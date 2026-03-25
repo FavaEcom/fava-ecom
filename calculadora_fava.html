@@ -833,7 +833,7 @@ function calcAll(){
         </div>
         <div class="acoes">
           <button class="btn-sm" onclick="copiar(${r.preco.toFixed(2)})">Copiar</button>
-          ${tokens.ml&&prodAtual?.mlb&&k.startsWith('ml')?`<button class="btn-sm btn-green" onclick="aplicarML('${prodAtual.mlb}',${r.preco.toFixed(2)})">Aplicar ML</button>`:''}
+          ${tokens.ml&&prodAtual&&prodAtual.mlb&&k.startsWith('ml')?'<button class="btn-sm btn-green" onclick="aplicarML(\''+prodAtual.mlb+'\','+r.preco.toFixed(2)+')">Aplicar ML</button>':''}
         </div>
       </div>`;
     grid.appendChild(card);
