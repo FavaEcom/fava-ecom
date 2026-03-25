@@ -1143,11 +1143,15 @@ async function carregarConciliacao(){
 
   try{
     // Busca movimentações do MP (releases/liquidations)
+    // MP payments search - formato correto
     const r = await fetch(
-      `/api/mp/v1/payments/search?begin_date=${de}T00:00:00.000-03:00&end_date=${ate}T23:59:59.999-03:00&sort=date_created&criteria=desc&limit=100`,
-      {headers:{'Authorization':`Bearer ${tkMP}`}}
+      `/api/mp/v1/payments/search?range=date_created&begin_date=${de}T00:00:00.000-03:00&end_date=${ate}T23:59:59.999-03:00&sort=date_created&criteria=desc&limit=100&status=approved`,
+      {headers:{'Authorization':`Bearer ${tkMP}`,'Content-Type':'application/json'}}
     );
-    if(!r.ok) throw new Error(`${r.status}`);
+    if(!r.ok){
+      const err = await r.json().catch(()=>({}));
+      throw new Error(`${r.status}: ${err.message||err.error||''}`);
+    }
     const d = await r.json();
     mpMovs = d.results || [];
 
@@ -1162,20 +1166,22 @@ async function carregarConciliacao(){
 
 function renderMovimentacoes(){
   const rows = mpMovs.map(m=>{
-    const dt = m.date_created?.substring(0,10)||'—';
+    const dt = (m.date_approved||m.date_created||'').substring(0,10)||'—';
     const [y,mo,d] = dt.split('-');
-    const tipo = m.type==='payment'?'Pagamento':
-                 m.type==='refund'?'Estorno':
-                 m.type==='payout'?'Saque':
-                 m.type==='fee'?'Taxa': m.type||'—';
+    const status = m.status||'—';
+    const tipo = status==='approved'?'Aprovado':
+                 status==='refunded'?'Estorno':
+                 status==='cancelled'?'Cancelado':
+                 status==='pending'?'Pendente': status;
     const bruto = m.transaction_amount||0;
     const taxa  = m.fee_details?.reduce((s,f)=>s+(f.amount||0),0)||0;
-    const liq   = m.net_received_amount||m.transaction_amount||0;
-    const corTipo = m.type==='refund'?'#dc2626':m.type==='payment'?'#16a34a':'#6b7280';
+    const liq   = m.transaction_details?.net_received_amount||bruto-taxa;
+    const corTipo = status==='refunded'?'#dc2626':status==='approved'?'#16a34a':'#d97706';
+    const desc = m.description||m.payment_method_id||'—';
     return`<tr>
       <td>${d}/${mo}</td>
       <td style="color:${corTipo};font-weight:700;font-size:10px">${tipo}</td>
-      <td style="font-size:10px;color:var(--muted)">${String(m.external_reference||m.id||'').substring(0,15)}</td>
+      <td style="font-size:10px;color:var(--muted)">${String(desc).substring(0,20)}</td>
       <td class="num">R$ ${fmt(bruto)}</td>
       <td class="num" style="color:#dc2626">-R$ ${fmt(Math.abs(taxa))}</td>
       <td class="num" style="color:#16a34a;font-weight:700">R$ ${fmt(liq)}</td>
@@ -1192,8 +1198,10 @@ function cruzarPedidos(){
   mpMovs.forEach(m=>{
     const ref = String(m.external_reference||'');
     if(ref) mpPorRef[ref] = m;
-    // Também mapeia por order_id se disponível
     if(m.order?.id) mpPorRef[String(m.order.id)] = m;
+    // MP usa order.id para referenciar pedido ML
+    const orderId = m.order?.id;
+    if(orderId) mpPorRef[String(orderId)] = m;
   });
 
   // Cruza com pedidos ML
@@ -1204,7 +1212,7 @@ function cruzarPedidos(){
     const taxa_est = bruto * 0.12; // estimativa
     const frete_est = p.frete || 0;
     const liq_est = bruto - taxa_est - frete_est;
-    const liq_real = mp ? (mp.net_received_amount||mp.transaction_amount||0) : null;
+    const liq_real = mp ? (mp.transaction_details?.net_received_amount||mp.transaction_amount||(mp.transaction_amount-(mp.fee_details?.reduce((s,f)=>s+(f.amount||0),0)||0))||0) : null;
     const dif = liq_real !== null ? liq_real - liq_est : null;
 
     concDados.push({
@@ -1272,9 +1280,9 @@ function calcKpisMP(){
   const hoje = new Date().toDateString();
   let entrou_hoje=0, estornos=0;
   mpMovs.forEach(m=>{
-    const dt = new Date(m.date_created||'').toDateString();
-    if(m.type==='payment'&&dt===hoje) entrou_hoje += m.net_received_amount||0;
-    if(m.type==='refund') estornos += Math.abs(m.transaction_amount||0);
+    const dt = new Date(m.date_approved||m.date_created||'').toDateString();
+    if(m.status==='approved'&&dt===hoje) entrou_hoje += m.transaction_details?.net_received_amount||m.transaction_amount||0;
+    if(m.status==='refunded') estornos += Math.abs(m.transaction_amount||0);
   });
 
   const totalPrev = concDados.reduce((s,c)=>s+c.liq_est,0);
