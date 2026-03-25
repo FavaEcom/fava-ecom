@@ -469,17 +469,57 @@ function switchTab(t){
 // TOKENS
 // ══════════════════════════════════════════════════════════════════════
 function toggleCfg(){const b=document.getElementById('cfg-body');b.classList.toggle('open');document.getElementById('cfg-arr').textContent=b.classList.contains('open')?'▲':'▼';}
-function salvarTokens(){tokens.bling=document.getElementById('tk-bling').value.trim();tokens.ml=document.getElementById('tk-ml').value.trim();localStorage.setItem('fava_tk4',JSON.stringify(tokens));localStorage.setItem('fava_dash_tk',JSON.stringify(tokens));testar();}
+function salvarTokens(){
+  tokens.bling=document.getElementById('tk-bling').value.trim();
+  tokens.ml=document.getElementById('tk-ml').value.trim();
+  if(!tokens.bling){alert('Cole o token do Bling antes de salvar');return;}
+  localStorage.setItem('fava_tk4',JSON.stringify(tokens));
+  localStorage.setItem('fava_dash_tk',JSON.stringify(tokens));
+  // Feedback visual imediato
+  const btn=document.querySelector('[onclick="salvarTokens()"]');
+  if(btn){btn.textContent='Salvando...';btn.disabled=true;}
+  testar().finally(()=>{
+    if(btn){btn.textContent='Salvar e testar';btn.disabled=false;}
+  });
+}
 
 async function testar(){
-  setDot('bling','wait','Bling...');
-  try{const r=await fetch('/api/bling/situacoes/modulos',{headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});setDot('bling',r.ok?'ok':'err',r.ok?'Bling ✓':'Bling ✗');}
-  catch(e){setDot('bling','err','Bling ✗');}
+  // Testa Bling
+  setDot('bling','wait','Testando...');
+  try{
+    const r=await fetch('/api/bling/produtos?pagina=1&limite=1',{
+      headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}
+    });
+    if(r.ok){
+      setDot('bling','ok','Bling ✓');
+    } else {
+      const err=await r.json().catch(()=>({}));
+      setDot('bling','err',`Bling ✗ (${r.status})`);
+      console.error('Bling erro:',err);
+    }
+  } catch(e){
+    setDot('bling','err','Bling ✗');
+    console.error('Bling erro:',e);
+  }
+  // Testa ML
   if(tokens.ml){
-    setDot('ml','wait','ML...');
-    try{const r=await fetch('/api/ml/users/me',{headers:{'Authorization':`Bearer ${tokens.ml}`}});if(r.ok){const d=await r.json();setDot('ml','ok',`ML ✓ ${d.nickname||''}`);}else setDot('ml','err','ML ✗');}
-    catch(e){setDot('ml','err','ML ✗');}
-  }else setDot('ml','err','ML: cole o token');
+    setDot('ml','wait','Testando...');
+    try{
+      const r=await fetch('/api/ml/users/me',{
+        headers:{'Authorization':`Bearer ${tokens.ml}`}
+      });
+      if(r.ok){
+        const d=await r.json();
+        setDot('ml','ok',`ML ✓ ${d.nickname||''}`);
+      } else {
+        setDot('ml','err',`ML ✗ (${r.status})`);
+      }
+    } catch(e){
+      setDot('ml','err','ML ✗');
+    }
+  } else {
+    setDot('ml','err','ML: sem token');
+  }
 }
 function setDot(a,s,l){document.getElementById(`dot-${a}`).className=`dot ${s}`;document.getElementById(`lbl-${a}`).textContent=l;}
 
@@ -830,15 +870,15 @@ function calcAll(){
             </tr></thead>
             <tbody>${tiers.map((t,i)=>{
               const mc=t.mc>=.20?'#16a34a':t.mc>=.10?'#d97706':'#dc2626';
-              return\`<tr style="border-top:1px solid #f3f4f6;background:\${i%2?'#fafbfc':'#fff'}">
-                <td style="padding:5px 8px;font-weight:700">Faixa \${t.tier}</td>
-                <td style="padding:5px 8px;text-align:center">\${t.qty}+ un</td>
-                <td style="padding:5px 8px;text-align:right;color:#d97706">\${t.desc>0?'-'+(t.desc*100).toFixed(0)+'%':'—'}</td>
-                <td style="padding:5px 8px;text-align:right;font-weight:700">R\$ \${fmt(t.preco)}</td>
-                <td style="padding:5px 8px;text-align:right;color:#6b7280">R\$ \${fmt(t.frete)}</td>
-                <td style="padding:5px 8px;text-align:right;color:\${mc}">R\$ \${fmt(t.lucro)}</td>
-                <td style="padding:5px 8px;text-align:right;font-weight:700;color:\${mc}">\${(t.mc*100).toFixed(1)}%</td>
-              </tr>\`;
+              return '<tr style="border-top:1px solid #f3f4f6;background:'+(i%2?'#fafbfc':'#fff')+'">'
+                +'<td style="padding:5px 8px;font-weight:700">Faixa '+t.tier+'</td>'
+                +'<td style="padding:5px 8px;text-align:center">'+t.qty+'+ un</td>'
+                +'<td style="padding:5px 8px;text-align:right;color:#d97706">'+(t.desc>0?'-'+(t.desc*100).toFixed(0)+'%':'—')+'</td>'
+                +'<td style="padding:5px 8px;text-align:right;font-weight:700">R$ '+fmt(t.preco)+'</td>'
+                +'<td style="padding:5px 8px;text-align:right;color:#6b7280">R$ '+fmt(t.frete)+'</td>'
+                +'<td style="padding:5px 8px;text-align:right;color:'+mc+'">R$ '+fmt(t.lucro)+'</td>'
+                +'<td style="padding:5px 8px;text-align:right;font-weight:700;color:'+mc+'">'+(t.mc*100).toFixed(1)+'%</td>'
+                +'</tr>';
             }).join('')}</tbody>
           </table>
         </div>`;
