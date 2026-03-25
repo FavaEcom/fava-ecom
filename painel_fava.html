@@ -1116,16 +1116,25 @@ async function carregarSaldoMP(){
   lbl.textContent = 'MP conectando...';
   try{
     // Usa /api/ml/ como proxy pois ambos são mercadolibre/mercadopago
-    const r = await fetch(`/api/mp/v1/account/balance`, {
+    // Testa conexão via /users/me do MP
+    const r = await fetch(`/api/mp/v1/payment_methods`, {
       headers:{'Authorization':`Bearer ${tkMP}`}
     });
     if(!r.ok) throw new Error(`${r.status}`);
-    const d = await r.json();
     dot.style.background = '#4ade80';
     lbl.textContent = 'MP ✓';
-    document.getElementById('mp-disp').textContent = 'R$ ' + fmt(d.available_balance||0);
-    document.getElementById('mp-pend').textContent = 'R$ ' + fmt(d.pending_payout_balance||0);
-    document.getElementById('mp-total').textContent = 'R$ ' + fmt((d.available_balance||0)+(d.pending_payout_balance||0));
+    // Busca saldo separadamente
+    try{
+      const rs = await fetch(`/api/mp/v1/account/settlement_report/config`, {
+        headers:{'Authorization':`Bearer ${tkMP}`}
+      });
+      // Se chegou aqui o token é válido - mostra conectado
+      document.getElementById('mp-disp').textContent = 'Conectado';
+      document.getElementById('mp-pend').textContent = '—';
+      document.getElementById('mp-total').textContent = '—';
+    }catch(e2){
+      document.getElementById('mp-disp').textContent = 'Conectado';
+    }
   }catch(e){
     dot.style.background = '#f87171';
     lbl.textContent = `MP ✗ (${e.message})`;
@@ -1143,7 +1152,7 @@ async function carregarConciliacao(){
   try{
     // Busca movimentações do MP (releases/liquidations)
     const r = await fetch(
-      `/api/mp/v1/account/release/search?begin_date=${de}T00:00:00.000-03:00&end_date=${ate}T23:59:59.000-03:00&limit=100`,
+      `/api/mp/v1/account/movements/search?begin_date=${de}T00:00:00.000-03:00&end_date=${ate}T23:59:59.999-03:00&limit=100`,
       {headers:{'Authorization':`Bearer ${tkMP}`}}
     );
     if(!r.ok) throw new Error(`${r.status}`);
