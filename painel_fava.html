@@ -97,6 +97,40 @@ header h1{font-size:15px;font-weight:700;flex:1}
 /* EMPTY */
 .empty{text-align:center;padding:30px;color:var(--muted);font-size:12px}
 
+/* VIEW TABS */
+.view-tabs{display:flex;background:#fff;border-bottom:2px solid var(--borda);padding:0 18px}
+.vtab{padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s;white-space:nowrap}
+.vtab.a{color:var(--azul);border-bottom-color:var(--azul)}
+
+/* ANUNCIOS */
+.anunc-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.anunc-filters input{border:1px solid var(--borda);border-radius:6px;padding:6px 10px;font-size:12px;outline:none}
+.anunc-filters input:focus{border-color:var(--azul2)}
+.filter-btn{padding:5px 12px;border:1px solid var(--borda);border-radius:6px;background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--muted);transition:.15s}
+.filter-btn.a{background:var(--azul);color:#fff;border-color:var(--azul)}
+.anunc-table-wrap{background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden}
+.anunc-table{width:100%;border-collapse:collapse;font-size:11px}
+.anunc-table th{padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--borda);background:#f8fafc;white-space:nowrap;cursor:pointer}
+.anunc-table th:hover{background:#f0f2f5}
+.anunc-table td{padding:7px 10px;border-bottom:1px solid #f9fafb;vertical-align:middle}
+.anunc-table tr:last-child td{border-bottom:none}
+.anunc-table tr:hover td{background:#fafbfc}
+.anunc-table .num{text-align:right;font-variant-numeric:tabular-nums}
+.delta-pos{color:var(--verde);font-size:10px;font-weight:700}
+.delta-neg{color:var(--vermelho);font-size:10px;font-weight:700}
+.alert-row td{background:#fff8f8}
+.promo-row td{background:#f0fdf4}
+.btn-price{padding:3px 8px;font-size:10px;border-radius:4px;border:1px solid var(--azul2);background:#fff;color:var(--azul2);cursor:pointer;font-weight:700;white-space:nowrap}
+.btn-price:hover{background:var(--azul2);color:#fff}
+.btn-promo{padding:3px 8px;font-size:10px;border-radius:4px;border:1px solid var(--verde);background:#fff;color:var(--verde);cursor:pointer;font-weight:700;white-space:nowrap}
+.btn-promo:hover{background:var(--verde);color:#fff}
+.anunc-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:10px}
+.modal-preco{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;display:flex;align-items:center;justify-content:center}
+.modal-preco .box{background:#fff;border-radius:10px;padding:20px;width:340px;max-width:95vw}
+.modal-preco h3{font-size:14px;font-weight:700;margin-bottom:12px}
+.modal-preco input{width:100%;border:1px solid var(--borda);border-radius:6px;padding:8px 10px;font-size:15px;font-weight:700;margin-bottom:8px;outline:none}
+.modal-preco input:focus{border-color:var(--azul2)}
+
 /* CHART WRAP */
 .chart-wrap{position:relative;height:200px}
 
@@ -139,8 +173,14 @@ header h1{font-size:15px;font-weight:700;flex:1}
   <button class="btn-reload" onclick="abrirCfg()">⚙️ Tokens</button>
 </header>
 
+<!-- VIEW TABS -->
+<div class="view-tabs">
+  <div class="vtab a" onclick="setView('dashboard')" id="vtab-dash">📊 Dashboard</div>
+  <div class="vtab" onclick="setView('anuncios')" id="vtab-anunc">🏷️ Anúncios ML</div>
+</div>
+
 <!-- PERIOD BAR -->
-<div class="period-bar">
+<div class="period-bar" id="period-bar">
   <div class="ptab a" onclick="setPeriod('today')">Hoje</div>
   <div class="ptab" onclick="setPeriod('yesterday')">Ontem</div>
   <div class="ptab" onclick="setPeriod('7d')">7 dias</div>
@@ -151,8 +191,68 @@ header h1{font-size:15px;font-weight:700;flex:1}
   <span class="last-update" id="last-update"></span>
 </div>
 
-<!-- MAIN -->
-<div class="main">
+<!-- ANÚNCIOS ML VIEW -->
+<div id="view-anuncios" style="display:none;padding:14px 18px;flex-direction:column;gap:10px">
+
+  <!-- KPIs anúncios -->
+  <div class="anunc-kpis" id="anunc-kpis">
+    <div class="kpi"><div class="kl">Total Anúncios</div><div class="kv" id="an-total">—</div></div>
+    <div class="kpi"><div class="kl">Margem Negativa</div><div class="kv" style="color:var(--vermelho)" id="an-neg">—</div></div>
+    <div class="kpi"><div class="kl">Abaixo 20%</div><div class="kv" style="color:var(--amarelo)" id="an-baixo">—</div></div>
+    <div class="kpi"><div class="kl">Acima 20% (promo ok)</div><div class="kv" style="color:var(--verde)" id="an-promo">—</div></div>
+    <div class="kpi"><div class="kl">Vendas hoje</div><div class="kv" id="an-vendas">—</div></div>
+    <div class="kpi"><div class="kl">Fat. hoje</div><div class="kv" id="an-fat">—</div></div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="anunc-filters">
+    <input type="text" id="anunc-search" placeholder="Buscar produto ou MLB..." style="width:240px" oninput="filtrarAnuncios()">
+    <button class="filter-btn a" id="f-todos" onclick="setFiltro('todos')">Todos</button>
+    <button class="filter-btn" id="f-alerta" onclick="setFiltro('alerta')">⚠️ Alerta margem</button>
+    <button class="filter-btn" id="f-promo" onclick="setFiltro('promo')">🏷️ Pode dar desconto</button>
+    <button class="filter-btn" id="f-fora" onclick="setFiltro('fora')">📊 Preço fora</button>
+    <button class="filter-btn" onclick="carregarAnuncios()" style="margin-left:auto">⟳ Atualizar</button>
+  </div>
+
+  <!-- Tabela -->
+  <div class="anunc-table-wrap">
+    <table class="anunc-table" id="anunc-table">
+      <thead>
+        <tr>
+          <th onclick="sortAnunc('mlb')">MLB ↕</th>
+          <th onclick="sortAnunc('titulo')">Produto ↕</th>
+          <th onclick="sortAnunc('vendas_hoje')" class="num">Vendas hoje ↕</th>
+          <th onclick="sortAnunc('preco_atual')" class="num">Preço atual ↕</th>
+          <th onclick="sortAnunc('cmv')" class="num">CMV ↕</th>
+          <th onclick="sortAnunc('margem_atual')" class="num">Margem atual ↕</th>
+          <th onclick="sortAnunc('preco_sugerido')" class="num">Preço sugerido ↕</th>
+          <th class="num">Δ Preço</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="anunc-body">
+        <tr><td colspan="10" class="empty"><span class="spin"></span> Clique em "Atualizar" para carregar anúncios</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MODAL ATUALIZAR PREÇO -->
+<div class="modal-preco" id="modal-preco" style="display:none">
+  <div class="box">
+    <h3 id="modal-titulo">Atualizar preço</h3>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px" id="modal-info"></div>
+    <input type="number" id="modal-preco-input" step="0.01" min="0" placeholder="Novo preço (R$)">
+    <div style="display:flex;gap:8px">
+      <button class="btn-prim" style="flex:1" onclick="confirmarPreco()">Aplicar no ML</button>
+      <button style="flex:1;padding:9px;border:1px solid var(--borda);border-radius:7px;background:#fff;cursor:pointer;font-size:13px" onclick="fecharModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN (dashboard) -->
+<div class="main" id="view-dashboard" style="display:flex;flex-direction:column;gap:12px;padding:14px 18px">
 
   <!-- KPIs -->
   <div class="kpi-row" id="kpi-row">
@@ -749,6 +849,265 @@ function setDot(a,s,l){document.getElementById(`dot-${a}`).className=`dot ${s}`;
 function recarregar(){dados.cmvCache={};carregarTudo();}
 function fmt(v){return(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtK(v){return v>=1000?`${(v/1000).toFixed(1)}k`:fmt(v);}
+
+// ══════════════════════════════════════════════════════════════════════
+// VIEW SWITCHING
+// ══════════════════════════════════════════════════════════════════════
+let currentView = 'dashboard';
+
+function setView(v){
+  currentView = v;
+  document.getElementById('view-dashboard').style.display = v==='dashboard'?'flex':'none';
+  document.getElementById('view-anuncios').style.display = v==='anuncios'?'flex':'none';
+  document.getElementById('period-bar').style.display = v==='dashboard'?'flex':'none';
+  document.getElementById('vtab-dash').classList.toggle('a', v==='dashboard');
+  document.getElementById('vtab-anunc').classList.toggle('a', v==='anuncios');
+  if(v==='anuncios' && anunciosData.length===0) carregarAnuncios();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ANÚNCIOS ML
+// ══════════════════════════════════════════════════════════════════════
+let anunciosData = [];
+let anuncFiltro = 'todos';
+let anuncSort = {col:'margem_atual', dir:1};
+let modalMLB = null;
+
+const PIS_A=.0165, COF_A=.076, ICMS_A=.12; // médias para margem dos anúncios
+
+async function carregarAnuncios(){
+  document.getElementById('anunc-body').innerHTML =
+    '<tr><td colspan="10" class="empty"><span class="spin"></span> Carregando anúncios...</td></tr>';
+
+  try{
+    // Busca anúncios ativos do vendedor
+    const userId = 537714337;
+    let items = [], offset=0, total=999;
+    while(offset < total && offset < 2000){
+      const r = await mlGet(`users/${userId}/items/search?status=active&limit=100&offset=${offset}`);
+      if(!r || !r.results) break;
+      total = r.paging?.total || 0;
+      if(!r.results.length) break;
+      items.push(...r.results);
+      offset += 100;
+    }
+
+    // Busca detalhes em lotes de 20
+    const detalhes = [];
+    for(let i=0; i<items.length; i+=20){
+      const lote = items.slice(i,i+20).join(',');
+      const r = await mlGet(`items?ids=${lote}&attributes=id,title,price,base_price,listing_type_id,available_quantity,seller_sku,category_id`);
+      if(r) detalhes.push(...r.filter(x=>x.body?.id).map(x=>x.body));
+    }
+
+    // Busca vendas de hoje
+    const {de,ate} = getDatas();
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const hojeStr = hoje.toISOString().substring(0,10);
+    const vendasHoje = {};
+    const pedidosHoje = dados.pedidosML.filter(p=>p.data===hojeStr&&p.status!=='cancelled');
+    pedidosHoje.forEach(p=>{
+      p.itens.forEach(it=>{
+        if(!vendasHoje[it.mlb]) vendasHoje[it.mlb]={qtd:0,fat:0};
+        vendasHoje[it.mlb].qtd += it.qtd;
+        vendasHoje[it.mlb].fat += it.preco*it.qtd;
+      });
+    });
+
+    // Monta dados com CMV do cache e calcula margem
+    anunciosData = detalhes.map(item=>{
+      const sku = item.seller_sku || '';
+      const cmvInfo = dados.cmvCache[sku];
+      const cmv = cmvInfo?.cmv || 0;
+      const preco = item.price || 0;
+      const taxa = item.listing_type_id==='gold_pro'?.17:.12;
+      const frete = freteAnuncio(preco);
+      const pis_r=preco*PIS_A, cof_r=preco*COF_A, tx_r=preco*taxa;
+      const lucro = preco - cmv - pis_r - cof_r - tx_r - frete;
+      const margem = cmv>0&&preco>0 ? lucro/preco : null;
+
+      // Preço sugerido (margem 28%)
+      const margem_alvo = taxa===.17?.26:.28;
+      const denom = Math.max(1-taxa-PIS_A-COF_A-margem_alvo,.05);
+      const preco_sug = cmv>0 ? (cmv+frete)/denom : 0;
+
+      const v = vendasHoje[item.id] || {qtd:0,fat:0};
+      return {
+        mlb: item.id,
+        titulo: item.title||'',
+        sku,
+        tipo: item.listing_type_id,
+        preco_atual: preco,
+        cmv,
+        margem_atual: margem,
+        preco_sugerido: preco_sug,
+        delta: preco_sug>0 ? preco-preco_sug : 0,
+        vendas_hoje: v.qtd,
+        fat_hoje: v.fat,
+        estoque: item.available_quantity||0,
+        frete,
+        taxa,
+      };
+    });
+
+    renderAnuncKpis();
+    filtrarAnuncios();
+  }catch(e){
+    document.getElementById('anunc-body').innerHTML =
+      `<tr><td colspan="10" class="empty">Erro: ${e.message}</td></tr>`;
+  }
+}
+
+function freteAnuncio(preco){
+  // Estimativa frete médio por faixa de preço
+  if(preco<19) return 6;
+  if(preco<49) return 7.5;
+  if(preco<79) return 8.5;
+  if(preco<100) return 14;
+  if(preco<150) return 18;
+  if(preco<200) return 21;
+  return 25;
+}
+
+function renderAnuncKpis(){
+  const total = anunciosData.length;
+  const negativa = anunciosData.filter(a=>a.margem_atual!==null&&a.margem_atual<0).length;
+  const baixo = anunciosData.filter(a=>a.margem_atual!==null&&a.margem_atual>=0&&a.margem_atual<.20).length;
+  const promo = anunciosData.filter(a=>a.margem_atual!==null&&a.margem_atual>=.20).length;
+  const vendas = anunciosData.reduce((s,a)=>s+a.vendas_hoje,0);
+  const fat = anunciosData.reduce((s,a)=>s+a.fat_hoje,0);
+
+  document.getElementById('an-total').textContent = total;
+  document.getElementById('an-neg').textContent = negativa;
+  document.getElementById('an-baixo').textContent = baixo;
+  document.getElementById('an-promo').textContent = promo;
+  document.getElementById('an-vendas').textContent = vendas+' un';
+  document.getElementById('an-fat').textContent = 'R$ '+fmtK(fat);
+}
+
+function setFiltro(f){
+  anuncFiltro=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('a'));
+  const map={todos:'f-todos',alerta:'f-alerta',promo:'f-promo',fora:'f-fora'};
+  if(map[f]) document.getElementById(map[f]).classList.add('a');
+  filtrarAnuncios();
+}
+
+function filtrarAnuncios(){
+  const q = (document.getElementById('anunc-search').value||'').toLowerCase();
+  let lista = anunciosData.filter(a=>{
+    if(q && !a.titulo.toLowerCase().includes(q) && !a.mlb.includes(q) && !a.sku.includes(q)) return false;
+    if(anuncFiltro==='alerta') return a.margem_atual!==null && a.margem_atual<.20;
+    if(anuncFiltro==='promo') return a.margem_atual!==null && a.margem_atual>=.20;
+    if(anuncFiltro==='fora') return a.preco_sugerido>0 && Math.abs(a.delta)>2;
+    return true;
+  });
+
+  // Sort
+  lista.sort((a,b)=>{
+    const va = a[anuncSort.col]??-999, vb = b[anuncSort.col]??-999;
+    return (va>vb?1:-1)*anuncSort.dir;
+  });
+
+  renderAnuncTable(lista);
+}
+
+function sortAnunc(col){
+  if(anuncSort.col===col) anuncSort.dir*=-1;
+  else {anuncSort.col=col;anuncSort.dir=-1;}
+  filtrarAnuncios();
+}
+
+function renderAnuncTable(lista){
+  if(!lista.length){
+    document.getElementById('anunc-body').innerHTML=
+      '<tr><td colspan="10" class="empty">Nenhum anúncio encontrado</td></tr>';
+    return;
+  }
+
+  const rows = lista.map(a=>{
+    const mc = a.margem_atual;
+    const mcCor = mc===null?'#9ca3af':mc>=.20?'#16a34a':mc>=.10?'#d97706':'#dc2626';
+    const mcStr = mc===null?'sem CMV':(mc*100).toFixed(1)+'%';
+    const alertClass = mc!==null&&mc<0?'alert-row':mc!==null&&mc>=.20?'promo-row':'';
+    const delta = a.delta;
+    const deltaStr = delta===0?'—':delta>0?`<span class="delta-pos">+R$ ${fmt(delta)}</span>`:`<span class="delta-neg">R$ ${fmt(delta)}</span>`;
+
+    // Status badge
+    let badge='';
+    if(mc!==null&&mc<0) badge='<span class="pill pill-r">Margem neg.</span>';
+    else if(mc!==null&&mc<.10) badge='<span class="pill pill-r">Abaixo 10%</span>';
+    else if(mc!==null&&mc<.20) badge='<span class="pill pill-y">Abaixo 20%</span>';
+    else if(mc!==null&&mc>=.20&&Math.abs(delta)>2) badge='<span class="pill" style="background:#dbeafe;color:#1e40af">Pode ajustar</span>';
+    else if(mc!==null&&mc>=.20) badge='<span class="pill pill-g">OK ✓</span>';
+    else badge='<span class="pill" style="background:#f3f4f6;color:#9ca3af">Sem CMV</span>';
+
+    // Vendas hoje
+    const vHoje = a.vendas_hoje>0
+      ? `<span style="font-weight:700;color:var(--verde)">${a.vendas_hoje} un</span>`
+      : '—';
+
+    return `<tr class="${alertClass}" data-mlb="${a.mlb}">
+      <td><a href="https://www.mercadolivre.com.br/p/${a.mlb}" target="_blank" style="font-size:10px;color:var(--azul2)">${a.mlb}</a></td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.titulo}">
+        <div style="font-weight:700;font-size:11px">${a.sku||'—'}</div>
+        <div style="font-size:10px;color:var(--muted)">${a.titulo}</div>
+      </td>
+      <td class="num">${vHoje}</td>
+      <td class="num" style="font-weight:700">R$ ${fmt(a.preco_atual)}</td>
+      <td class="num" style="color:var(--muted)">${a.cmv>0?'R$ '+fmt(a.cmv):'—'}</td>
+      <td class="num" style="font-weight:700;color:${mcCor}">${mcStr}</td>
+      <td class="num">${a.preco_sugerido>0?'R$ '+fmt(a.preco_sugerido):'—'}</td>
+      <td class="num">${deltaStr}</td>
+      <td>${badge}</td>
+      <td>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <button class="btn-price" onclick="abrirModal('${a.mlb}','${a.titulo.replace(/'/g,'')}',${a.preco_atual},${a.preco_sugerido})">Preço</button>
+          ${mc!==null&&mc>=.20?`<button class="btn-promo" onclick="abrirModal('${a.mlb}','${a.titulo.replace(/'/g,'')}',${a.preco_atual},${(a.preco_atual*0.90).toFixed(2)})">-10%</button>`:''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('anunc-body').innerHTML = rows;
+}
+
+// MODAL PREÇO
+function abrirModal(mlb, titulo, precoAtual, precoSug){
+  modalMLB = mlb;
+  document.getElementById('modal-titulo').textContent = 'Atualizar preço';
+  document.getElementById('modal-info').innerHTML =
+    `<strong>${titulo.substring(0,60)}</strong><br>Preço atual: R$ ${fmt(precoAtual)} | Sugerido: R$ ${fmt(precoSug)}`;
+  document.getElementById('modal-preco-input').value = precoSug.toFixed(2);
+  document.getElementById('modal-preco').style.display = 'flex';
+}
+
+function fecharModal(){
+  document.getElementById('modal-preco').style.display='none';
+  modalMLB=null;
+}
+
+async function confirmarPreco(){
+  const preco = parseFloat(document.getElementById('modal-preco-input').value);
+  if(!preco||!modalMLB){alert('Informe um preço válido');return;}
+  if(!confirm(`Aplicar R$ ${fmt(preco)} no anúncio ${modalMLB}?`))return;
+  try{
+    const r = await fetch(`/api/ml/items/${modalMLB}`,{
+      method:'PUT',
+      headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},
+      body:JSON.stringify({price:parseFloat(preco.toFixed(2))})
+    });
+    const d=await r.json();
+    if(r.ok){
+      alert(`✅ Preço atualizado para R$ ${fmt(preco)}!`);
+      fecharModal();
+      // Atualiza local
+      const idx=anunciosData.findIndex(a=>a.mlb===modalMLB);
+      if(idx>=0)anunciosData[idx].preco_atual=preco;
+      filtrarAnuncios();
+    } else alert(`❌ ${d.message||JSON.stringify(d)}`);
+  }catch(e){alert(`❌ ${e.message}`);}
+}
 </script>
 </body>
 </html>
