@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel Fava Ecom</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--azul:#1F3864;--azul2:#2E75B6;--verde:#16a34a;--vermelho:#dc2626;--amarelo:#d97706;--cinza:#f0f2f5;--borda:#e5e7eb;--texto:#1a1a1a;--muted:#6b7280}
+body{font-family:Arial,sans-serif;background:var(--cinza);color:var(--texto);font-size:13px}
+
+/* HEADER */
+header{background:var(--azul);color:#fff;padding:10px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{font-size:15px;font-weight:700;flex:1}
+.dot{width:7px;height:7px;border-radius:50%}
+.dot.ok{background:#4ade80}.dot.err{background:#f87171}.dot.wait{background:#fbbf24}
+.dlbl{font-size:11px;opacity:.85}
+.btn-reload{padding:5px 12px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:5px;color:#fff;font-size:12px;cursor:pointer;font-weight:700}
+.btn-reload:hover{background:rgba(255,255,255,.25)}
+
+/* PERIOD TABS */
+.period-bar{background:#fff;border-bottom:1px solid var(--borda);padding:0 18px;display:flex;align-items:center;gap:0}
+.ptab{padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:.15s;white-space:nowrap}
+.ptab.a{color:var(--azul);border-bottom-color:var(--azul)}
+.period-bar .spacer{flex:1}
+.last-update{font-size:10px;color:var(--muted);padding:9px 0}
+
+/* MAIN LAYOUT */
+.main{padding:14px 18px;display:flex;flex-direction:column;gap:12px}
+
+/* KPI CARDS */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.kpi{background:#fff;border-radius:9px;border:1px solid var(--borda);padding:12px 14px;position:relative;overflow:hidden}
+.kpi .kl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.kpi .kv{font-size:22px;font-weight:700;margin-bottom:3px}
+.kpi .kd{font-size:11px;color:var(--muted)}
+.kpi .kd .up{color:var(--verde)}.kpi .kd .dn{color:var(--vermelho)}
+.kpi-accent{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:28px;opacity:.12}
+
+/* GRID 2 COL */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+/* CARDS */
+.card{background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden}
+.card-head{padding:11px 14px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between}
+.card-head h3{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.card-body{padding:12px 14px}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl th{padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--borda);white-space:nowrap;background:#f8fafc}
+.tbl td{padding:6px 8px;border-bottom:1px solid #f9fafb;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#fafbfc}
+.tbl .num{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+
+/* PILLS */
+.pill{display:inline-block;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:700;white-space:nowrap}
+.pill-g{background:#dcfce7;color:#166534}.pill-y{background:#fef9c3;color:#854d0e}.pill-r{background:#fee2e2;color:#991b1b}
+.pill-b{background:#dbeafe;color:#1e40af}.pill-p{background:#f3e8ff;color:#6b21a8}
+
+/* BAR INLINE */
+.bar-row{display:flex;align-items:center;gap:7px}
+.bar-bg{flex:1;background:#f3f4f6;border-radius:3px;height:6px;overflow:hidden;min-width:40px}
+.bar-fg{height:100%;border-radius:3px;transition:.4s}
+
+/* CANAL BADGES */
+.c-ml{background:#eff6ff;color:#1d4ed8}.c-shp{background:#fdf2f8;color:#be185d}
+.c-site{background:#f5f3ff;color:#6d28d9}.c-bal{background:#f0fdf4;color:#15803d}
+
+/* STATE MAP BARS */
+.state-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.state-name{width:26px;font-size:10px;font-weight:700;color:var(--muted)}
+.state-bar{flex:1;background:#f3f4f6;border-radius:3px;height:8px;overflow:hidden}
+.state-fill{height:100%;border-radius:3px;background:var(--azul2)}
+.state-val{font-size:10px;font-weight:700;color:var(--texto);width:70px;text-align:right}
+
+/* LOADING */
+.loading-cover{position:fixed;inset:0;background:rgba(255,255,255,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;font-size:14px;color:var(--muted);gap:12px}
+.spin{width:28px;height:28px;border:3px solid #e5e7eb;border-top-color:var(--azul2);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* CFG MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:center;justify-content:center}
+.modal{background:#fff;border-radius:12px;padding:22px;width:420px;max-width:95vw}
+.modal h2{font-size:15px;font-weight:700;margin-bottom:14px}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:11px;color:var(--muted);font-weight:600;margin-bottom:3px}
+.field input{width:100%;border:1px solid var(--borda);border-radius:6px;padding:7px 10px;font-size:13px;outline:none}
+.field input:focus{border-color:var(--azul2);box-shadow:0 0 0 2px #dbeafe}
+.btn-prim{width:100%;background:var(--azul);color:#fff;border:none;border-radius:7px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;margin-top:4px}
+.btn-prim:hover{background:var(--azul2)}
+.btn-sec{width:100%;background:#fff;color:var(--texto);border:1px solid var(--borda);border-radius:7px;padding:8px;font-size:12px;cursor:pointer;margin-top:5px}
+
+/* EMPTY */
+.empty{text-align:center;padding:30px;color:var(--muted);font-size:12px}
+
+/* CHART WRAP */
+.chart-wrap{position:relative;height:200px}
+
+@media(max-width:700px){.grid2,.grid3{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-cover" id="loading" style="display:none">
+  <div class="spin"></div>
+  <div id="loading-msg">Carregando dados...</div>
+</div>
+
+<!-- CONFIG MODAL -->
+<div class="modal-bg" id="cfg-modal">
+  <div class="modal">
+    <h2>⚙️ Configurar tokens de acesso</h2>
+    <div class="field">
+      <label>Token Bling API v3</label>
+      <input type="password" id="tk-bling" placeholder="Cole o token do Bling">
+    </div>
+    <div class="field">
+      <label>Access Token ML (APP_USR-...)</label>
+      <input type="password" id="tk-ml" placeholder="Cole o access token do ML">
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Os tokens ficam salvos localmente no seu navegador.</div>
+    <button class="btn-prim" onclick="salvarCfg()">Salvar e carregar painel</button>
+    <button class="btn-sec" onclick="fecharCfg()">Cancelar</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <h1>📊 Painel Fava Ecom</h1>
+  <div class="dot wait" id="dot-bling"></div><span class="dlbl" id="lbl-bling">Bling</span>
+  &nbsp;
+  <div class="dot wait" id="dot-ml"></div><span class="dlbl" id="lbl-ml">ML</span>
+  <button class="btn-reload" onclick="recarregar()">⟳ Atualizar</button>
+  <button class="btn-reload" onclick="abrirCfg()">⚙️ Tokens</button>
+</header>
+
+<!-- PERIOD BAR -->
+<div class="period-bar">
+  <div class="ptab a" onclick="setPeriod('today')">Hoje</div>
+  <div class="ptab" onclick="setPeriod('yesterday')">Ontem</div>
+  <div class="ptab" onclick="setPeriod('7d')">7 dias</div>
+  <div class="ptab" onclick="setPeriod('30d')">30 dias</div>
+  <div class="ptab" onclick="setPeriod('mes')">Mês atual</div>
+  <div class="ptab" onclick="setPeriod('mes-ant')">Mês anterior</div>
+  <div class="spacer"></div>
+  <span class="last-update" id="last-update"></span>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- KPIs -->
+  <div class="kpi-row" id="kpi-row">
+    <div class="kpi"><div class="kpi-accent">💰</div><div class="kl">Faturamento</div><div class="kv" id="k-fat">—</div><div class="kd" id="k-fat-d"></div></div>
+    <div class="kpi"><div class="kpi-accent">📦</div><div class="kl">Pedidos</div><div class="kv" id="k-ped">—</div><div class="kd" id="k-ped-d"></div></div>
+    <div class="kpi"><div class="kpi-accent">🎯</div><div class="kl">Ticket Médio</div><div class="kv" id="k-tick">—</div><div class="kd" id="k-tick-d"></div></div>
+    <div class="kpi"><div class="kpi-accent">📈</div><div class="kl">Margem Média</div><div class="kv" id="k-mg">—</div><div class="kd" id="k-mg-d"></div></div>
+    <div class="kpi"><div class="kpi-accent">💸</div><div class="kl">Lucro Estimado</div><div class="kv" id="k-lucro">—</div><div class="kd" id="k-lucro-d"></div></div>
+    <div class="kpi"><div class="kpi-accent">🏷️</div><div class="kl">SKUs vendidos</div><div class="kv" id="k-sku">—</div><div class="kd" id="k-sku-d"></div></div>
+  </div>
+
+  <!-- GRÁFICO VENDAS DIÁRIAS + CANAL SPLIT -->
+  <div class="grid2">
+    <div class="card">
+      <div class="card-head"><h3>Faturamento diário</h3><span style="font-size:10px;color:var(--muted)" id="chart-period-lbl"></span></div>
+      <div class="card-body"><div class="chart-wrap"><canvas id="chart-fat"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Vendas por canal</h3></div>
+      <div class="card-body">
+        <div class="chart-wrap"><canvas id="chart-canal"></canvas></div>
+        <div id="canal-detalhe" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SKU RANKINGS -->
+  <div class="grid2">
+    <div class="card">
+      <div class="card-head">
+        <h3>Ranking — Faturamento</h3>
+        <span style="font-size:10px;color:var(--muted)" id="rank-fat-lbl"></span>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="tbl" id="tbl-rank-fat">
+          <thead><tr><th>#</th><th>SKU / Produto</th><th>Canal</th><th class="num">Qtd</th><th class="num">Faturamento</th><th class="num">Margem</th></tr></thead>
+          <tbody id="body-rank-fat"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h3>Ranking — Margem real</h3>
+        <span style="font-size:10px;color:var(--muted)">Preço ML − CMV Bling − taxas − frete − impostos</span>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="tbl" id="tbl-rank-mg">
+          <thead><tr><th>#</th><th>SKU / Produto</th><th class="num">CMV</th><th class="num">Preço</th><th class="num">Lucro</th><th class="num">Margem</th></tr></thead>
+          <tbody id="body-rank-mg"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ESTADOS + PEDIDOS RECENTES -->
+  <div class="grid2">
+    <div class="card">
+      <div class="card-head"><h3>Vendas por estado</h3><span style="font-size:10px;color:var(--muted)">DIFAL e ICMS real por destino</span></div>
+      <div class="card-body" id="estados-body">
+        <div class="empty">Carregando...</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Pedidos recentes</h3></div>
+      <div class="card-body" style="padding:0">
+        <table class="tbl">
+          <thead><tr><th>Pedido</th><th>Produto</th><th>UF</th><th class="num">Valor</th><th class="num">Margem</th><th>Status</th></tr></thead>
+          <tbody id="body-pedidos"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPARATIVO MÊS -->
+  <div class="card" id="card-comparativo">
+    <div class="card-head"><h3>Comparativo — Mês atual vs mês anterior</h3></div>
+    <div class="card-body">
+      <div class="grid3" id="comp-grid">
+        <div class="empty" style="grid-column:1/-1">Selecione "Mês atual" ou "Mês anterior" para ver o comparativo</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════
+// CONSTANTES FISCAIS
+// ══════════════════════════════════════════════════════════════════════
+const PIS=.0165, COFINS=.076, ICMS_PR=.195;
+const ICMS_TB={
+  PR:{inter:.12,interno:.195,difal:0},SP:{inter:.12,interno:.18,difal:.06},
+  MG:{inter:.12,interno:.18,difal:.06},RJ:{inter:.12,interno:.20,difal:.08},
+  SC:{inter:.12,interno:.17,difal:.05},RS:{inter:.12,interno:.17,difal:.05},
+  GO:{inter:.07,interno:.19,difal:.12},BA:{inter:.07,interno:.205,difal:.135},
+  PE:{inter:.07,interno:.205,difal:.135},CE:{inter:.07,interno:.20,difal:.13},
+  MT:{inter:.07,interno:.19,difal:.12},MS:{inter:.07,interno:.17,difal:.10},
+  ES:{inter:.07,interno:.17,difal:.10},DF:{inter:.07,interno:.18,difal:.11},
+  PA:{inter:.07,interno:.19,difal:.12},AM:{inter:.07,interno:.20,difal:.13},
+  MA:{inter:.07,interno:.18,difal:.11},PI:{inter:.07,interno:.18,difal:.11},
+  RN:{inter:.07,interno:.18,difal:.11},PB:{inter:.07,interno:.18,difal:.11},
+  AL:{inter:.07,interno:.19,difal:.12},SE:{inter:.07,interno:.19,difal:.12},
+  TO:{inter:.07,interno:.18,difal:.11},AC:{inter:.07,interno:.17,difal:.10},
+  RO:{inter:.07,interno:.175,difal:.105},RR:{inter:.07,interno:.17,difal:.10},
+  AP:{inter:.07,interno:.18,difal:.11},
+};
+
+// Taxa ML por tipo de anúncio
+const ML_TAXA={gold_pro:.16,gold_special:.11,gold_premium:.16,classified:.16};
+function taxaML(listing_type){return ML_TAXA[listing_type]||.11;}
+
+// ══════════════════════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ══════════════════════════════════════════════════════════════════════
+let tokens={bling:'',ml:''};
+let periodo='7d';
+let dados={pedidosML:[],pedidosBling:[],cmvCache:{}};
+let charts={fat:null,canal:null};
+
+// ══════════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════════
+window.onload=()=>{
+  const sv=localStorage.getItem('fava_dash_tk');
+  if(sv){
+    tokens=JSON.parse(sv);
+    document.getElementById('tk-bling').value=tokens.bling||'';
+    document.getElementById('tk-ml').value=tokens.ml||'';
+    if(tokens.bling||tokens.ml){
+      document.getElementById('cfg-modal').style.display='none';
+      carregarTudo();
+    }
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════════════════
+function abrirCfg(){document.getElementById('cfg-modal').style.display='flex';}
+function fecharCfg(){document.getElementById('cfg-modal').style.display='none';}
+function salvarCfg(){
+  tokens.bling=document.getElementById('tk-bling').value.trim();
+  tokens.ml=document.getElementById('tk-ml').value.trim();
+  localStorage.setItem('fava_dash_tk',JSON.stringify(tokens));
+  fecharCfg();
+  carregarTudo();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// PERÍODO
+// ══════════════════════════════════════════════════════════════════════
+function setPeriod(p){
+  periodo=p;
+  document.querySelectorAll('.ptab').forEach(el=>el.classList.remove('a'));
+  event.target.classList.add('a');
+  carregarTudo();
+}
+
+function getDatas(){
+  const hoje=new Date();hoje.setHours(0,0,0,0);
+  const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  switch(periodo){
+    case'today':{const d=new Date(hoje);return{de:fmt(d),ate:fmt(d)};}
+    case'yesterday':{const d=new Date(hoje);d.setDate(d.getDate()-1);return{de:fmt(d),ate:fmt(d)};}
+    case'7d':{const d=new Date(hoje);d.setDate(d.getDate()-6);return{de:fmt(d),ate:fmt(hoje)};}
+    case'30d':{const d=new Date(hoje);d.setDate(d.getDate()-29);return{de:fmt(d),ate:fmt(hoje)};}
+    case'mes':{const d=new Date(hoje.getFullYear(),hoje.getMonth(),1);return{de:fmt(d),ate:fmt(hoje)};}
+    case'mes-ant':{const d=new Date(hoje.getFullYear(),hoje.getMonth()-1,1);const d2=new Date(hoje.getFullYear(),hoje.getMonth(),0);return{de:fmt(d),ate:fmt(d2)};}
+    default:{const d=new Date(hoje);d.setDate(d.getDate()-6);return{de:fmt(d),ate:fmt(hoje)};}
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// CARREGAR TUDO
+// ══════════════════════════════════════════════════════════════════════
+async function carregarTudo(){
+  showLoading('Conectando às APIs...');
+  setDot('bling','wait','Bling...');
+  setDot('ml','wait','ML...');
+  const {de,ate}=getDatas();
+
+  try{
+    const [pedidosML, pedidosBling]=await Promise.all([
+      tokens.ml?fetchPedidosML(de,ate):[],
+      tokens.bling?fetchPedidosBling(de,ate):[],
+    ]);
+
+    dados.pedidosML=pedidosML;
+    dados.pedidosBling=pedidosBling;
+
+    // Busca CMV dos SKUs que ainda não temos em cache
+    if(tokens.bling){
+      const skusML=new Set(pedidosML.flatMap(p=>p.itens.map(i=>i.sku)).filter(Boolean));
+      const skusSemCmv=[...skusML].filter(s=>!dados.cmvCache[s]);
+      if(skusSemCmv.length){
+        showLoading(`Buscando CMV de ${skusSemCmv.length} produtos no Bling...`);
+        await fetchCMVs(skusSemCmv);
+      }
+    }
+
+    renderTudo();
+    document.getElementById('last-update').textContent='Atualizado: '+new Date().toLocaleTimeString('pt-BR');
+  }catch(e){
+    console.error(e);
+    alert('Erro ao carregar: '+e.message);
+  }
+  hideLoading();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// API ML — PEDIDOS
+// ══════════════════════════════════════════════════════════════════════
+async function fetchPedidosML(de,ate){
+  setDot('ml','wait','ML carregando...');
+  try{
+    const pedidos=[];
+    let offset=0,total=999;
+    while(offset<total&&offset<500){
+      const r=await mlGet(`orders/search?seller=537714337&order.date_created.from=${de}T00:00:00.000-03:00&order.date_created.to=${ate}T23:59:59.000-03:00&sort=date_desc&limit=50&offset=${offset}`);
+      if(!r||!r.results)break;
+      total=r.paging?.total||0;
+      if(!r.results.length)break;
+
+      for(const o of r.results){
+        const itens=o.order_items?.map(it=>({
+          mlb:it.item?.id,
+          titulo:it.item?.title||'',
+          sku:it.item?.seller_sku||'',
+          qtd:it.quantity||1,
+          preco:parseFloat(it.unit_price||0),
+          listing_type:it.listing_type_id||'gold_special',
+        }))||[];
+
+        pedidos.push({
+          id:o.id,
+          data:o.date_created?.substring(0,10),
+          status:o.status,
+          total:parseFloat(o.total_amount||0),
+          valor_pago:parseFloat(o.paid_amount||0),
+          uf:o.shipping?.receiver_address?.state?.id||'XX',
+          canal:'ML',
+          frete:parseFloat(o.shipping_cost||0)||0,
+          itens,
+        });
+      }
+      offset+=50;
+      if(offset>=total)break;
+    }
+
+    setDot('ml','ok',`ML ✓ (${pedidos.length} pedidos)`);
+    return pedidos;
+  }catch(e){setDot('ml','err','ML ✗');console.error('ML erro:',e);return[];}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// API BLING — PEDIDOS
+// ══════════════════════════════════════════════════════════════════════
+async function fetchPedidosBling(de,ate){
+  setDot('bling','wait','Bling carregando...');
+  try{
+    const pedidos=[];
+    let pag=1,totalPag=1;
+    while(pag<=totalPag&&pag<=20){
+      const r=await blingGet(`pedidos/vendas?pagina=${pag}&limite=100&dataInicial=${de}&dataFinal=${ate}`);
+      if(!r?.data?.length)break;
+      totalPag=Math.ceil((r.total||r.data.length)/100);
+      pedidos.push(...r.data.map(p=>({
+        id:p.numero||p.id,
+        data:p.data?.substring(0,10),
+        status:p.situacao?.nome||p.situacao||'',
+        total:parseFloat(p.totalProdutos||p.valor||0),
+        canal:p.canal||'Bling',
+        itens:(p.itens||[]).map(it=>({
+          sku:it.codigo||'',titulo:it.descricao||'',
+          qtd:parseInt(it.quantidade||1),preco:parseFloat(it.valorUnitario||0),
+        })),
+      })));
+      pag++;
+    }
+    setDot('bling','ok',`Bling ✓ (${pedidos.length} pedidos)`);
+    return pedidos;
+  }catch(e){setDot('bling','err','Bling ✗');console.error('Bling erro:',e);return[];}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// BUSCAR CMV NO BLING
+// ══════════════════════════════════════════════════════════════════════
+async function fetchCMVs(skus){
+  const lotes=[];
+  for(let i=0;i<skus.length;i+=10)lotes.push(skus.slice(i,i+10));
+  for(const lote of lotes){
+    await Promise.all(lote.map(async sku=>{
+      try{
+        const r=await blingGet(`produtos?criterio=1&tipo=T&codigo=${encodeURIComponent(sku)}&limite=1`);
+        const prod=r?.data?.[0];
+        if(prod){
+          dados.cmvCache[sku]={
+            nome:prod.nome||prod.descricao||sku,
+            cmv:parseFloat(prod.preco||0),
+            custo:parseFloat(prod.precoCusto||prod.preco||0),
+          };
+        }
+      }catch(e){}
+    }));
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// CÁLCULO DE MARGEM REAL
+// ══════════════════════════════════════════════════════════════════════
+function calcMargemReal(preco, sku, uf, listing_type, frete, qtd){
+  const ufData=ICMS_TB[uf]||ICMS_TB['SP'];
+  const taxa=taxaML(listing_type);
+  const cmvInfo=dados.cmvCache[sku];
+  // CMV: se tem no cache usa, senão estima 60% do preço
+  const cmv=cmvInfo?cmvInfo.cmv:preco*.6;
+  // Impostos na saída
+  const icms=preco*ufData.inter;
+  const difal=uf!=='PR'?preco*ufData.difal:0;
+  const pis_r=preco*PIS;
+  const cof_r=preco*COFINS;
+  const taxa_r=preco*taxa;
+  const frete_un=(frete||0)/(qtd||1);
+  const lucro=preco-cmv-icms-difal-pis_r-cof_r-taxa_r-frete_un;
+  const margem=preco>0?lucro/preco:0;
+  return{cmv,icms,difal,pis_r,cof_r,taxa_r,frete_un,lucro,margem,temCMV:!!cmvInfo};
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// RENDER TUDO
+// ══════════════════════════════════════════════════════════════════════
+function renderTudo(){
+  const todos=[...dados.pedidosML,...dados.pedidosBling].filter(p=>p.status!=='cancelled');
+  if(!todos.length){
+    document.getElementById('k-fat').textContent='R$ 0';
+    document.getElementById('k-ped').textContent='0';
+    renderRankingVazio();return;
+  }
+
+  // Agregar itens com margem
+  const itensComMargem=[];
+  dados.pedidosML.filter(p=>p.status!=='cancelled').forEach(p=>{
+    p.itens.forEach(it=>{
+      const m=calcMargemReal(it.preco,it.sku,p.uf,it.listing_type,p.frete,p.itens.length);
+      itensComMargem.push({...it,data:p.data,uf:p.uf,canal:'ML',pedidoId:p.id,...m});
+    });
+  });
+  dados.pedidosBling.filter(p=>p.status!=='cancelled'&&!String(p.status).toLowerCase().includes('cancel')).forEach(p=>{
+    p.itens.forEach(it=>{
+      const m=calcMargemReal(it.preco,it.sku,'PR','gold_special',0,1);
+      itensComMargem.push({...it,data:p.data,uf:'PR',canal:p.canal||'Bling',pedidoId:p.id,...m});
+    });
+  });
+
+  renderKPIs(todos,itensComMargem);
+  renderChartFat(todos);
+  renderChartCanal(todos);
+  renderRankingFat(itensComMargem);
+  renderRankingMg(itensComMargem);
+  renderEstados(itensComMargem);
+  renderPedidosRecentes(dados.pedidosML.filter(p=>p.status!=='cancelled').slice(0,15), itensComMargem);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// KPIs
+// ══════════════════════════════════════════════════════════════════════
+function renderKPIs(todos, itens){
+  const fat=todos.reduce((s,p)=>s+p.total,0);
+  const nPed=todos.length;
+  const ticket=nPed?fat/nPed:0;
+  const lucroTotal=itens.reduce((s,i)=>s+i.lucro*i.qtd,0);
+  const fatTotal=itens.reduce((s,i)=>s+i.preco*i.qtd,0);
+  const mg=fatTotal?lucroTotal/fatTotal:0;
+  const skus=new Set(itens.map(i=>i.sku).filter(Boolean)).size;
+
+  document.getElementById('k-fat').textContent='R$ '+fmt(fat);
+  document.getElementById('k-ped').textContent=nPed;
+  document.getElementById('k-tick').textContent='R$ '+fmt(ticket);
+  document.getElementById('k-mg').textContent=(mg*100).toFixed(1)+'%';
+  document.getElementById('k-mg').style.color=mg>=.20?'var(--verde)':mg>=.10?'var(--amarelo)':'var(--vermelho)';
+  document.getElementById('k-lucro').textContent='R$ '+fmt(lucroTotal);
+  document.getElementById('k-lucro').style.color=lucroTotal>0?'var(--verde)':'var(--vermelho)';
+  document.getElementById('k-sku').textContent=skus;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// CHART FATURAMENTO DIÁRIO
+// ══════════════════════════════════════════════════════════════════════
+function renderChartFat(todos){
+  const por_dia={};
+  todos.forEach(p=>{
+    if(!por_dia[p.data])por_dia[p.data]={ml:0,bling:0};
+    if(p.canal==='ML')por_dia[p.data].ml+=p.total;
+    else por_dia[p.data].bling+=p.total;
+  });
+  const dias=Object.keys(por_dia).sort();
+  const lbls=dias.map(d=>{const [y,m,di]=d.split('-');return`${di}/${m}`;});
+
+  if(charts.fat){charts.fat.destroy();}
+  const ctx=document.getElementById('chart-fat').getContext('2d');
+  charts.fat=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:lbls,
+      datasets:[
+        {label:'ML',data:dias.map(d=>por_dia[d].ml),backgroundColor:'#93c5fd',borderRadius:4},
+        {label:'Bling/Outros',data:dias.map(d=>por_dia[d].bling),backgroundColor:'#6ee7b7',borderRadius:4},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:10}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{grid:{color:'#f3f4f6'},ticks:{font:{size:9},callback:v=>'R$'+fmtK(v)}}}}
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// CHART CANAL
+// ══════════════════════════════════════════════════════════════════════
+function renderChartCanal(todos){
+  const canais={};
+  todos.forEach(p=>{const c=p.canal||'Outros';if(!canais[c])canais[c]=0;canais[c]+=p.total;});
+  const labels=Object.keys(canais),vals=Object.values(canais);
+  const cores=['#3b82f6','#f43f5e','#8b5cf6','#10b981','#f59e0b','#6366f1'];
+
+  if(charts.canal){charts.canal.destroy();}
+  const ctx=document.getElementById('chart-canal').getContext('2d');
+  charts.canal=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels,datasets:[{data:vals,backgroundColor:cores.slice(0,labels.length),borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10}}}}
+  });
+
+  const total=vals.reduce((s,v)=>s+v,0);
+  document.getElementById('canal-detalhe').innerHTML=labels.map((c,i)=>`
+    <div class="bar-row" style="margin-bottom:4px">
+      <span style="font-size:10px;color:var(--muted);width:50px">${c}</span>
+      <div class="bar-bg"><div class="bar-fg" style="width:${total?vals[i]/total*100:0}%;background:${cores[i]}"></div></div>
+      <span style="font-size:10px;font-weight:700;width:70px;text-align:right">R$ ${fmtK(vals[i])}</span>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// RANKING FATURAMENTO
+// ══════════════════════════════════════════════════════════════════════
+function renderRankingFat(itens){
+  const por_sku={};
+  itens.forEach(it=>{
+    const k=it.sku||it.titulo||'—';
+    if(!por_sku[k]){por_sku[k]={sku:it.sku,nome:it.titulo||dados.cmvCache[it.sku]?.nome||it.sku,fat:0,qtd:0,canais:new Set(),margem_soma:0,n:0};}
+    por_sku[k].fat+=it.preco*it.qtd;
+    por_sku[k].qtd+=it.qtd;
+    por_sku[k].canais.add(it.canal);
+    por_sku[k].margem_soma+=it.margem;
+    por_sku[k].n++;
+  });
+  const rank=Object.values(por_sku).sort((a,b)=>b.fat-a.fat).slice(0,20);
+  const maxFat=rank[0]?.fat||1;
+  document.getElementById('body-rank-fat').innerHTML=rank.map((r,i)=>{
+    const mg=r.n?r.margem_soma/r.n:0;
+    const mc=mg>=.20?'pill-g':mg>=.10?'pill-y':'pill-r';
+    return`<tr>
+      <td><strong>${i+1}</strong></td>
+      <td><div style="font-weight:700;font-size:11px">${r.sku||'—'}</div><div style="font-size:10px;color:var(--muted);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.nome}</div></td>
+      <td>${[...r.canais].map(c=>`<span class="pill pill-b" style="font-size:9px;margin:1px">${c}</span>`).join('')}</td>
+      <td class="num">${r.qtd}</td>
+      <td><div class="bar-row"><div class="bar-bg"><div class="bar-fg" style="width:${r.fat/maxFat*100}%;background:var(--azul2)"></div></div><span style="font-size:10px;font-weight:700;min-width:55px;text-align:right">R$ ${fmtK(r.fat)}</span></div></td>
+      <td class="num"><span class="pill ${mc}">${(mg*100).toFixed(0)}%</span></td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="6" class="empty">Sem dados</td></tr>';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// RANKING MARGEM
+// ══════════════════════════════════════════════════════════════════════
+function renderRankingMg(itens){
+  const por_sku={};
+  itens.forEach(it=>{
+    const k=it.sku||it.titulo||'—';
+    if(!por_sku[k]){por_sku[k]={sku:it.sku,nome:it.titulo||dados.cmvCache[it.sku]?.nome||it.sku,lucro:0,fat:0,cmv_sum:0,preco_sum:0,n:0,qtd:0,temCMV:it.temCMV};}
+    por_sku[k].lucro+=it.lucro*it.qtd;
+    por_sku[k].fat+=it.preco*it.qtd;
+    por_sku[k].cmv_sum+=it.cmv;
+    por_sku[k].preco_sum+=it.preco;
+    por_sku[k].n++;por_sku[k].qtd+=it.qtd;
+  });
+  const rank=Object.values(por_sku).filter(r=>r.n>0).map(r=>({...r,mg:r.fat?r.lucro/r.fat:0,cmv_med:r.n?r.cmv_sum/r.n:0,preco_med:r.n?r.preco_sum/r.n:0})).sort((a,b)=>b.mg-a.mg).slice(0,20);
+
+  document.getElementById('body-rank-mg').innerHTML=rank.map((r,i)=>{
+    const mc=r.mg>=.20?'pill-g':r.mg>=.10?'pill-y':'pill-r';
+    return`<tr>
+      <td><strong>${i+1}</strong></td>
+      <td><div style="font-weight:700;font-size:11px">${r.sku||'—'}</div><div style="font-size:10px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.nome}${!r.temCMV?'<span title="CMV estimado" style="color:var(--amarelo)"> ≈</span>':''}</div></td>
+      <td class="num">R$ ${fmt(r.cmv_med)}</td>
+      <td class="num">R$ ${fmt(r.preco_med)}</td>
+      <td class="num" style="color:${r.lucro>0?'var(--verde)':'var(--vermelho)'}">R$ ${fmt(r.lucro)}</td>
+      <td class="num"><span class="pill ${mc}">${(r.mg*100).toFixed(1)}%</span></td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="6" class="empty">Sem dados</td></tr>';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ESTADOS
+// ══════════════════════════════════════════════════════════════════════
+function renderEstados(itens){
+  const por_uf={};
+  itens.forEach(it=>{
+    const uf=it.uf||'XX';
+    if(!por_uf[uf]){por_uf[uf]={fat:0,qtd:0,lucro:0,difal:0};}
+    const fat=it.preco*it.qtd;
+    por_uf[uf].fat+=fat;
+    por_uf[uf].qtd+=it.qtd;
+    por_uf[uf].lucro+=it.lucro*it.qtd;
+    por_uf[uf].difal+=it.difal*it.qtd;
+  });
+  const rank=Object.entries(por_uf).sort((a,b)=>b[1].fat-a[1].fat).slice(0,15);
+  const maxFat=rank[0]?.[1].fat||1;
+  const ufData=ICMS_TB;
+
+  const body=document.getElementById('estados-body');
+  body.innerHTML=rank.map(([uf,d])=>{
+    const ic=ufData[uf];
+    const mg=d.fat?d.lucro/d.fat:0;
+    const mc=mg>=.20?'#16a34a':mg>=.10?'#d97706':'#dc2626';
+    return`<div class="state-row">
+      <span class="state-name">${uf}</span>
+      <div class="state-bar"><div class="state-fill" style="width:${d.fat/maxFat*100}%"></div></div>
+      <div class="state-val">
+        <span style="font-weight:700">R$ ${fmtK(d.fat)}</span>
+        <span style="font-size:9px;color:var(--muted);margin-left:4px">${d.qtd}un</span>
+        ${ic?.difal>0?`<span style="font-size:9px;color:var(--amarelo);margin-left:4px">DIFAL ${(ic.difal*100).toFixed(0)}%</span>`:''}
+        <span style="font-size:9px;font-weight:700;margin-left:4px;color:${mc}">(${(mg*100).toFixed(0)}%)</span>
+      </div>
+    </div>`;
+  }).join('')||'<div class="empty">Sem dados de estado</div>';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// PEDIDOS RECENTES
+// ══════════════════════════════════════════════════════════════════════
+function renderPedidosRecentes(pedidos, itensComMargem){
+  const mgPorPedido={};
+  itensComMargem.forEach(it=>{
+    if(!mgPorPedido[it.pedidoId]){mgPorPedido[it.pedidoId]={soma:0,n:0};}
+    mgPorPedido[it.pedidoId].soma+=it.margem;
+    mgPorPedido[it.pedidoId].n++;
+  });
+
+  const rows=pedidos.slice(0,20).map(p=>{
+    const titulo=p.itens?.[0]?.titulo||'—';
+    const qtd=p.itens?.length||0;
+    const mg=mgPorPedido[p.id];
+    const mgMedia=mg&&mg.n?mg.soma/mg.n:null;
+    const mc=mgMedia!==null?(mgMedia>=.20?'pill-g':mgMedia>=.10?'pill-y':'pill-r'):'';
+    const st=p.status;
+    const stCor=st==='paid'||st==='shipped'||st==='delivered'?'pill-g':st==='cancelled'?'pill-r':'pill-y';
+    return`<tr>
+      <td style="font-size:10px;color:var(--muted)">${p.id?.toString().slice(-6)||'—'}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">${titulo}${qtd>1?` +${qtd-1}`:''}</td>
+      <td><span class="pill pill-b" style="font-size:9px">${p.uf||'—'}</span></td>
+      <td class="num">R$ ${fmt(p.total)}</td>
+      <td class="num">${mgMedia!==null?`<span class="pill ${mc}">${(mgMedia*100).toFixed(0)}%</span>`:'—'}</td>
+      <td><span class="pill ${stCor}" style="font-size:9px">${st}</span></td>
+    </tr>`;
+  });
+  document.getElementById('body-pedidos').innerHTML=rows.join('')||'<tr><td colspan="6" class="empty">Sem pedidos</td></tr>';
+}
+
+function renderRankingVazio(){
+  ['body-rank-fat','body-rank-mg','body-pedidos'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.innerHTML='<tr><td colspan="6" class="empty">Sem dados no período</td></tr>';
+  });
+  document.getElementById('estados-body').innerHTML='<div class="empty">Sem dados</div>';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// API HELPERS
+// ══════════════════════════════════════════════════════════════════════
+async function blingGet(path){
+  const r=await fetch(`/api/bling/${path}`,{headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});
+  if(!r.ok)throw new Error(`Bling ${r.status} ${path}`);
+  return r.json();
+}
+async function mlGet(path){
+  const r=await fetch(`/api/ml/${path}`,{headers:{'Authorization':`Bearer ${tokens.ml}`}});
+  if(!r.ok)throw new Error(`ML ${r.status} ${path}`);
+  return r.json();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════════════════════════════════
+function showLoading(msg){document.getElementById('loading').style.display='flex';document.getElementById('loading-msg').textContent=msg||'Carregando...';}
+function hideLoading(){document.getElementById('loading').style.display='none';}
+function setDot(a,s,l){document.getElementById(`dot-${a}`).className=`dot ${s}`;document.getElementById(`lbl-${a}`).textContent=l;}
+function recarregar(){dados.cmvCache={};carregarTudo();}
+function fmt(v){return(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtK(v){return v>=1000?`${(v/1000).toFixed(1)}k`:fmt(v);}
+</script>
+</body>
+</html>
