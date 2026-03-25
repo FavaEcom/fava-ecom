@@ -1289,8 +1289,7 @@ function calcKpisMP(){
 
 function exportarConciliacao(){
   if(!concDados.length){alert('Nada para exportar');return;}
-  let csv='Pedido ML;Data;Bruto ML;Taxa Est;Frete;Liq Estimado;Liq Real MP;Diferença;Status
-';
+  let csv='Pedido ML;Data;Bruto ML;Taxa Est;Frete;Liq Estimado;Liq Real MP;Diferenca;Status\n';
   concDados.forEach(c=>{
     csv+=`${c.pedido};${c.data};${c.bruto.toFixed(2)};${c.taxa_est.toFixed(2)};${c.frete_est.toFixed(2)};${c.liq_est.toFixed(2)};${c.liq_real!==null?c.liq_real.toFixed(2):'pendente'};${c.dif!==null?c.dif.toFixed(2):'—'};${c.status_mp}
 `;
