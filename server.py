@@ -13,6 +13,7 @@ PORTA = int(os.environ.get('PORT', 8080))
 PROXY = {
     '/api/bling/': 'https://www.bling.com.br/Api/v3/',
     '/api/ml/':    'https://api.mercadolibre.com/',
+    '/api/mp/':    'https://api.mercadopago.com/',
 }
 
 class Handler(http.server.SimpleHTTPRequestHandler):

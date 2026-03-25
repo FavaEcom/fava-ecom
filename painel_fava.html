@@ -98,6 +98,18 @@ header h1{font-size:15px;font-weight:700;flex:1}
 /* EMPTY */
 .empty{text-align:center;padding:30px;color:var(--muted);font-size:12px}
 
+/* CONCILIAÇÃO MP */
+.mp-saldo-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:9px;margin-bottom:12px}
+.mp-saldo{background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 13px}
+.mp-saldo .sl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.mp-saldo .sv{font-size:20px;font-weight:700}
+.conc-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.conc-filters input[type=date]{border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:12px;outline:none}
+.conc-filters input[type=date]:focus{border-color:var(--azul2)}
+.diff-ok{color:#16a34a;font-weight:700}
+.diff-warn{color:#d97706;font-weight:700}
+.diff-err{color:#dc2626;font-weight:700}
+
 /* FINANCEIRO */
 .fin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:9px;margin-bottom:12px}
 .fin-kpi{background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 13px}
@@ -211,6 +223,7 @@ header h1{font-size:15px;font-weight:700;flex:1}
   <div class="vtab a" onclick="setView('dashboard')" id="vtab-dash">📊 Dashboard</div>
   <div class="vtab" onclick="setView('anuncios')" id="vtab-anunc">🏷️ Anúncios ML</div>
   <div class="vtab" onclick="setView('financeiro')" id="vtab-fin">💰 Financeiro</div>
+  <div class="vtab" onclick="setView('conciliacao')" id="vtab-conc">🏦 Conciliação MP</div>
 </div>
 
 <!-- PERIOD BAR -->
@@ -357,6 +370,88 @@ header h1{font-size:15px;font-weight:700;flex:1}
           <tbody id="tbody-lanc"></tbody>
         </table>
       </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- CONCILIAÇÃO MP VIEW -->
+<div id="view-conciliacao" style="display:none;padding:14px 18px;flex-direction:column;gap:12px">
+
+  <!-- Config token MP -->
+  <div class="fcard">
+    <div class="fcard-body" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:12px;font-weight:700;color:var(--azul)">🏦 Mercado Pago — Conciliação Financeira</div>
+        <div style="font-size:11px;color:var(--muted)">Saldo real, extrato e conciliação pedido a pedido</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="password" id="tk-mp" placeholder="Access Token MP (APP_USR-...)"
+          style="width:260px;border:1px solid var(--borda);border-radius:5px;padding:6px 10px;font-size:11px;outline:none">
+        <button class="btn-fin" onclick="salvarTkMP()">Salvar e carregar</button>
+      </div>
+      <div class="dot wait" id="dot-mp" style="width:8px;height:8px;border-radius:50%;flex-shrink:0"></div>
+      <span id="lbl-mp" style="font-size:11px;color:var(--muted)">MP: não conectado</span>
+    </div>
+  </div>
+
+  <!-- KPIs saldo MP -->
+  <div class="mp-saldo-row">
+    <div class="mp-saldo"><div class="sl">Saldo Disponível</div><div class="sv" id="mp-disp" style="color:#16a34a">—</div><div style="font-size:10px;color:var(--muted)">Pode sacar agora</div></div>
+    <div class="mp-saldo"><div class="sl">Saldo Pendente</div><div class="sv" id="mp-pend" style="color:#d97706">—</div><div style="font-size:10px;color:var(--muted)">Aguardando liberação</div></div>
+    <div class="mp-saldo"><div class="sl">Total na Conta</div><div class="sv" id="mp-total" style="color:var(--azul)">—</div><div style="font-size:10px;color:var(--muted)">Disponível + Pendente</div></div>
+    <div class="mp-saldo"><div class="sl">Entrou Hoje</div><div class="sv" id="mp-hoje" style="color:#16a34a">—</div><div style="font-size:10px;color:var(--muted)">Depósitos do dia</div></div>
+    <div class="mp-saldo"><div class="sl">Estornos (30d)</div><div class="sv" id="mp-estorno" style="color:#dc2626">—</div><div style="font-size:10px;color:var(--muted)">Devoluções</div></div>
+    <div class="mp-saldo"><div class="sl">Diferença</div><div class="sv" id="mp-diff">—</div><div style="font-size:10px;color:var(--muted)">Previsto − Realizado</div></div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="fcard">
+    <div class="fcard-body" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:11px;font-weight:700">Período:</label>
+      <input type="date" id="conc-de">
+      <span style="font-size:11px">até</span>
+      <input type="date" id="conc-ate">
+      <button class="btn-fin" onclick="carregarConciliacao()">🔍 Carregar</button>
+      <button class="btn-fin" style="background:#16a34a" onclick="exportarConciliacao()">⬇ Exportar CSV</button>
+      <span id="conc-status" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+  </div>
+
+  <!-- Tabelas lado a lado -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+
+    <!-- Movimentações MP -->
+    <div class="fcard">
+      <div class="fcard-head"><h3>💳 Movimentações Mercado Pago</h3><span id="mp-mov-lbl" style="font-size:10px;color:var(--muted)"></span></div>
+      <div class="fcard-body" style="padding:0;max-height:400px;overflow-y:auto">
+        <table class="ftbl">
+          <thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th class="num">Bruto</th><th class="num">Taxa</th><th class="num">Líquido</th></tr></thead>
+          <tbody id="tbody-mp-mov"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">Carregue as movimentações</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Conciliação por pedido -->
+    <div class="fcard">
+      <div class="fcard-head"><h3>🔁 Conciliação por Pedido ML × MP</h3><span id="conc-lbl" style="font-size:10px;color:var(--muted)"></span></div>
+      <div class="fcard-body" style="padding:0;max-height:400px;overflow-y:auto">
+        <table class="ftbl">
+          <thead><tr><th>Pedido ML</th><th>Data</th><th class="num">Bruto ML</th><th class="num">Tx ML</th><th class="num">Frete</th><th class="num">Líq. MP</th><th class="num">Dif.</th></tr></thead>
+          <tbody id="tbody-conc"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">Carregue as movimentações</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pendentes de liberação -->
+  <div class="fcard">
+    <div class="fcard-head"><h3>⏳ Pendentes de Liberação</h3><span id="pend-lbl" style="font-size:10px;color:var(--muted)"></span></div>
+    <div class="fcard-body" style="padding:0">
+      <table class="ftbl">
+        <thead><tr><th>Data venda</th><th>Previsão liberação</th><th>Pedido</th><th class="num">Valor bruto</th><th class="num">Valor líquido est.</th><th>Status</th></tr></thead>
+        <tbody id="tbody-pend"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">Carregue as movimentações</td></tr></tbody>
+      </table>
     </div>
   </div>
 
@@ -975,6 +1070,236 @@ function fmt(v){return(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,max
 function fmtK(v){return v>=1000?`${(v/1000).toFixed(1)}k`:fmt(v);}
 
 // ══════════════════════════════════════════════════════════════════════
+// MERCADO PAGO — CONCILIAÇÃO
+// ══════════════════════════════════════════════════════════════════════
+let tkMP = localStorage.getItem('fava_tk_mp') || '';
+let mpMovs = [];
+let concDados = [];
+
+// Init ao carregar página
+window.addEventListener('load', ()=>{
+  if(tkMP) document.getElementById('tk-mp').value = tkMP;
+});
+
+function salvarTkMP(){
+  tkMP = document.getElementById('tk-mp').value.trim();
+  localStorage.setItem('fava_tk_mp', tkMP);
+  carregarSaldoMP();
+}
+
+function initConciliacao(){
+  if(tkMP){
+    carregarSaldoMP();
+    // Preenche datas padrão: últimos 30 dias
+    const hoje = new Date().toISOString().substring(0,10);
+    const d30 = new Date(); d30.setDate(d30.getDate()-30);
+    document.getElementById('conc-de').value = d30.toISOString().substring(0,10);
+    document.getElementById('conc-ate').value = hoje;
+  }
+}
+
+async function mpGet(path){
+  const r = await fetch(`/api/mp/${path}`, {
+    headers:{'Authorization':`Bearer ${tkMP}`,'Content-Type':'application/json'}
+  });
+  if(!r.ok) throw new Error(`MP ${r.status}`);
+  return r.json();
+}
+
+// Adiciona rota MP ao proxy server
+// O proxy já tem /api/ml/ — precisamos /api/mp/ → api.mercadopago.com
+
+async function carregarSaldoMP(){
+  const dot = document.getElementById('dot-mp');
+  const lbl = document.getElementById('lbl-mp');
+  dot.style.background = '#fbbf24';
+  lbl.textContent = 'MP conectando...';
+  try{
+    // Usa /api/ml/ como proxy pois ambos são mercadolibre/mercadopago
+    const r = await fetch(`/api/mp/v1/account/balance`, {
+      headers:{'Authorization':`Bearer ${tkMP}`}
+    });
+    if(!r.ok) throw new Error(`${r.status}`);
+    const d = await r.json();
+    dot.style.background = '#4ade80';
+    lbl.textContent = 'MP ✓';
+    document.getElementById('mp-disp').textContent = 'R$ ' + fmt(d.available_balance||0);
+    document.getElementById('mp-pend').textContent = 'R$ ' + fmt(d.pending_payout_balance||0);
+    document.getElementById('mp-total').textContent = 'R$ ' + fmt((d.available_balance||0)+(d.pending_payout_balance||0));
+  }catch(e){
+    dot.style.background = '#f87171';
+    lbl.textContent = `MP ✗ (${e.message})`;
+  }
+}
+
+async function carregarConciliacao(){
+  if(!tkMP){ alert('Configure o token do Mercado Pago'); return; }
+  const de = document.getElementById('conc-de').value;
+  const ate = document.getElementById('conc-ate').value;
+  if(!de||!ate){ alert('Informe o período'); return; }
+
+  document.getElementById('conc-status').textContent = '⟳ Carregando...';
+
+  try{
+    // Busca movimentações do MP (releases/liquidations)
+    const r = await fetch(
+      `/api/mp/v1/account/release/search?begin_date=${de}T00:00:00.000-03:00&end_date=${ate}T23:59:59.000-03:00&limit=100`,
+      {headers:{'Authorization':`Bearer ${tkMP}`}}
+    );
+    if(!r.ok) throw new Error(`${r.status}`);
+    const d = await r.json();
+    mpMovs = d.results || [];
+
+    renderMovimentacoes();
+    cruzarPedidos();
+    calcKpisMP();
+    document.getElementById('conc-status').textContent = `✅ ${mpMovs.length} movimentações`;
+  }catch(e){
+    document.getElementById('conc-status').textContent = `❌ Erro: ${e.message}`;
+  }
+}
+
+function renderMovimentacoes(){
+  const rows = mpMovs.map(m=>{
+    const dt = m.date_created?.substring(0,10)||'—';
+    const [y,mo,d] = dt.split('-');
+    const tipo = m.type==='payment'?'Pagamento':
+                 m.type==='refund'?'Estorno':
+                 m.type==='payout'?'Saque':
+                 m.type==='fee'?'Taxa': m.type||'—';
+    const bruto = m.transaction_amount||0;
+    const taxa  = m.fee_details?.reduce((s,f)=>s+(f.amount||0),0)||0;
+    const liq   = m.net_received_amount||m.transaction_amount||0;
+    const corTipo = m.type==='refund'?'#dc2626':m.type==='payment'?'#16a34a':'#6b7280';
+    return`<tr>
+      <td>${d}/${mo}</td>
+      <td style="color:${corTipo};font-weight:700;font-size:10px">${tipo}</td>
+      <td style="font-size:10px;color:var(--muted)">${String(m.external_reference||m.id||'').substring(0,15)}</td>
+      <td class="num">R$ ${fmt(bruto)}</td>
+      <td class="num" style="color:#dc2626">-R$ ${fmt(Math.abs(taxa))}</td>
+      <td class="num" style="color:#16a34a;font-weight:700">R$ ${fmt(liq)}</td>
+    </tr>`;
+  });
+  document.getElementById('tbody-mp-mov').innerHTML = rows.join('')||
+    '<tr><td colspan="6" style="text-align:center;padding:15px;color:var(--muted)">Sem movimentações</td></tr>';
+  document.getElementById('mp-mov-lbl').textContent = `${mpMovs.length} registros`;
+}
+
+function cruzarPedidos(){
+  // Mapeia payment_id → movimentação MP
+  const mpPorRef = {};
+  mpMovs.forEach(m=>{
+    const ref = String(m.external_reference||'');
+    if(ref) mpPorRef[ref] = m;
+    // Também mapeia por order_id se disponível
+    if(m.order?.id) mpPorRef[String(m.order.id)] = m;
+  });
+
+  // Cruza com pedidos ML
+  concDados = [];
+  dados.pedidosML.filter(p=>p.status!=='cancelled').forEach(p=>{
+    const mp = mpPorRef[String(p.id)] || null;
+    const bruto = p.total;
+    const taxa_est = bruto * 0.12; // estimativa
+    const frete_est = p.frete || 0;
+    const liq_est = bruto - taxa_est - frete_est;
+    const liq_real = mp ? (mp.net_received_amount||mp.transaction_amount||0) : null;
+    const dif = liq_real !== null ? liq_real - liq_est : null;
+
+    concDados.push({
+      pedido: p.id, data: p.data, bruto,
+      taxa_est, frete_est, liq_est, liq_real, dif,
+      status_mp: mp?.status||'pendente'
+    });
+  });
+
+  renderConciliacao();
+  renderPendentes();
+}
+
+function renderConciliacao(){
+  const rows = concDados.slice(0,50).map(c=>{
+    const [y,m,d] = c.data.split('-');
+    const difEl = c.dif===null ? '<span style="color:var(--muted)">—</span>' :
+      Math.abs(c.dif)<0.50 ? `<span class="diff-ok">R$ ${fmt(c.dif)}</span>` :
+      Math.abs(c.dif)<5 ? `<span class="diff-warn">R$ ${fmt(c.dif)}</span>` :
+      `<span class="diff-err">R$ ${fmt(c.dif)}</span>`;
+    const liqReal = c.liq_real!==null ? `<strong>R$ ${fmt(c.liq_real)}</strong>` : '<span style="color:var(--muted)">Pendente</span>';
+    return`<tr>
+      <td style="font-size:10px">${String(c.pedido).slice(-8)}</td>
+      <td>${d}/${m}</td>
+      <td class="num">R$ ${fmt(c.bruto)}</td>
+      <td class="num" style="color:#dc2626">-R$ ${fmt(c.taxa_est)}</td>
+      <td class="num" style="color:#6b7280">R$ ${fmt(c.frete_est)}</td>
+      <td class="num">${liqReal}</td>
+      <td class="num">${difEl}</td>
+    </tr>`;
+  });
+  document.getElementById('tbody-conc').innerHTML = rows.join('')||
+    '<tr><td colspan="7" style="text-align:center;padding:15px;color:var(--muted)">Sem dados</td></tr>';
+  document.getElementById('conc-lbl').textContent = `${concDados.length} pedidos`;
+}
+
+function renderPendentes(){
+  const pendentes = concDados.filter(c=>c.liq_real===null);
+  const prazo = 15;
+  const rows = pendentes.map(c=>{
+    const dt = new Date(c.data+'T12:00:00');
+    const lib = new Date(dt); lib.setDate(lib.getDate()+prazo);
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const diff = Math.round((lib-hoje)/(1000*60*60*24));
+    const lib_fmt = `${String(lib.getDate()).padStart(2,'0')}/${String(lib.getMonth()+1).padStart(2,'0')}`;
+    const [y,m,d] = c.data.split('-');
+    const tag = diff<0?`<span class="tag-atraso">Atrasado</span>`:
+                diff===0?`<span class="tag-pagar">Hoje</span>`:
+                `<span class="tag-prev">Em ${diff}d</span>`;
+    return`<tr>
+      <td>${d}/${m}/${y}</td>
+      <td>${lib_fmt}</td>
+      <td style="font-size:10px">${String(c.pedido).slice(-8)}</td>
+      <td class="num">R$ ${fmt(c.bruto)}</td>
+      <td class="num">R$ ${fmt(c.liq_est)}</td>
+      <td>${tag}</td>
+    </tr>`;
+  });
+  document.getElementById('tbody-pend').innerHTML = rows.join('')||
+    '<tr><td colspan="6" style="text-align:center;padding:15px;color:var(--muted)">Nenhum pendente — todos conciliados!</td></tr>';
+  document.getElementById('pend-lbl').textContent = `${pendentes.length} pendentes`;
+}
+
+function calcKpisMP(){
+  const hoje = new Date().toDateString();
+  let entrou_hoje=0, estornos=0;
+  mpMovs.forEach(m=>{
+    const dt = new Date(m.date_created||'').toDateString();
+    if(m.type==='payment'&&dt===hoje) entrou_hoje += m.net_received_amount||0;
+    if(m.type==='refund') estornos += Math.abs(m.transaction_amount||0);
+  });
+
+  const totalPrev = concDados.reduce((s,c)=>s+c.liq_est,0);
+  const totalReal = concDados.filter(c=>c.liq_real!==null).reduce((s,c)=>s+c.liq_real,0);
+  const dif = totalReal - totalPrev;
+
+  document.getElementById('mp-hoje').textContent = 'R$ '+fmt(entrou_hoje);
+  document.getElementById('mp-estorno').textContent = 'R$ '+fmt(estornos);
+  const difEl = document.getElementById('mp-diff');
+  difEl.textContent = 'R$ '+fmt(Math.abs(dif));
+  difEl.style.color = Math.abs(dif)<10?'#16a34a':dif<0?'#dc2626':'#d97706';
+}
+
+function exportarConciliacao(){
+  if(!concDados.length){alert('Nada para exportar');return;}
+  let csv='Pedido ML;Data;Bruto ML;Taxa Est;Frete;Liq Estimado;Liq Real MP;Diferença;Status
+';
+  concDados.forEach(c=>{
+    csv+=`${c.pedido};${c.data};${c.bruto.toFixed(2)};${c.taxa_est.toFixed(2)};${c.frete_est.toFixed(2)};${c.liq_est.toFixed(2)};${c.liq_real!==null?c.liq_real.toFixed(2):'pendente'};${c.dif!==null?c.dif.toFixed(2):'—'};${c.status_mp}
+`;
+  });
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='conciliacao_mp.csv';a.click();
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // VIEW SWITCHING
 // ══════════════════════════════════════════════════════════════════════
 let currentView = 'dashboard';
@@ -984,12 +1309,15 @@ function setView(v){
   document.getElementById('view-dashboard').style.display = v==='dashboard'?'flex':'none';
   document.getElementById('view-anuncios').style.display = v==='anuncios'?'flex':'none';
   document.getElementById('view-financeiro').style.display = v==='financeiro'?'flex':'none';
+  document.getElementById('view-conciliacao').style.display = v==='conciliacao'?'flex':'none';
   document.getElementById('period-bar').style.display = v==='dashboard'?'flex':'none';
   document.getElementById('vtab-dash').classList.toggle('a', v==='dashboard');
   document.getElementById('vtab-anunc').classList.toggle('a', v==='anuncios');
   document.getElementById('vtab-fin').classList.toggle('a', v==='financeiro');
+  document.getElementById('vtab-conc').classList.toggle('a', v==='conciliacao');
   if(v==='anuncios' && anunciosData.length===0) carregarAnuncios();
   if(v==='financeiro') initFinanceiro();
+  if(v==='conciliacao') initConciliacao();
 }
 
 // ══════════════════════════════════════════════════════════════════════
