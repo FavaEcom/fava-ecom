@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel Fava Ecom</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--azul:#1F3864;--azul2:#2E75B6;--verde:#16a34a;--vermelho:#dc2626;--amarelo:#d97706;--cinza:#f0f2f5;--borda:#e5e7eb;--texto:#1a1a1a;--muted:#6b7280}
@@ -97,6 +98,38 @@ header h1{font-size:15px;font-weight:700;flex:1}
 /* EMPTY */
 .empty{text-align:center;padding:30px;color:var(--muted);font-size:12px}
 
+/* FINANCEIRO */
+.fin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:9px;margin-bottom:12px}
+.fin-kpi{background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 13px}
+.fin-kpi .fk-l{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.fin-kpi .fk-v{font-size:20px;font-weight:700}
+.fin-kpi .fk-d{font-size:10px;color:var(--muted);margin-top:2px}
+.fin-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.fin-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+.fcard{background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden}
+.fcard-head{padding:9px 13px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between}
+.fcard-head h3{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.fcard-body{padding:11px 13px}
+.ftbl{width:100%;border-collapse:collapse;font-size:11px}
+.ftbl th{padding:5px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--borda);background:#f8fafc;white-space:nowrap}
+.ftbl td{padding:5px 8px;border-bottom:1px solid #f9fafb;vertical-align:middle}
+.ftbl tr:last-child td{border-bottom:none}
+.ftbl tr:hover td{background:#fafbfc}
+.ftbl .num{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.venc-hoje{background:#fff7ed}
+.venc-atras{background:#fff1f2}
+.tag-pago{background:#dcfce7;color:#166534;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700}
+.tag-pagar{background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700}
+.tag-atraso{background:#fee2e2;color:#991b1b;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700}
+.tag-prev{background:#dbeafe;color:#1e40af;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700}
+.fin-form{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;align-items:end;margin-bottom:8px}
+.fin-form input,.fin-form select{border:1px solid var(--borda);border-radius:5px;padding:5px 8px;font-size:11px;outline:none}
+.fin-form input:focus,.fin-form select:focus{border-color:var(--azul2)}
+.btn-fin{padding:5px 12px;border-radius:5px;border:none;background:var(--azul);color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+.chart-fin{position:relative;height:180px}
+.upload-xlsx{border:2px dashed var(--borda);border-radius:7px;padding:12px;text-align:center;font-size:12px;color:var(--muted);cursor:pointer;transition:.15s}
+.upload-xlsx:hover{border-color:var(--azul2);background:#f0f7ff}
+
 /* VIEW TABS */
 .view-tabs{display:flex;background:#fff;border-bottom:2px solid var(--borda);padding:0 18px}
 .vtab{padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s;white-space:nowrap}
@@ -177,6 +210,7 @@ header h1{font-size:15px;font-weight:700;flex:1}
 <div class="view-tabs">
   <div class="vtab a" onclick="setView('dashboard')" id="vtab-dash">📊 Dashboard</div>
   <div class="vtab" onclick="setView('anuncios')" id="vtab-anunc">🏷️ Anúncios ML</div>
+  <div class="vtab" onclick="setView('financeiro')" id="vtab-fin">💰 Financeiro</div>
 </div>
 
 <!-- PERIOD BAR -->
@@ -236,6 +270,96 @@ header h1{font-size:15px;font-weight:700;flex:1}
       </tbody>
     </table>
   </div>
+</div>
+
+<!-- FINANCEIRO VIEW -->
+<div id="view-financeiro" style="display:none;padding:14px 18px;flex-direction:column;gap:0">
+
+  <!-- KPIs Financeiros -->
+  <div class="fin-grid" id="fin-kpis">
+    <div class="fin-kpi"><div class="fk-l">A Receber (30d)</div><div class="fk-v" id="fk-receber" style="color:#166534">—</div><div class="fk-d">Vendas ML + Shopee</div></div>
+    <div class="fin-kpi"><div class="fk-l">A Pagar (30d)</div><div class="fk-v" id="fk-pagar" style="color:#dc2626">—</div><div class="fk-d">Fornecedores</div></div>
+    <div class="fin-kpi"><div class="fk-l">Vence Hoje</div><div class="fk-v" id="fk-hoje" style="color:#d97706">—</div><div class="fk-d">Boletos do dia</div></div>
+    <div class="fin-kpi"><div class="fk-l">Vence Semana</div><div class="fk-v" id="fk-semana" style="color:#d97706">—</div><div class="fk-d">Próximos 7 dias</div></div>
+    <div class="fin-kpi"><div class="fk-l">Saldo Previsto</div><div class="fk-v" id="fk-saldo">—</div><div class="fk-d">Receber − Pagar</div></div>
+    <div class="fin-kpi"><div class="fk-l">Repasse ML (méd)</div><div class="fk-v" id="fk-repasse" style="color:#1d4ed8">—</div><div class="fk-d">Últimos 30 dias</div></div>
+  </div>
+
+  <!-- Gráfico fluxo + Config -->
+  <div class="fin-2col" style="margin-bottom:12px">
+    <div class="fcard" style="grid-column:1/-1">
+      <div class="fcard-head">
+        <h3>Fluxo de caixa — próximos 30 dias</h3>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:10px;color:var(--muted)">Prazo repasse ML:</span>
+          <input type="number" id="prazo-repasse" value="15" min="1" max="60" style="width:45px;border:1px solid var(--borda);border-radius:4px;padding:3px 5px;font-size:11px" oninput="recalcFluxo()">
+          <span style="font-size:10px;color:var(--muted)">dias</span>
+          <input type="file" id="xlsx-boletos" accept=".xlsx,.xlsm" style="display:none" onchange="carregarBoletos(this)">
+          <button class="btn-fin" onclick="document.getElementById('xlsx-boletos').click()">📂 Importar boletos</button>
+        </div>
+      </div>
+      <div class="fcard-body"><div class="chart-fin"><canvas id="chart-fluxo"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="fin-2col">
+    <!-- Contas a receber -->
+    <div class="fcard">
+      <div class="fcard-head"><h3>💰 A Receber — Previsão ML</h3><span style="font-size:10px;color:var(--muted)" id="receber-lbl"></span></div>
+      <div class="fcard-body" style="padding:0">
+        <table class="ftbl">
+          <thead><tr><th>Data venda</th><th>Previsão repasse</th><th class="num">Valor</th><th>Status</th></tr></thead>
+          <tbody id="tbody-receber"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Carregue o painel principal primeiro</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Contas a pagar -->
+    <div class="fcard">
+      <div class="fcard-head"><h3>📋 A Pagar — Boletos Fornecedores</h3><span style="font-size:10px;color:var(--muted)" id="pagar-lbl"></span></div>
+      <div class="fcard-body" style="padding:0">
+        <table class="ftbl">
+          <thead><tr><th>Fornecedor</th><th>NF</th><th>Vencimento</th><th class="num">Valor</th><th>Status</th></tr></thead>
+          <tbody id="tbody-pagar"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">Importe a planilha de boletos</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="fin-2col">
+    <!-- Gastos por fornecedor -->
+    <div class="fcard">
+      <div class="fcard-head"><h3>🏭 Compras por Fornecedor (mês)</h3></div>
+      <div class="fcard-body" style="padding:0">
+        <table class="ftbl">
+          <thead><tr><th>Fornecedor</th><th class="num">NFs</th><th class="num">Total</th><th class="num">A pagar</th></tr></thead>
+          <tbody id="tbody-fornec"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Importe a planilha</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Lançamentos manuais -->
+    <div class="fcard">
+      <div class="fcard-head"><h3>✏️ Lançamentos do dia a dia</h3></div>
+      <div class="fcard-body">
+        <div class="fin-form">
+          <input type="date" id="lanc-data">
+          <input type="text" id="lanc-desc" placeholder="Descrição">
+          <input type="number" id="lanc-valor" placeholder="Valor" step="0.01">
+          <select id="lanc-tipo"><option value="saida">Saída</option><option value="entrada">Entrada</option><option value="fixo">Fixo mensal</option></select>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <input type="text" id="lanc-cat" placeholder="Categoria (ex: Aluguel, Energia, Funcionário)" style="flex:1;border:1px solid var(--borda);border-radius:5px;padding:5px 8px;font-size:11px">
+          <button class="btn-fin" onclick="addLancamento()">+ Adicionar</button>
+        </div>
+        <table class="ftbl">
+          <thead><tr><th>Data</th><th>Descrição</th><th>Cat.</th><th class="num">Valor</th><th></th></tr></thead>
+          <tbody id="tbody-lanc"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- MODAL ATUALIZAR PREÇO -->
@@ -859,10 +983,303 @@ function setView(v){
   currentView = v;
   document.getElementById('view-dashboard').style.display = v==='dashboard'?'flex':'none';
   document.getElementById('view-anuncios').style.display = v==='anuncios'?'flex':'none';
+  document.getElementById('view-financeiro').style.display = v==='financeiro'?'flex':'none';
   document.getElementById('period-bar').style.display = v==='dashboard'?'flex':'none';
   document.getElementById('vtab-dash').classList.toggle('a', v==='dashboard');
   document.getElementById('vtab-anunc').classList.toggle('a', v==='anuncios');
+  document.getElementById('vtab-fin').classList.toggle('a', v==='financeiro');
   if(v==='anuncios' && anunciosData.length===0) carregarAnuncios();
+  if(v==='financeiro') initFinanceiro();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// FINANCEIRO
+// ══════════════════════════════════════════════════════════════════════
+let boletosData = [];
+let lancamentos = JSON.parse(localStorage.getItem('fava_lancamentos')||'[]');
+let chartFluxo = null;
+let finIniciado = false;
+
+function initFinanceiro(){
+  if(!finIniciado){ finIniciado=true; }
+  renderReceber();
+  renderBoletos();
+  renderFornecedores();
+  renderLancamentos();
+  recalcFluxo();
+  renderKpisFinanceiros();
+  // Preenche data de hoje no lançamento
+  const hoje = new Date().toISOString().substring(0,10);
+  document.getElementById('lanc-data').value = hoje;
+}
+
+// ── RECEBER: cruza vendas ML com prazo de repasse ──────────────────────────
+function renderReceber(){
+  const prazo = parseInt(document.getElementById('prazo-repasse').value)||15;
+  const pedidos = dados.pedidosML.filter(p=>p.status!=='cancelled');
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+
+  // Agrupa por data de venda
+  const por_data = {};
+  pedidos.forEach(p=>{
+    if(!por_data[p.data]) por_data[p.data]={fat:0,n:0};
+    por_data[p.data].fat += p.total;
+    por_data[p.data].n++;
+  });
+
+  const rows = Object.entries(por_data).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,30).map(([data,d])=>{
+    const dt = new Date(data+'T12:00:00');
+    const repasse = new Date(dt);
+    repasse.setDate(repasse.getDate()+prazo);
+    const diff = Math.round((repasse-hoje)/(1000*60*60*24));
+    const status = diff<0?`<span class="tag-atraso">Atrasado ${Math.abs(diff)}d</span>`:
+                   diff===0?`<span class="tag-pagar">Hoje</span>`:
+                   `<span class="tag-prev">Em ${diff}d</span>`;
+    const [y,m,di]=data.split('-');
+    const rep_fmt=`${String(repasse.getDate()).padStart(2,'0')}/${String(repasse.getMonth()+1).padStart(2,'0')}`;
+    return `<tr>
+      <td>${di}/${m}/${y} (${d.n} ped.)</td>
+      <td><strong>${rep_fmt}</strong></td>
+      <td class="num">R$ ${fmt(d.fat)}</td>
+      <td>${status}</td>
+    </tr>`;
+  });
+
+  document.getElementById('tbody-receber').innerHTML = rows.join('')||'<tr><td colspan="4" style="text-align:center;padding:15px;color:var(--muted)">Sem dados</td></tr>';
+  document.getElementById('receber-lbl').textContent = `${Object.keys(por_data).length} dias de venda`;
+}
+
+// ── BOLETOS: importa da planilha xlsx ──────────────────────────────────────
+function carregarBoletos(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      // Dynamically import SheetJS
+      if(typeof XLSX === 'undefined'){
+        alert('Biblioteca Excel não carregada. Use o servidor local.');
+        return;
+      }
+      const wb = XLSX.read(e.target.result,{type:'array'});
+      const ws = wb.Sheets['BOLETOS']||wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      boletosData = [];
+      rows.slice(2).forEach(r=>{
+        const forn=r[0],nf=r[2],venc=r[8],valor=parseFloat(r[9]||0),status=r[10]||'A PAGAR';
+        if(forn&&valor>0){
+          let dt=null;
+          if(venc instanceof Date) dt=venc;
+          else if(typeof venc==='number') dt=new Date(Math.round((venc-25569)*86400*1000));
+          else if(venc) dt=new Date(venc);
+          boletosData.push({forn:String(forn),nf:String(nf||''),venc:dt,valor,status:String(status)});
+        }
+      });
+      renderBoletos();
+      renderFornecedores();
+      recalcFluxo();
+      renderKpisFinanceiros();
+      alert(`✅ ${boletosData.length} boletos importados!`);
+    }catch(ex){alert('Erro ao ler planilha: '+ex.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderBoletos(){
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const prox30 = new Date(hoje); prox30.setDate(prox30.getDate()+30);
+
+  const sorted = [...boletosData].sort((a,b)=>(a.venc||new Date(9999,0,1))-(b.venc||new Date(9999,0,1)));
+  const rows = sorted.map(b=>{
+    const pago = b.status.toUpperCase().includes('PAGO');
+    const dt = b.venc;
+    const diff = dt?Math.round((dt-hoje)/(1000*60*60*24)):null;
+    const dtFmt = dt?`${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`:'—';
+    const tag = pago?`<span class="tag-pago">Pago</span>`:
+                diff===null?`<span class="tag-pagar">Sem venc.</span>`:
+                diff<0?`<span class="tag-atraso">Atraso ${Math.abs(diff)}d</span>`:
+                diff===0?`<span class="tag-pagar">Hoje!</span>`:
+                `<span class="tag-pagar">Em ${diff}d</span>`;
+    const rowClass = !pago&&diff!==null&&diff<0?'venc-atras':!pago&&diff===0?'venc-hoje':'';
+    const forn_curto = b.forn.length>30?b.forn.substring(0,28)+'…':b.forn;
+    return `<tr class="${rowClass}">
+      <td title="${b.forn}" style="font-size:10px">${forn_curto}</td>
+      <td style="font-size:10px">${b.nf}</td>
+      <td>${dtFmt}</td>
+      <td class="num">R$ ${fmt(b.valor)}</td>
+      <td>${tag}</td>
+    </tr>`;
+  });
+  document.getElementById('tbody-pagar').innerHTML = rows.join('')||'<tr><td colspan="5" style="text-align:center;padding:15px;color:var(--muted)">Importe a planilha</td></tr>';
+  document.getElementById('pagar-lbl').textContent = `${boletosData.length} boletos`;
+}
+
+function renderFornecedores(){
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const mesInicio = new Date(hoje.getFullYear(),hoje.getMonth(),1);
+  const por_forn = {};
+  boletosData.forEach(b=>{
+    if(!por_forn[b.forn]) por_forn[b.forn]={total:0,nfs:new Set(),apagar:0};
+    por_forn[b.forn].total += b.valor;
+    por_forn[b.forn].nfs.add(b.nf);
+    const pago = b.status.toUpperCase().includes('PAGO');
+    if(!pago) por_forn[b.forn].apagar += b.valor;
+  });
+  const sorted = Object.entries(por_forn).sort((a,b)=>b[1].total-a[1].total).slice(0,15);
+  const rows = sorted.map(([forn,d])=>`<tr>
+    <td style="font-size:10px" title="${forn}">${forn.length>28?forn.substring(0,26)+'…':forn}</td>
+    <td class="num">${d.nfs.size}</td>
+    <td class="num">R$ ${fmt(d.total)}</td>
+    <td class="num" style="color:${d.apagar>0?'#dc2626':'#16a34a'}">R$ ${fmt(d.apagar)}</td>
+  </tr>`);
+  document.getElementById('tbody-fornec').innerHTML = rows.join('')||'<tr><td colspan="4" style="text-align:center;padding:15px;color:var(--muted)">Sem dados</td></tr>';
+}
+
+// ── LANÇAMENTOS MANUAIS ────────────────────────────────────────────────────
+function addLancamento(){
+  const data=document.getElementById('lanc-data').value;
+  const desc=document.getElementById('lanc-desc').value.trim();
+  const valor=parseFloat(document.getElementById('lanc-valor').value)||0;
+  const tipo=document.getElementById('lanc-tipo').value;
+  const cat=document.getElementById('lanc-cat').value.trim();
+  if(!desc||!valor){alert('Informe descrição e valor');return;}
+  lancamentos.push({id:Date.now(),data,desc,valor,tipo,cat});
+  localStorage.setItem('fava_lancamentos',JSON.stringify(lancamentos));
+  document.getElementById('lanc-desc').value='';
+  document.getElementById('lanc-valor').value='';
+  document.getElementById('lanc-cat').value='';
+  renderLancamentos();
+  recalcFluxo();
+  renderKpisFinanceiros();
+}
+
+function delLancamento(id){
+  lancamentos=lancamentos.filter(l=>l.id!==id);
+  localStorage.setItem('fava_lancamentos',JSON.stringify(lancamentos));
+  renderLancamentos();
+  recalcFluxo();
+}
+
+function renderLancamentos(){
+  const sorted=[...lancamentos].sort((a,b)=>b.data.localeCompare(a.data));
+  const rows=sorted.map(l=>{
+    const cor=l.tipo==='entrada'?'#16a34a':'#dc2626';
+    const sinal=l.tipo==='entrada'?'+':'-';
+    const [y,m,d]=l.data.split('-');
+    return`<tr>
+      <td>${d}/${m}</td>
+      <td>${l.desc}</td>
+      <td style="font-size:10px;color:var(--muted)">${l.cat||'—'}</td>
+      <td class="num" style="color:${cor}">${sinal}R$ ${fmt(l.valor)}</td>
+      <td><button onclick="delLancamento(${l.id})" style="border:none;background:none;cursor:pointer;color:#dc2626;font-size:13px">×</button></td>
+    </tr>`;
+  });
+  document.getElementById('tbody-lanc').innerHTML=rows.join('')||'<tr><td colspan="5" style="text-align:center;padding:10px;color:var(--muted)">Nenhum lançamento</td></tr>';
+}
+
+// ── GRÁFICO FLUXO ─────────────────────────────────────────────────────────
+function recalcFluxo(){
+  const prazo=parseInt(document.getElementById('prazo-repasse').value)||15;
+  const hoje=new Date();hoje.setHours(0,0,0,0);
+
+  // Gera próximos 30 dias
+  const dias=[];
+  for(let i=0;i<31;i++){
+    const d=new Date(hoje);d.setDate(d.getDate()+i);
+    dias.push(d);
+  }
+
+  // Entradas previstas: repasse ML
+  const entradas={};
+  dados.pedidosML.filter(p=>p.status!=='cancelled').forEach(p=>{
+    const dt=new Date(p.data+'T12:00:00');
+    const rep=new Date(dt);rep.setDate(rep.getDate()+prazo);
+    const key=rep.toISOString().substring(0,10);
+    if(!entradas[key])entradas[key]=0;
+    entradas[key]+=p.total;
+  });
+  // Lançamentos entrada
+  lancamentos.filter(l=>l.tipo==='entrada').forEach(l=>{
+    if(!entradas[l.data])entradas[l.data]=0;
+    entradas[l.data]+=l.valor;
+  });
+
+  // Saídas: boletos + lançamentos saída
+  const saidas={};
+  boletosData.filter(b=>!b.status.toUpperCase().includes('PAGO')&&b.venc).forEach(b=>{
+    const key=b.venc.toISOString().substring(0,10);
+    if(!saidas[key])saidas[key]=0;
+    saidas[key]+=b.valor;
+  });
+  lancamentos.filter(l=>l.tipo!=='entrada').forEach(l=>{
+    if(!saidas[l.data])saidas[l.data]=0;
+    saidas[l.data]+=l.valor;
+  });
+
+  const labels=dias.map(d=>`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`);
+  const entr=dias.map(d=>entradas[d.toISOString().substring(0,10)]||0);
+  const said=dias.map(d=>saidas[d.toISOString().substring(0,10)]||0);
+  const saldo=entr.map((e,i)=>e-said[i]);
+
+  if(chartFluxo)chartFluxo.destroy();
+  const ctx=document.getElementById('chart-fluxo').getContext('2d');
+  chartFluxo=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'Entradas',data:entr,backgroundColor:'rgba(22,163,74,.7)',borderRadius:3},
+        {label:'Saídas',data:said,backgroundColor:'rgba(220,38,38,.7)',borderRadius:3},
+        {label:'Saldo dia',data:saldo,type:'line',borderColor:'#2563eb',borderWidth:2,pointRadius:2,tension:.3,fill:false,yAxisID:'y2'},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:10}}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:9},maxRotation:45}},
+        y:{grid:{color:'#f3f4f6'},ticks:{font:{size:9},callback:v=>'R$'+fmtK(v)}},
+        y2:{position:'right',grid:{display:false},ticks:{font:{size:9},callback:v=>'R$'+fmtK(v)}},
+      }
+    }
+  });
+}
+
+// ── KPIs FINANCEIROS ──────────────────────────────────────────────────────
+function renderKpisFinanceiros(){
+  const prazo=parseInt(document.getElementById('prazo-repasse').value)||15;
+  const hoje=new Date();hoje.setHours(0,0,0,0);
+  const d30=new Date(hoje);d30.setDate(d30.getDate()+30);
+  const d7=new Date(hoje);d7.setDate(d7.getDate()+7);
+
+  // A receber
+  let receber=0;
+  dados.pedidosML.filter(p=>p.status!=='cancelled').forEach(p=>{
+    const dt=new Date(p.data+'T12:00:00');
+    const rep=new Date(dt);rep.setDate(rep.getDate()+prazo);
+    if(rep>=hoje&&rep<=d30)receber+=p.total;
+  });
+
+  // A pagar
+  let pagar=0,hoje_val=0,semana_val=0;
+  boletosData.filter(b=>!b.status.toUpperCase().includes('PAGO')&&b.venc).forEach(b=>{
+    if(b.venc>=hoje&&b.venc<=d30)pagar+=b.valor;
+    if(b.venc.toDateString()===hoje.toDateString())hoje_val+=b.valor;
+    if(b.venc>=hoje&&b.venc<=d7)semana_val+=b.valor;
+  });
+
+  // Repasse médio últimos 30 dias
+  const d30ant=new Date(hoje);d30ant.setDate(d30ant.getDate()-30);
+  const fat30=dados.pedidosML.filter(p=>p.status!=='cancelled'&&new Date(p.data+'T12:00:00')>=d30ant).reduce((s,p)=>s+p.total,0);
+
+  document.getElementById('fk-receber').textContent='R$ '+fmtK(receber);
+  document.getElementById('fk-pagar').textContent='R$ '+fmtK(pagar);
+  document.getElementById('fk-hoje').textContent='R$ '+fmtK(hoje_val);
+  document.getElementById('fk-semana').textContent='R$ '+fmtK(semana_val);
+  const saldo=receber-pagar;
+  const fks=document.getElementById('fk-saldo');
+  fks.textContent='R$ '+fmtK(Math.abs(saldo));
+  fks.style.color=saldo>=0?'#16a34a':'#dc2626';
+  document.getElementById('fk-repasse').textContent='R$ '+fmtK(fat30);
 }
 
 // ══════════════════════════════════════════════════════════════════════
