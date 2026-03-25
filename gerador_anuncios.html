@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador de Anúncios — Fava Ecom</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--azul:#1F3864;--azul2:#2E75B6;--verde:#16a34a;--cinza:#f0f2f5;--borda:#e5e7eb;--muted:#6b7280}
+body{font-family:Arial,sans-serif;background:var(--cinza);font-size:13px;color:#1a1a1a}
+header{background:var(--azul);color:#fff;padding:11px 18px;display:flex;align-items:center;gap:10px}
+header h1{font-size:14px;font-weight:700;flex:1}
+.tabs{display:flex;background:#fff;border-bottom:2px solid var(--borda)}
+.tab{padding:10px 18px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s}
+.tab.a{color:var(--azul);border-bottom-color:var(--azul)}
+.layout{display:grid;grid-template-columns:360px 1fr;height:calc(100vh - 82px)}
+.left{background:#fff;border-right:1px solid var(--borda);overflow-y:auto;padding:14px}
+.right{overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);padding-bottom:4px;border-bottom:1px solid #f3f4f6;margin:12px 0 7px}
+.sec:first-child{margin-top:0}
+.field{margin-bottom:8px}
+.field label{display:block;font-size:11px;color:var(--muted);font-weight:600;margin-bottom:3px}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--borda);border-radius:6px;padding:7px 9px;font-size:12px;outline:none;font-family:Arial,sans-serif;transition:.15s;background:#fff}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--azul2);box-shadow:0 0 0 2px #dbeafe}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.btn{width:100%;border:none;border-radius:7px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;margin-top:4px}
+.btn-blue{background:var(--azul);color:#fff}.btn-blue:hover{background:var(--azul2)}
+.btn-blue:disabled{background:#94a3b8;cursor:not-allowed}
+.btn-out{background:#fff;color:#374151;border:1px solid var(--borda)}.btn-out:hover{background:#f9fafb}
+.btn-sm{padding:4px 10px;font-size:11px;border-radius:5px;border:1px solid var(--borda);background:#fff;cursor:pointer;font-weight:700}
+.card{background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden}
+.card-head{padding:10px 14px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between}
+.card-head h3{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.titulo-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:10px 13px;margin-bottom:10px}
+.titulo-box .lbl{font-size:10px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.titulo-box .val{font-size:14px;font-weight:700;color:#1e3a8a;line-height:1.4}
+.titulo-box .chars{font-size:10px;color:var(--muted);margin-top:3px}
+.desc-block{background:#f8fafc;border:1px solid var(--borda);border-radius:7px;padding:12px 14px;white-space:pre-wrap;font-size:12px;line-height:1.7;color:#374151;max-height:500px;overflow-y:auto}
+.copy-btn{padding:5px 12px;font-size:11px;border-radius:5px;border:1px solid var(--azul2);background:#fff;color:var(--azul2);cursor:pointer;font-weight:700}
+.copy-btn:hover{background:var(--azul2);color:#fff}
+.copy-btn.ok{background:#16a34a;color:#fff;border-color:#16a34a}
+.pill{display:inline-block;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:700}
+.pill-g{background:#dcfce7;color:#166534}.pill-r{background:#fee2e2;color:#991b1b}
+.loading-msg{text-align:center;padding:50px;color:var(--muted);font-size:13px}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:var(--azul2);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.alert{border-radius:6px;padding:8px 11px;font-size:12px;margin-bottom:8px}
+.alert-info{background:#dbeafe;color:#1e40af}.alert-ok{background:#dcfce7;color:#166534}.alert-warn{background:#fef3c7;color:#92400e}
+.chks{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+.chk{display:inline-flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;padding:3px 8px;border:1px solid var(--borda);border-radius:12px;background:#fff;transition:.15s;user-select:none}
+.chk.on{background:var(--azul);color:#fff;border-color:var(--azul)}
+.massa-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.massa-tbl th{padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);background:#f8fafc;border-bottom:1px solid var(--borda);text-transform:uppercase}
+.massa-tbl td{padding:6px 8px;border-bottom:1px solid #f9fafb;vertical-align:middle}
+@media(max-width:760px){.layout{grid-template-columns:1fr;height:auto}}
+</style>
+</head>
+<body>
+<header>
+  <h1>✍️ Gerador de Anúncios — Fava Ecom</h1>
+  <span style="font-size:11px;opacity:.7">Powered by Claude AI</span>
+</header>
+<div class="tabs">
+  <div class="tab a" onclick="switchTab('unico')">Produto único</div>
+  <div class="tab" onclick="switchTab('massa')">Em massa</div>
+  <div class="tab" onclick="switchTab('cfg')">⚙️ Config</div>
+</div>
+<div class="layout">
+<div class="left">
+
+  <!-- ÚNICO -->
+  <div id="tab-unico">
+    <div class="sec">Dados do produto</div>
+    <div class="row2">
+      <div class="field"><label>SKU</label><input id="sku" placeholder="Ex: 2806"></div>
+      <div class="field"><label>Tipo</label><select id="tipo"><option>Peça</option><option>Kit</option><option>Acessório</option><option>Ferramenta</option><option>Equipamento</option></select></div>
+    </div>
+    <div class="field"><label>Nome do produto *</label><input id="nome" placeholder="Ex: Pinhão do Volante 1 Traço Super"></div>
+    <div class="row2">
+      <div class="field"><label>Marca *</label><input id="marca" placeholder="Ex: Menegotti"></div>
+      <div class="field"><label>Família / Categoria</label><input id="familia" placeholder="Ex: Peças para Betoneiras"></div>
+    </div>
+    <div class="field"><label>Fornecedor</label><input id="fornecedor" placeholder="Nome completo do fornecedor"></div>
+    <div class="field"><label>Código fabricante / referência</label><input id="cod-fab" placeholder="Ex: 30203385"></div>
+    <div class="sec">Especificações</div>
+    <div class="field"><label>Compatibilidade / aplicações</label><textarea id="compat" rows="3" placeholder="Compatível com betoneiras Menegotti 400L Prime, Pro..."></textarea></div>
+    <div class="field"><label>Ficha técnica (separar com |)</label><textarea id="ficha" rows="3" placeholder="Material: Aço | Peso: 0,66kg | Dimensões: 13x7x7cm"></textarea></div>
+    <div class="row2">
+      <div class="field"><label>Peso (kg)</label><input type="number" id="peso" step="0.001" placeholder="0.660"></div>
+      <div class="field"><label>Tom</label><select id="tom"><option value="tecnico">Técnico</option><option value="acessivel">Acessível</option><option value="vendedor">Persuasivo</option></select></div>
+    </div>
+    <div class="field"><label>Info adicional</label><textarea id="extra" rows="2" placeholder="Qualquer info relevante..."></textarea></div>
+    <div class="sec">Blocos</div>
+    <div class="chks" id="chks-u"></div>
+    <button class="btn btn-blue" id="btn-u" onclick="gerarUnico()">✨ Gerar com IA</button>
+    <button class="btn btn-out" onclick="limpar()">Limpar</button>
+  </div>
+
+  <!-- MASSA -->
+  <div id="tab-massa" style="display:none">
+    <div class="sec">Dados em massa</div>
+    <div class="alert alert-info">Cole linhas do Excel com colunas: SKU | Produto | Marca | Família | Fornecedor | Compatibilidade | Ficha Técnica</div>
+    <div class="field"><label>Cole aqui (TSV do Excel)</label>
+      <textarea id="massa-input" rows="10" placeholder="Copie direto do Excel (inclua a linha de cabeçalho)&#10;SKU&#9;Produto&#9;Marca&#9;Família&#9;Fornecedor&#9;Compatibilidade&#9;Ficha Técnica&#10;2806&#9;Pinhão do Volante...&#9;CSM&#9;Peças para Betoneiras&#9;..."></textarea>
+    </div>
+    <div id="massa-preview"></div>
+    <div class="sec">Blocos</div>
+    <div class="chks" id="chks-m"></div>
+    <div class="field" style="margin-top:8px"><label>Pausa entre gerações (s)</label><input type="number" id="pausa" value="2" min="1" max="10"></div>
+    <button class="btn btn-blue" id="btn-m" onclick="gerarMassa()">✨ Gerar todos</button>
+    <button class="btn btn-out" onclick="exportar()">⬇️ Exportar CSV</button>
+  </div>
+
+  <!-- CONFIG -->
+  <div id="tab-cfg" style="display:none">
+    <div class="sec">Bloco institucional Fava Ecom</div>
+    <div class="field"><textarea id="bloco-inst" rows="9">🏪 FAVA ECOM — Sua loja especializada em peças, ferramentas e equipamentos.
+
+✅ Produtos originais com procedência garantida
+🚀 Envio rápido para todo o Brasil
+💬 Atendimento especializado para dúvidas técnicas
+🔒 Compra segura pelo Mercado Livre
+
+Somos especialistas em peças de reposição e ferramentas profissionais. Nossa equipe está pronta para ajudar na identificação correta da peça para o seu equipamento.</textarea></div>
+    <div class="sec">Marcas e histórico</div>
+    <div class="field"><label>Marca: descrição (uma por linha)</label>
+      <textarea id="marcas" rows="8">Menegotti: marca líder nacional em betoneiras e guinchos, com mais de 60 anos de tradição na construção civil brasileira, fabricante de equipamentos robustos e confiáveis usados em obras de todo o Brasil
+CSM: especialista em componentes e sistemas para máquinas de construção, fornecedora oficial de peças originais com altíssima precisão de engenharia
+Kala: distribuidora nacional de ferramentas e equipamentos para construção civil e uso geral, reconhecida pela qualidade e variedade de produtos
+MOR: marca tradicional brasileira de ferramentas e utensílios, presente no mercado há décadas com produtos de qualidade acessível
+Vonder: fabricante nacional de ferramentas elétricas e manuais com foco em qualidade e custo-benefício para profissionais e amadores</textarea></div>
+    <div class="sec">Instruções extras para a IA</div>
+    <div class="field"><textarea id="extra-ia" rows="3" placeholder="Ex: Sempre mencionar que a peça é original de fábrica..."></textarea></div>
+    <button class="btn btn-blue" onclick="salvarCfg()">Salvar</button>
+  </div>
+
+</div>
+
+<!-- DIREITA -->
+<div class="right" id="painel">
+  <div class="loading-msg">✍️<br><br>Preencha os dados e clique em <strong>Gerar com IA</strong></div>
+</div>
+</div>
+
+<script>
+const BLOCOS=[
+  {id:'titulo',    lb:'Títulos 60c/120c',  on:true},
+  {id:'apresenta', lb:'Apresentação',       on:true},
+  {id:'curiosidade',lb:'Curiosidade téc.', on:true},
+  {id:'marca',     lb:'Sobre a marca',      on:true},
+  {id:'beneficios',lb:'Benefícios',         on:true},
+  {id:'ficha',     lb:'Ficha técnica',      on:true},
+  {id:'compat',    lb:'Compatibilidade',    on:true},
+  {id:'cuidados',  lb:'Cuidados / uso',     on:true},
+  {id:'inst',      lb:'Bloco Fava Ecom',    on:true},
+  {id:'hashtags',  lb:'Hashtags SEO',       on:true},
+];
+let ativos=new Set(BLOCOS.filter(b=>b.on).map(b=>b.id));
+let massaResult=[];
+
+window.onload=()=>{renderChks();carregarCfg();document.getElementById('massa-input').addEventListener('input',prevMassa);};
+
+function renderChks(){
+  ['chks-u','chks-m'].forEach(id=>{
+    const w=document.getElementById(id);if(!w)return;
+    w.innerHTML=BLOCOS.map(b=>`<span class="chk ${ativos.has(b.id)?'on':''}" onclick="toggleB('${b.id}')">${b.lb}</span>`).join('');
+  });
+}
+function toggleB(id){ativos.has(id)?ativos.delete(id):ativos.add(id);renderChks();}
+
+function switchTab(t){
+  ['unico','massa','cfg'].forEach(n=>{document.getElementById(`tab-${n}`).style.display=n===t?'':'none';});
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('a',['unico','massa','cfg'][i]===t));
+}
+
+function salvarCfg(){localStorage.setItem('fava_ad_cfg',JSON.stringify({inst:v('bloco-inst'),marcas:v('marcas'),extra:v('extra-ia')}));alert('✅ Salvo!');}
+function carregarCfg(){const c=JSON.parse(localStorage.getItem('fava_ad_cfg')||'{}');if(c.inst)set('bloco-inst',c.inst);if(c.marcas)set('marcas',c.marcas);if(c.extra)set('extra-ia',c.extra);}
+function v(id){return document.getElementById(id)?.value||'';}
+function set(id,val){const el=document.getElementById(id);if(el)el.value=val;}
+
+function montarPrompt(p){
+  const cfg=JSON.parse(localStorage.getItem('fava_ad_cfg')||'{}');
+  const inst=cfg.inst||v('bloco-inst');
+  const marcasTxt=cfg.marcas||v('marcas');
+  const extraIA=cfg.extra||v('extra-ia');
+  const tom=v('tom')||'tecnico';
+  const infoMarca=marcasTxt.split('\n').find(l=>l.toLowerCase().startsWith((p.marca||'').toLowerCase()+':'))?.split(':').slice(1).join(':').trim()||'';
+  const bl=[...ativos];
+  return `Você é um especialista em e-commerce brasileiro criando anúncios profissionais para a Fava Ecom, loja especializada em peças de reposição, ferramentas e equipamentos.
+
+PRODUTO:
+- SKU: ${p.sku||'—'}
+- Nome: ${p.nome}
+- Marca: ${p.marca||'—'}
+- Família/Categoria: ${p.familia||'—'}
+- Tipo: ${p.tipo||'Produto'}
+- Fornecedor: ${p.fornecedor||'—'}
+- Código fabricante: ${p.cod_fab||'—'}
+- Peso: ${p.peso||'—'} kg
+${p.ficha?`- Ficha técnica: ${p.ficha}`:''}
+${p.compat?`- Compatibilidade: ${p.compat}`:''}
+${p.extra?`- Informações extras: ${p.extra}`:''}
+${infoMarca?`\nSOBRE A MARCA ${(p.marca||'').toUpperCase()}:\n${infoMarca}`:''}
+
+TOM: ${tom==='tecnico'?'técnico e profissional':tom==='acessivel'?'acessível e direto':'persuasivo e vendedor'}
+${extraIA?`\nINSTRUÇÕES EXTRAS:\n${extraIA}`:''}
+
+BLOCO INSTITUCIONAL (use este texto exatamente no bloco Fava Ecom):
+${inst}
+
+GERE o anúncio com os blocos marcados com ✓ abaixo:
+${bl.includes('titulo')?`✓ TÍTULOS:
+- TÍTULO CURTO (máx 60 caracteres exatos — conte cada caractere): palavra-chave principal + marca + complemento
+- TÍTULO LONGO (máx 120 caracteres exatos): mais descritivo com marca, compatibilidade e diferencial`:''}
+${bl.includes('apresenta')?'✓ APRESENTAÇÃO DO PRODUTO: 2-3 frases diretas sobre o que é e para que serve':''}
+${bl.includes('curiosidade')?'✓ CURIOSIDADE TÉCNICA: 1 parágrafo com informação técnica interessante sobre o produto':''}
+${bl.includes('marca')?`✓ SOBRE A MARCA ${p.marca||''}: 1 parágrafo destacando tradição e credibilidade`:''}
+${bl.includes('beneficios')?'✓ BENEFÍCIOS: lista com 6-8 bullet points com emoji ou •, vantagens reais e específicas':''}
+${bl.includes('ficha')?'✓ FICHA TÉCNICA: dados técnicos formatados em linhas "Campo: Valor"':''}
+${bl.includes('compat')?'✓ COMPATIBILIDADE: lista clara de modelos/equipamentos compatíveis e aviso de incompatibilidades':''}
+${bl.includes('cuidados')?'✓ CUIDADOS E MODO DE USO: instrução de instalação e cuidados de conservação':''}
+${bl.includes('inst')?'✓ BLOCO FAVA ECOM: use o texto institucional exato fornecido acima':''}
+${bl.includes('hashtags')?'✓ HASHTAGS SEO: 15-20 palavras-chave relevantes separadas por espaço (sem #)':''}
+
+REGRAS:
+- NUNCA inclua informações fiscais (NCM, CFOP, CEST, impostos, tributação)
+- NUNCA mencione preço
+- Português brasileiro
+- Títulos: conte os caracteres com cuidado — respeite rigorosamente os limites
+- Cada bloco começa com === NOME DO BLOCO === em linha separada
+- Seja específico — evite frases genéricas como "produto de qualidade"
+- Mencione o código do fabricante quando disponível`;
+}
+
+async function chamarClaude(prompt){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})
+  });
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(`API ${r.status}: ${e.error?.message||JSON.stringify(e)}`);}
+  const d=await r.json();return d.content?.[0]?.text||'';
+}
+
+async function gerarUnico(){
+  const p={sku:v('sku'),nome:v('nome'),marca:v('marca'),familia:v('familia'),fornecedor:v('fornecedor'),cod_fab:v('cod-fab'),compat:v('compat'),ficha:v('ficha'),peso:v('peso'),tipo:v('tipo'),extra:v('extra')};
+  if(!p.nome){alert('Informe o nome do produto');return;}
+  const btn=document.getElementById('btn-u');btn.disabled=true;btn.textContent='⏳ Gerando...';
+  document.getElementById('painel').innerHTML=`<div class="loading-msg"><span class="spin"></span>Gerando anúncio para <strong>${p.nome}</strong>...<br><br>Aguarde alguns segundos</div>`;
+  try{const txt=await chamarClaude(montarPrompt(p));renderRes(txt,p);}
+  catch(e){document.getElementById('painel').innerHTML=`<div class="card"><div class="card-body"><div class="alert alert-warn">❌ ${e.message}<br><br>Verifique se está acessando via HTTPS (Railway ou localhost)</div></div></div>`;}
+  finally{btn.disabled=false;btn.textContent='✨ Gerar com IA';}
+}
+
+function renderRes(txt,p){
+  const panel=document.getElementById('painel');panel.innerHTML='';panel._txt=txt;
+  const t60=txt.match(/TÍTULO CURTO[:\s]+([^\n]+)/i)?.[1]?.trim()||'';
+  const t120=txt.match(/TÍTULO LONGO[:\s]+([^\n]+)/i)?.[1]?.trim()||'';
+
+  if(t60||t120){
+    const ct=document.createElement('div');ct.className='card';
+    ct.innerHTML=`<div class="card-head"><h3>Títulos</h3><div style="display:flex;gap:6px">
+      ${t60?`<button class="copy-btn" onclick="cp(this,\`${t60.replace(/`/g,"'")}\`)">Copiar 60c</button>`:''}
+      ${t120?`<button class="copy-btn" onclick="cp(this,\`${t120.replace(/`/g,"'")}\`)">Copiar 120c</button>`:''}
+    </div></div><div class="card-body">
+      ${t60?`<div class="titulo-box"><div class="lbl">Título curto (≤60 c)</div><div class="val">${t60}</div><div class="chars">${t60.length}/60 ${t60.length>60?'⚠️ EXCEDE':'✅'}</div></div>`:''}
+      ${t120?`<div class="titulo-box" style="background:#f0fdf4;border-color:#bbf7d0"><div class="lbl" style="color:#166534">Título longo (≤120 c)</div><div class="val" style="color:#14532d">${t120}</div><div class="chars">${t120.length}/120 ${t120.length>120?'⚠️ EXCEDE':'✅'}</div></div>`:''}
+    </div>`;
+    panel.appendChild(ct);
+  }
+
+  const cd=document.createElement('div');cd.className='card';
+  cd.innerHTML=`<div class="card-head"><h3>Descrição completa</h3><div style="display:flex;gap:6px">
+    <button class="copy-btn" id="btn-cp" onclick="cpDesc()">Copiar tudo</button>
+    <button class="btn-sm" onclick="bruto()">Bruto</button>
+  </div></div><div class="card-body" style="padding:10px 14px">
+    <div class="desc-block" id="desc-fmt">${fmtTxt(txt)}</div>
+    <div class="desc-block" id="desc-raw" style="display:none;font-family:monospace;font-size:11px">${esc(txt)}</div>
+    <div style="font-size:10px;color:var(--muted);margin-top:5px">${txt.length} chars | ${txt.split('\n').length} linhas</div>
+  </div>`;
+  panel.appendChild(cd);
+}
+
+function fmtTxt(t){return t.split('\n').map(l=>{
+  if(l.startsWith('==='))return`<hr style="border:none;border-top:2px solid var(--azul);margin:10px 0;opacity:.2">`;
+  if(/^[A-ZÁÉÍÓÚ\s]{6,}$/.test(l.trim()))return`<strong style="color:var(--azul);font-size:12px">${esc(l)}</strong>`;
+  if(l.match(/^[•✅✓🚀💬🔒🏪🛒⭐]/))return`<span style="display:block;padding-left:4px">${esc(l)}</span>`;
+  return esc(l);
+}).join('<br>');}
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function bruto(){const f=document.getElementById('desc-fmt'),r=document.getElementById('desc-raw');const s=r.style.display==='none';f.style.display=s?'none':'';r.style.display=s?'':'none';}
+function cpDesc(){const p=document.getElementById('painel');if(p._txt)navigator.clipboard.writeText(p._txt).then(()=>{const b=document.getElementById('btn-cp');b.textContent='✓ Copiado!';b.className='copy-btn ok';setTimeout(()=>{b.textContent='Copiar tudo';b.className='copy-btn';},2000);});}
+function cp(btn,txt){navigator.clipboard.writeText(txt).then(()=>{btn.textContent='✓ Copiado!';btn.className='copy-btn ok';setTimeout(()=>{btn.textContent='Copiar';btn.className='copy-btn';},2000);});}
+function limpar(){['sku','nome','marca','familia','fornecedor','cod-fab','compat','ficha','peso','extra'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('painel').innerHTML='<div class="loading-msg">✍️<br><br>Preencha os dados e clique em <strong>Gerar com IA</strong></div>';}
+
+// MASSA
+function parseTSV(){
+  const raw=v('massa-input').trim();if(!raw)return[];
+  const lines=raw.split('\n').filter(l=>l.trim());
+  if(lines.length<2)return[];
+  const hdr=lines[0].split('\t').map(h=>h.trim().toLowerCase());
+  const fi=(keys)=>hdr.findIndex(h=>keys.some(k=>h.includes(k)));
+  const idx={sku:fi(['sku']),nome:fi(['produto','nome']),marca:fi(['marca']),familia:fi(['família','familia','categoria']),fornecedor:fi(['fornecedor']),compat:fi(['compat']),ficha:fi(['ficha']),cod_fab:fi(['código','codigo','cód','cod']),peso:fi(['peso'])};
+  return lines.slice(1).filter(l=>l.trim()).map(l=>{
+    const c=l.split('\t');const p={};
+    Object.entries(idx).forEach(([k,i])=>{if(i>=0)p[k]=(c[i]||'').trim();});
+    return p;
+  }).filter(p=>p.nome);
+}
+
+function prevMassa(){
+  const d=parseTSV();
+  const pr=document.getElementById('massa-preview');
+  pr.innerHTML=d.length?`<div class="alert alert-ok">✅ ${d.length} produtos detectados</div>`:'';
+}
+
+async function gerarMassa(){
+  const data=parseTSV();
+  if(!data.length){alert('Cole os dados primeiro');return;}
+  if(!confirm(`Gerar anúncios para ${data.length} produtos?`))return;
+  const btn=document.getElementById('btn-m');btn.disabled=true;btn.textContent='⏳ Gerando...';
+  massaResult=[];
+  const panel=document.getElementById('painel');
+  panel.innerHTML=`<div class="card"><div class="card-head"><h3>Geração em massa</h3></div><div class="card-body"><div id="prog">Iniciando...</div><table class="massa-tbl" style="margin-top:10px"><thead><tr><th>SKU</th><th>Produto</th><th>Status</th><th>Ver</th></tr></thead><tbody id="mtbody"></tbody></table></div></div>`;
+  const pausa=parseInt(v('pausa')||'2')*1000;
+  for(let i=0;i<data.length;i++){
+    const p=data[i];
+    document.getElementById('prog').innerHTML=`<span class="spin"></span>${i+1}/${data.length}: <strong>${p.nome}</strong>`;
+    const tbody=document.getElementById('mtbody');
+    const tr=document.createElement('tr');tr.id=`mr-${i}`;
+    tr.innerHTML=`<td>${p.sku||'—'}</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.nome}</td><td><span class="spin"></span></td><td>—</td>`;
+    tbody.appendChild(tr);
+    try{
+      const txt=await chamarClaude(montarPrompt({...p,tipo:'Produto'}));
+      const t60=txt.match(/TÍTULO CURTO[:\s]+([^\n]+)/i)?.[1]?.trim()||'';
+      const t120=txt.match(/TÍTULO LONGO[:\s]+([^\n]+)/i)?.[1]?.trim()||'';
+      massaResult.push({...p,txt,t60,t120,ok:true});
+      const idx2=massaResult.length-1;
+      tr.innerHTML=`<td><strong>${p.sku||'—'}</strong></td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.nome}</td><td><span class="pill pill-g">✅ OK</span></td><td><button class="btn-sm" onclick="verR(${idx2})">Ver</button></td>`;
+    }catch(e){
+      massaResult.push({...p,txt:'',ok:false,erro:e.message});
+      tr.innerHTML=`<td>${p.sku||'—'}</td><td>${p.nome}</td><td><span class="pill pill-r">❌ Erro</span></td><td>—</td>`;
+    }
+    if(i<data.length-1)await new Promise(r=>setTimeout(r,pausa));
+  }
+  document.getElementById('prog').innerHTML=`✅ Concluído! ${massaResult.filter(r=>r.ok).length}/${data.length} gerados.`;
+  btn.disabled=false;btn.textContent='✨ Gerar todos';
+}
+
+function verR(idx){const r=massaResult[idx];if(r&&r.txt)renderRes(r.txt,r);}
+function exportar(){
+  if(!massaResult.length){alert('Gere primeiro');return;}
+  let csv='SKU;Produto;Marca;Título 60c;Título 120c;Descrição\n';
+  massaResult.forEach(r=>{csv+=`${r.sku||''};${r.nome||''};${r.marca||''};${(r.t60||'').replace(/;/g,',')};${(r.t120||'').replace(/;/g,',')};${(r.txt||'').replace(/\n/g,' | ').replace(/;/g,',')}\n`;});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.download='anuncios_fava.csv';a.click();
+}
+</script>
+</body>
+</html>
