@@ -880,14 +880,13 @@ async function carregarAnuncios(){
     '<tr><td colspan="10" class="empty"><span class="spin"></span> Carregando anúncios...</td></tr>';
 
   try{
-    // Busca anúncios ativos do vendedor
+    // Busca anúncios ativos do vendedor (ML limita a 1000 itens por query)
     const userId = 537714337;
     let items = [], offset=0, total=999;
-    while(offset < total && offset < 2000){
+    while(offset < Math.min(total, 1000)){
       const r = await mlGet(`users/${userId}/items/search?status=active&limit=100&offset=${offset}`);
-      if(!r || !r.results) break;
-      total = r.paging?.total || 0;
-      if(!r.results.length) break;
+      if(!r || !r.results || !r.results.length) break;
+      total = r.paging?.total || r.results.length;
       items.push(...r.results);
       offset += 100;
     }
@@ -917,19 +916,34 @@ async function carregarAnuncios(){
     // Monta dados com CMV do cache e calcula margem
     anunciosData = detalhes.map(item=>{
       const sku = item.seller_sku || '';
-      const cmvInfo = dados.cmvCache[sku];
+      // Try multiple key formats (numeric, string, trimmed)
+      const cmvInfo = dados.cmvCache[sku] || dados.cmvCache[String(parseInt(sku))] || dados.cmvCache[sku.trim()] || null;
       const cmv = cmvInfo?.cmv || 0;
       const preco = item.price || 0;
       const taxa = item.listing_type_id==='gold_pro'?.17:.12;
       const frete = freteAnuncio(preco);
-      const pis_r=preco*PIS_A, cof_r=preco*COF_A, tx_r=preco*taxa;
-      const lucro = preco - cmv - pis_r - cof_r - tx_r - frete;
-      const margem = cmv>0&&preco>0 ? lucro/preco : null;
+      // Margem: só calcula se tiver CMV real no Bling
+      // Lucro = Preço - CMV - PIS(1,65%) - COFINS(7,6%) - Taxa ML - Frete
+      let margem = null;
+      let lucro = 0;
+      if(cmv > 0 && preco > 0){
+        const pis_r = preco * PIS_A;
+        const cof_r = preco * COF_A;
+        const tx_r  = preco * taxa;
+        lucro = preco - cmv - pis_r - cof_r - tx_r - frete;
+        margem = lucro / preco;
+      }
 
-      // Preço sugerido (margem 28%)
-      const margem_alvo = taxa===.17?.26:.28;
-      const denom = Math.max(1-taxa-PIS_A-COF_A-margem_alvo,.05);
-      const preco_sug = cmv>0 ? (cmv+frete)/denom : 0;
+      // Preço sugerido com margem alvo
+      const margem_alvo = taxa===.17 ? .26 : .28;
+      const denom = Math.max(1 - taxa - PIS_A - COF_A - margem_alvo, .05);
+      // Iteração: calcula preço → recalcula frete com esse preço → novo preço
+      let preco_sug = 0;
+      if(cmv > 0){
+        preco_sug = cmv / denom;
+        const frete_sug = freteAnuncio(preco_sug);
+        preco_sug = (cmv + frete_sug) / denom;
+      }
 
       const v = vendasHoje[item.id] || {qtd:0,fat:0};
       return {

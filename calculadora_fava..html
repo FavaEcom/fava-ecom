@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora Fava Ecom</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f0f2f5;color:#1a1a1a;font-size:14px}
+header{background:#1F3864;color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+header h1{font-size:14px;font-weight:700;flex:1}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot.ok{background:#4ade80}.dot.err{background:#f87171}.dot.wait{background:#fbbf24}
+.dlbl{font-size:11px;opacity:.85}
+
+/* TABS */
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e5e7eb}
+.tab{padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;color:#9ca3af;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s}
+.tab.ativo{color:#1F3864;border-bottom-color:#1F3864}
+
+.layout{display:grid;grid-template-columns:340px 1fr;height:calc(100vh - 82px)}
+.left{background:#fff;border-right:1px solid #e0e4ea;overflow-y:auto;padding:13px}
+.right{overflow-y:auto;padding:13px;display:flex;flex-direction:column;gap:10px}
+
+/* FORM */
+.sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#9ca3af;padding-bottom:4px;border-bottom:1px solid #f3f4f6;margin:11px 0 7px}
+.sec:first-child{margin-top:0}
+.field{margin-bottom:7px}
+.field label{display:block;font-size:11px;color:#6b7280;font-weight:600;margin-bottom:3px}
+.field input,.field select{width:100%;border:1px solid #d1d5db;border-radius:6px;padding:6px 9px;font-size:13px;outline:none;transition:.15s;background:#fff}
+.field input:focus,.field select:focus{border-color:#2E75B6;box-shadow:0 0 0 2px #dbeafe}
+.field input[readonly]{background:#f9fafb;color:#374151}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.row4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px}
+
+.btn{width:100%;border:none;border-radius:7px;padding:9px;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;margin-top:3px}
+.btn-blue{background:#1F3864;color:#fff}.btn-blue:hover{background:#2E75B6}
+.btn-out{background:#fff;color:#374151;border:1px solid #d1d5db;margin-top:4px}.btn-out:hover{background:#f9fafb}
+.btn-sm{padding:4px 8px;font-size:11px;border-radius:5px;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-weight:600;white-space:nowrap}
+.btn-green{background:#16a34a;color:#fff;border:none}.btn-sm.btn-green:hover{background:#15803d}
+
+/* CONFIG */
+.cfg{background:#fafafa;border:1px solid #e5e7eb;border-radius:7px;padding:9px;margin-bottom:10px}
+.cfg-toggle{font-size:12px;color:#6b7280;cursor:pointer;display:flex;align-items:center;gap:5px;user-select:none}
+.cfg-body{margin-top:8px;display:none}.cfg-body.open{display:block}
+
+/* PRODUTO CARD */
+.prod-card{background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:8px 10px;margin-bottom:8px;display:none}
+.prod-card.show{display:block}
+.pname{font-size:12px;font-weight:700;color:#1e40af;margin-bottom:4px}
+.pmeta{display:flex;flex-wrap:wrap;gap:7px}
+.pmeta span{font-size:11px;color:#6b7280}.pmeta strong{color:#1e3a8a}
+
+/* CMV BOX */
+.cmv-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:9px 11px;margin-bottom:8px}
+.cmv-box .ct{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#166534;margin-bottom:6px}
+.cmv-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.cmv-item{background:#fff;border-radius:5px;padding:5px 8px;border:1px solid #d1fae5}
+.cmv-item .cl{font-size:10px;color:#6b7280;margin-bottom:1px}.cmv-item .cv{font-size:14px;font-weight:700;color:#166534}
+
+/* FRETE BOX */
+.frete-box{background:#faf5ff;border:1px solid #e9d5ff;border-radius:7px;padding:9px 11px;margin-bottom:8px}
+.frete-box .ct{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6d28d9;margin-bottom:6px}
+.frete-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px}
+.frete-item{background:#fff;border-radius:5px;padding:5px 8px;border:1px solid #e9d5ff;text-align:center}
+.frete-item .fl{font-size:10px;color:#6b7280;margin-bottom:1px}.frete-item .fv{font-size:13px;font-weight:700;color:#6d28d9}
+
+/* CENÁRIOS ML */
+.cenarios-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:9px}
+.ccard{background:#fff;border-radius:9px;border:1.5px solid #e5e7eb;overflow:hidden}
+.ccard.rec{border-color:#16a34a}.ccard.warn{border-color:#f59e0b}.ccard.info{border-color:#3b82f6}
+.chead{padding:8px 11px;display:flex;align-items:center;gap:7px;border-bottom:1px solid #f3f4f6}
+.cion{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.ctitle{font-size:11px;font-weight:700}.csub{font-size:10px;color:#9ca3af}
+.badge2{font-size:9px;font-weight:700;padding:2px 5px;border-radius:6px;margin-left:auto;white-space:nowrap}
+.cbody{padding:9px 11px}
+.preco{font-size:22px;font-weight:700}
+.preco-min{font-size:10px;color:#9ca3af;margin-bottom:5px}.preco-min strong{color:#6b7280}
+.bar{background:#f3f4f6;border-radius:3px;height:4px;margin:5px 0;overflow:hidden}
+.barfill{height:100%;border-radius:3px;transition:.4s}
+.mrow{display:flex;justify-content:space-between;font-size:10px;padding:1px 0}
+.ml2{color:#9ca3af}.mr2{font-weight:700;color:#374151}
+.dtl{border-top:1px solid #f3f4f6;margin-top:6px;padding-top:6px}
+.dr{display:flex;justify-content:space-between;font-size:10px;padding:1px 0}
+.dr span{color:#b0b7c3}.dr strong{color:#4b5563}
+.acoes{display:flex;gap:4px;margin-top:6px;padding-top:6px;border-top:1px solid #f3f4f6;flex-wrap:wrap}
+
+/* SUMMARY */
+.summary{background:#fff;border-radius:9px;border:1px solid #e5e7eb;padding:10px 13px}
+.summary h3{font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:5px}
+.sitem{background:#f8fafc;border-radius:5px;padding:5px 7px}
+.sl{font-size:9px;color:#9ca3af;margin-bottom:1px}.sv{font-size:12px;font-weight:700}
+
+/* MASSA TABLE */
+.massa-table{width:100%;background:#fff;border-radius:9px;border:1px solid #e5e7eb;overflow:hidden}
+.massa-table table{width:100%;border-collapse:collapse;font-size:11px}
+.massa-table th{background:#f8fafc;padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.massa-table td{padding:7px 10px;border-top:1px solid #f3f4f6;vertical-align:middle}
+.massa-table tr:hover td{background:#fafbfc}
+.massa-table .preco-cell{font-weight:700;white-space:nowrap}
+.massa-table .mg-cell{font-size:10px;font-weight:700}
+.pill{display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:700}
+.pill-green{background:#dcfce7;color:#166534}
+.pill-yellow{background:#fef9c3;color:#854d0e}
+.pill-red{background:#fee2e2;color:#991b1b}
+
+/* ALERTS */
+.alert{border-radius:5px;padding:7px 10px;font-size:12px;margin-bottom:7px}
+.alert-info{background:#dbeafe;color:#1e40af}
+.alert-warn{background:#fef3c7;color:#92400e}
+.alert-err{background:#fee2e2;color:#991b1b}
+.alert-ok{background:#dcfce7;color:#166534}
+
+/* SLIDER */
+.mg-row{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.mg-row label{font-size:10px;color:#374151;width:80px;flex-shrink:0}
+.mg-row input[type=range]{flex:1}
+.mgv{font-size:10px;font-weight:700;width:28px;text-align:right;color:#1F3864}
+
+/* TAG */
+.tag{display:inline-flex;align-items:center;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:700;cursor:pointer;border:1.5px solid;transition:.15s;margin:2px}
+
+.loading{text-align:center;padding:40px 20px;color:#9ca3af;font-size:13px}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:#2E75B6;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.c-mlcl{background:#fff7ed;color:#c2410c}.c-mlpr{background:#eff6ff;color:#1d4ed8}
+.c-shp{background:#fdf2f8;color:#be185d}.c-ymp{background:#f5f3ff;color:#6d28d9}
+.c-bal{background:#f0fdf4;color:#15803d}.c-atc{background:#fffbeb;color:#b45309}
+
+@media(max-width:760px){.layout{grid-template-columns:1fr;height:auto}.left{border-right:none;border-bottom:1px solid #e0e4ea}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏷️ Calculadora de Preços — Fava Ecom</h1>
+  <div class="dot wait" id="dot-bling"></div><span class="dlbl" id="lbl-bling">Bling</span>
+  &nbsp;
+  <div class="dot wait" id="dot-ml"></div><span class="dlbl" id="lbl-ml">ML</span>
+</header>
+
+<div class="tabs">
+  <div class="tab ativo" onclick="switchTab('unitario')">Produto único</div>
+  <div class="tab" onclick="switchTab('massa')">Precificação em massa (NF)</div>
+</div>
+
+<div class="layout">
+<!-- ═══════════════════ ESQUERDA ═══════════════════ -->
+<div class="left">
+
+  <div class="cfg">
+    <div class="cfg-toggle" onclick="toggleCfg()">⚙️ Tokens <span id="cfg-arr">▼</span></div>
+    <div class="cfg-body open" id="cfg-body">
+      <div class="field" style="margin-top:7px">
+        <label>Token Bling API v3</label>
+        <input type="password" id="tk-bling" placeholder="Cole aqui">
+      </div>
+      <div class="field">
+        <label>Access Token ML (APP_USR-...)</label>
+        <input type="password" id="tk-ml" placeholder="Cole aqui">
+      </div>
+      <button class="btn btn-blue" onclick="salvarTokens()">Salvar e testar</button>
+    </div>
+  </div>
+
+  <!-- ─── TAB UNITÁRIO ─── -->
+  <div id="painel-unitario">
+    <div class="sec">Buscar produto</div>
+    <div class="field">
+      <label>Código SKU (Bling) ou MLB</label>
+      <div style="display:flex;gap:5px">
+        <input type="text" id="sku" placeholder="Ex: 1782 ou MLB123456" style="flex:1" onkeydown="if(event.key==='Enter')buscar()">
+        <button class="btn btn-blue" style="width:auto;padding:6px 12px;margin:0" onclick="buscar()">Buscar</button>
+      </div>
+    </div>
+    <div id="balert"></div>
+    <div id="prod-card" class="prod-card"></div>
+
+    <div class="sec">Custo</div>
+    <div class="field">
+      <label>Custo Bling bruto (R$) — com IPI e ST embutidos</label>
+      <input type="number" id="custo-b" step="0.01" min="0" placeholder="0,00" oninput="recalcCMV()">
+    </div>
+    <div class="row3">
+      <div class="field"><label>IPI (%)</label><input type="number" id="ipi-p" step="0.1" min="0" value="0" oninput="recalcCMV()"></div>
+      <div class="field"><label>ST (R$)</label><input type="number" id="st-v" step="0.01" min="0" value="0" oninput="recalcCMV()"></div>
+      <div class="field"><label>Tem ST?</label><select id="tem-st" onchange="recalcCMV()"><option value="nao">Não</option><option value="sim">Sim</option></select></div>
+    </div>
+
+    <div id="cmv-box" class="cmv-box" style="display:none">
+      <div class="ct">CMV calculado</div>
+      <div class="cmv-grid">
+        <div class="cmv-item"><div class="cl">CMV Brasil</div><div class="cv" id="cmv-br-s">—</div></div>
+        <div class="cmv-item"><div class="cl">CMV Paraná</div><div class="cv" id="cmv-pr-s">—</div></div>
+      </div>
+      <div style="font-size:10px;color:#6b7280;margin-top:5px;line-height:1.5" id="cmv-det"></div>
+    </div>
+
+    <div class="sec">Dimensões para frete</div>
+    <div class="row2">
+      <div class="field"><label>Peso real (kg)</label><input type="number" id="peso-r" step="0.001" min="0" value="0.5" oninput="calcFrete()"></div>
+      <div class="field"><label>Estoque</label><input type="number" id="estoque" readonly></div>
+    </div>
+    <div class="row3">
+      <div class="field"><label>Larg (cm)</label><input type="number" id="dim-l" step="0.1" min="0" value="0" oninput="calcFrete()"></div>
+      <div class="field"><label>Alt (cm)</label><input type="number" id="dim-a" step="0.1" min="0" value="0" oninput="calcFrete()"></div>
+      <div class="field"><label>Prof (cm)</label><input type="number" id="dim-p" step="0.1" min="0" value="0" oninput="calcFrete()"></div>
+    </div>
+
+    <div id="frete-box" class="frete-box" style="display:none">
+      <div class="ct">Peso para cobrança ML</div>
+      <div class="frete-grid">
+        <div class="frete-item"><div class="fl">Peso Real</div><div class="fv" id="f-real">—</div></div>
+        <div class="frete-item"><div class="fl">Peso Volum.</div><div class="fv" id="f-vol">—</div></div>
+        <div class="frete-item"><div class="fl" style="color:#6d28d9;font-weight:700">Peso Cobrado</div><div class="fv" id="f-cob">—</div></div>
+      </div>
+    </div>
+
+    <div class="sec">Parâmetros médios de venda</div>
+    <div class="row2">
+      <div class="field"><label>% vendas fora PR</label><input type="number" id="pct-int" value="70" min="0" max="100" oninput="recalcCMV()"></div>
+      <div class="field"><label>% vendas p/ PF</label><input type="number" id="pct-pf" value="80" min="0" max="100" oninput="recalcCMV()"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>ICMS inter. médio (%)</label><input type="number" id="icms-m" value="12" step="0.1" oninput="recalcCMV()"></div>
+      <div class="field"><label>DIFAL médio (%)</label><input type="number" id="difal-m" value="8.5" step="0.1" oninput="recalcCMV()"></div>
+    </div>
+
+    <div class="sec">Origem fiscal</div>
+    <div class="row2" style="margin-bottom:8px">
+      <div>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:700;padding:7px 10px;border:1.5px solid #d1d5db;border-radius:6px" id="btn-pr">
+          <input type="radio" name="origem" value="PR" checked onchange="setOrigem('PR')"> 🏭 Matriz PR
+        </label>
+      </div>
+      <div>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:700;padding:7px 10px;border:1.5px solid #d1d5db;border-radius:6px" id="btn-sp">
+          <input type="radio" name="origem" value="SP" onchange="setOrigem('SP')"> 🏢 Filial SP (Full)
+        </label>
+      </div>
+    </div>
+    <div id="sp-info" style="font-size:10px;color:#6b7280;background:#fffbeb;border:1px solid #fde68a;border-radius:5px;padding:6px 9px;margin-bottom:8px;display:none">
+      ⚡ SP→SP: ICMS 18% sem DIFAL | SP→outros: ICMS inter + DIFAL reduzido
+    </div>
+
+    <div class="sec">Atacado — Faixas de quantidade</div>
+    <div id="atac-tiers" style="margin-bottom:8px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:10px;color:#6b7280;font-weight:700;margin-bottom:3px">
+        <span>Qtd mínima</span><span>Desconto %</span>
+      </div>
+      <div id="tiers-wrap"></div>
+    </div>
+
+    <div class="sec">Taxas ML</div>
+    <div class="row2">
+      <div class="field">
+        <label>Clássico (%)</label>
+        <input type="number" id="taxa-cl" value="12" min="1" max="30" step="0.5"
+          oninput="document.getElementById('taxa-pr').value=(parseFloat(this.value||12)+5).toFixed(1);atualizarTaxas()">
+      </div>
+      <div class="field">
+        <label>Premium (% = Cl+5)</label>
+        <input type="number" id="taxa-pr" value="17" min="1" max="35" step="0.5"
+          oninput="atualizarTaxas()">
+      </div>
+    </div>
+
+    <div class="sec">Categoria ML (taxa real por anúncio)</div>
+    <div class="field">
+      <label>ID do anúncio MLB (opcional)</label>
+      <div style="display:flex;gap:5px">
+        <input type="text" id="mlb-id" placeholder="MLB123456789" style="flex:1">
+        <button class="btn-sm" onclick="buscarTaxaML()" style="height:32px">Buscar taxa</button>
+      </div>
+    </div>
+    <div id="taxa-ml-info" style="font-size:11px;color:#6b7280;margin-bottom:6px"></div>
+
+    <div class="sec">Margens desejadas</div>
+    <div id="mg-wrap"></div>
+
+    <div class="sec">Canais ativos</div>
+    <div id="tags-wrap" style="margin-bottom:8px"></div>
+
+    <button class="btn btn-blue" onclick="calcAll()">Calcular preços</button>
+    <button class="btn btn-out" onclick="limpar()">Limpar</button>
+  </div>
+
+  <!-- ─── TAB MASSA ─── -->
+  <div id="painel-massa" style="display:none">
+    <div class="sec">Precificação em massa por NF</div>
+    <div class="alert alert-info">Puxa todos os SKUs do HISTORICO_COMPRAS da planilha Excel. O arquivo deve estar na mesma pasta do navegador ou acessível.</div>
+
+    <div class="field" style="margin-top:8px">
+      <label>Nº da NF</label>
+      <input type="text" id="nf-num" placeholder="Ex: 503392">
+    </div>
+    <div class="field">
+      <label>Arquivo FAVA_ESTOQUE_V5.xlsx (selecione)</label>
+      <input type="file" id="xlsx-file" accept=".xlsx,.xlsm">
+    </div>
+    <div id="massa-alert"></div>
+
+    <div class="sec">Margens por canal (massa)</div>
+    <div id="mg-wrap-massa"></div>
+
+    <div class="sec">Parâmetros médios (massa)</div>
+    <div class="row2">
+      <div class="field"><label>% fora PR</label><input type="number" id="m-pct-int" value="70" min="0" max="100"></div>
+      <div class="field"><label>% PF</label><input type="number" id="m-pct-pf" value="80" min="0" max="100"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>ICMS inter (%)</label><input type="number" id="m-icms" value="12" step="0.1"></div>
+      <div class="field"><label>DIFAL médio (%)</label><input type="number" id="m-difal" value="8.5" step="0.1"></div>
+    </div>
+
+    <button class="btn btn-blue" onclick="calcMassa()">Calcular NF</button>
+    <button class="btn btn-out" onclick="exportarMassa()">Exportar CSV</button>
+  </div>
+
+</div>
+
+<!-- ═══════════════════ DIREITA ═══════════════════ -->
+<div class="right" id="right">
+  <div class="loading">🏷️<br><br>Busque um produto ou informe o custo</div>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ══════════════════════════════════════════════════════════════════════
+// CONSTANTES
+// ══════════════════════════════════════════════════════════════════════
+const PIS=.0165, COFINS=.076, ICMS_PR=.195;
+const ICMS_SP_INTERNO = 0.18; // SP intraestadual
+
+// ICMS interestadual por UF destino (origem SP)
+// Origem SP: Sul/Sudeste = 12%, Norte/Nordeste/CO+ES = 7%
+const ICMS_DEST = {
+  // Intraestadual (SP→SP)
+  SP: {icms_saida:0.18, inter:0.18, difal:0},
+  // Sul/Sudeste — 12% inter
+  PR:{icms_saida:0.195,inter:0.12,difal:0.075}, // PR interno 19.5%, DIFAL=7.5% se saindo de SP
+  MG:{icms_saida:0.18, inter:0.12,difal:0.06},
+  RJ:{icms_saida:0.20, inter:0.12,difal:0.08},
+  SC:{icms_saida:0.17, inter:0.12,difal:0.05},
+  RS:{icms_saida:0.17, inter:0.12,difal:0.05},
+  // Norte/Nordeste/CO+ES — 7% inter
+  GO:{icms_saida:0.19, inter:0.07,difal:0.12},
+  DF:{icms_saida:0.18, inter:0.07,difal:0.11},
+  MT:{icms_saida:0.19, inter:0.07,difal:0.12},
+  MS:{icms_saida:0.17, inter:0.07,difal:0.10},
+  BA:{icms_saida:0.205,inter:0.07,difal:0.135},
+  PE:{icms_saida:0.205,inter:0.07,difal:0.135},
+  CE:{icms_saida:0.20, inter:0.07,difal:0.13},
+  ES:{icms_saida:0.17, inter:0.07,difal:0.10},
+  MA:{icms_saida:0.18, inter:0.07,difal:0.11},
+  PI:{icms_saida:0.18, inter:0.07,difal:0.11},
+  RN:{icms_saida:0.18, inter:0.07,difal:0.11},
+  PB:{icms_saida:0.18, inter:0.07,difal:0.11},
+  AL:{icms_saida:0.19, inter:0.07,difal:0.12},
+  SE:{icms_saida:0.19, inter:0.07,difal:0.12},
+  PA:{icms_saida:0.19, inter:0.07,difal:0.12},
+  AM:{icms_saida:0.20, inter:0.07,difal:0.13},
+  TO:{icms_saida:0.18, inter:0.07,difal:0.11},
+  AC:{icms_saida:0.17, inter:0.07,difal:0.10},
+  RO:{icms_saida:0.175,inter:0.07,difal:0.105},
+  RR:{icms_saida:0.17, inter:0.07,difal:0.10},
+  AP:{icms_saida:0.18, inter:0.07,difal:0.11},
+};
+const FRETE_GRATIS_LIMITE = 79;
+
+// Tabela real ML (peso_max, ate18, 19-48, 49-78, 79-99, 100-119, 120-149, 150-199, 200+, frete_rapido)
+const FRETE_ML_TB = [
+  [0.3, 5.65,6.55,7.75,12.35,14.35,16.45,18.45,20.95,12.35],
+  [0.5, 5.95,6.65,7.85,13.25,15.45,17.65,19.85,22.55,13.25],
+  [1,   6.05,6.75,7.95,13.85,16.15,18.45,20.75,23.65,13.85],
+  [1.5, 6.15,6.85,8.05,14.15,16.45,18.85,21.15,24.65,14.15],
+  [2,   6.25,6.95,8.15,14.45,16.85,19.25,21.65,24.65,14.45],
+  [3,   6.35,7.95,8.55,15.75,18.35,21.05,23.65,26.25,15.75],
+  [4,   6.45,8.15,8.95,17.05,19.85,22.65,25.55,28.35,17.05],
+  [5,   6.55,8.35,9.75,18.45,21.55,24.65,27.75,30.75,18.45],
+  [6,   6.65,8.55,9.95,25.45,28.55,32.65,35.75,39.75,25.45],
+  [7,   6.75,8.75,10.15,27.05,31.05,36.05,40.05,44.05,27.05],
+  [8,   6.85,8.95,10.35,28.85,33.65,38.45,43.25,48.05,28.85],
+  [9,   6.95,9.15,10.55,29.65,34.55,39.55,44.45,49.35,29.65],
+  [11,  7.05,9.55,10.95,41.25,48.05,54.95,61.75,68.65,41.25],
+  [13,  7.15,9.95,11.35,42.15,49.25,56.25,63.25,70.25,42.15],
+  [15,  7.25,10.15,11.55,45.05,52.45,59.95,67.45,74.95,45.05],
+  [17,  7.35,10.35,11.75,48.55,56.05,63.55,70.75,78.65,48.55],
+  [20,  7.45,10.55,11.95,54.75,63.85,72.95,82.05,91.15,54.75],
+  [25,  7.65,10.95,12.15,64.05,75.05,84.75,95.35,105.95,64.05],
+  [30,  7.75,11.15,12.35,65.95,75.45,85.55,96.25,106.95,65.95],
+  [40,  7.85,11.35,12.55,67.75,78.95,88.95,99.15,107.05,67.75],
+  [50,  7.95,11.55,12.75,70.25,81.05,92.05,102.55,110.75,70.25],
+  [60,  8.05,11.75,12.95,74.95,86.45,98.15,109.35,118.15,74.95],
+  [70,  8.15,11.95,13.15,80.25,92.95,105.05,117.15,126.55,80.25],
+  [80,  8.25,12.15,13.35,83.95,97.05,109.85,122.45,132.25,83.95],
+  [90,  8.35,12.35,13.55,93.25,107.45,122.05,136.05,146.95,93.25],
+  [100, 8.45,12.55,13.75,106.55,123.95,139.55,155.55,167.95,106.55],
+  [125, 8.55,12.75,13.95,119.25,138.05,156.05,173.95,187.95,119.25],
+  [150, 8.65,12.75,14.15,126.55,146.15,165.65,184.65,199.45,126.55],
+  [999, 8.75,12.95,14.35,166.15,192.45,217.55,242.55,261.95,166.15],
+];
+
+// Calcula frete ML real por peso e preço
+function freteML(peso, preco, rapido=false){
+  const row = FRETE_ML_TB.find(r => peso <= r[0]) || FRETE_ML_TB[FRETE_ML_TB.length-1];
+  if(rapido) return row[9];
+  if(preco < 19)   return Math.min(row[1], preco * 0.5);
+  if(preco < 49)   return row[2];
+  if(preco < 79)   return row[3];
+  if(preco < 100)  return row[4];
+  if(preco < 120)  return row[5];
+  if(preco < 150)  return row[6];
+  if(preco < 200)  return row[7];
+  return row[8];
+}
+
+function estimaFreteML(peso){ return freteML(peso, 100); }
+
+// Canais de venda
+const CD = {
+  mlcl_fr : {n:'ML Clássico — Frete Rápido',s:'Taxa 12% + frete rápido ~R$13,50',c:'c-mlcl',e:'🛒',tx:.12,cmv:'br',grupo:'ml'},
+  mlcl_fx : {n:'ML Clássico — Taxa Fixa',s:'Taxa 12% + taxa fixa R$7,25',c:'c-mlcl',e:'🛒',tx:.12,cmv:'br',grupo:'ml'},
+  mlcl_fg : {n:'ML Clássico — Frete Grátis',s:'Taxa 12% ≥ R$79 (frete grátis)',c:'c-mlcl',e:'🛒',tx:.12,cmv:'br',grupo:'ml'},
+  mlpr    : {n:'ML Premium',s:'Taxa 17% — frete grátis embutido',c:'c-mlpr',e:'⭐',tx:.17,cmv:'br',grupo:'ml'},
+  shp     : {n:'Shopee',s:'Taxa 14%',c:'c-shp',e:'🛍️',tx:.14,cmv:'br',grupo:'mkt'},
+  ymp     : {n:'Site Próprio',s:'Gateway 2,5%',c:'c-ymp',e:'🌐',tx:.025,cmv:'pr',grupo:'site'},
+  bal     : {n:'Balcão',s:'Sem taxa — CMV PR',c:'c-bal',e:'🏪',tx:0,cmv:'pr',grupo:'site'},
+  atac_ml : {n:'Atacado ML',s:'Taxa 12% — CNPJ validado',c:'c-atc',e:'📦',tx:.12,cmv:'br',grupo:'atacado'},
+  atac_sp : {n:'Atacado ML Full SP',s:'Taxa 12% — origem SP',c:'c-atc',e:'🏭',tx:.12,cmv:'br',grupo:'atacado'},
+  atac_dir: {n:'Atacado Direto',s:'Sem taxa marketplace',c:'c-atc',e:'🤝',tx:0,cmv:'pr',grupo:'atacado'},
+};
+
+const CANAIS_DEFAULT = ['mlcl_fr','mlcl_fx','mlcl_fg','mlpr','shp','ymp','bal'];
+let ativos = new Set(['mlcl_fr','mlcl_fx','mlcl_fg','mlpr','shp','ymp']);
+let margens = {mlcl_fr:.28,mlcl_fx:.28,mlcl_fg:.28,mlpr:.26,shp:.28,ymp:.35,bal:.40};
+let tokens = {bling:'',ml:''};
+let cmvBr=0, cmvPr=0, prodAtual=null;
+let pesoCobrado=0, freteEstimado=0;
+let origemFiscal='PR'; // PR ou SP
+let atacadoTiers=[{qty:1,desc:0},{qty:3,desc:0.05},{qty:5,desc:0.10},{qty:10,desc:0.15},{qty:20,desc:0.20}];
+let taxaMLCustom = null; // taxa real puxada da API
+let massaData = []; // resultado da precificação em massa
+
+// ══════════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════════
+window.onload=()=>{
+  const sv=localStorage.getItem('fava_tk4')||localStorage.getItem('fava_dash_tk');
+  if(sv){tokens=JSON.parse(sv);document.getElementById('tk-bling').value=tokens.bling||'';document.getElementById('tk-ml').value=tokens.ml||'';}
+  else{tokens.bling='590eed8f0b2fb1998e3f60335cef2a17bf5b2135fc69ec4a5ae925f520a8';document.getElementById('tk-bling').value=tokens.bling;localStorage.setItem('fava_tk4',JSON.stringify(tokens));}
+  testar();renderTags();renderMg();renderTiers();renderMgMassa();
+};
+
+// ══════════════════════════════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════════════════════════════
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('ativo',i===(t==='unitario'?0:1)));
+  document.getElementById('painel-unitario').style.display=t==='unitario'?'':'none';
+  document.getElementById('painel-massa').style.display=t==='massa'?'':'none';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// TOKENS
+// ══════════════════════════════════════════════════════════════════════
+function toggleCfg(){const b=document.getElementById('cfg-body');b.classList.toggle('open');document.getElementById('cfg-arr').textContent=b.classList.contains('open')?'▲':'▼';}
+function salvarTokens(){
+  tokens.bling=document.getElementById('tk-bling').value.trim();
+  tokens.ml=document.getElementById('tk-ml').value.trim();
+  if(!tokens.bling){alert('Cole o token do Bling antes de salvar');return;}
+  localStorage.setItem('fava_tk4',JSON.stringify(tokens));
+  localStorage.setItem('fava_dash_tk',JSON.stringify(tokens));
+  // Feedback visual imediato
+  const btn=document.querySelector('[onclick="salvarTokens()"]');
+  if(btn){btn.textContent='Salvando...';btn.disabled=true;}
+  testar().finally(()=>{
+    if(btn){btn.textContent='Salvar e testar';btn.disabled=false;}
+  });
+}
+
+async function testar(){
+  // Testa Bling
+  setDot('bling','wait','Testando...');
+  try{
+    const r=await fetch('/api/bling/produtos?pagina=1&limite=1',{
+      headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}
+    });
+    if(r.ok){
+      setDot('bling','ok','Bling ✓');
+    } else {
+      const err=await r.json().catch(()=>({}));
+      setDot('bling','err',`Bling ✗ (${r.status})`);
+      console.error('Bling erro:',err);
+    }
+  } catch(e){
+    setDot('bling','err','Bling ✗');
+    console.error('Bling erro:',e);
+  }
+  // Testa ML
+  if(tokens.ml){
+    setDot('ml','wait','Testando...');
+    try{
+      const r=await fetch('/api/ml/users/me',{
+        headers:{'Authorization':`Bearer ${tokens.ml}`}
+      });
+      if(r.ok){
+        const d=await r.json();
+        setDot('ml','ok',`ML ✓ ${d.nickname||''}`);
+      } else {
+        setDot('ml','err',`ML ✗ (${r.status})`);
+      }
+    } catch(e){
+      setDot('ml','err','ML ✗');
+    }
+  } else {
+    setDot('ml','err','ML: sem token');
+  }
+}
+function setDot(a,s,l){document.getElementById(`dot-${a}`).className=`dot ${s}`;document.getElementById(`lbl-${a}`).textContent=l;}
+
+// ══════════════════════════════════════════════════════════════════════
+// BUSCA BLING
+// ══════════════════════════════════════════════════════════════════════
+async function buscar(){
+  const sku=document.getElementById('sku').value.trim();
+  if(!sku){alerta('balert','Digite o código','warn');return;}
+  alerta('balert','<span class="spin"></span>Buscando...','info');
+  document.getElementById('prod-card').className='prod-card';
+  try{
+    if(sku.toUpperCase().startsWith('MLB')){await buscarMLItem(sku.toUpperCase());return;}
+    const r=await fetch(`/api/bling/produtos?pagina=1&limite=5&criterio=1&tipo=T&codigo=${encodeURIComponent(sku)}`,
+      {headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});
+    if(!r.ok){const e=await r.json().catch(()=>({}));alerta('balert',`Erro Bling ${r.status}: ${e.error?.description||'verifique o token'}. Abra ⚙️ e cole o token novamente.`,'err');return;}
+    const data=await r.json();
+    let lista=data.data||[];
+    if(!lista.length){
+      // fallback: busca por nome
+      const r2=await fetch(`/api/bling/produtos?pagina=1&limite=5&criterio=1&tipo=T&descricao=${encodeURIComponent(sku)}`,
+        {headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});
+      const d2=await r2.json();lista=d2.data||[];
+    }
+    if(!lista.length){alerta('balert','Produto não encontrado. O código deve ser exatamente igual ao cadastrado no Bling (campo "Código").','warn');return;}
+    await processarBling(lista[0]);
+  }catch(e){alerta('balert',`Erro: ${e.message}`,'err');}
+}
+
+async function processarBling(p){
+  let prod=p;
+  try{const r=await fetch(`/api/bling/produtos/${p.id}`,{headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});if(r.ok){const d=await r.json();prod=d.data||p;}}catch(e){}
+  let est=0;
+  try{const re=await fetch(`/api/bling/estoques/${prod.id}`,{headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});if(re.ok){const de=await re.json();est=de.data?.saldoFisicoTotal||de.data?.saldoVirtual||0;}}catch(e){}
+  prodAtual={id:prod.id,nome:prod.nome||'',codigo:prod.codigo||'',custo:parseFloat(prod.preco||0),peso:parseFloat(prod.pesoBruto||prod.peso||.5),l:parseFloat(prod.largura||0),a:parseFloat(prod.altura||0),p:parseFloat(prod.profundidade||0),estoque:est,ipi:parseFloat(prod.ipi||0)};
+  document.getElementById('custo-b').value=prodAtual.custo.toFixed(2);
+  document.getElementById('ipi-p').value=prodAtual.ipi||0;
+  document.getElementById('peso-r').value=prodAtual.peso||.5;
+  document.getElementById('dim-l').value=prodAtual.l||0;
+  document.getElementById('dim-a').value=prodAtual.a||0;
+  document.getElementById('dim-p').value=prodAtual.p||0;
+  document.getElementById('estoque').value=est;
+  alerta('balert','','');
+  mostrarCardProd();
+  recalcCMV();calcFrete();
+}
+
+async function buscarMLItem(mlb){
+  try{
+    const r=await fetch(`/api/ml/items/${mlb}`,{headers:{'Authorization':`Bearer ${tokens.ml}`}});
+    if(!r.ok){alerta('balert','Anúncio não encontrado no ML','warn');return;}
+    const item=await r.json();
+    prodAtual={nome:item.title||'',codigo:mlb,custo:parseFloat(item.price||0)*.6,peso:(item.shipping?.dimensions?.weight||500)/1000,l:0,a:0,p:0,estoque:item.available_quantity||0,mlb};
+    document.getElementById('custo-b').value=prodAtual.custo.toFixed(2);
+    document.getElementById('peso-r').value=prodAtual.peso;
+    alerta('balert','','');
+    mostrarCardProd();
+    // Puxar taxa real
+    await buscarTaxaMLById(mlb, item.price);
+    recalcCMV();calcFrete();
+  }catch(e){alerta('balert',`Erro: ${e.message}`,'err');}
+}
+
+function mostrarCardProd(){
+  if(!prodAtual)return;
+  const c=document.getElementById('prod-card');c.className='prod-card show';
+  c.innerHTML=`<div class="pname">${prodAtual.nome}</div>
+    <div class="pmeta">
+      <span>Cód: <strong>${prodAtual.codigo}</strong></span>
+      <span>Custo: <strong>R$ ${fmt(prodAtual.custo)}</strong></span>
+      <span>Peso: <strong>${prodAtual.peso}kg</strong></span>
+      ${prodAtual.mlb?`<span>MLB: <strong>${prodAtual.mlb}</strong></span>`:''}
+      <span>Estoque: <strong>${prodAtual.estoque}</strong></span>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// TAXA ML POR CATEGORIA / ANÚNCIO
+// ══════════════════════════════════════════════════════════════════════
+async function buscarTaxaML(){
+  const mlb=document.getElementById('mlb-id').value.trim();
+  if(!mlb){alert('Informe o código MLB');return;}
+  await buscarTaxaMLById(mlb, null);
+}
+
+async function buscarTaxaMLById(mlb, preco){
+  if(!tokens.ml){document.getElementById('taxa-ml-info').textContent='Configure o token ML para buscar taxa real';return;}
+  document.getElementById('taxa-ml-info').textContent='🔍 Buscando taxa do anúncio...';
+  try{
+    // Pega detalhes do item para saber listing_type e categoria
+    const ri=await fetch(`/api/ml/items/${mlb}`,{headers:{'Authorization':`Bearer ${tokens.ml}`}});
+    if(!ri.ok){document.getElementById('taxa-ml-info').textContent=`Erro ao buscar anúncio (${ri.status})`;return;}
+    const item=await ri.json();
+    const p=preco||item.price;
+    const lt=item.listing_type_id;
+
+    // Busca taxa via endpoint de fees
+    const rf=await fetch(`/api/ml/items/${mlb}/fees`,{headers:{'Authorization':`Bearer ${tokens.ml}`}});
+    if(rf.ok){
+      const fees=await rf.json();
+      // Calcula taxa total
+      const taxa_total = fees.sale_fee_amount / p;
+      taxaMLCustom={mlb, taxa:taxa_total, listing_type:lt, preco:p};
+      document.getElementById('taxa-ml-info').innerHTML=
+        `✅ Taxa real ML: <strong>${(taxa_total*100).toFixed(1)}%</strong> | Tipo: ${lt} | Preço: R$ ${fmt(p)}`;
+      calcAll();
+    }else{
+      // Fallback: usa tabela padrão
+      const taxa=lt==='gold_pro'?.16:lt==='gold_special'?.11:.14;
+      taxaMLCustom={mlb,taxa,listing_type:lt,preco:p};
+      document.getElementById('taxa-ml-info').innerHTML=`ℹ️ Taxa estimada: <strong>${(taxa*100).toFixed(0)}%</strong> (tipo: ${lt})`;
+      calcAll();
+    }
+  }catch(e){document.getElementById('taxa-ml-info').textContent=`Erro: ${e.message}`;}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// FRETE VOLUMÉTRICO
+// ══════════════════════════════════════════════════════════════════════
+function calcFrete(){
+  const pr=parseFloat(document.getElementById('peso-r').value)||0;
+  const l=parseFloat(document.getElementById('dim-l').value)||0;
+  const a=parseFloat(document.getElementById('dim-a').value)||0;
+  const p=parseFloat(document.getElementById('dim-p').value)||0;
+  const vol=(l&&a&&p) ? (l*a*p)/6000 : 0;
+  pesoCobrado=Math.max(pr,vol);
+  freteEstimado=estimaFreteML(pesoCobrado);
+
+  if(pr>0){
+    document.getElementById('frete-box').style.display='block';
+    document.getElementById('f-real').textContent=pr.toFixed(3)+' kg';
+    document.getElementById('f-vol').textContent=vol>0?vol.toFixed(3)+' kg':'— (sem dim.)';
+    document.getElementById('f-cob').textContent=pesoCobrado.toFixed(3)+' kg';
+  }
+  calcAll();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ATUALIZAR TAXAS ML
+// ══════════════════════════════════════════════════════════════════════
+function atualizarTaxas(){
+  const cl = parseFloat(document.getElementById('taxa-cl').value)||12;
+  const pr = parseFloat(document.getElementById('taxa-pr').value)||(cl+5);
+  const txCl = cl/100;
+  const txPr = pr/100;
+  // Atualiza CD dinamicamente
+  CD.mlcl_fr.tx = txCl; CD.mlcl_fr.s = `Taxa ${cl}% + frete rápido ~R$13,50`;
+  CD.mlcl_fx.tx = txCl; CD.mlcl_fx.s = `Taxa ${cl}% + taxa fixa R$7,25`;
+  CD.mlcl_fg.tx = txCl; CD.mlcl_fg.s = `Taxa ${cl}% ≥ R$79 (frete grátis)`;
+  CD.mlpr.tx    = txPr; CD.mlpr.s    = `Taxa ${pr}% — frete grátis embutido`;
+  calcAll();
+}
+
+
+// ══════════════════════════════════════════════════════════════════════
+function recalcCMV(){
+  const cb=parseFloat(document.getElementById('custo-b').value)||0;
+  const ipi=(parseFloat(document.getElementById('ipi-p').value)||0)/100;
+  const stV=parseFloat(document.getElementById('st-v').value)||0;
+  const temST=document.getElementById('tem-st').value==='sim';
+  const pInt=(parseFloat(document.getElementById('pct-int').value)||70)/100;
+  const icmsM=(parseFloat(document.getElementById('icms-m').value)||12)/100;
+
+  if(cb<=0){document.getElementById('cmv-box').style.display='none';cmvBr=0;cmvPr=0;return;}
+
+  const custoNF=(cb-stV)/(1+ipi);
+  const credPC=custoNF*(PIS+COFINS);
+  const credIcmsBr=temST?0:custoNF*pInt*icmsM;
+  cmvBr=Math.max(custoNF-credIcmsBr-credPC, custoNF*.35);
+  const credIcmsPR=temST?0:custoNF*ICMS_PR;
+  cmvPr=Math.max(custoNF-credIcmsPR-credPC, custoNF*.35);
+
+  document.getElementById('cmv-box').style.display='block';
+  document.getElementById('cmv-br-s').textContent='R$ '+fmt(cmvBr);
+  document.getElementById('cmv-pr-s').textContent='R$ '+fmt(cmvPr);
+  document.getElementById('cmv-det').innerHTML=
+    `Custo NF: R$ ${fmt(custoNF)} | Créd.ICMS BR: R$ ${fmt(credIcmsBr)} | Créd.ICMS PR: R$ ${fmt(credIcmsPR)} | Créd.PIS+COF: R$ ${fmt(credPC)}`+
+    (temST?' | ⚠️ ST: sem créd. ICMS':'');
+  calcAll();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// CÁLCULO PRINCIPAL
+// ══════════════════════════════════════════════════════════════════════
+function calcCenario(k, cmvBr, cmvPr, pesoKg){
+  const c=CD[k], m=margens[k];
+  const custo=c.cmv==='pr'?cmvPr:cmvBr;
+  if(custo<=0)return null;
+
+  // Taxa: usa custom se disponível para canais ML
+  let taxa=c.tx;
+  if(taxaMLCustom && k.startsWith('ml')){
+    if((k==='mlpr'&&taxaMLCustom.listing_type==='gold_pro')||(k.startsWith('mlcl')&&taxaMLCustom.listing_type==='gold_special'))
+      taxa=taxaMLCustom.taxa;
+  }
+  // Para atacado, delega para calcAtacado
+  if(k.startsWith('atac')) return null; // renderizado separado
+
+  // Frete rápido e taxa fixa: APENAS para preço < R$79
+  // Frete grátis e Premium: APENAS para preço >= R$79
+  // Cálculo iterativo: estima preço, calcula frete real, recalcula
+  const denom = Math.max(1-taxa-PIS-COFINS-m, .05);
+  const denomMin = Math.max(1-taxa-PIS-COFINS, .05);
+
+  // Estimativa inicial sem frete
+  let preco_est = custo / denom;
+  let frete_custo = 0;
+
+  if(k==='mlcl_fr'){
+    // Frete rápido (< R$79): usa tabela real, coluna frete_rapido
+    frete_custo = freteML(pesoCobrado||pesoKg, preco_est, true);
+    preco = (custo + frete_custo) / denom;
+    // Recalcula frete com preço real (iteração)
+    frete_custo = freteML(pesoCobrado||pesoKg, preco, true);
+    preco = (custo + frete_custo) / denom;
+  } else if(k==='mlcl_fx'){
+    // Taxa fixa (< R$79): usa tabela real, faixa 19-48 ou 49-78
+    frete_custo = freteML(pesoCobrado||pesoKg, Math.min(preco_est, 78));
+    preco = (custo + frete_custo) / denom;
+    frete_custo = freteML(pesoCobrado||pesoKg, Math.min(preco, 78));
+    preco = (custo + frete_custo) / denom;
+  } else if(k==='mlcl_fg'){
+    // Frete grátis (>= R$79): frete real pela tabela
+    frete_custo = freteML(pesoCobrado||pesoKg, preco_est);
+    preco = (custo + frete_custo) / denom;
+    frete_custo = freteML(pesoCobrado||pesoKg, preco);
+    preco = (custo + frete_custo) / denom;
+  } else if(k==='mlpr'){
+    // Premium (>= R$79): frete real pela tabela
+    frete_custo = freteML(pesoCobrado||pesoKg, preco_est);
+    preco = (custo + frete_custo) / denom;
+    frete_custo = freteML(pesoCobrado||pesoKg, preco);
+    preco = (custo + frete_custo) / denom;
+  } else {
+    preco = custo / denom;
+  }
+
+  const precoMin = (custo + frete_custo) / denomMin;
+  const pis_r=preco*PIS, cof_r=preco*COFINS, tx_r=preco*taxa;
+  const lucro=preco-custo-pis_r-cof_r-tx_r-frete_custo;
+  const mgliq=preco>0?lucro/preco:0;
+  const mc=preco>0?lucro/preco:0; // MC% = Lucro/Preço
+
+  // Validação de aplicabilidade por regra ML
+  let aplicavel=true, obs='';
+  // Frete rápido e taxa fixa: só válidos abaixo de R$79
+  if(k==='mlcl_fr'&&preco>=FRETE_GRATIS_LIMITE){aplicavel=false;obs='Frete rápido só para preço < R$79';}
+  if(k==='mlcl_fx'&&preco>=FRETE_GRATIS_LIMITE){aplicavel=false;obs='Taxa fixa só para preço < R$79';}
+  // Frete grátis e Premium: ideais acima de R$79
+  if(k==='mlcl_fg'&&preco<FRETE_GRATIS_LIMITE){aplicavel=false;obs='Frete grátis exige preço ≥ R$79';}
+  if(k==='mlpr'&&preco<FRETE_GRATIS_LIMITE){aplicavel=false;obs='ML Premium exige preço ≥ R$79';}
+
+  return{preco,precoMin,pis_r,cof_r,tx_r,frete_custo,lucro,mgliq,custo,taxa,aplicavel,obs};
+}
+
+function calcAll(){
+  if(cmvBr<=0&&cmvPr<=0){
+    document.getElementById('right').innerHTML='<div class="loading">🏷️<br><br>Informe o custo para calcular</div>';
+    return;
+  }
+  const peso=parseFloat(document.getElementById('peso-r').value)||.5;
+  const panel=document.getElementById('right');panel.innerHTML='';
+
+  // Summary
+  const sum=document.createElement('div');sum.className='summary';
+  sum.innerHTML=`<h3>${prodAtual?prodAtual.nome:'Produto'} &nbsp;|&nbsp; Peso cobrado ML: ${pesoCobrado>0?pesoCobrado.toFixed(3)+' kg':'—'} &nbsp;|&nbsp; Frete est.: R$ ${fmt(freteEstimado)}</h3><div class="sgrid" id="sgrid"></div>`;
+  panel.appendChild(sum);
+
+  const grid=document.createElement('div');grid.className='cenarios-grid';panel.appendChild(grid);
+
+  let res=[];
+  ativos.forEach(k=>{
+    const r=calcCenario(k,cmvBr,cmvPr,peso);
+    if(r)res.push({k,c:CD[k],r});
+  });
+  if(!res.length){panel.innerHTML='<div class="loading">Nenhum canal ativo</div>';return;}
+
+  // Melhor margem entre os aplicáveis
+  const aplicaveis=res.filter(x=>x.r.aplicavel);
+  const best=aplicaveis.length?aplicaveis.reduce((a,b)=>b.r.mgliq>a.r.mgliq?b:a,aplicaveis[0]):res[0];
+
+  res.forEach(({k,c,r})=>{
+    const mc=r.mgliq>=.20?'#16a34a':r.mgliq>=.10?'#d97706':'#dc2626';
+    const mw=Math.min(Math.max(r.mgliq*100,0),55).toFixed(0);
+    const isTop=k===best?.k;
+    const opacity=r.aplicavel?1:.5;
+
+    const card=document.createElement('div');
+    card.className='ccard'+(isTop?' rec':'')+(r.obs&&r.aplicavel?' warn':'');
+    card.style.opacity=opacity;
+    card.innerHTML=`
+      <div class="chead">
+        <div class="cion ${c.c}">${c.e}</div>
+        <div style="flex:1"><div class="ctitle">${c.n}</div><div class="csub">${c.s}</div></div>
+        ${isTop?'<span class="badge2" style="background:#dcfce7;color:#166534">✓ Melhor</span>':''}
+        ${!r.aplicavel?'<span class="badge2" style="background:#fee2e2;color:#991b1b">N/A</span>':''}
+      </div>
+      <div class="cbody">
+        <div class="preco">R$ ${fmt(r.preco)}</div>
+        <div class="preco-min">Mín: <strong>R$ ${fmt(r.precoMin)}</strong></div>
+        ${r.obs?`<div style="font-size:10px;color:#d97706;margin-bottom:4px">${r.obs}</div>`:''}
+        <div class="bar"><div class="barfill" style="width:${mw}%;background:${mc}"></div></div>
+        <div class="mrow"><span class="ml2">Margem líquida</span><span class="mr2" style="color:${mc}">${(r.mgliq*100).toFixed(1)}%</span></div>
+        <div class="mrow"><span class="ml2">Lucro R$</span><span class="mr2" style="color:${mc}">R$ ${fmt(r.lucro)}</span></div>
+        <div class="mrow"><span class="ml2">CMV ${c.cmv==='pr'?'PR':'Brasil'}</span><span class="mr2">R$ ${fmt(r.custo)}</span></div>
+        <div class="mrow"><span class="ml2">MC Líquida</span><span class="mr2" style="color:${mc}">${r.preco>0?((r.lucro)/r.preco*100).toFixed(1)+'%':'—'}</span></div>
+        <div class="dtl">
+          <div class="dr"><span>Taxa canal (${(r.taxa*100).toFixed(1)}%)</span><strong>R$ ${fmt(r.tx_r)}</strong></div>
+          <div class="dr"><span>PIS+COFINS</span><strong>R$ ${fmt(r.pis_r+r.cof_r)}</strong></div>
+          <div class="dr"><span>Frete</span><strong>R$ ${fmt(r.frete_custo)}</strong></div>
+        </div>
+        <div class="acoes">
+          <button class="btn-sm" onclick="copiar(${r.preco.toFixed(2)})">Copiar</button>
+          ${tokens.ml&&prodAtual?.mlb&&k.startsWith('ml')?`<button class="btn-sm btn-green" onclick="aplicarML('${prodAtual.mlb}',${r.preco.toFixed(2)})">Aplicar ML</button>`:''}
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+
+  // Atacado cards
+  const canaisAtac=['atac_ml','atac_sp','atac_dir'];
+  const ativosAtac=canaisAtac.filter(k=>ativos.has(k));
+  if(ativosAtac.length){
+    const atHead=document.createElement('div');
+    atHead.innerHTML='<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Atacado — Faixas de preço</div>';
+    panel.appendChild(atHead);
+    ativosAtac.forEach(k=>{
+      const c=CD[k];
+      const tiers=calcAtacado(cmvBr,cmvPr,k,peso);
+      if(!tiers) return;
+      const card=document.createElement('div');
+      card.className='ccard';card.style.gridColumn='1/-1';
+      card.innerHTML=`
+        <div class="chead">
+          <div class="cion ${c.c}">${c.e}</div>
+          <div><div class="ctitle">${c.n}</div><div class="csub">${c.s}</div></div>
+        </div>
+        <div class="cbody" style="padding:8px 11px">
+          <table style="width:100%;font-size:11px;border-collapse:collapse">
+            <thead><tr style="background:#f8fafc">
+              <th style="padding:5px 8px;text-align:left;font-size:10px;color:#9ca3af;font-weight:700">FAIXA</th>
+              <th style="padding:5px 8px;text-align:center;font-size:10px;color:#9ca3af;font-weight:700">QTD MÍN</th>
+              <th style="padding:5px 8px;text-align:right;font-size:10px;color:#9ca3af;font-weight:700">DESC %</th>
+              <th style="padding:5px 8px;text-align:right;font-size:10px;color:#9ca3af;font-weight:700">PREÇO UNIT</th>
+              <th style="padding:5px 8px;text-align:right;font-size:10px;color:#9ca3af;font-weight:700">FRETE</th>
+              <th style="padding:5px 8px;text-align:right;font-size:10px;color:#9ca3af;font-weight:700">LUCRO</th>
+              <th style="padding:5px 8px;text-align:right;font-size:10px;color:#9ca3af;font-weight:700">MC%</th>
+            </tr></thead>
+            <tbody>${tiers.map((t,i)=>{
+              const mc=t.mc>=.20?'#16a34a':t.mc>=.10?'#d97706':'#dc2626';
+              return\`<tr style="border-top:1px solid #f3f4f6;background:\${i%2?'#fafbfc':'#fff'}">
+                <td style="padding:5px 8px;font-weight:700">Faixa \${t.tier}</td>
+                <td style="padding:5px 8px;text-align:center">\${t.qty}+ un</td>
+                <td style="padding:5px 8px;text-align:right;color:#d97706">\${t.desc>0?'-'+(t.desc*100).toFixed(0)+'%':'—'}</td>
+                <td style="padding:5px 8px;text-align:right;font-weight:700">R\$ \${fmt(t.preco)}</td>
+                <td style="padding:5px 8px;text-align:right;color:#6b7280">R\$ \${fmt(t.frete)}</td>
+                <td style="padding:5px 8px;text-align:right;color:\${mc}">R\$ \${fmt(t.lucro)}</td>
+                <td style="padding:5px 8px;text-align:right;font-weight:700;color:\${mc}">\${(t.mc*100).toFixed(1)}%</td>
+              </tr>\`;
+            }).join('')}</tbody>
+          </table>
+        </div>`;
+      panel.appendChild(card);
+      grid.appendChild(document.createElement('span')); // placeholder
+    });
+  }
+
+  // Summary
+  const sg=document.getElementById('sgrid');
+  sg.innerHTML=
+    `<div class="sitem"><div class="sl">CMV Brasil</div><div class="sv">R$ ${fmt(cmvBr)}</div></div>`+
+    `<div class="sitem"><div class="sl">CMV Paraná</div><div class="sv">R$ ${fmt(cmvPr)}</div></div>`+
+    `<div class="sitem"><div class="sl">Frete ML est.</div><div class="sv">R$ ${fmt(freteEstimado)}</div></div>`+
+    res.filter(x=>x.r.aplicavel).map(({k,c,r})=>
+      `<div class="sitem"><div class="sl">${c.n.split('—')[0].trim()}</div><div class="sv" style="color:${r.mgliq>=.20?'#16a34a':r.mgliq>=.10?'#d97706':'#dc2626'}">R$ ${fmt(r.preco)} <span style="font-size:9px">(${(r.mgliq*100).toFixed(0)}%)</span></div></div>`
+    ).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// APLICAR PREÇO ML
+// ══════════════════════════════════════════════════════════════════════
+async function aplicarML(mlb,preco){
+  if(!confirm(`Aplicar R$ ${fmt(preco)} no anúncio ${mlb}?`))return;
+  try{
+    const r=await fetch(`/api/ml/items/${mlb}`,{method:'PUT',headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},body:JSON.stringify({price:parseFloat(preco.toFixed(2))})});
+    const d=await r.json();
+    r.ok?alert(`✅ Preço atualizado para R$ ${fmt(preco)}!`):alert(`❌ ${d.message||JSON.stringify(d)}`);
+  }catch(e){alert(`❌ ${e.message}`);}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// PRECIFICAÇÃO EM MASSA (NF + XLSX)
+// ══════════════════════════════════════════════════════════════════════
+async function calcMassa(){
+  const nfNum=document.getElementById('nf-num').value.trim();
+  const file=document.getElementById('xlsx-file').files[0];
+  if(!nfNum){alerta('massa-alert','Informe o nº da NF','warn');return;}
+  if(!file){alerta('massa-alert','Selecione o arquivo FAVA_ESTOQUE_V5.xlsx','warn');return;}
+
+  alerta('massa-alert','<span class="spin"></span>Lendo planilha...','info');
+
+  try{
+    const data=await file.arrayBuffer();
+    const wb=XLSX.read(data,{type:'array'});
+    const ws=wb.Sheets['HISTORICO_COMPRAS'];
+    if(!ws){alerta('massa-alert','Aba HISTORICO_COMPRAS não encontrada na planilha','err');return;}
+
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    // Cabeçalho na linha 2 (índice 1), dados a partir da linha 3 (índice 2)
+    // Colunas: A=NF, B=FORNECEDOR, C=DATA, D=SKU, E=PRODUTO, F=QTD, G=CADASTRADO,
+    //          H=VL.UNIT, I=VL.TOTAL, J=IPI%, K=IPI R$, L=IPI UN, M=ICMS%,
+    //          N=ICMS R$, O=ST R$, P=ST UN, Q=PIS R$, R=COFINS R$,
+    //          S=CRÉD.PIS+COF, T=CUSTO REAL UN, U=CMV BRASIL, V=CMV PR
+
+    const itensnf=rows.slice(2).filter(r=>String(r[0]||'').trim()===String(nfNum).trim());
+    if(!itensnf.length){alerta('massa-alert',`NF ${nfNum} não encontrada no HISTORICO_COMPRAS. Importe a NF primeiro.`,'warn');return;}
+
+    const pInt=(parseFloat(document.getElementById('m-pct-int').value)||70)/100;
+    const pPF=(parseFloat(document.getElementById('m-pct-pf').value)||80)/100;
+    const icmsM=(parseFloat(document.getElementById('m-icms').value)||12)/100;
+    const difalM=(parseFloat(document.getElementById('m-difal').value)||8.5)/100;
+
+    massaData=itensnf.map(r=>{
+      const sku=r[3],nome=r[4],qtd=parseFloat(r[5])||0;
+      const vlUnit=parseFloat(r[7])||0;
+      const ipiPct=parseFloat(r[9])||0;
+      const stUn=parseFloat(r[15])||0;
+      const temST=stUn>0;
+
+      // CMV já calculado na planilha — usar diretamente
+      let cmvBrItem=parseFloat(r[20])||0;  // col U = CMV BRASIL
+      let cmvPrItem=parseFloat(r[21])||0;  // col V = CMV PR
+
+      // Se não tiver CMV calculado, recalcula
+      if(cmvBrItem<=0&&vlUnit>0){
+        const custoNF=vlUnit;
+        const credPC=custoNF*(PIS+COFINS);
+        const credIcmsBr=temST?0:custoNF*pInt*icmsM;
+        cmvBrItem=Math.max(custoNF-credIcmsBr-credPC,custoNF*.35);
+        const credIcmsPR=temST?0:custoNF*ICMS_PR;
+        cmvPrItem=Math.max(custoNF-credIcmsPR-credPC,custoNF*.35);
+      }
+
+      // Calcula preços para cada canal principal
+      const precos={};
+      ['mlcl_fr','mlcl_fx','mlcl_fg','mlpr','shp','ymp','bal'].forEach(k=>{
+        const c=CD[k];
+        const custo=c.cmv==='pr'?cmvPrItem:cmvBrItem;
+        const m=margens[k];
+        let frete=k==='mlcl_fr'?13.5:k==='mlcl_fx'?7.25:k==='mlpr'||k==='mlcl_fg'?15:0;
+        const denom=Math.max(1-c.tx-PIS-COFINS-m,.05);
+        const preco=(custo+frete)/denom;
+        const lucro=preco-custo-preco*PIS-preco*COFINS-preco*c.tx-frete;
+        const mgliq=preco>0?lucro/preco:0;
+        precos[k]={preco,mgliq};
+      });
+
+      return{sku,nome,qtd,vlUnit,ipiPct,stUn,temST,cmvBr:cmvBrItem,cmvPr:cmvPrItem,precos};
+    });
+
+    alerta('massa-alert','','');
+    renderMassa(nfNum);
+  }catch(e){alerta('massa-alert',`Erro ao ler planilha: ${e.message}`,'err');}
+}
+
+function renderMassa(nfNum){
+  const panel=document.getElementById('right');panel.innerHTML='';
+
+  const head=document.createElement('div');head.className='summary';
+  head.innerHTML=`<h3>NF ${nfNum} — ${massaData.length} produtos</h3>`;
+  panel.appendChild(head);
+
+  const wrap=document.createElement('div');wrap.className='massa-table';
+  const canaisMassa=['mlcl_fr','mlcl_fx','mlcl_fg','mlpr','shp','ymp'];
+  const cNomes={mlcl_fr:'ML Cl. Rápido',mlcl_fx:'ML Cl. Fixo',mlcl_fg:'ML Cl. Grátis',mlpr:'ML Premium',shp:'Shopee',ymp:'Site'};
+
+  wrap.innerHTML=`<table>
+    <thead><tr>
+      <th>SKU</th><th>Produto</th><th>Qtd</th>
+      <th>CMV BR</th><th>CMV PR</th>
+      ${canaisMassa.map(k=>`<th>${cNomes[k]}</th>`).join('')}
+    </tr></thead>
+    <tbody>${massaData.map(it=>`
+      <tr>
+        <td><strong>${it.sku||'—'}</strong></td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${it.nome}">${it.nome}</td>
+        <td style="text-align:center">${it.qtd}</td>
+        <td>R$ ${fmt(it.cmvBr)}</td>
+        <td>R$ ${fmt(it.cmvPr)}</td>
+        ${canaisMassa.map(k=>{
+          const p=it.precos[k];
+          const cor=p.mgliq>=.20?'#16a34a':p.mgliq>=.10?'#d97706':'#dc2626';
+          return `<td class="preco-cell" style="color:${cor}">R$ ${fmt(p.preco)}<br><span class="mg-cell" style="color:${cor}">${(p.mgliq*100).toFixed(0)}%</span></td>`;
+        }).join('')}
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+  panel.appendChild(wrap);
+}
+
+function exportarMassa(){
+  if(!massaData.length){alert('Calcule uma NF primeiro');return;}
+  const canais=['mlcl_fr','mlcl_fx','mlcl_fg','mlpr','shp','ymp','bal'];
+  const cNomes={mlcl_fr:'ML Cl Rápido',mlcl_fx:'ML Cl Fixo',mlcl_fg:'ML Cl Grátis',mlpr:'ML Premium',shp:'Shopee',ymp:'Site',bal:'Balcão'};
+  let csv='SKU;Produto;Qtd;CMV Brasil;CMV PR;'+canais.map(k=>cNomes[k]).join(';')+';'+canais.map(k=>cNomes[k]+' Margem%').join(';')+'\n';
+  massaData.forEach(it=>{
+    csv+=`${it.sku};"${it.nome}";${it.qtd};${it.cmvBr.toFixed(3)};${it.cmvPr.toFixed(3)};`;
+    csv+=canais.map(k=>it.precos[k].preco.toFixed(2)).join(';')+';';
+    csv+=canais.map(k=>(it.precos[k].mgliq*100).toFixed(1)+'%').join(';')+'\n';
+  });
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='precificacao_nf.csv';a.click();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// UI
+// ══════════════════════════════════════════════════════════════════════
+function setOrigem(o){
+  origemFiscal = o;
+  document.getElementById('sp-info').style.display = o==='SP' ? 'block' : 'none';
+  document.getElementById('btn-pr').style.borderColor = o==='PR' ? '#1F3864' : '#d1d5db';
+  document.getElementById('btn-sp').style.borderColor = o==='SP' ? '#1F3864' : '#d1d5db';
+  calcAll();
+}
+
+function renderTiers(){
+  const w = document.getElementById('tiers-wrap');
+  if(!w) return;
+  w.innerHTML = atacadoTiers.map((t,i)=>`
+    <div style="display:grid;grid-template-columns:1fr 1fr 24px;gap:4px;margin-bottom:3px">
+      <input type="number" min="1" value="${t.qty}" style="padding:4px 7px;border:1px solid #d1d5db;border-radius:5px;font-size:12px"
+        oninput="atacadoTiers[${i}].qty=parseInt(this.value)||1;calcAll()">
+      <input type="number" min="0" max="60" step="1" value="${Math.round(t.desc*100)}"
+        style="padding:4px 7px;border:1px solid #d1d5db;border-radius:5px;font-size:12px"
+        oninput="atacadoTiers[${i}].desc=this.value/100;calcAll()">
+      <span style="font-size:11px;color:#9ca3af;line-height:28px">${Math.round(t.desc*100)}%</span>
+    </div>`).join('');
+}
+
+function calcAtacado(cmvBr, cmvPr, k, peso){
+  const c = CD[k];
+  const baseCMV = c.cmv==='pr' ? cmvPr : cmvBr;
+  if(baseCMV<=0) return null;
+  
+  // Para atacado SP, usa lógica SP→SP (sem DIFAL, ICMS 18%)
+  const isSP = k==='atac_sp';
+  
+  return atacadoTiers.map((tier,i)=>{
+    const custo = baseCMV; // CMV não muda por tier
+    const m = margens[k] * (1 - tier.desc); // aplica desconto na margem
+    const denom = Math.max(1 - c.tx - PIS - COFINS - m, .05);
+    const frete = k==='atac_dir' ? 0 : freteML(pesoCobrado||peso, custo/denom);
+    const preco = (custo + frete) / denom;
+    const pis_r=preco*PIS, cof_r=preco*COFINS, tx_r=preco*c.tx;
+    const lucro = preco - custo - pis_r - cof_r - tx_r - frete;
+    const mc = preco>0 ? lucro/preco : 0;
+    const precoDesconto = i>0 ? preco : null; // preço com desconto vs tier 1
+    return {tier:i+1, qty:tier.qty, desc:tier.desc, preco, lucro, mc, frete, custo, tx_r};
+  });
+}
+
+function renderTags(){
+  const w=document.getElementById('tags-wrap');w.innerHTML='';
+  Object.entries(CD).forEach(([k,c])=>{
+    const t=document.createElement('span');t.className='tag';
+    const a=ativos.has(k);
+    t.style.cssText=`background:${a?'#1F3864':'#fff'};color:${a?'#fff':'#6b7280'};border-color:${a?'#1F3864':'#d1d5db'}`;
+    t.textContent=`${c.e} ${c.n.split('—')[1]||c.n.split(' ').slice(0,2).join(' ')}`;
+    t.onclick=()=>{if(ativos.has(k))ativos.delete(k);else ativos.add(k);renderTags();renderMg();calcAll();};
+    w.appendChild(t);
+  });
+}
+
+function renderMg(){
+  const w=document.getElementById('mg-wrap');w.innerHTML='';
+  ativos.forEach(k=>{
+    const c=CD[k];const d=document.createElement('div');d.className='mg-row';
+    d.innerHTML=`<label style="font-size:10px;color:#374151;width:90px;flex-shrink:0">${c.e} ${c.n.split('—')[1]?.trim()||c.n.split(' ')[1]}</label>
+      <input type="range" min="5" max="70" step="1" value="${Math.round(margens[k]*100)}"
+        oninput="margens['${k}']=this.value/100;document.getElementById('mgv-${k}').textContent=this.value+'%';calcAll()" style="flex:1">
+      <span id="mgv-${k}" class="mgv">${Math.round(margens[k]*100)}%</span>`;
+    w.appendChild(d);
+  });
+}
+
+function renderMgMassa(){
+  const w=document.getElementById('mg-wrap-massa');if(!w)return;w.innerHTML='';
+  Object.entries(CD).slice(0,6).forEach(([k,c])=>{
+    const d=document.createElement('div');d.className='mg-row';
+    d.innerHTML=`<label style="font-size:10px;width:90px;flex-shrink:0">${c.e} ${c.n.split(' ').slice(0,2).join(' ')}</label>
+      <input type="range" min="5" max="70" step="1" value="${Math.round(margens[k]*100)}"
+        oninput="margens['${k}']=this.value/100;document.getElementById('mgvm-${k}').textContent=this.value+'%'" style="flex:1">
+      <span id="mgvm-${k}" class="mgv">${Math.round(margens[k]*100)}%</span>`;
+    w.appendChild(d);
+  });
+}
+
+function alerta(id,msg,tipo){const el=document.getElementById(id);if(!msg){el.innerHTML='';return;}el.innerHTML=`<div class="alert alert-${tipo}">${msg}</div>`;}
+function fmt(v){return(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function copiar(v){navigator.clipboard.writeText(v.toFixed(2)).then(()=>alert('Copiado: R$ '+fmt(v)));}
+function limpar(){
+  ['sku','custo-b','ipi-p','st-v','dim-l','dim-a','dim-p','mlb-id'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('ipi-p').value='0';document.getElementById('st-v').value='0';
+  document.getElementById('tem-st').value='nao';document.getElementById('peso-r').value='0.5';
+  document.getElementById('estoque').value='';
+  document.getElementById('prod-card').className='prod-card';
+  document.getElementById('cmv-box').style.display='none';
+  document.getElementById('frete-box').style.display='none';
+  document.getElementById('taxa-ml-info').textContent='';
+  document.getElementById('balert').innerHTML='';
+  cmvBr=0;cmvPr=0;pesoCobrado=0;freteEstimado=0;prodAtual=null;taxaMLCustom=null;
+  document.getElementById('right').innerHTML='<div class="loading">🏷️<br><br>Busque um produto ou informe o custo</div>';
+}
+</script>
+</body>
+</html>
