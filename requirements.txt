@@ -1,0 +1,1 @@
+# Fava Ecom — sem dependências externas, só Python padrão
