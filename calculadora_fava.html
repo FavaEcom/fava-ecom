@@ -153,7 +153,7 @@ header h1{font-size:14px;font-weight:700;flex:1}
 
   <div class="cfg">
     <div class="cfg-toggle" onclick="toggleCfg()">⚙️ Tokens <span id="cfg-arr">▼</span></div>
-    <div class="cfg-body" id="cfg-body">
+    <div class="cfg-body open" id="cfg-body">
       <div class="field" style="margin-top:7px">
         <label>Token Bling API v3</label>
         <input type="password" id="tk-bling" placeholder="Cole aqui">
@@ -450,7 +450,7 @@ let massaData = []; // resultado da precificação em massa
 // INIT
 // ══════════════════════════════════════════════════════════════════════
 window.onload=()=>{
-  const sv=localStorage.getItem('fava_tk4');
+  const sv=localStorage.getItem('fava_tk4')||localStorage.getItem('fava_dash_tk');
   if(sv){tokens=JSON.parse(sv);document.getElementById('tk-bling').value=tokens.bling||'';document.getElementById('tk-ml').value=tokens.ml||'';}
   else{tokens.bling='590eed8f0b2fb1998e3f60335cef2a17bf5b2135fc69ec4a5ae925f520a8';document.getElementById('tk-bling').value=tokens.bling;localStorage.setItem('fava_tk4',JSON.stringify(tokens));}
   testar();renderTags();renderMg();renderTiers();renderMgMassa();
@@ -469,7 +469,7 @@ function switchTab(t){
 // TOKENS
 // ══════════════════════════════════════════════════════════════════════
 function toggleCfg(){const b=document.getElementById('cfg-body');b.classList.toggle('open');document.getElementById('cfg-arr').textContent=b.classList.contains('open')?'▲':'▼';}
-function salvarTokens(){tokens.bling=document.getElementById('tk-bling').value.trim();tokens.ml=document.getElementById('tk-ml').value.trim();localStorage.setItem('fava_tk4',JSON.stringify(tokens));testar();}
+function salvarTokens(){tokens.bling=document.getElementById('tk-bling').value.trim();tokens.ml=document.getElementById('tk-ml').value.trim();localStorage.setItem('fava_tk4',JSON.stringify(tokens));localStorage.setItem('fava_dash_tk',JSON.stringify(tokens));testar();}
 
 async function testar(){
   setDot('bling','wait','Bling...');
