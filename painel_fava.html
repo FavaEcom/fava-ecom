@@ -98,6 +98,39 @@ header h1{font-size:15px;font-weight:700;flex:1}
 /* EMPTY */
 .empty{text-align:center;padding:30px;color:var(--muted);font-size:12px}
 
+/* PEDIDOS */
+.ped-filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.ped-filters input{border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:11px;outline:none}
+.ped-filters input:focus{border-color:var(--azul2)}
+.ped-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.ped-tbl th{padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--borda);background:#f8fafc;white-space:nowrap;cursor:pointer}
+.ped-tbl th:hover{background:#f0f2f5}
+.ped-tbl td{padding:6px 9px;border-bottom:1px solid #f9fafb;vertical-align:middle}
+.ped-tbl tr:last-child td{border-bottom:none}
+.ped-tbl tr:hover td{background:#fafbfc}
+.ped-tbl .num{text-align:right;font-variant-numeric:tabular-nums}
+.ped-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:8px;margin-bottom:10px}
+.ped-kpi{background:#fff;border-radius:8px;border:1px solid var(--borda);padding:9px 12px}
+.ped-kpi .pkl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.ped-kpi .pkv{font-size:18px;font-weight:700}
+
+/* ADS */
+.ads-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:9px;margin-bottom:12px}
+.ads-kpi{background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 13px}
+.ads-kpi .akl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.ads-kpi .akv{font-size:20px;font-weight:700}
+.ads-kpi .akd{font-size:10px;color:var(--muted);margin-top:2px}
+.ads-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.ads-tbl th{padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--borda);background:#f8fafc;white-space:nowrap;cursor:pointer}
+.ads-tbl th:hover{background:#f0f2f5}
+.ads-tbl td{padding:6px 9px;border-bottom:1px solid #f9fafb;vertical-align:middle}
+.ads-tbl tr:last-child td{border-bottom:none}
+.ads-tbl tr:hover td{background:#fafbfc}
+.ads-tbl .num{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.roas-bom{color:#16a34a;font-weight:700}
+.roas-med{color:#d97706;font-weight:700}
+.roas-ruim{color:#dc2626;font-weight:700}
+
 /* GESTÃO PREÇOS */
 .gp-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fff;border-radius:9px;border:1px solid var(--borda);padding:10px 14px;margin-bottom:10px}
 .gp-toolbar label{font-size:11px;font-weight:700;color:var(--muted)}
@@ -261,6 +294,8 @@ header h1{font-size:15px;font-weight:700;flex:1}
   <div class="vtab" onclick="setView('financeiro')" id="vtab-fin">💰 Financeiro</div>
   <div class="vtab" onclick="setView('conciliacao')" id="vtab-conc">🏦 Conciliação MP</div>
   <div class="vtab" onclick="setView('precos')" id="vtab-prec">🏷️ Gestão Preços</div>
+  <div class="vtab" onclick="setView('ads')" id="vtab-ads">📣 ADS + Margem</div>
+  <div class="vtab" onclick="setView('pedidos')" id="vtab-ped">📦 Pedidos</div>
 </div>
 
 <!-- PERIOD BAR -->
@@ -412,6 +447,164 @@ header h1{font-size:15px;font-weight:700;flex:1}
 
 </div>
 
+<!-- PEDIDOS VIEW -->
+<div id="view-pedidos" style="display:none;padding:14px 18px;flex-direction:column;gap:0">
+
+  <!-- KPIs -->
+  <div class="ped-kpis" id="ped-kpis">
+    <div class="ped-kpi"><div class="pkl">Total pedidos</div><div class="pkv" id="pk-total">—</div></div>
+    <div class="ped-kpi"><div class="pkl">Faturamento</div><div class="pkv" id="pk-fat">—</div></div>
+    <div class="ped-kpi"><div class="pkl">Lucro total</div><div class="pkv" id="pk-lucro">—</div></div>
+    <div class="ped-kpi"><div class="pkl">Margem média</div><div class="pkv" id="pk-mg">—</div></div>
+    <div class="ped-kpi"><div class="pkl">DIFAL total pago</div><div class="pkv" id="pk-difal" style="color:#d97706">—</div></div>
+    <div class="ped-kpi"><div class="pkl">Frete total pago</div><div class="pkv" id="pk-frete">—</div></div>
+    <div class="ped-kpi"><div class="pkl">Sem CMV</div><div class="pkv" id="pk-nocmv" style="color:#9ca3af">—</div></div>
+    <div class="ped-kpi"><div class="pkl">Ticket médio</div><div class="pkv" id="pk-tick">—</div></div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="ped-filters">
+    <input type="text" id="ped-search" placeholder="Buscar pedido, SKU ou produto..." oninput="filtrarPedidos()" style="width:240px">
+    <select id="ped-uf" onchange="filtrarPedidos()" style="border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:11px;outline:none">
+      <option value="">Todos os estados</option>
+    </select>
+    <select id="ped-status" onchange="filtrarPedidos()" style="border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:11px;outline:none">
+      <option value="">Todos os status</option>
+      <option value="paid">Pago</option>
+      <option value="shipped">Enviado</option>
+      <option value="delivered">Entregue</option>
+    </select>
+    <button class="filt-btn a" id="pf-todos" onclick="setPedFiltro('todos')">Todos</button>
+    <button class="filt-btn" id="pf-mg-neg" onclick="setPedFiltro('neg')">⛔ Margem negativa</button>
+    <button class="filt-btn" id="pf-mg-low" onclick="setPedFiltro('low')">⚠️ Abaixo 15%</button>
+    <button class="filt-btn" id="pf-ok" onclick="setPedFiltro('ok')">✅ Margem OK</button>
+    <button class="btn-fin" onclick="exportarPedidos()" style="margin-left:auto">⬇ Exportar CSV</button>
+  </div>
+
+  <!-- Tabela -->
+  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden">
+    <table class="ped-tbl">
+      <thead>
+        <tr>
+          <th onclick="sortPed('id')">Pedido ↕</th>
+          <th onclick="sortPed('data')">Data ↕</th>
+          <th onclick="sortPed('sku')">SKU</th>
+          <th>Produto</th>
+          <th>UF</th>
+          <th class="num" onclick="sortPed('preco')">Preço ↕</th>
+          <th class="num" onclick="sortPed('cmv')">CMV ↕</th>
+          <th class="num" onclick="sortPed('taxa_r')">Taxa ML ↕</th>
+          <th class="num" onclick="sortPed('frete_un')">Frete ↕</th>
+          <th class="num" onclick="sortPed('difal')">DIFAL ↕</th>
+          <th class="num" onclick="sortPed('pis_r')">PIS+COF ↕</th>
+          <th class="num" onclick="sortPed('cred_taxa')">Créd. taxa ↕</th>
+          <th class="num" onclick="sortPed('lucro')">Lucro ↕</th>
+          <th class="num" onclick="sortPed('margem')">Margem ↕</th>
+        </tr>
+      </thead>
+      <tbody id="ped-tbody">
+        <tr><td colspan="14" style="text-align:center;padding:30px;color:var(--muted)">Carregue o painel principal primeiro (período desejado)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ADS + MARGEM PÓS-ADS VIEW -->
+<div id="view-ads" style="display:none;padding:14px 18px;flex-direction:column;gap:12px">
+
+  <!-- Config período -->
+  <div class="fcard">
+    <div class="fcard-body" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:11px;font-weight:700">📣 ADS Mercado Livre — Métricas e Margem Pós-ADS</label>
+      <input type="date" id="ads-de" style="border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:12px;outline:none">
+      <span style="font-size:11px">até</span>
+      <input type="date" id="ads-ate" style="border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:12px;outline:none">
+      <button class="btn-fin" onclick="carregarADS()">🔍 Carregar ADS</button>
+      <button class="btn-fin" style="background:#16a34a" onclick="carregarPedidosComADS()">📦 Cruzar com Pedidos</button>
+      <button class="btn-fin" style="background:#6b7280" onclick="exportarADS()">⬇ Exportar</button>
+      <span id="ads-status" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+  </div>
+
+  <!-- KPIs ADS -->
+  <div class="ads-kpis">
+    <div class="ads-kpi"><div class="akl">Gasto Total ADS</div><div class="akv" id="ak-gasto" style="color:#dc2626">—</div><div class="akd">No período</div></div>
+    <div class="ads-kpi"><div class="akl">Faturamento via ADS</div><div class="akv" id="ak-fat-ads" style="color:#16a34a">—</div><div class="akd">Vendas atribuídas</div></div>
+    <div class="ads-kpi"><div class="akl">ROAS</div><div class="akv" id="ak-roas">—</div><div class="akd">Retorno por R$1 investido</div></div>
+    <div class="ads-kpi"><div class="akl">% Gasto / Fatur.</div><div class="akv" id="ak-pct-ads">—</div><div class="akd">Custo ADS sobre receita</div></div>
+    <div class="ads-kpi"><div class="akl">Cliques</div><div class="akv" id="ak-cliques">—</div><div class="akd">Total de cliques</div></div>
+    <div class="ads-kpi"><div class="akl">Impressões</div><div class="akv" id="ak-impress">—</div><div class="akd">Visualizações</div></div>
+    <div class="ads-kpi"><div class="akl">CTR</div><div class="akv" id="ak-ctr">—</div><div class="akd">Taxa de clique</div></div>
+    <div class="ads-kpi"><div class="akl">Margem Média pós-ADS</div><div class="akv" id="ak-mg-ads">—</div><div class="akd">Com custo ADS descontado</div></div>
+  </div>
+
+  <!-- Gráficos -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="fcard">
+      <div class="fcard-head"><h3>Gasto ADS vs Faturamento diário</h3></div>
+      <div class="fcard-body"><div style="height:180px"><canvas id="chart-ads-fat"></canvas></div></div>
+    </div>
+    <div class="fcard">
+      <div class="fcard-head"><h3>ROAS por anúncio (top 15)</h3></div>
+      <div class="fcard-body"><div style="height:180px"><canvas id="chart-roas"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- Tabela por anúncio -->
+  <div class="fcard">
+    <div class="fcard-head">
+      <h3>📊 Métricas por anúncio — Margem pós-ADS</h3>
+      <span style="font-size:10px;color:var(--muted)">Margem = (Receita - CMV - Taxas - Frete - DIFAL - Gasto ADS) / Receita</span>
+    </div>
+    <div class="fcard-body" style="padding:0;max-height:450px;overflow-y:auto">
+      <table class="ads-tbl">
+        <thead>
+          <tr>
+            <th>SKU / MLB</th>
+            <th>Produto</th>
+            <th class="num">Impressões</th>
+            <th class="num">Cliques</th>
+            <th class="num">CTR</th>
+            <th class="num">Vendas</th>
+            <th class="num">Receita</th>
+            <th class="num">Gasto ADS</th>
+            <th class="num">% ADS</th>
+            <th class="num">ROAS</th>
+            <th class="num">Margem s/ ADS</th>
+            <th class="num">Margem c/ ADS</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="ads-tbody">
+          <tr><td colspan="13" style="text-align:center;padding:30px;color:var(--muted)">
+            Clique em "Carregar ADS" para buscar métricas
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Pedidos com ADS -->
+  <div class="fcard" id="ads-pedidos-card" style="display:none">
+    <div class="fcard-head"><h3>📦 Pedidos com Margem Real pós-ADS</h3></div>
+    <div class="fcard-body" style="padding:0;max-height:350px;overflow-y:auto">
+      <table class="ads-tbl">
+        <thead>
+          <tr>
+            <th>Pedido</th><th>Data</th><th>Produto</th><th>UF</th>
+            <th class="num">Preço</th><th class="num">CMV</th>
+            <th class="num">Taxa ML</th><th class="num">Frete</th>
+            <th class="num">DIFAL</th><th class="num">ADS est.</th>
+            <th class="num">Lucro</th><th class="num">Margem</th>
+          </tr>
+        </thead>
+        <tbody id="ads-pedidos-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
 <!-- GESTÃO DE PREÇOS VIEW -->
 <div id="view-precos" style="display:none;padding:14px 18px;flex-direction:column;gap:0">
 
@@ -465,7 +658,12 @@ header h1{font-size:15px;font-weight:700;flex:1}
     <button class="btn-fin" onclick="aplicarDescGlobal()" style="padding:4px 10px;font-size:11px">Aplicar a todos</button>
 
     <div style="margin-left:auto;display:flex;gap:6px">
-      <button class="btn-fin" onclick="exportarGP()" style="background:#6b7280">⬇ Exportar planilha</button>
+      <input type="file" id="cmv-xlsx" accept=".xlsx,.xlsm" style="display:none" onchange="carregarCMVPlanilha(this)">
+      <button class="btn-fin" onclick="document.getElementById('cmv-xlsx').click()"
+        style="background:#6b7280" title="Carrega CMV real do FAVA_ESTOQUE_V5.xlsx">
+        📊 Carregar CMV da planilha
+      </button>
+      <button class="btn-fin" onclick="exportarGP()" style="background:#374151">⬇ Exportar</button>
     </div>
   </div>
 
@@ -903,10 +1101,13 @@ async function fetchCMVs(skus){
         const r=await blingGet(`produtos?criterio=1&tipo=T&codigo=${encodeURIComponent(sku)}&limite=1`);
         const prod=r?.data?.[0];
         if(prod){
+          // precoCusto = custo Bling (já inclui IPI+ST)
+          // NÃO usar preco (preço de venda)
+          const custoB = parseFloat(prod.precoCusto||0);
           dados.cmvCache[sku]={
-            nome:prod.nome||prod.descricao||sku,
-            cmv:parseFloat(prod.preco||0),
-            custo:parseFloat(prod.precoCusto||prod.preco||0),
+            nome: prod.nome||prod.descricao||sku,
+            cmv:  custoB,
+            custo: custoB,
           };
         }
       }catch(e){}
@@ -920,19 +1121,28 @@ async function fetchCMVs(skus){
 function calcMargemReal(preco, sku, uf, listing_type, frete, qtd){
   const ufData=ICMS_TB[uf]||ICMS_TB['SP'];
   const taxa=taxaML(listing_type);
-  const cmvInfo=dados.cmvCache[sku];
-  // CMV: se tem no cache usa, senão estima 60% do preço
-  const cmv=cmvInfo?cmvInfo.cmv:preco*.6;
-  // Impostos na saída
-  const icms=preco*ufData.inter;
-  const difal=uf!=='PR'?preco*ufData.difal:0;
-  const pis_r=preco*PIS;
-  const cof_r=preco*COFINS;
-  const taxa_r=preco*taxa;
-  const frete_un=(frete||0)/(qtd||1);
-  const lucro=preco-cmv-icms-difal-pis_r-cof_r-taxa_r-frete_un;
-  const margem=preco>0?lucro/preco:0;
-  return{cmv,icms,difal,pis_r,cof_r,taxa_r,frete_un,lucro,margem,temCMV:!!cmvInfo};
+  const cmvInfo=dados.cmvCache[sku] || dados.cmvCache[String(parseInt(sku)||0)];
+  // CMV: usa cache (HISTORICO ou Bling) — NÃO estima se não tiver
+  const cmv = cmvInfo?.cmv || 0;
+  const temCMV = cmv > 0;
+
+  // Impostos na saída — DIFAL real por estado do comprador
+  const icms    = preco * (ufData?.inter || ICMS_TB['SP'].inter);
+  const difal   = uf!=='PR' ? preco*(ufData?.difal||0.085) : 0;
+  const pis_r   = preco * PIS;
+  const cof_r   = preco * COFINS;
+  const taxa_r  = preco * taxa;
+  const frete_un = (frete||0) / (qtd||1);
+
+  // Crédito PIS/COFINS sobre taxa ML e frete (seu modelo real)
+  const cred_taxa = taxa_r * (PIS+COFINS);
+  const cred_frete = frete_un * (PIS+COFINS);
+
+  const lucro = temCMV
+    ? preco - cmv - icms - difal - pis_r - cof_r - taxa_r - frete_un + cred_taxa + cred_frete
+    : 0;
+  const margem = preco>0&&temCMV ? lucro/preco : null;
+  return{cmv,icms,difal,pis_r,cof_r,taxa_r,frete_un,cred_taxa,cred_frete,lucro,margem,temCMV};
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1091,7 +1301,7 @@ function renderRankingMg(itens){
     por_sku[k].preco_sum+=it.preco;
     por_sku[k].n++;por_sku[k].qtd+=it.qtd;
   });
-  const rank=Object.values(por_sku).filter(r=>r.n>0).map(r=>({...r,mg:r.fat?r.lucro/r.fat:0,cmv_med:r.n?r.cmv_sum/r.n:0,preco_med:r.n?r.preco_sum/r.n:0})).sort((a,b)=>b.mg-a.mg).slice(0,20);
+  const rank=Object.values(por_sku).filter(r=>r.n>0&&r.fat>0).map(r=>({...r,mg:r.fat?r.lucro/r.fat:0,cmv_med:r.n?r.cmv_sum/r.n:0,preco_med:r.n?r.preco_sum/r.n:0})).sort((a,b)=>b.mg-a.mg).slice(0,20);
 
   document.getElementById('body-rank-mg').innerHTML=rank.map((r,i)=>{
     const mc=r.mg>=.20?'pill-g':r.mg>=.10?'pill-y':'pill-r';
@@ -1205,6 +1415,420 @@ function fmt(v){return(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,max
 function fmtK(v){return v>=1000?`${(v/1000).toFixed(1)}k`:fmt(v);}
 
 // ══════════════════════════════════════════════════════════════════════
+// ADS + MARGEM PÓS-ADS
+// ══════════════════════════════════════════════════════════════════════
+let adsData = [];
+let adsChartFat = null, adsChartRoas = null;
+const PIS_ADS=.0165, COF_ADS=.076, ICMS_ADS=.12, DIFAL_ADS=.085;
+
+function initADS(){
+  const hoje = new Date().toISOString().substring(0,10);
+  const d30 = new Date(); d30.setDate(d30.getDate()-30);
+  document.getElementById('ads-de').value = d30.toISOString().substring(0,10);
+  document.getElementById('ads-ate').value = hoje;
+}
+
+async function carregarADS(){
+  if(!tokens.ml){alert('Configure o token ML');return;}
+  const de = document.getElementById('ads-de').value;
+  const ate = document.getElementById('ads-ate').value;
+  if(!de||!ate){alert('Informe o período');return;}
+
+  document.getElementById('ads-status').textContent = '⟳ Buscando métricas ADS...';
+
+  try{
+    // Busca campanhas ativas
+    const rc = await fetch(`/api/ml/advertising/product_ads/advertisers/537714337/campaigns?limit=50`,
+      {headers:{'Authorization':`Bearer ${tokens.ml}`}});
+
+    if(!rc.ok){
+      // ADS pode não estar ativo — busca métricas direto
+      await buscarMetricasADS(de, ate);
+      return;
+    }
+    const campaigns = await rc.json();
+    document.getElementById('ads-status').textContent = `✅ ${campaigns.results?.length||0} campanhas encontradas`;
+    await buscarMetricasADS(de, ate);
+  }catch(e){
+    // Tenta direto
+    await buscarMetricasADS(de, ate);
+  }
+}
+
+async function buscarMetricasADS(de, ate){
+  try{
+    // Endpoint de relatório por produto
+    const url = `/api/ml/advertising/product_ads/advertisers/537714337/reports/products?date_from=${de}&date_to=${ate}&limit=100`;
+    const r = await fetch(url, {headers:{'Authorization':`Bearer ${tokens.ml}`}});
+
+    if(!r.ok){
+      const err = await r.json().catch(()=>({}));
+      // Se não tiver ADS ativo, mostra pedidos com margem real sem ADS
+      document.getElementById('ads-status').textContent = `ℹ️ ADS: ${err.message||'sem campanhas ativas'} — mostrando margem sem ADS`;
+      adsData = [];
+      renderADSvazio();
+      renderPedidosComADS();
+      return;
+    }
+
+    const d = await r.json();
+    adsData = d.results || d.data || [];
+    renderADS();
+    document.getElementById('ads-status').textContent = `✅ ${adsData.length} anúncios com ADS`;
+  }catch(e){
+    document.getElementById('ads-status').textContent = `❌ Erro: ${e.message}`;
+    renderADSvazio();
+    renderPedidosComADS();
+  }
+}
+
+function renderADSvazio(){
+  // Quando não tem ADS ativo, mostra tabela com pedidos e margem sem ADS
+  document.getElementById('ads-tbody').innerHTML =
+    '<tr><td colspan="13" style="text-align:center;padding:20px;color:var(--muted)">Sem campanhas ADS ativas no período — use "Cruzar com Pedidos" para ver margem real</td></tr>';
+  // Zera KPIs
+  ['ak-gasto','ak-fat-ads','ak-roas','ak-pct-ads','ak-cliques','ak-impress','ak-ctr'].forEach(id=>{
+    document.getElementById(id).textContent='R$ 0' in ['ak-gasto','ak-fat-ads']?'R$ 0':'0';
+  });
+  document.getElementById('ak-gasto').textContent='R$ 0';
+  document.getElementById('ak-fat-ads').textContent='—';
+  document.getElementById('ak-roas').textContent='—';
+  document.getElementById('ak-pct-ads').textContent='0%';
+  document.getElementById('ak-cliques').textContent='0';
+  document.getElementById('ak-impress').textContent='0';
+  document.getElementById('ak-ctr').textContent='0%';
+}
+
+function renderADS(){
+  // KPIs
+  const totalGasto = adsData.reduce((s,a)=>s+(a.cost||a.spent||0),0);
+  const totalFat   = adsData.reduce((s,a)=>s+(a.revenue||a.attributed_revenue||0),0);
+  const totalClick = adsData.reduce((s,a)=>s+(a.clicks||0),0);
+  const totalImp   = adsData.reduce((s,a)=>s+(a.impressions||0),0);
+  const roas = totalGasto>0 ? totalFat/totalGasto : 0;
+  const ctr  = totalImp>0 ? totalClick/totalImp : 0;
+  const pctAds = totalFat>0 ? totalGasto/totalFat : 0;
+
+  document.getElementById('ak-gasto').textContent = 'R$ '+fmt(totalGasto);
+  document.getElementById('ak-fat-ads').textContent = 'R$ '+fmtK(totalFat);
+  document.getElementById('ak-roas').textContent = roas.toFixed(2)+'x';
+  document.getElementById('ak-roas').className = 'akv '+(roas>=3?'roas-bom':roas>=1.5?'roas-med':'roas-ruim');
+  document.getElementById('ak-pct-ads').textContent = (pctAds*100).toFixed(1)+'%';
+  document.getElementById('ak-cliques').textContent = totalClick.toLocaleString('pt-BR');
+  document.getElementById('ak-impress').textContent = fmtK(totalImp);
+  document.getElementById('ak-ctr').textContent = (ctr*100).toFixed(2)+'%';
+
+  // Tabela por anúncio
+  const sorted = [...adsData].sort((a,b)=>(b.cost||b.spent||0)-(a.cost||a.spent||0));
+  const rows = sorted.map(a=>{
+    const mlb = a.item_id||a.ad_id||'—';
+    const sku = a.sku||'—';
+    const titulo = a.title||a.item_title||'—';
+    const impr = a.impressions||0;
+    const clicks = a.clicks||0;
+    const ctr_a = impr>0?clicks/impr:0;
+    const vendas = a.units_sold||a.conversions||0;
+    const receita = a.revenue||a.attributed_revenue||0;
+    const gasto = a.cost||a.spent||0;
+    const roas_a = gasto>0?receita/gasto:0;
+    const pct_a = receita>0?gasto/receita:0;
+
+    // Margem sem e com ADS
+    const cmvInfo = dados.cmvCache[sku]||dados.cmvCache[String(parseInt(sku)||0)];
+    const cmv = cmvInfo?.cmv||0;
+    const taxa = .12;
+    const frete_est = 15;
+    const difal_est = receita*.085*.7*.8;
+    const margem_sem = receita>0&&cmv>0 ? (receita-cmv-receita*PIS_ADS-receita*COF_ADS-receita*taxa-frete_est-difal_est)/receita : null;
+    const margem_com = margem_sem!==null ? margem_sem - pct_a : null;
+
+    const mgCor = (m)=>m===null?'#9ca3af':m>=.15?'#16a34a':m>=.10?'#d97706':'#dc2626';
+    const roasCls = roas_a>=3?'roas-bom':roas_a>=1.5?'roas-med':'roas-ruim';
+
+    return`<tr>
+      <td><div style="font-size:10px;font-weight:700;color:var(--azul)">${sku}</div><div style="font-size:9px;color:var(--muted)">${String(mlb).slice(-10)}</div></td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px">${titulo}</td>
+      <td class="num">${fmtK(impr)}</td>
+      <td class="num">${clicks}</td>
+      <td class="num">${(ctr_a*100).toFixed(2)}%</td>
+      <td class="num">${vendas}</td>
+      <td class="num">R$ ${fmt(receita)}</td>
+      <td class="num" style="color:#dc2626">R$ ${fmt(gasto)}</td>
+      <td class="num" style="color:${pct_a>.15?'#dc2626':'#d97706'}">${(pct_a*100).toFixed(1)}%</td>
+      <td class="num ${roasCls}">${roas_a.toFixed(2)}x</td>
+      <td class="num" style="color:${mgCor(margem_sem)}">${margem_sem!==null?(margem_sem*100).toFixed(1)+'%':'—'}</td>
+      <td class="num" style="color:${mgCor(margem_com)};font-weight:700">${margem_com!==null?(margem_com*100).toFixed(1)+'%':'—'}</td>
+      <td>${margem_com===null?'—':margem_com>=.15?'<span class="pill pill-g">✓ OK</span>':margem_com>=.10?'<span class="pill pill-y">⚠ Atenção</span>':'<span class="pill pill-r">✗ Negativo</span>'}</td>
+    </tr>`;
+  });
+  document.getElementById('ads-tbody').innerHTML = rows.join('')||
+    '<tr><td colspan="13" style="text-align:center;padding:20px;color:var(--muted)">Sem dados ADS</td></tr>';
+
+  renderChartADS(sorted);
+  renderPedidosComADS();
+  document.getElementById('ak-mg-ads').textContent = adsData.length>0&&adsData[0].revenue>0?
+    ((adsData.reduce((s,a)=>{
+      const g=a.cost||0,r=a.revenue||1;
+      return s+(r-g)/r/adsData.length;
+    },0)*100).toFixed(1)+'%'):'—';
+}
+
+function renderPedidosComADS(){
+  document.getElementById('ads-pedidos-card').style.display='block';
+  const pedidos = dados.pedidosML.filter(p=>p.status!=='cancelled').slice(0,50);
+
+  // Gasto ADS total / total pedidos = custo ADS por pedido (estimativa)
+  const gastoTotal = adsData.reduce((s,a)=>s+(a.cost||a.spent||0),0);
+  const nPedidos = dados.pedidosML.filter(p=>p.status!=='cancelled').length;
+  const adsPorPedido = nPedidos>0 ? gastoTotal/nPedidos : 0;
+
+  const rows = pedidos.map(p=>{
+    const uf = p.uf||'SP';
+    const ufData = {SP:{difal:.06},PR:{difal:0},MG:{difal:.06},RJ:{difal:.08},SC:{difal:.05},RS:{difal:.05}};
+    const difal_pct = (ufData[uf]?.difal||.085)*.8; // 80% PF
+    const taxa = .12;
+    const preco = p.total;
+    const frete = p.frete||freteGP(preco);
+    const difal_r = preco*difal_pct;
+    const pis_r = preco*PIS_ADS;
+    const cof_r = preco*COF_ADS;
+    const tx_r = preco*taxa;
+
+    // CMV por item
+    const cmv = p.itens?.reduce((s,it)=>{
+      const ci=dados.cmvCache[it.sku]||dados.cmvCache[String(parseInt(it.sku)||0)];
+      return s+(ci?.cmv||0)*it.qtd;
+    },0)||0;
+
+    const lucro = preco-cmv-pis_r-cof_r-tx_r-frete-difal_r-adsPorPedido;
+    const margem = preco>0?lucro/preco:0;
+    const mc=margem>=.15?'#16a34a':margem>=.10?'#d97706':'#dc2626';
+    const [y,m,d]=p.data.split('-');
+
+    return`<tr>
+      <td style="font-size:10px">${String(p.id).slice(-8)}</td>
+      <td>${d}/${m}</td>
+      <td style="font-size:10px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.itens?.[0]?.titulo||'—'}</td>
+      <td><span class="pill pill-b" style="font-size:9px">${uf}</span></td>
+      <td class="num">R$ ${fmt(preco)}</td>
+      <td class="num" style="color:var(--muted)">${cmv>0?'R$ '+fmt(cmv):'—'}</td>
+      <td class="num" style="color:var(--muted)">R$ ${fmt(tx_r)}</td>
+      <td class="num" style="color:var(--muted)">R$ ${fmt(frete)}</td>
+      <td class="num" style="color:#d97706">R$ ${fmt(difal_r)}</td>
+      <td class="num" style="color:#dc2626">R$ ${fmt(adsPorPedido)}</td>
+      <td class="num" style="color:${mc};font-weight:700">R$ ${fmt(lucro)}</td>
+      <td class="num" style="color:${mc};font-weight:700">${(margem*100).toFixed(1)}%</td>
+    </tr>`;
+  });
+
+  document.getElementById('ads-pedidos-tbody').innerHTML = rows.join('')||
+    '<tr><td colspan="12" style="text-align:center;padding:15px;color:var(--muted)">Sem pedidos</td></tr>';
+}
+
+async function carregarPedidosComADS(){
+  if(!dados.pedidosML.length){
+    alert('Carregue o Dashboard primeiro para ter os pedidos');return;
+  }
+  renderPedidosComADS();
+  document.getElementById('ads-pedidos-card').style.display='block';
+}
+
+function renderChartADS(sorted){
+  // ROAS por anúncio top 10
+  const top = sorted.slice(0,10);
+  if(adsChartRoas) adsChartRoas.destroy();
+  const ctx = document.getElementById('chart-roas').getContext('2d');
+  adsChartRoas = new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels: top.map(a=>a.sku||String(a.item_id||'').slice(-6)||'—'),
+      datasets:[{
+        label:'ROAS',
+        data: top.map(a=>{const g=a.cost||a.spent||0,r=a.revenue||0;return g>0?r/g:0;}),
+        backgroundColor: top.map(a=>{const g=a.cost||a.spent||0,r=a.revenue||0,roas=g>0?r/g:0;return roas>=3?'#16a34a':roas>=1.5?'#d97706':'#dc2626';}),
+        borderRadius:4,
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:9}}},
+        y:{grid:{color:'#f3f4f6'},ticks:{font:{size:9},callback:v=>v+'x'}}}
+    }
+  });
+}
+
+function exportarADS(){
+  if(!adsData.length&&!dados.pedidosML.length){alert('Nenhum dado');return;}
+  const wb = XLSX.utils.book_new();
+  if(adsData.length){
+    const rows=[['SKU','MLB','Título','Impressões','Cliques','CTR%','Vendas','Receita','Gasto ADS','% ADS','ROAS','Margem s/ADS','Margem c/ADS']];
+    adsData.forEach(a=>{
+      const g=a.cost||a.spent||0,r=a.revenue||0,imp=a.impressions||0,cl=a.clicks||0;
+      rows.push([a.sku||'',a.item_id||'',a.title||'',imp,cl,imp>0?(cl/imp*100).toFixed(2)+'%':0,
+        a.units_sold||0,r.toFixed(2),g.toFixed(2),r>0?(g/r*100).toFixed(1)+'%':0,
+        g>0?(r/g).toFixed(2)+'x':0,'—','—']);
+    });
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb,ws,'ADS por Anúncio');
+  }
+  XLSX.writeFile(wb,'ads_fava_ecom.xlsx');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// PEDIDOS — MARGEM REAL POR PEDIDO
+// ══════════════════════════════════════════════════════════════════════
+let pedidosDetalhados = [];
+let pedFiltroMg = 'todos';
+let pedSort = {col:'data', dir:-1};
+
+function initPedidos(){
+  buildPedidosDetalhados();
+  populaFiltroUF();
+  filtrarPedidos();
+}
+
+function buildPedidosDetalhados(){
+  pedidosDetalhados = [];
+  dados.pedidosML.filter(p=>p.status!=='cancelled').forEach(p=>{
+    p.itens.forEach(it=>{
+      const uf = p.uf||'XX';
+      const ufData = ICMS_TB[uf]||ICMS_TB['SP'];
+      const taxa = it.listing_type==='gold_pro'?.17:.12;
+      const m = calcMargemReal(it.preco, it.sku, uf, it.listing_type||'gold_special', p.frete, p.itens.length);
+      pedidosDetalhados.push({
+        id: p.id,
+        data: p.data,
+        sku: it.sku,
+        titulo: it.titulo||'',
+        uf,
+        qtd: it.qtd,
+        preco: it.preco,
+        cmv: m.cmv,
+        taxa_r: m.taxa_r,
+        frete_un: m.frete_un,
+        difal: m.difal,
+        pis_r: m.pis_r,
+        cof_r: m.cof_r,
+        cred_taxa: m.cred_taxa||0,
+        cred_frete: m.cred_frete||0,
+        lucro: m.lucro,
+        margem: m.margem,
+        temCMV: m.temCMV,
+        status: p.status,
+      });
+    });
+  });
+}
+
+function populaFiltroUF(){
+  const ufs = [...new Set(pedidosDetalhados.map(p=>p.uf))].sort();
+  const sel = document.getElementById('ped-uf');
+  sel.innerHTML = '<option value="">Todos os estados</option>' +
+    ufs.map(uf=>`<option value="${uf}">${uf}</option>`).join('');
+}
+
+function setPedFiltro(f){
+  pedFiltroMg=f;
+  ['todos','neg','low','ok'].forEach(x=>document.getElementById(`pf-${x}`)?.classList.toggle('a',x===f));
+  filtrarPedidos();
+}
+
+function sortPed(col){
+  if(pedSort.col===col) pedSort.dir*=-1;
+  else{pedSort.col=col;pedSort.dir=-1;}
+  filtrarPedidos();
+}
+
+function filtrarPedidos(){
+  const q=(document.getElementById('ped-search')?.value||'').toLowerCase();
+  const uf=document.getElementById('ped-uf')?.value||'';
+  const st=document.getElementById('ped-status')?.value||'';
+
+  let lista=pedidosDetalhados.filter(p=>{
+    if(q&&!String(p.id).includes(q)&&!p.sku.includes(q)&&!p.titulo.toLowerCase().includes(q)) return false;
+    if(uf&&p.uf!==uf) return false;
+    if(st&&p.status!==st) return false;
+    if(pedFiltroMg==='neg') return p.temCMV&&p.margem!==null&&p.margem<0;
+    if(pedFiltroMg==='low') return p.temCMV&&p.margem!==null&&p.margem>=0&&p.margem<.15;
+    if(pedFiltroMg==='ok') return p.temCMV&&p.margem!==null&&p.margem>=.15;
+    return true;
+  });
+
+  lista.sort((a,b)=>{
+    const va=a[pedSort.col]??-999, vb=b[pedSort.col]??-999;
+    return(va>vb?1:-1)*pedSort.dir;
+  });
+
+  renderKpisPedidos(lista);
+  renderTabelaPedidos(lista.slice(0,200));
+}
+
+function renderKpisPedidos(lista){
+  const total=lista.length;
+  const fat=lista.reduce((s,p)=>s+p.preco*p.qtd,0);
+  const comCmv=lista.filter(p=>p.temCMV);
+  const lucro=comCmv.reduce((s,p)=>s+p.lucro*p.qtd,0);
+  const fatCmv=comCmv.reduce((s,p)=>s+p.preco*p.qtd,0);
+  const mg=fatCmv?lucro/fatCmv:0;
+  const difal=comCmv.reduce((s,p)=>s+p.difal*p.qtd,0);
+  const frete=lista.reduce((s,p)=>s+p.frete_un*p.qtd,0);
+  const nocmv=lista.filter(p=>!p.temCMV).length;
+  const tick=total?fat/total:0;
+
+  document.getElementById('pk-total').textContent=total;
+  document.getElementById('pk-fat').textContent='R$ '+fmtK(fat);
+  const lel=document.getElementById('pk-lucro');
+  lel.textContent='R$ '+fmtK(lucro);
+  lel.style.color=lucro>=0?'#16a34a':'#dc2626';
+  const mel=document.getElementById('pk-mg');
+  mel.textContent=(mg*100).toFixed(1)+'%';
+  mel.style.color=mg>=.15?'#16a34a':mg>=.10?'#d97706':'#dc2626';
+  document.getElementById('pk-difal').textContent='R$ '+fmtK(difal);
+  document.getElementById('pk-frete').textContent='R$ '+fmtK(frete);
+  document.getElementById('pk-nocmv').textContent=nocmv;
+  document.getElementById('pk-tick').textContent='R$ '+fmt(tick);
+}
+
+function renderTabelaPedidos(lista){
+  const rows=lista.map(p=>{
+    const mg=p.margem;
+    const mc=mg===null?'#9ca3af':mg>=.15?'#16a34a':mg>=0?'#d97706':'#dc2626';
+    const mgStr=mg===null?'sem CMV':(mg*100).toFixed(1)+'%';
+    const [y,m,d]=p.data.split('-');
+    return`<tr>
+      <td style="font-size:10px;color:var(--muted)">${String(p.id).slice(-8)}</td>
+      <td>${d}/${m}</td>
+      <td style="font-weight:700;color:var(--azul);font-size:10px">${p.sku||'—'}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="${p.titulo}">${p.titulo}</td>
+      <td><span class="pill pill-b" style="font-size:9px">${p.uf}</span></td>
+      <td class="num" style="font-weight:700">R$ ${fmt(p.preco)}</td>
+      <td class="num" style="color:var(--muted)">${p.temCMV?'R$ '+fmt(p.cmv):'—'}</td>
+      <td class="num" style="color:#d97706">R$ ${fmt(p.taxa_r)}</td>
+      <td class="num" style="color:#6b7280">R$ ${fmt(p.frete_un)}</td>
+      <td class="num" style="color:#d97706">${p.uf!=='PR'?'R$ '+fmt(p.difal):'—'}</td>
+      <td class="num" style="color:#6b7280">R$ ${fmt(p.pis_r+p.cof_r)}</td>
+      <td class="num" style="color:#16a34a">R$ ${fmt(p.cred_taxa+p.cred_frete)}</td>
+      <td class="num" style="font-weight:700;color:${mc}">${p.temCMV?'R$ '+fmt(p.lucro):'—'}</td>
+      <td class="num" style="font-weight:700;color:${mc}">${mgStr}</td>
+    </tr>`;
+  });
+  document.getElementById('ped-tbody').innerHTML=rows.join('')||
+    '<tr><td colspan="14" style="text-align:center;padding:20px;color:var(--muted)">Sem pedidos</td></tr>';
+}
+
+function exportarPedidos(){
+  if(!pedidosDetalhados.length){alert('Sem dados para exportar');return;}
+  let csv='Pedido;Data;SKU;Produto;UF;Preço;CMV;Taxa ML;Frete;DIFAL;PIS+COF;Créd.Taxa;Lucro;Margem%
+';
+  pedidosDetalhados.forEach(p=>{
+    csv+=`${p.id};${p.data};${p.sku};"${p.titulo}";${p.uf};${p.preco.toFixed(2)};${p.cmv.toFixed(2)};${p.taxa_r.toFixed(2)};${p.frete_un.toFixed(2)};${p.difal.toFixed(2)};${(p.pis_r+p.cof_r).toFixed(2)};${(p.cred_taxa+p.cred_frete).toFixed(2)};${p.temCMV?p.lucro.toFixed(2):'sem CMV'};${p.margem!==null?(p.margem*100).toFixed(1)+'%':'sem CMV'}
+`;
+  });
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pedidos_margem_real.csv';a.click();
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // GESTÃO DE PREÇOS E DESCONTOS
 // ══════════════════════════════════════════════════════════════════════
 const PIS_GP=.0165, COF_GP=.076, ICMS_INT_GP=.12;
@@ -1245,6 +1869,36 @@ function calcMargemGP(preco, cmv, taxa){
   const preco_min = (cmv + frete) / denom;
 
   return {margem, lucro, frete, taxa_r, difal_r, icms_r, pis_r, cof_r, preco_min};
+}
+
+// Carrega CMV real do HISTORICO_COMPRAS (mais preciso que Bling)
+function carregarCMVPlanilha(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const wb = XLSX.read(e.target.result,{type:'array'});
+      const ws = wb.Sheets['HISTORICO_COMPRAS'];
+      if(!ws){alert('Aba HISTORICO_COMPRAS não encontrada');return;}
+      const rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      // Col D(3)=SKU, Col E(4)=PRODUTO, Col U(20)=CMV_BRASIL
+      const skuMap={};
+      rows.slice(2).forEach(r=>{
+        const sku=String(r[3]||'').trim();
+        const cmv=parseFloat(r[20]||0);
+        const nome=String(r[4]||'');
+        // Guarda o CMV mais recente por SKU (última linha ganha)
+        if(sku && cmv>0) skuMap[sku]={cmv,nome};
+      });
+      let n=Object.keys(skuMap).length;
+      Object.entries(skuMap).forEach(([sku,d])=>{ dados.cmvCache[sku]=d; });
+      alert(`✅ CMV carregado para ${n} SKUs do HISTORICO_COMPRAS!
+Agora o cálculo usa o custo real da nota fiscal.`);
+      if(gpData.length) recalcGP();
+    }catch(ex){alert('Erro: '+ex.message);}
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 function carregarPlanilhaGP(input){
@@ -1780,15 +2434,20 @@ function setView(v){
   document.getElementById('view-financeiro').style.display = v==='financeiro'?'flex':'none';
   document.getElementById('view-conciliacao').style.display = v==='conciliacao'?'flex':'none';
   document.getElementById('view-precos').style.display = v==='precos'?'flex':'none';
+  document.getElementById('view-ads').style.display = v==='ads'?'flex':'none';
+  document.getElementById('view-pedidos').style.display = v==='pedidos'?'flex':'none';
   document.getElementById('period-bar').style.display = v==='dashboard'?'flex':'none';
   document.getElementById('vtab-dash').classList.toggle('a', v==='dashboard');
   document.getElementById('vtab-anunc').classList.toggle('a', v==='anuncios');
   document.getElementById('vtab-fin').classList.toggle('a', v==='financeiro');
   document.getElementById('vtab-conc').classList.toggle('a', v==='conciliacao');
   document.getElementById('vtab-prec').classList.toggle('a', v==='precos');
+  document.getElementById('vtab-ads').classList.toggle('a', v==='ads');
+  document.getElementById('vtab-ped').classList.toggle('a', v==='pedidos');
   if(v==='anuncios' && anunciosData.length===0) carregarAnuncios();
   if(v==='financeiro') initFinanceiro();
   if(v==='conciliacao') initConciliacao();
+  if(v==='pedidos') initPedidos();
 }
 
 // ══════════════════════════════════════════════════════════════════════
