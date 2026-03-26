@@ -1180,6 +1180,71 @@ header h1{font-size:15px;font-weight:700;flex:1}
     </div>
   </div>
 
+  <!-- FATURAMENTO MENSAL -->
+  <div class="card">
+    <div class="card-head">
+      <h3>📅 Faturamento por mês</h3>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:10px;color:var(--muted)">Últimos 6 meses</span>
+        <select id="chart-mensal-canal" onchange="renderChartMensal()" style="border:1px solid var(--borda);border-radius:4px;padding:3px 7px;font-size:11px;outline:none">
+          <option value="todos">Todos os canais</option>
+          <option value="ML">Mercado Livre</option>
+          <option value="Shopee">Shopee</option>
+          <option value="Site">Site</option>
+        </select>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px">
+        <div class="chart-wrap"><canvas id="chart-mensal"></canvas></div>
+        <div id="mensal-resumo" style="display:flex;flex-direction:column;gap:6px;justify-content:center"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADS + MARGEM PÓS-ADS -->
+  <div class="grid2">
+    <div class="card">
+      <div class="card-head"><h3>📣 ADS Mercado Livre</h3><span style="font-size:10px;color:var(--muted)">Investimento vs retorno</span></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
+          <div style="background:#f0fdf4;border-radius:7px;padding:9px;text-align:center">
+            <div style="font-size:10px;color:var(--muted);font-weight:700">Vendido via ADS</div>
+            <div style="font-size:17px;font-weight:700;color:#16a34a" id="ads-vendido">—</div>
+          </div>
+          <div style="background:#fff7ed;border-radius:7px;padding:9px;text-align:center">
+            <div style="font-size:10px;color:var(--muted);font-weight:700">Custo ADS</div>
+            <div style="font-size:17px;font-weight:700;color:#d97706" id="ads-custo">—</div>
+          </div>
+          <div style="background:#eff6ff;border-radius:7px;padding:9px;text-align:center">
+            <div style="font-size:10px;color:var(--muted);font-weight:700">ROAS</div>
+            <div style="font-size:17px;font-weight:700;color:#2563eb" id="ads-roas">—</div>
+          </div>
+        </div>
+        <div class="chart-wrap" style="height:140px"><canvas id="chart-ads"></canvas></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">⚠️ Dados de ADS disponíveis na aba ADS + Margem após carregar</div>
+      </div>
+    </div>
+
+    <!-- TOP ANÚNCIOS -->
+    <div class="card">
+      <div class="card-head">
+        <h3>🏆 Top anúncios</h3>
+        <select id="top-canal-sel" onchange="renderTopAnuncios()" style="border:1px solid var(--borda);border-radius:4px;padding:3px 7px;font-size:11px;outline:none">
+          <option value="todos">Todos</option>
+          <option value="ML">ML</option>
+          <option value="Shopee">Shopee</option>
+        </select>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="tbl">
+          <thead><tr><th>#</th><th>Produto</th><th class="num">Qtd</th><th class="num">Fat.</th><th class="num">Margem</th></tr></thead>
+          <tbody id="body-top-anuncios"><tr><td colspan="5" class="empty">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- SKU RANKINGS -->
   <div class="grid2">
     <div class="card">
@@ -1211,9 +1276,15 @@ header h1{font-size:15px;font-weight:700;flex:1}
   <!-- ESTADOS + PEDIDOS RECENTES -->
   <div class="grid2">
     <div class="card">
-      <div class="card-head"><h3>Vendas por estado</h3><span style="font-size:10px;color:var(--muted)">DIFAL e ICMS real por destino</span></div>
-      <div class="card-body" id="estados-body">
-        <div class="empty">Carregando...</div>
+      <div class="card-head">
+        <h3>🗺️ Vendas por estado</h3>
+        <span style="font-size:10px;color:var(--muted)">DIFAL estimado por destino</span>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="tbl">
+          <thead><tr><th>UF</th><th class="num">Pedidos</th><th class="num">Faturamento</th><th class="num">% Fat.</th><th class="num">DIFAL est.</th><th class="num">ICMS inter.</th></tr></thead>
+          <tbody id="body-estados"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
+        </table>
       </div>
     </div>
     <div class="card">
@@ -2291,7 +2362,7 @@ async function enviarResposta(perguntaId, idx){
 // ══════════════════════════════════════════════════════════════════════
 // PROMOÇÕES ML
 // ══════════════════════════════════════════════════════════════════════
-let promoData = [];
+promoData = [];
 let chartDifal = null;
 
 async function carregarPromocoes(){
@@ -3679,6 +3750,146 @@ function exportarGP(){
   ws['!cols']=[{wch:50},{wch:15},{wch:8},{wch:12},{wch:12},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws,'Promoções');
   XLSX.writeFile(wb,'gestao_precos_fava.xlsx');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// GRÁFICO MENSAL E TOP ANÚNCIOS
+// ══════════════════════════════════════════════════════════════════════
+let chartMensal = null;
+let chartAds = null;
+
+function renderChartMensal(){
+  const canal = document.getElementById('chart-mensal-canal')?.value||'todos';
+  const pedidos = dados.pedidosML.filter(p=>p.status!=='cancelled');
+  
+  // Agrupa por mês
+  const meses = {};
+  pedidos.forEach(p=>{
+    if(canal!=='todos'&&!p.canal?.includes(canal)) return;
+    const mes = p.data?.substring(0,7)||'';
+    if(!mes) return;
+    if(!meses[mes]) meses[mes]={fat:0,n:0,lucro:0};
+    meses[mes].fat += p.total||0;
+    meses[mes].n++;
+    // Lucro estimado
+    p.itens?.forEach(it=>{
+      const m = calcMargemReal(it.preco, it.sku, p.uf||'SP', it.listing_type||'gold_special', p.frete||0, p.itens.length);
+      meses[mes].lucro += m.lucro * (it.qtd||1);
+    });
+  });
+
+  const labels = Object.keys(meses).sort().slice(-6);
+  const fats = labels.map(m=>meses[m].fat);
+  const lucros = labels.map(m=>Math.max(0,meses[m].lucro));
+  const meses_fmt = labels.map(m=>{
+    const [y,mo]=m.split('-');
+    const nomes=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    return nomes[parseInt(mo)-1]+'/'+y.slice(2);
+  });
+
+  if(chartMensal) chartMensal.destroy();
+  const ctx = document.getElementById('chart-mensal').getContext('2d');
+  chartMensal = new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels: meses_fmt,
+      datasets:[
+        {label:'Faturamento',data:fats,backgroundColor:'rgba(37,99,235,.7)',borderRadius:4,yAxisID:'y'},
+        {label:'Lucro est.',data:lucros,backgroundColor:'rgba(22,163,74,.6)',borderRadius:4,yAxisID:'y'},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{font:{size:9},boxWidth:10}}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:9}}},
+        y:{grid:{color:'#f3f4f6'},ticks:{font:{size:9},callback:v=>'R$'+fmtK(v)}},
+      }
+    }
+  });
+
+  // Resumo lateral
+  const totalFat = fats.reduce((s,v)=>s+v,0);
+  const totalLucro = lucros.reduce((s,v)=>s+v,0);
+  const melhorMes = labels[fats.indexOf(Math.max(...fats))];
+  const melhorFmt = melhorMes ? meses_fmt[labels.indexOf(melhorMes)] : '—';
+  const resumo = document.getElementById('mensal-resumo');
+  if(resumo) resumo.innerHTML = `
+    <div style="background:#eff6ff;border-radius:7px;padding:10px;text-align:center">
+      <div style="font-size:10px;color:var(--muted);font-weight:700">Total 6 meses</div>
+      <div style="font-size:16px;font-weight:700;color:#1d4ed8">R$ ${fmtK(totalFat)}</div>
+    </div>
+    <div style="background:#f0fdf4;border-radius:7px;padding:10px;text-align:center">
+      <div style="font-size:10px;color:var(--muted);font-weight:700">Lucro est. total</div>
+      <div style="font-size:16px;font-weight:700;color:#16a34a">R$ ${fmtK(totalLucro)}</div>
+    </div>
+    <div style="background:#fafafa;border-radius:7px;padding:10px;text-align:center">
+      <div style="font-size:10px;color:var(--muted);font-weight:700">Melhor mês</div>
+      <div style="font-size:16px;font-weight:700;color:var(--azul)">${melhorFmt}</div>
+      <div style="font-size:11px;color:var(--muted)">R$ ${fmtK(Math.max(...fats))}</div>
+    </div>
+    <div style="background:#fafafa;border-radius:7px;padding:10px;text-align:center">
+      <div style="font-size:10px;color:var(--muted);font-weight:700">Média mensal</div>
+      <div style="font-size:16px;font-weight:700;color:var(--azul)">R$ ${fmtK(totalFat/Math.max(labels.length,1))}</div>
+    </div>`;
+}
+
+function renderTopAnuncios(){
+  const canal = document.getElementById('top-canal-sel')?.value||'todos';
+  const por_sku = {};
+  dados.pedidosML.filter(p=>p.status!=='cancelled').forEach(p=>{
+    if(canal!=='todos'&&!p.canal?.includes(canal)) return;
+    p.itens?.forEach(it=>{
+      const k = it.sku||it.titulo||'?';
+      if(!por_sku[k]){por_sku[k]={sku:k,nome:it.titulo||k,fat:0,qtd:0,lucro:0,n:0};}
+      por_sku[k].fat += it.preco*(it.qtd||1);
+      por_sku[k].qtd += it.qtd||1;
+      por_sku[k].n++;
+      const m = calcMargemReal(it.preco,it.sku,p.uf||'SP',it.listing_type||'gold_special',p.frete||0,p.itens.length);
+      por_sku[k].lucro += m.lucro*(it.qtd||1);
+    });
+  });
+
+  const top = Object.values(por_sku).sort((a,b)=>b.fat-a.fat).slice(0,10);
+  const rows = top.map((d,i)=>{
+    const mg = d.fat>0?d.lucro/d.fat:0;
+    const mc = mg>=.15?'#16a34a':mg>=0?'#d97706':'#dc2626';
+    return`<tr>
+      <td style="font-weight:700;color:var(--muted)">${i+1}</td>
+      <td style="font-size:10px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.nome}">${d.nome}</td>
+      <td class="num">${d.qtd}</td>
+      <td class="num">R$ ${fmtK(d.fat)}</td>
+      <td class="num" style="font-weight:700;color:${mc}">${(mg*100).toFixed(1)}%</td>
+    </tr>`;
+  });
+  document.getElementById('body-top-anuncios').innerHTML = rows.join('')||'<tr><td colspan="5" class="empty">Sem dados</td></tr>';
+}
+
+function renderEstadosTabela(){
+  const por_uf = {};
+  const totalFat = dados.pedidosML.filter(p=>p.status!=='cancelled').reduce((s,p)=>s+(p.total||0),0);
+  
+  dados.pedidosML.filter(p=>p.status!=='cancelled').forEach(p=>{
+    const uf = p.uf||'XX';
+    if(!por_uf[uf]){por_uf[uf]={uf,n:0,fat:0,difal:0,icms:0};}
+    por_uf[uf].n++;
+    por_uf[uf].fat += p.total||0;
+    const tb = ICMS_TB[uf]||ICMS_TB['SP'];
+    por_uf[uf].difal += (p.total||0)*tb.difal;
+    por_uf[uf].icms  += (p.total||0)*tb.inter;
+  });
+
+  const sorted = Object.values(por_uf).sort((a,b)=>b.fat-a.fat);
+  const rows = sorted.map(d=>`<tr>
+    <td><span class="pill" style="background:#eff6ff;color:#1e40af;font-size:9px">${d.uf}</span></td>
+    <td class="num">${d.n}</td>
+    <td class="num">R$ ${fmtK(d.fat)}</td>
+    <td class="num">${totalFat>0?(d.fat/totalFat*100).toFixed(1)+'%':'—'}</td>
+    <td class="num" style="color:#d97706">R$ ${fmtK(d.difal)}</td>
+    <td class="num" style="color:var(--muted)">R$ ${fmtK(d.icms)}</td>
+  </tr>`);
+  
+  const el = document.getElementById('body-estados');
+  if(el) el.innerHTML = rows.join('')||'<tr><td colspan="6" class="empty">Sem dados</td></tr>';
 }
 
 // ══════════════════════════════════════════════════════════════════════
