@@ -384,6 +384,14 @@ function salvarCfg(){
 function fecharCfg(){
   document.getElementById('modal-cfg').style.display='none';
 }
+function abrirCfg(){
+  document.getElementById('modal-cfg').style.display='flex';
+}
+function recarregar(){
+  if(typeof dados !== 'undefined') dados.cmvCache={};
+  if(typeof carregarTudo === 'function') carregarTudo();
+  else window.location.reload();
+}
 </script>
 
 <!-- HEADER -->
