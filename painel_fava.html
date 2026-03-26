@@ -79,6 +79,17 @@ header h1{font-size:15px;font-weight:700;flex:1}
 .state-val{font-size:10px;font-weight:700;color:var(--texto);width:70px;text-align:right}
 
 /* LOADING */
+/* LOGIN */
+.login-screen{position:fixed;inset:0;background:var(--azul);z-index:9999;display:flex;align-items:center;justify-content:center}
+.login-box{background:#fff;border-radius:14px;padding:32px;width:360px;max-width:92vw;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.login-box .logo{font-size:32px;margin-bottom:8px}
+.login-box h2{font-size:18px;font-weight:700;color:var(--azul);margin-bottom:4px}
+.login-box p{font-size:12px;color:var(--muted);margin-bottom:20px}
+.login-box input{width:100%;border:1px solid var(--borda);border-radius:8px;padding:11px 14px;font-size:15px;outline:none;margin-bottom:12px;text-align:center;letter-spacing:3px}
+.login-box input:focus{border-color:var(--azul2);box-shadow:0 0 0 2px #dbeafe}
+.login-box button{width:100%;background:var(--azul);color:#fff;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer}
+.login-box button:hover{background:var(--azul2)}
+.login-erro{color:var(--vermelho);font-size:12px;margin-top:8px;min-height:16px}
 .loading-cover{position:fixed;inset:0;background:rgba(255,255,255,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;font-size:14px;color:var(--muted);gap:12px}
 .spin{width:28px;height:28px;border:3px solid #e5e7eb;border-top-color:var(--azul2);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -328,6 +339,36 @@ function fecharCfg(){
 }
 </script>
 <body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="logo">🛒</div>
+    <h2>Painel Fava Ecom</h2>
+    <p>Digite a senha para acessar</p>
+    <input type="password" id="login-senha" placeholder="••••••••" onkeydown="if(event.key==='Enter')fazerLogin()" autofocus>
+    <button onclick="fazerLogin()">Entrar</button>
+    <div class="login-erro" id="login-erro"></div>
+  </div>
+</div>
+<script>
+const SENHA_PAINEL = 'fava2024';
+function fazerLogin(){
+  const s = document.getElementById('login-senha').value;
+  if(s === SENHA_PAINEL){
+    localStorage.setItem('fava_auth', btoa(SENHA_PAINEL+':ok'));
+    document.getElementById('login-screen').style.display='none';
+  } else {
+    document.getElementById('login-erro').textContent='Senha incorreta. Tente novamente.';
+    document.getElementById('login-senha').value='';
+    document.getElementById('login-senha').focus();
+  }
+}
+// Verifica se já autenticado
+if(localStorage.getItem('fava_auth') === btoa(SENHA_PAINEL+':ok')){
+  document.getElementById('login-screen').style.display='none';
+}
+</script>
 <script>
 // salvarCfg definido aqui para garantir disponibilidade
 function salvarCfg(){
@@ -365,6 +406,8 @@ function fecharCfg(){
   <div class="vtab" id="vtab-prom" onclick="setView('promocoes')">Promoções ML</div>
   <div class="vtab" id="vtab-difal" onclick="setView('difal')">DIFAL</div>
   <div class="vtab" id="vtab-perg" onclick="setView('perguntas')">Perguntas</div>
+  <div class="vtab" id="vtab-dev" onclick="setView('devolucoes')">↩️ Devoluções</div>
+  <div class="vtab" id="vtab-capa" onclick="setView('capa')">🖨️ Capa NF</div>
 </div>
 
 <!-- PERIOD BAR -->
@@ -388,6 +431,8 @@ function fecharCfg(){
     <div class="kpi"><div class="kl">Margem Líq.</div><div class="kv" id="k-mg">—</div><div class="kpi-accent">📊</div></div>
     <div class="kpi"><div class="kl">Lucro Est.</div><div class="kv" id="k-lucro">—</div><div class="kpi-accent">✅</div></div>
     <div class="kpi"><div class="kl">SKUs Vendidos</div><div class="kv" id="k-sku">—</div><div class="kpi-accent">🏷️</div></div>
+      <div class="kpi" style="border-color:#fee2e2"><div class="kl">Cancelamentos</div><div class="kv" id="k-cancel" style="color:#dc2626">—</div><div class="kd" id="k-cancel-pct" style="font-size:10px;color:#6b7280">do total</div><span class="kpi-accent">🚫</span></div>
+      <div class="kpi" style="border-color:#fef9c3"><div class="kl">Devoluções</div><div class="kv" id="k-dev" style="color:#d97706">—</div><div class="kd" id="k-dev-status" style="font-size:10px;color:#6b7280">importadas</div><span class="kpi-accent">↩️</span></div>
   </div>
   <div class="grid2">
     <div class="card"><div class="card-head"><h3>Faturamento Diário</h3></div><div class="card-body"><div class="chart-wrap"><canvas id="chart-fat"></canvas></div></div></div>
@@ -691,26 +736,59 @@ function fecharCfg(){
 
 <!-- ═══════════════════════════ PROMOÇÕES ML ═══════════════════════════ -->
 <div id="view-promocoes" class="main" style="display:none">
-  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
-    <button class="btn-fin" onclick="carregarPromocoes()">🔄 Carregar Promoções</button>
-    <span id="prom-status" style="font-size:11px;color:var(--muted)"></span>
+
+  <!-- INSTRUÇÃO -->
+  <div style="background:#eff6ff;border-radius:9px;border:1px solid #bfdbfe;padding:12px 16px;margin-bottom:12px;font-size:12px;color:#1e40af">
+    <strong>📥 Como usar:</strong> Baixe a planilha de promoções da Central do Vendedor ML → <em>Promoções</em> → <em>Exportar planilha</em> → importe aqui.
+    O painel calcula a margem real de cada item e mostra se o desconto é viável.
   </div>
-  <div id="prom-kpis" class="prom-kpis" style="display:none">
-    <div class="prom-kpi"><div class="pkl">Total</div><div class="pkv" id="prk-total">—</div></div>
-    <div class="prom-kpi"><div class="pkl">✅ Viável</div><div class="pkv" id="prk-viavel" style="color:#16a34a">—</div></div>
-    <div class="prom-kpi"><div class="pkl">⚠️ Atenção</div><div class="pkv" id="prk-atenc" style="color:#d97706">—</div></div>
-    <div class="prom-kpi"><div class="pkl">❌ Inviável</div><div class="pkv" id="prk-inviavel" style="color:#dc2626">—</div></div>
-    <div class="prom-kpi"><div class="pkl">Bônus ML Médio</div><div class="pkv" id="prk-bonus">—</div></div>
-  </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-    <input type="text" id="prom-search" placeholder="Buscar produto..." oninput="filtrarPromocoes()" style="border:1px solid var(--borda);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:250px">
+
+  <!-- TOOLBAR -->
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#fff;border-radius:9px;border:1px solid var(--borda);padding:10px 14px;margin-bottom:10px">
+    <label style="background:var(--azul);color:#fff;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">
+      📂 Importar Planilha ML (.xlsx)
+      <input type="file" accept=".xlsx,.xls" onchange="importarPlanilhaPromocoes(this)" style="display:none">
+    </label>
+    <span id="prom-status" style="font-size:11px;color:var(--muted)">Nenhuma planilha importada</span>
+    <div style="flex:1"></div>
+    <input type="text" id="prom-search" placeholder="🔍 Buscar..." oninput="filtrarPromocoes()" style="border:1px solid var(--borda);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:200px">
     <button class="filt-btn a" id="prf-todos" onclick="setFiltroPromo('todos')">Todos</button>
     <button class="filt-btn" id="prf-viavel" onclick="setFiltroPromo('viavel')" style="color:#16a34a">✅ Viável</button>
     <button class="filt-btn" id="prf-atenc" onclick="setFiltroPromo('atenc')" style="color:#d97706">⚠️ Atenção</button>
     <button class="filt-btn" id="prf-inv" onclick="setFiltroPromo('inv')" style="color:#dc2626">❌ Inviável</button>
+    <button class="apply-all-btn" id="btn-aplicar-prom" onclick="aplicarDescontosML()" style="display:none">🚀 Aplicar Descontos no ML</button>
   </div>
-  <div id="prom-table-wrap" style="display:none;overflow-x:auto">
-    <table class="prom-tbl"><thead><tr><th>Título</th><th>MLB</th><th>SKU</th><th>Preço</th><th>Meu Desc.</th><th>Bônus ML</th><th>Total Desc.</th><th>Preço Final</th><th>CMV</th><th>Margem</th><th>Preço Mín.</th><th>Status</th><th>Ação</th></tr></thead><tbody id="prom-tbody"></tbody></table>
+
+  <!-- KPIs -->
+  <div id="prom-kpis" class="prom-kpis" style="display:none;margin-bottom:10px">
+    <div class="prom-kpi"><div class="pkl">Total</div><div class="pkv" id="prk-total">—</div></div>
+    <div class="prom-kpi"><div class="pkl">✅ Viável</div><div class="pkv" id="prk-viavel" style="color:#16a34a">—</div></div>
+    <div class="prom-kpi"><div class="pkl">⚠️ Atenção</div><div class="pkv" id="prk-atenc" style="color:#d97706">—</div></div>
+    <div class="prom-kpi"><div class="pkl">❌ Inviável</div><div class="pkv" id="prk-inviavel" style="color:#dc2626">—</div></div>
+    <div class="prom-kpi"><div class="pkl">Desc. Médio</div><div class="pkv" id="prk-bonus">—</div></div>
+    <div class="prom-kpi"><div class="pkl">Fat. Total</div><div class="pkv" id="prk-fat">—</div></div>
+  </div>
+
+  <!-- TABELA -->
+  <div id="prom-table-wrap" style="display:none;background:#fff;border-radius:9px;border:1px solid var(--borda);overflow-x:auto">
+    <table class="prom-tbl">
+      <thead><tr>
+        <th style="min-width:180px">Título</th>
+        <th>MLB</th>
+        <th>SKU</th>
+        <th class="num">Preço Orig.</th>
+        <th class="num">Desc. ML</th>
+        <th class="num">Meu Desc.%</th>
+        <th class="num">Preço Final</th>
+        <th class="num">CMV</th>
+        <th class="num">Margem</th>
+        <th class="num">Preço Mín.</th>
+        <th>Status</th>
+        <th>Viabilidade</th>
+        <th>Ação</th>
+      </tr></thead>
+      <tbody id="prom-tbody"></tbody>
+    </table>
   </div>
 </div>
 
@@ -795,6 +873,7 @@ const PIS=.0165, COFINS=.076;
 let tokens={bling:'',ml:''};
 let periodo='7d';
 let dados={pedidosML:[],pedidosBling:[],cmvCache:{}};
+let devolucoesData=[];
 let charts={fat:null,canal:null};
 
 // ══════════════════════════════════════════════════════════════════════
@@ -959,14 +1038,14 @@ async function fetchPedidosBling(de,ate){
 // BUSCAR CMV NO BLING
 // ══════════════════════════════════════════════════════════════════════
 async function fetchCMVs(skus){
-  const lotes=[];
-  for(let i=0;i<skus.length;i+=10)lotes.push(skus.slice(i,i+10));
-  for(const lote of lotes){
-    await Promise.all(lote.map(async sku=>{
-      try{
-        const r=await blingGet(`produtos?criterio=1&tipo=T&codigo=${encodeURIComponent(sku)}&limite=1`);
-        const prod=r?.data?.[0];
-        if(prod){
+  // Sequencial com delay para evitar 429 do Bling (~30 req/min)
+  let ok=0, erros=0;
+  for(let i=0; i<skus.length; i++){
+    const sku = skus[i];
+    try{
+      const r = await blingGet(`produtos?criterio=1&tipo=T&codigo=${encodeURIComponent(sku)}&limite=1`);
+      const prod = r?.data?.[0];
+      if(prod){
           // precoCusto = custo Bling (já inclui IPI+ST)
           // NÃO usar preco (preço de venda)
           const custoB = parseFloat(prod.precoCusto||0);
@@ -976,8 +1055,13 @@ async function fetchCMVs(skus){
             custo: custoB,
           };
         }
-      }catch(e){}
-    }));
+      }
+    }catch(e){
+      erros++;
+      if(String(e.message).includes('429')) await new Promise(r=>setTimeout(r,3000));
+    }
+    if(i%5===0) showLoading(`CMV Bling: ${i+1}/${skus.length} SKUs... (${ok} ok${erros?' | '+erros+' err':''})`);
+    await new Promise(r=>setTimeout(r,400));
   }
 }
 
@@ -1066,6 +1150,22 @@ function renderKPIs(todos, itens){
   document.getElementById('k-lucro').textContent='R$ '+fmt(lucroTotal);
   document.getElementById('k-lucro').style.color=lucroTotal>0?'var(--verde)':'var(--vermelho)';
   document.getElementById('k-sku').textContent=skus;
+
+  // Cancelamentos do período
+  const todosPedML = [...dados.pedidosML];
+  const cancelados = todosPedML.filter(p=>p.status==='cancelled').length;
+  const totalComCancel = todosPedML.length;
+  const pctCancel = totalComCancel > 0 ? (cancelados/totalComCancel*100).toFixed(1) : 0;
+  document.getElementById('k-cancel').textContent = cancelados;
+  document.getElementById('k-cancel-pct').textContent = `${pctCancel}% do total (${totalComCancel} ped.)`;
+  document.getElementById('k-cancel').style.color = cancelados===0?'#16a34a':pctCancel>5?'#dc2626':'#d97706';
+
+  // Devoluções (do cache importado)
+  const nDev = devolucoesData.length;
+  const devPend = devolucoesData.filter(d=>d.decisao==='Pendente'||!d.decisao).length;
+  document.getElementById('k-dev').textContent = nDev;
+  document.getElementById('k-dev-status').textContent = nDev > 0 ? `${devPend} pendentes` : 'importe planilha';
+  document.getElementById('k-dev').style.color = nDev===0?'#9ca3af':devPend>0?'#d97706':'#16a34a';
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1816,113 +1916,237 @@ async function enviarResposta(perguntaId, idx){
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// PROMOÇÕES ML
+// PROMOÇÕES ML — IMPORT VIA PLANILHA XLSX
 // ══════════════════════════════════════════════════════════════════════
-promoData = [];
-chartDifal = null;
+let promoData = [];
+let promoFiltro = 'todos';
 
-async function carregarPromocoes(){
-  if(!tokens.ml){alert('Configure o token ML');return;}
-  document.getElementById('prom-status').textContent='⟳ Carregando...';
-  try{
-    // Busca campanhas de promoção disponíveis
-    const r = await fetch(`/api/ml/seller-promotions/search?seller_id=537714337&status=active&limit=50`,{
-      headers:{'Authorization':`Bearer ${tokens.ml}`}
-    });
-    if(!r.ok) throw new Error(`${r.status}`);
-    const d = await r.json();
-    const campanhas = d.results||d||[];
+function importarPlanilhaPromocoes(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets['Promoções'] || wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
 
-    promoData = [];
-    // Para cada campanha, busca os itens elegíveis
-    for(const camp of campanhas.slice(0,10)){
-      const ri = await fetch(`/api/ml/seller-promotions/${camp.id}/items?limit=50`,{
-        headers:{'Authorization':`Bearer ${tokens.ml}`}
-      }).catch(()=>null);
-      if(!ri||!ri.ok) continue;
-      const di = await ri.json();
-      const itens = di.results||[];
-      itens.forEach(item=>{
-        const mlb = item.item_id||item.id;
-        const sku = item.seller_sku||'';
-        const cmvInfo = dados.cmvCache[sku]||dados.cmvCache[String(parseInt(sku)||0)];
-        const cmv = cmvInfo?.cmv||0;
-        const taxa = item.price >= 79 ? 0.12 : 0.12;
-        const bonus_ml = camp.benefits?.find(b=>b.type==='COUPON')?.value||0;
-        const meu_desc = item.promotion?.discount_percentage||0;
-        const preco_orig = item.original_price||item.price||0;
-        const preco_final = preco_orig * (1-(meu_desc/100)) * (1-(bonus_ml/100));
+      // Estrutura ML: linha 1=cabeçalho técnico, dados a partir da linha 6
+      // Col: A=TITLE(0), B=ITEM_ID(1), C=SKU(2), D=ORIGINAL_PRICE(3),
+      //      E=DISCOUNT_PERCENTAGE(4), F=FINAL_PRICE(5), L=STATUS(11)
+      promoData = [];
+      rows.slice(5).forEach(r => {
+        const mlb = String(r[1]||'').trim();
+        if(!mlb.startsWith('MLB')) return;
+        const sku       = String(r[2]||'').trim();
+        const titulo    = String(r[0]||'').trim();
+        const preco_orig = parseFloat(r[3])||0;
+        const desc_ml   = parseFloat(r[4])||0;   // desconto que o ML oferece/sugere
+        const preco_final_ml = parseFloat(r[5])||0;
+        const status    = String(r[11]||'').trim();
 
-        let margem_prom = null;
-        if(cmv>0&&preco_final>0){
-          const calc = calcMargemGP(preco_final, cmv, taxa);
-          margem_prom = calc.margem;
+        // CMV do cache Bling
+        const cmvInfo = dados.cmvCache[sku] || dados.cmvCache[String(parseInt(sku)||0)];
+        const cmv = cmvInfo?.cmv || 0;
+        const taxa = preco_orig >= 79 ? 0.12 : 0.12;
+
+        // Calcula margem com o desconto sugerido pelo ML
+        let margem = null, lucro = 0, preco_min = 0;
+        const preco_calc = preco_final_ml > 0 ? preco_final_ml : preco_orig*(1-desc_ml/100);
+        if(cmv > 0 && preco_calc > 0){
+          const calc = calcMargemGP(preco_calc, cmv, taxa);
+          margem = calc.margem;
+          lucro  = calc.lucro;
+          // Preço mínimo para 15% de margem
+          const mgMin = getMgMinCategoria(titulo);
+          const denom = Math.max(1-taxa-PIS_GP-COF_GP-0.085*0.7*0.8-ICMS_INT_GP*0.7-mgMin, 0.05);
+          preco_min = (cmv + freteGP(preco_calc)) / denom;
         }
-        const mg_min = getMgMinCategoria(item.title||'');
-        const viavel = margem_prom===null?null:margem_prom>=mg_min?'ok':margem_prom>=.10?'atencao':'inviavel';
 
+        const mgMin = getMgMinCategoria(titulo);
+        const viavel = margem === null ? null :
+          margem >= mgMin ? 'ok' :
+          margem >= 0.10  ? 'atencao' : 'inviavel';
+
+        // Desconto máximo viável calculado
+        const desc_max_viavel = preco_min > 0 && preco_orig > 0
+          ? Math.max(0, Math.floor((1 - preco_min/preco_orig)*100))
+          : null;
+
+        // Desconto meu editável (inicia com o sugerido pelo ML)
         promoData.push({
-          mlb, sku, titulo:item.title||'', campanha:camp.name||camp.type||'Promoção',
-          preco_orig, bonus_ml, meu_desc, preco_final, cmv, margem_prom, mg_min, viavel,
-          camp_id: camp.id, item_id: item.id
+          mlb, sku, titulo, preco_orig,
+          desc_ml,                    // desconto original da planilha ML
+          meu_desc: desc_ml,          // editável pelo usuário
+          preco_final: preco_calc,
+          preco_final_ml,
+          cmv, taxa, status, margem, lucro,
+          preco_min: preco_min > 0 ? preco_min : null,
+          desc_max_viavel,
+          mgMin, viavel, temCMV: cmv > 0,
         });
       });
+
+      renderKpisPromocoes();
+      filtrarPromocoes();
+      document.getElementById('prom-kpis').style.display = '';
+      document.getElementById('prom-table-wrap').style.display = '';
+      document.getElementById('btn-aplicar-prom').style.display = 'block';
+      document.getElementById('prom-status').textContent = `✅ ${promoData.length} itens carregados`;
+      document.getElementById('prom-status').style.color = '#16a34a';
+    }catch(ex){
+      document.getElementById('prom-status').textContent = `❌ Erro: ${ex.message}`;
+      document.getElementById('prom-status').style.color = '#dc2626';
     }
-    renderPromocoes();
-    document.getElementById('prom-status').textContent=`✅ ${promoData.length} itens em promoção`;
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderKpisPromocoes(){
+  const total = promoData.length;
+  const comCmv = promoData.filter(p=>p.temCMV);
+  const viaveis  = comCmv.filter(p=>p.viavel==='ok').length;
+  const atencao  = comCmv.filter(p=>p.viavel==='atencao').length;
+  const inviaveis= comCmv.filter(p=>p.viavel==='inviavel').length;
+  const descMed  = promoData.filter(p=>p.meu_desc>0)
+    .reduce((s,p,i,a)=>s+p.meu_desc/a.length, 0);
+  const fatTotal = promoData.reduce((s,p)=>s+p.preco_final,0);
+  document.getElementById('prk-total').textContent    = total;
+  document.getElementById('prk-viavel').textContent   = viaveis;
+  document.getElementById('prk-atenc').textContent    = atencao;
+  document.getElementById('prk-inviavel').textContent = inviaveis;
+  document.getElementById('prk-bonus').textContent    = descMed.toFixed(1)+'%';
+  document.getElementById('prk-fat').textContent      = 'R$ '+fmtK(fatTotal);
+}
+
+function setFiltroPromo(f){
+  promoFiltro = f;
+  ['todos','viavel','atenc','inv'].forEach(x=>{
+    document.getElementById(`prf-${x}`)?.classList.toggle('a', x===f);
+  });
+  filtrarPromocoes();
+}
+
+function filtrarPromocoes(){
+  const q = (document.getElementById('prom-search')?.value||'').toLowerCase();
+  let lista = promoData.filter(p=>{
+    if(q && !p.titulo.toLowerCase().includes(q) &&
+       !p.mlb.includes(q) && !p.sku.includes(q)) return false;
+    if(promoFiltro==='viavel')  return p.temCMV && p.viavel==='ok';
+    if(promoFiltro==='atenc')   return p.temCMV && p.viavel==='atencao';
+    if(promoFiltro==='inv')     return p.temCMV && p.viavel==='inviavel';
+    return true;
+  });
+  renderTabelaPromocoes(lista);
+}
+
+function atualizarDescPromo(mlb, descStr){
+  const desc = parseFloat(descStr)||0;
+  const item = promoData.find(p=>p.mlb===mlb);
+  if(!item) return;
+  item.meu_desc = desc;
+  item.preco_final = parseFloat((item.preco_orig*(1-desc/100)).toFixed(2));
+  if(item.cmv > 0){
+    const calc = calcMargemGP(item.preco_final, item.cmv, item.taxa);
+    item.margem = calc.margem;
+    item.lucro  = calc.lucro;
+    const mgMin = item.mgMin||0.15;
+    item.viavel = item.margem >= mgMin ? 'ok' : item.margem >= 0.10 ? 'atencao' : 'inviavel';
+  }
+  renderKpisPromocoes();
+  filtrarPromocoes();
+}
+
+function renderTabelaPromocoes(lista){
+  if(!lista.length){
+    document.getElementById('prom-tbody').innerHTML =
+      '<tr><td colspan="13" style="text-align:center;padding:20px;color:var(--muted)">Nenhum item encontrado</td></tr>';
+    return;
+  }
+  const rows = lista.map(p=>{
+    const mg = p.margem;
+    const mc = mg===null?'#9ca3af':mg>=(p.mgMin||0.15)?'#16a34a':mg>=0.10?'#d97706':'#dc2626';
+    const mgStr = mg===null?'sem CMV':(mg*100).toFixed(1)+'%';
+    const tag = !p.temCMV
+      ? '<span class="pill" style="background:#f3f4f6;color:#9ca3af">sem CMV</span>'
+      : p.viavel==='ok'
+        ? '<span class="pill pill-g">✅ Viável</span>'
+        : p.viavel==='atencao'
+          ? '<span class="pill pill-y">⚠️ Atenção</span>'
+          : '<span class="pill pill-r">❌ Inviável</span>';
+
+    const rowBg = p.viavel==='ok'?'background:#f0fdf4':p.viavel==='inviavel'?'background:#fff1f2':'';
+
+    return `<tr style="${rowBg}">
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="${p.titulo}">${p.titulo}</td>
+      <td style="font-size:10px;color:var(--azul2)">${p.mlb}</td>
+      <td style="font-weight:700;font-size:10px">${p.sku||'—'}</td>
+      <td class="num">R$ ${fmt(p.preco_orig)}</td>
+      <td class="num" style="color:#16a34a;font-weight:700">${p.desc_ml||0}%</td>
+      <td class="num">
+        <input type="number" min="0" max="80" step="1" value="${p.meu_desc||0}"
+          style="width:52px;border:1px solid var(--borda);border-radius:4px;padding:3px 5px;font-size:11px;font-weight:700;text-align:center;outline:none"
+          onchange="atualizarDescPromo('${p.mlb}',this.value)">%
+        ${p.desc_max_viavel!==null?`<div style="font-size:9px;color:#16a34a">máx ${p.desc_max_viavel}%</div>`:''}
+      </td>
+      <td class="num" style="font-weight:700">R$ ${fmt(p.preco_final)}</td>
+      <td class="num" style="color:var(--muted)">${p.temCMV?'R$ '+fmt(p.cmv):'—'}</td>
+      <td class="num" style="font-weight:700;color:${mc}">${mgStr}</td>
+      <td class="num" style="color:#dc2626;font-size:10px">${p.preco_min?'R$ '+fmt(p.preco_min):'—'}</td>
+      <td style="font-size:10px;color:var(--muted)">${p.status}</td>
+      <td>${tag}</td>
+      <td>
+        ${p.temCMV && (p.viavel==='ok'||p.viavel==='atencao')
+          ? `<button class="apply-btn" id="apb-prom-${p.mlb}"
+              onclick="aplicarPrecoPromo('${p.mlb}',${p.preco_final.toFixed(2)})">
+              Aplicar
+            </button>`
+          : '—'
+        }
+      </td>
+    </tr>`;
+  });
+  document.getElementById('prom-tbody').innerHTML = rows.join('');
+}
+
+async function aplicarPrecoPromo(mlb, preco){
+  if(!tokens.ml){ alert('Token ML necessário'); return; }
+  const btn = document.getElementById(`apb-prom-${mlb}`);
+  if(btn){ btn.textContent='...'; btn.className='apply-btn applying'; }
+  try{
+    const r = await fetch(`/api/ml/items/${mlb}`, {
+      method:'PUT',
+      headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},
+      body: JSON.stringify({price: parseFloat(preco.toFixed(2))})
+    });
+    if(r.ok){
+      if(btn){ btn.textContent='✓ OK'; btn.className='apply-btn done'; }
+    } else {
+      const e = await r.json().catch(()=>({}));
+      if(btn){ btn.textContent='✗ Erro'; btn.className='apply-btn'; }
+      alert('Erro ML: '+(e.message||r.status));
+    }
   }catch(e){
-    document.getElementById('prom-status').textContent=`❌ ${e.message}`;
+    if(btn){ btn.textContent='✗'; btn.className='apply-btn'; }
   }
 }
 
-function renderPromocoes(){
-  const viaveis=promoData.filter(p=>p.viavel==='ok').length;
-  const atencao=promoData.filter(p=>p.viavel==='atencao').length;
-  const inviaveis=promoData.filter(p=>p.viavel==='inviavel').length;
-  const bonusMed=promoData.length?promoData.reduce((s,p)=>s+p.bonus_ml,0)/promoData.length:0;
-  document.getElementById('pm-total').textContent=promoData.length;
-  document.getElementById('pm-viaveis').textContent=viaveis;
-  document.getElementById('pm-atencao').textContent=atencao;
-  document.getElementById('pm-inviaveis').textContent=inviaveis;
-  document.getElementById('pm-bonus').textContent=bonusMed.toFixed(1)+'%';
-
-  const rows=promoData.map(p=>{
-    const rowCls=p.viavel==='ok'?'viavel':p.viavel==='atencao'?'atencao':p.viavel==='inviavel'?'inviavel':'';
-    const mgStr=p.margem_prom!==null?(p.margem_prom*100).toFixed(1)+'%':'sem CMV';
-    const mgCor=p.margem_prom===null?'#9ca3af':p.margem_prom>=p.mg_min?'#16a34a':p.margem_prom>=.10?'#d97706':'#dc2626';
-    const viTag=p.viavel==='ok'?'<span class="pill pill-g">✅ Viável</span>':
-                p.viavel==='atencao'?'<span class="pill pill-y">⚠️ Atenção</span>':
-                p.viavel==='inviavel'?'<span class="pill pill-r">❌ Inviável</span>':
-                '<span style="color:#9ca3af;font-size:10px">sem CMV</span>';
-    return`<tr class="${rowCls}">
-      <td style="font-size:10px;color:var(--azul2)">${p.mlb}</td>
-      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="${p.titulo}">${p.titulo}</td>
-      <td style="font-size:10px">${p.campanha}</td>
-      <td class="num">R$ ${fmt(p.preco_orig)}</td>
-      <td class="num" style="color:#16a34a;font-weight:700">+${p.bonus_ml}%</td>
-      <td class="num">${p.meu_desc}%</td>
-      <td class="num" style="font-weight:700">R$ ${fmt(p.preco_final)}</td>
-      <td class="num" style="color:var(--muted)">${p.cmv>0?'R$ '+fmt(p.cmv):'—'}</td>
-      <td class="num" style="font-weight:700;color:${mgCor}">${mgStr}</td>
-      <td>${viTag}</td>
-      <td>${p.viavel==='ok'||p.viavel==='atencao'?`<button class="btn-resp" onclick="participarPromo('${p.camp_id}','${p.item_id}')">Participar</button>`:'—'}</td>
-    </tr>`;
-  });
-  document.getElementById('prom-tbody').innerHTML=rows.join('')||
-    '<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--muted)">Nenhuma promoção disponível</td></tr>';
+async function aplicarDescontosML(){
+  const viaveis = promoData.filter(p=>p.temCMV&&(p.viavel==='ok'||p.viavel==='atencao'));
+  if(!viaveis.length){ alert('Nenhum item viável para aplicar'); return; }
+  if(!tokens.ml){ alert('Token ML necessário'); return; }
+  if(!confirm(`Aplicar preços em ${viaveis.length} anúncios viáveis?`)) return;
+  let ok=0, err=0;
+  for(const p of viaveis){
+    await aplicarPrecoPromo(p.mlb, p.preco_final);
+    ok++;
+    await new Promise(r=>setTimeout(r,400));
+  }
+  alert(`✅ ${ok} preços aplicados!`);
 }
 
-async function participarPromo(campId, itemId){
-  if(!tokens.ml){alert('Token ML necessário');return;}
-  try{
-    const r=await fetch(`/api/ml/seller-promotions/${campId}/items`,{
-      method:'POST',
-      headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},
-      body:JSON.stringify({item_id:itemId})
-    });
-    r.ok?alert('✅ Participando da promoção!'):alert('❌ Erro ao participar: '+(await r.text()));
-  }catch(e){alert('❌ '+e.message);}
-}
+// Alias para compatibilidade com carregarPromocoes chamado no setView
+function carregarPromocoes(){ /* usa importação xlsx — não faz nada automaticamente */ }
 
 // ══════════════════════════════════════════════════════════════════════
 // DIFAL POR ESTADO
@@ -3629,12 +3853,18 @@ function setView(v){
   document.getElementById('view-promocoes').style.display = v==='promocoes'?'flex':'none';
   document.getElementById('view-difal').style.display = v==='difal'?'flex':'none';
   document.getElementById('view-perguntas').style.display = v==='perguntas'?'flex':'none';
+  document.getElementById('view-capa').style.display = v==='capa'?'flex':'none';
+  document.getElementById('view-devolucoes').style.display = v==='devolucoes'?'flex':'none';
   document.getElementById('vtab-prom').classList.toggle('a', v==='promocoes');
   document.getElementById('vtab-difal').classList.toggle('a', v==='difal');
   document.getElementById('vtab-perg').classList.toggle('a', v==='perguntas');
+  document.getElementById('vtab-capa').classList.toggle('a', v==='capa');
+  document.getElementById('vtab-dev').classList.toggle('a', v==='devolucoes');
+  if(v==='devolucoes') initDevolucoes();
   if(v==='pedidos') initPedidos();
   if(v==='promocoes') carregarPromocoes();
   if(v==='difal') renderDifal();
+  if(v==='capa') initCapa();
   if(v==='perguntas'){ const k=localStorage.getItem('fava_claude_key')||''; document.getElementById('perg-apikey').value=k; }
 }
 
@@ -4325,5 +4555,622 @@ async function confirmarPreco(){
   }catch(e){alert(`❌ ${e.message}`);}
 }
 </script>
-</body>
-</html>
+<!-- ═══════════════════════════ CAPA NF ═══════════════════════════ -->
+<!-- ═══════════════════════════ DEVOLUÇÕES ═══════════════════════════ -->
+<div id="view-devolucoes" class="main" style="display:none">
+
+  <!-- INSTRUÇÃO -->
+  <div style="background:#fffbeb;border-radius:9px;border:1px solid #fde68a;padding:12px 16px;margin-bottom:12px;font-size:12px;color:#92400e">
+    <strong>📥 Importe a planilha CONTROLE_DEVOLUCOES.xlsx</strong> para visualizar e gerenciar suas devoluções.
+    Os dados ficam em memória — reimporte sempre que atualizar a planilha.
+  </div>
+
+  <!-- TOOLBAR -->
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#fff;border-radius:9px;border:1px solid var(--borda);padding:10px 14px;margin-bottom:10px">
+    <label style="background:var(--azul);color:#fff;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">
+      📂 Importar Planilha (.xlsx)
+      <input type="file" accept=".xlsx" onchange="importarDevolucoes(this)" style="display:none">
+    </label>
+    <span id="dev-status" style="font-size:11px;color:var(--muted)">Nenhuma planilha importada</span>
+    <div style="flex:1"></div>
+    <input type="text" id="dev-search" placeholder="🔍 Buscar pedido/produto..." oninput="filtrarDevolucoes()" style="border:1px solid var(--borda);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:220px">
+    <select id="dev-filtro-status" onchange="filtrarDevolucoes()" style="border:1px solid var(--borda);border-radius:5px;padding:5px 8px;font-size:11px;outline:none">
+      <option value="">Todos os status</option>
+      <option value="Pendente">Pendente</option>
+      <option value="Repor estoque">Repor estoque</option>
+      <option value="Vender no Outlet">Vender no Outlet</option>
+      <option value="ML pagou tudo">ML pagou tudo</option>
+      <option value="ML pagou parcial">ML pagou parcial</option>
+      <option value="Garantia fornecedor">Garantia fornecedor</option>
+      <option value="Prejuizo total">Prejuizo total</option>
+      <option value="Descarte">Descarte</option>
+    </select>
+    <select id="dev-filtro-culpa" onchange="filtrarDevolucoes()" style="border:1px solid var(--borda);border-radius:5px;padding:5px 8px;font-size:11px;outline:none">
+      <option value="">Toda culpa</option>
+      <option value="Cliente">Culpa: Cliente</option>
+      <option value="Fava">Culpa: Fava</option>
+      <option value="ML">Culpa: ML</option>
+      <option value="Fornecedor">Culpa: Fornecedor</option>
+    </select>
+  </div>
+
+  <!-- KPIs -->
+  <div id="dev-kpis" style="display:none">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:8px;margin-bottom:12px">
+      <div class="kpi"><div class="kl">Total Devoluções</div><div class="kv" id="dk-total">—</div></div>
+      <div class="kpi" style="border-color:#fef9c3"><div class="kl">Em Aberto</div><div class="kv" id="dk-aberto" style="color:#d97706">—</div></div>
+      <div class="kpi" style="border-color:#fee2e2"><div class="kl">Prazo Vencendo</div><div class="kv" id="dk-prazo" style="color:#dc2626">—</div></div>
+      <div class="kpi"><div class="kl">ML Pagou</div><div class="kv" id="dk-mlpagou" style="color:#16a34a">—</div></div>
+      <div class="kpi" style="border-color:#fee2e2"><div class="kl">Prejuízo Total</div><div class="kv" id="dk-prejuizo" style="color:#dc2626">—</div></div>
+      <div class="kpi"><div class="kl">Culpa Cliente</div><div class="kv" id="dk-cliente">—</div></div>
+      <div class="kpi" style="border-color:#fef9c3"><div class="kl">Culpa Fava/ML</div><div class="kv" id="dk-fava" style="color:#d97706">—</div></div>
+      <div class="kpi"><div class="kl">Tx. Devolução</div><div class="kv" id="dk-taxa">—</div><div class="kd">vs pedidos ML</div></div>
+    </div>
+
+    <!-- Distribuição por decisão -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div class="fcard">
+        <div class="fcard-head"><h3>📊 Por Decisão</h3></div>
+        <div class="fcard-body" id="dev-por-decisao"></div>
+      </div>
+      <div class="fcard">
+        <div class="fcard-head"><h3>🔍 Por Motivo</h3></div>
+        <div class="fcard-body" id="dev-por-motivo"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABELA -->
+  <div id="dev-table-wrap" style="display:none;background:#fff;border-radius:9px;border:1px solid var(--borda);overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:11px">
+      <thead><tr style="background:#f8fafc">
+        <th style="padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--borda)">Nº Pedido</th>
+        <th style="padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--borda)">Data Venda</th>
+        <th style="padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--borda);min-width:160px">Produto</th>
+        <th style="padding:6px 9px;text-align:right;font-size:10px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--borda)">Vl. Venda</th>
+        <th style="padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--borda)">Motivo</th>
+        <th style="padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--borda)">Tipo</th>
+        <th style="padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--borda)">Culpa</th>
+        <th style="padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--borda)">Dias Rest.</th>
+        <th style="padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--borda)">Condição</th>
+        <th style="padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--borda)">Decisão</th>
+        <th style="padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--borda)">ML Pagou?</th>
+        <th style="padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--borda)">Obs</th>
+      </tr></thead>
+      <tbody id="dev-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════
+// DEVOLUÇÕES
+// ══════════════════════════════════════════════════════════════════════
+let devolucoesData = [];
+let devolucoesCache = JSON.parse(localStorage.getItem('fava_devolucoes')||'[]');
+
+function initDevolucoes(){
+  if(devolucoesData.length === 0 && devolucoesCache.length > 0){
+    devolucoesData = devolucoesCache;
+    renderDevolucoes();
+    document.getElementById('dev-status').textContent = `✅ ${devolucoesData.length} devoluções (cache)`;
+  }
+}
+
+function importarDevolucoes(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets['DEVOLUCOES'];
+      if(!ws){ alert('Aba DEVOLUCOES não encontrada'); return; }
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+
+      // Estrutura: linha 4=cabeçalho, dados a partir da linha 5
+      // A=#, B=PEDIDO, C=DATA VENDA, D=PRODUTO, E=VL VENDA,
+      // F=DT RECLAMAÇÃO, G=MOTIVO, H=TIPO, I=CULPA, J=RESP FAVA,
+      // K=DT LIMITE, L=DIAS REST, M=RASTREIO, N=STATUS ENVIO,
+      // O=DT CHEGADA, P=CONDIÇÃO, Q=DT LIMITE CONF, R=DECISÃO,
+      // S=ML PAGOU, T=OBS
+      devolucoesData = [];
+      rows.slice(4).forEach(r => {
+        const pedido = String(r[1]||'').trim();
+        if(!pedido) return;
+        devolucoesData.push({
+          num:       r[0]||'',
+          pedido,
+          data_venda: r[2]||'',
+          produto:   String(r[3]||'').trim(),
+          vl_venda:  parseFloat(r[4])||0,
+          dt_reclamacao: r[5]||'',
+          motivo:    String(r[6]||'').trim(),
+          tipo:      String(r[7]||'').trim(),
+          culpa:     String(r[8]||'').trim(),
+          resp_fava: String(r[9]||'').trim(),
+          dt_limite: r[10]||'',
+          dias_rest: r[11]!==''?parseFloat(r[11]):null,
+          rastreio:  String(r[12]||'').trim(),
+          status_envio: String(r[13]||'').trim(),
+          dt_chegada: r[14]||'',
+          condicao:  String(r[15]||'').trim(),
+          decisao:   String(r[17]||'').trim(),
+          ml_pagou:  String(r[18]||'').trim(),
+          obs:       String(r[19]||'').trim(),
+        });
+      });
+
+      // Salva em localStorage para persistir
+      localStorage.setItem('fava_devolucoes', JSON.stringify(devolucoesData));
+      renderDevolucoes();
+      document.getElementById('dev-status').textContent = `✅ ${devolucoesData.length} devoluções carregadas`;
+      document.getElementById('dev-status').style.color = '#16a34a';
+      // Atualiza KPI do dashboard se carregado
+      const kd = document.getElementById('k-dev');
+      if(kd){
+        kd.textContent = devolucoesData.length;
+        const pend = devolucoesData.filter(d=>!d.decisao||d.decisao==='Pendente').length;
+        document.getElementById('k-dev-status').textContent = pend > 0 ? `${pend} pendentes` : 'todas resolvidas';
+      }
+    }catch(ex){
+      document.getElementById('dev-status').textContent = `❌ Erro: ${ex.message}`;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderDevolucoes(){
+  renderKpisDevolucoes();
+  filtrarDevolucoes();
+  document.getElementById('dev-kpis').style.display = '';
+  document.getElementById('dev-table-wrap').style.display = '';
+}
+
+function renderKpisDevolucoes(){
+  const total = devolucoesData.length;
+  const aberto = devolucoesData.filter(d=>!d.decisao||d.decisao==='Pendente').length;
+  const prazoVencendo = devolucoesData.filter(d=>d.dias_rest!==null&&d.dias_rest>=0&&d.dias_rest<=7).length;
+  const mlPagou = devolucoesData.filter(d=>d.ml_pagou&&d.ml_pagou.toLowerCase().includes('sim')).length;
+  const prejuizo = devolucoesData.filter(d=>d.decisao==='Prejuizo total').length;
+  const culpaCliente = devolucoesData.filter(d=>d.culpa&&d.culpa.toLowerCase()==='cliente').length;
+  const culpaFava = devolucoesData.filter(d=>d.culpa&&(d.culpa.toLowerCase()==='fava'||d.culpa.toLowerCase()==='ml')).length;
+
+  // Taxa vs pedidos ML carregados
+  const totalML = dados.pedidosML.length;
+  const taxa = totalML > 0 ? (total/totalML*100).toFixed(1)+'%' : '—';
+
+  document.getElementById('dk-total').textContent = total;
+  document.getElementById('dk-aberto').textContent = aberto;
+  document.getElementById('dk-prazo').textContent = prazoVencendo;
+  document.getElementById('dk-mlpagou').textContent = mlPagou;
+  document.getElementById('dk-prejuizo').textContent = prejuizo;
+  document.getElementById('dk-cliente').textContent = culpaCliente;
+  document.getElementById('dk-fava').textContent = culpaFava;
+  document.getElementById('dk-taxa').textContent = taxa;
+
+  // Por decisão
+  const porDecisao = {};
+  devolucoesData.forEach(d=>{
+    const dec = d.decisao||'Pendente';
+    if(!porDecisao[dec]) porDecisao[dec] = {n:0, val:0};
+    porDecisao[dec].n++;
+    porDecisao[dec].val += d.vl_venda;
+  });
+  const cores = {'Pendente':'#fbbf24','Repor estoque':'#3b82f6','Vender no Outlet':'#8b5cf6','ML pagou tudo':'#16a34a','ML pagou parcial':'#10b981','Garantia fornecedor':'#f59e0b','Prejuizo total':'#dc2626','Descarte':'#6b7280'};
+  document.getElementById('dev-por-decisao').innerHTML = Object.entries(porDecisao)
+    .sort((a,b)=>b[1].n-a[1].n)
+    .map(([dec,d])=>`
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="width:10px;height:10px;border-radius:50%;background:${cores[dec]||'#9ca3af'};display:inline-block;flex-shrink:0"></span>
+        <span style="flex:1;font-size:11px">${dec}</span>
+        <span style="font-size:11px;font-weight:700">${d.n}</span>
+        <span style="font-size:10px;color:var(--muted)">R$ ${fmtK(d.val)}</span>
+      </div>`).join('') || '<div style="color:var(--muted);font-size:11px">Sem dados</div>';
+
+  // Por motivo
+  const porMotivo = {};
+  devolucoesData.forEach(d=>{
+    const mot = d.motivo||'Não informado';
+    if(!porMotivo[mot]) porMotivo[mot] = 0;
+    porMotivo[mot]++;
+  });
+  document.getElementById('dev-por-motivo').innerHTML = Object.entries(porMotivo)
+    .sort((a,b)=>b[1]-a[1]).slice(0,8)
+    .map(([mot,n])=>`
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+        <span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${mot}">${mot||'—'}</span>
+        <span style="font-size:11px;font-weight:700;color:var(--azul)">${n}</span>
+        <div style="width:50px;background:#f3f4f6;border-radius:3px;height:5px">
+          <div style="width:${total>0?n/total*100:0}%;background:var(--azul2);height:100%;border-radius:3px"></div>
+        </div>
+      </div>`).join('') || '<div style="color:var(--muted);font-size:11px">Sem dados</div>';
+}
+
+function filtrarDevolucoes(){
+  const q = (document.getElementById('dev-search')?.value||'').toLowerCase();
+  const fs = document.getElementById('dev-filtro-status')?.value||'';
+  const fc = document.getElementById('dev-filtro-culpa')?.value||'';
+  const lista = devolucoesData.filter(d=>{
+    if(q && !d.pedido.toLowerCase().includes(q) && !d.produto.toLowerCase().includes(q)) return false;
+    if(fs && d.decisao !== fs) return false;
+    if(fc && d.culpa !== fc) return false;
+    return true;
+  });
+  renderTabelaDevolucoes(lista);
+}
+
+function renderTabelaDevolucoes(lista){
+  const decCor = {
+    'Pendente':'#d97706','Repor estoque':'#2563eb','Vender no Outlet':'#7c3aed',
+    'ML pagou tudo':'#16a34a','ML pagou parcial':'#10b981','Garantia fornecedor':'#d97706',
+    'Prejuizo total':'#dc2626','Descarte':'#6b7280'
+  };
+  const rows = lista.map(d=>{
+    const bg = !d.decisao||d.decisao==='Pendente' ? 'background:#fffbeb' :
+               d.decisao==='Prejuizo total' ? 'background:#fff1f2' :
+               d.decisao==='ML pagou tudo' ? 'background:#f0fdf4' : '';
+    const diasCor = d.dias_rest!==null ? (d.dias_rest<=3?'color:#dc2626;font-weight:700':d.dias_rest<=7?'color:#d97706;font-weight:700':'') : 'color:#9ca3af';
+    const dtVenda = d.data_venda instanceof Date
+      ? `${String(d.data_venda.getDate()).padStart(2,'0')}/${String(d.data_venda.getMonth()+1).padStart(2,'0')}/${d.data_venda.getFullYear()}`
+      : String(d.data_venda||'').substring(0,10);
+    return `<tr style="${bg}">
+      <td style="font-size:10px;color:var(--azul2);font-weight:700">${d.pedido}</td>
+      <td style="font-size:10px;color:var(--muted)">${dtVenda}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px" title="${d.produto}">${d.produto||'—'}</td>
+      <td style="text-align:right;font-weight:700">R$ ${fmt(d.vl_venda)}</td>
+      <td style="font-size:10px">${d.motivo||'—'}</td>
+      <td style="font-size:10px">${d.tipo||'—'}</td>
+      <td style="font-size:10px;font-weight:700;color:${d.culpa==='Cliente'?'#16a34a':d.culpa?'#dc2626':'#9ca3af'}">${d.culpa||'—'}</td>
+      <td style="font-size:11px;${diasCor}">${d.dias_rest!==null?d.dias_rest+'d':'—'}</td>
+      <td style="font-size:10px">${d.condicao||'—'}</td>
+      <td><span style="font-size:10px;font-weight:700;color:${decCor[d.decisao]||'#9ca3af'}">${d.decisao||'Pendente'}</span></td>
+      <td style="font-size:10px;color:${d.ml_pagou&&d.ml_pagou.toLowerCase().includes('sim')?'#16a34a':'#9ca3af'}">${d.ml_pagou||'—'}</td>
+      <td style="font-size:10px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.obs}">${d.obs||'—'}</td>
+    </tr>`;
+  });
+  document.getElementById('dev-tbody').innerHTML = rows.join('') ||
+    '<tr><td colspan="12" style="text-align:center;padding:20px;color:var(--muted)">Nenhuma devolução encontrada</td></tr>';
+}
+</script>
+
+<div id="view-capa" class="main" style="display:none">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <!-- FORMULÁRIO -->
+    <div class="fcard">
+      <div class="fcard-head"><h3>🖨️ Gerador de Capa de NF</h3></div>
+      <div class="fcard-body" style="display:flex;flex-direction:column;gap:10px">
+
+        <div style="background:#eff6ff;border-radius:7px;padding:10px;font-size:11px;color:#1e40af">
+          💡 Preencha os dados da nota fiscal para gerar a capa para separação/embalagem.
+        </div>
+
+        <!-- Dados do pedido -->
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:4px">Dados do Pedido</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><label style="font-size:10px;color:var(--muted);font-weight:600">Nº Pedido / NF</label>
+            <input type="text" id="capa-nf" placeholder="Ex: 123456" style="width:100%;border:1px solid var(--borda);border-radius:5px;padding:6px 9px;font-size:12px;outline:none;margin-top:2px"></div>
+          <div><label style="font-size:10px;color:var(--muted);font-weight:600">Data</label>
+            <input type="date" id="capa-data" style="width:100%;border:1px solid var(--borda);border-radius:5px;padding:6px 9px;font-size:12px;outline:none;margin-top:2px"></div>
+        </div>
+
+        <!-- Destinatário -->
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:4px">Destinatário</div>
+        <div><label style="font-size:10px;color:var(--muted);font-weight:600">Nome / Razão Social</label>
+          <input type="text" id="capa-nome" placeholder="Nome do cliente" style="width:100%;border:1px solid var(--borda);border-radius:5px;padding:6px 9px;font-size:12px;outline:none;margin-top:2px"></div>
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px">
+          <div><label style="font-size:10px;color:var(--muted);font-weight:600">Cidade</label>
+            <input type="text" id="capa-cidade" placeholder="Cidade" style="width:100%;border:1px solid var(--borda);border-radius:5px;padding:6px 9px;font-size:12px;outline:none;margin-top:2px"></div>
+          <div><label style="font-size:10px;color:var(--muted);font-weight:600">UF</label>
+            <input type="text" id="capa-uf" placeholder="SP" maxlength="2" style="width:100%;border:1px solid var(--borda);border-radius:5px;padding:6px 9px;font-size:12px;outline:none;margin-top:2px;text-transform:uppercase"></div>
+        </div>
+
+        <!-- Itens -->
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:4px">Itens</div>
+        <div id="capa-itens" style="display:flex;flex-direction:column;gap:6px">
+          <div class="capa-item-row" style="display:grid;grid-template-columns:1fr 60px 90px 80px;gap:6px;align-items:center">
+            <input type="text" placeholder="SKU / Descrição" style="border:1px solid var(--borda);border-radius:5px;padding:5px 8px;font-size:11px;outline:none">
+            <input type="number" placeholder="Qtd" min="1" value="1" style="border:1px solid var(--borda);border-radius:5px;padding:5px 8px;font-size:11px;outline:none;text-align:center">
+            <input type="number" placeholder="Custo unit." step="0.01" style="border:1px solid var(--borda);border-radius:5px;padding:5px 8px;font-size:11px;outline:none">
+            <input type="number" placeholder="IPI%" step="0.01" style="border:1px solid var(--borda);border-radius:5px;padding:5px 8px;font-size:11px;outline:none;text-align:center">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-fin" style="background:var(--azul2)" onclick="adicionarItemCapa()">+ Item</button>
+          <button class="btn-fin" style="background:#6b7280" onclick="limparItensCapa()">Limpar</button>
+        </div>
+
+        <!-- Custos extras -->
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:4px">Custos Extras</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div><label style="font-size:10px;color:var(--muted);font-weight:600">Frete (R$)</label>
+            <input type="number" id="capa-frete" step="0.01" value="0" style="width:100%;border:1px solid var(--borda);border-radius:5px;padding:6px 9px;font-size:12px;outline:none;margin-top:2px" oninput="calcularCapa()"></div>
+          <div><label style="font-size:10px;color:var(--muted);font-weight:600">ST (%)</label>
+            <input type="number" id="capa-st" step="0.01" value="0" style="width:100%;border:1px solid var(--borda);border-radius:5px;padding:6px 9px;font-size:12px;outline:none;margin-top:2px" oninput="calcularCapa()"></div>
+          <div><label style="font-size:10px;color:var(--muted);font-weight:600">Outros (R$)</label>
+            <input type="number" id="capa-outros" step="0.01" value="0" style="width:100%;border:1px solid var(--borda);border-radius:5px;padding:6px 9px;font-size:12px;outline:none;margin-top:2px" oninput="calcularCapa()"></div>
+        </div>
+
+        <button class="btn-prim" onclick="gerarCapaNF()" style="margin-top:8px">🖨️ Gerar Capa para Impressão</button>
+      </div>
+    </div>
+
+    <!-- PREVIEW / CÁLCULO -->
+    <div class="fcard">
+      <div class="fcard-head"><h3>📊 CAPA_NF_CALCULOS — CMV Real</h3></div>
+      <div class="fcard-body">
+        <div id="capa-calculo" style="font-size:12px;color:var(--muted);text-align:center;padding:20px">
+          Preencha os dados ao lado para ver o cálculo do CMV.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════
+// CAPA NF
+// ══════════════════════════════════════════════════════════════════════
+function initCapa(){
+  const hoje = new Date().toISOString().substring(0,10);
+  document.getElementById('capa-data').value = hoje;
+  calcularCapa();
+}
+
+function adicionarItemCapa(){
+  const div = document.createElement('div');
+  div.className = 'capa-item-row';
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 60px 90px 80px;gap:6px;align-items:center;position:relative';
+  div.innerHTML = `
+    <input type="text" placeholder="SKU / Descrição" style="border:1px solid var(--borda);border-radius:5px;padding:5px 8px;font-size:11px;outline:none" oninput="calcularCapa()">
+    <input type="number" placeholder="Qtd" min="1" value="1" style="border:1px solid var(--borda);border-radius:5px;padding:5px 8px;font-size:11px;outline:none;text-align:center" oninput="calcularCapa()">
+    <input type="number" placeholder="Custo unit." step="0.01" style="border:1px solid var(--borda);border-radius:5px;padding:5px 8px;font-size:11px;outline:none" oninput="calcularCapa()">
+    <div style="display:flex;gap:4px;align-items:center">
+      <input type="number" placeholder="IPI%" step="0.01" style="flex:1;border:1px solid var(--borda);border-radius:5px;padding:5px 4px;font-size:11px;outline:none;text-align:center" oninput="calcularCapa()">
+      <button onclick="this.closest('.capa-item-row').remove();calcularCapa()" style="border:none;background:none;cursor:pointer;color:#dc2626;font-size:16px;padding:0 2px">×</button>
+    </div>`;
+  document.getElementById('capa-itens').appendChild(div);
+  calcularCapa();
+}
+
+function limparItensCapa(){
+  const rows = document.querySelectorAll('.capa-item-row');
+  // Limpa só os inputs, mantém a primeira linha
+  rows.forEach((r,i)=>{
+    if(i===0) r.querySelectorAll('input').forEach(inp=>{ inp.value = inp.placeholder==='Qtd'?'1':''; });
+    else r.remove();
+  });
+  calcularCapa();
+}
+
+function getItens(){
+  const rows = document.querySelectorAll('.capa-item-row');
+  const itens = [];
+  rows.forEach(r=>{
+    const inputs = r.querySelectorAll('input');
+    const sku = inputs[0].value.trim();
+    const qtd = parseFloat(inputs[1].value)||1;
+    const custo = parseFloat(inputs[2].value)||0;
+    const ipi_pct = parseFloat(inputs[3].value)||0;
+    if(sku||custo>0) itens.push({sku,qtd,custo,ipi_pct});
+  });
+  return itens;
+}
+
+function calcularCapa(){
+  const itens = getItens();
+  const frete = parseFloat(document.getElementById('capa-frete')?.value)||0;
+  const st_pct = parseFloat(document.getElementById('capa-st')?.value)||0;
+  const outros = parseFloat(document.getElementById('capa-outros')?.value)||0;
+
+  if(!itens.length){
+    document.getElementById('capa-calculo').innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">Preencha os itens para ver o cálculo.</div>';
+    return;
+  }
+
+  // Cálculo CMV real por item
+  let totalCusto=0, totalQtd=0, totalIPI=0;
+  const linhas = itens.map(it=>{
+    const custo_total = it.custo * it.qtd;
+    const ipi_val = custo_total * (it.ipi_pct/100);
+    totalCusto += custo_total;
+    totalIPI += ipi_val;
+    totalQtd += it.qtd;
+    return {
+      ...it,
+      custo_total,
+      ipi_val,
+      subtotal: custo_total + ipi_val
+    };
+  });
+
+  const base_st = totalCusto + totalIPI;
+  const st_val = base_st * (st_pct/100);
+  const total_geral = totalCusto + totalIPI + st_val + frete + outros;
+
+  // CMV por unidade (dividido pela quantidade total)
+  const cmv_unitario = totalQtd > 0 ? total_geral / totalQtd : 0;
+
+  // Rateio por item
+  const html = `
+    <div style="margin-bottom:12px">
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead><tr style="background:#f8fafc">
+          <th style="padding:5px 8px;text-align:left;border-bottom:1px solid var(--borda);font-size:10px;color:var(--muted)">SKU/Item</th>
+          <th style="padding:5px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;color:var(--muted)">Qtd</th>
+          <th style="padding:5px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;color:var(--muted)">Custo</th>
+          <th style="padding:5px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;color:var(--muted)">IPI</th>
+          <th style="padding:5px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;color:var(--muted)">Subtotal</th>
+          <th style="padding:5px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;color:var(--muted)">CMV/un</th>
+        </tr></thead>
+        <tbody>
+          ${linhas.map(l=>`<tr>
+            <td style="padding:5px 8px;border-bottom:1px solid #f9fafb">${l.sku||'—'}</td>
+            <td style="padding:5px 8px;border-bottom:1px solid #f9fafb;text-align:right">${l.qtd}</td>
+            <td style="padding:5px 8px;border-bottom:1px solid #f9fafb;text-align:right">R$ ${fmt(l.custo)}</td>
+            <td style="padding:5px 8px;border-bottom:1px solid #f9fafb;text-align:right;color:#d97706">R$ ${fmt(l.ipi_val)}</td>
+            <td style="padding:5px 8px;border-bottom:1px solid #f9fafb;text-align:right;font-weight:700">R$ ${fmt(l.subtotal)}</td>
+            <td style="padding:5px 8px;border-bottom:1px solid #f9fafb;text-align:right;color:#16a34a;font-weight:700">R$ ${fmt((l.subtotal + (frete+outros+st_val)*(l.subtotal/Math.max(totalCusto+totalIPI,1)))/l.qtd)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+      <div style="background:#f8fafc;border-radius:6px;padding:9px 12px">
+        <div style="font-size:10px;color:var(--muted);font-weight:700">Custo Mercadoria</div>
+        <div style="font-size:16px;font-weight:700">R$ ${fmt(totalCusto)}</div>
+      </div>
+      <div style="background:#fff7ed;border-radius:6px;padding:9px 12px">
+        <div style="font-size:10px;color:var(--muted);font-weight:700">IPI Total</div>
+        <div style="font-size:16px;font-weight:700;color:#d97706">R$ ${fmt(totalIPI)}</div>
+      </div>
+      <div style="background:#fefce8;border-radius:6px;padding:9px 12px">
+        <div style="font-size:10px;color:var(--muted);font-weight:700">ST (${st_pct}%)</div>
+        <div style="font-size:16px;font-weight:700;color:#ca8a04">R$ ${fmt(st_val)}</div>
+      </div>
+      <div style="background:#f0fdf4;border-radius:6px;padding:9px 12px">
+        <div style="font-size:10px;color:var(--muted);font-weight:700">Frete + Outros</div>
+        <div style="font-size:16px;font-weight:700;color:#16a34a">R$ ${fmt(frete+outros)}</div>
+      </div>
+    </div>
+    <div style="background:#1F3864;border-radius:8px;padding:12px 14px;margin-top:10px;color:#fff;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:10px;opacity:.8;font-weight:700">TOTAL GERAL</div>
+        <div style="font-size:22px;font-weight:700">R$ ${fmt(total_geral)}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:10px;opacity:.8;font-weight:700">CMV_BRASIL / unidade</div>
+        <div style="font-size:20px;font-weight:700;color:#4ade80">R$ ${fmt(cmv_unitario)}</div>
+        <div style="font-size:10px;opacity:.7">${totalQtd} unidade(s)</div>
+      </div>
+    </div>`;
+
+  document.getElementById('capa-calculo').innerHTML = html;
+}
+
+function gerarCapaNF(){
+  const nf = document.getElementById('capa-nf').value||'—';
+  const data = document.getElementById('capa-data').value;
+  const nome = document.getElementById('capa-nome').value||'—';
+  const cidade = document.getElementById('capa-cidade').value||'—';
+  const uf = document.getElementById('capa-uf').value||'—';
+  const itens = getItens();
+  const frete = parseFloat(document.getElementById('capa-frete')?.value)||0;
+  const st_pct = parseFloat(document.getElementById('capa-st')?.value)||0;
+  const outros = parseFloat(document.getElementById('capa-outros')?.value)||0;
+
+  let totalCusto=0, totalQtd=0, totalIPI=0;
+  const linhas = itens.map(it=>{
+    const ct = it.custo*it.qtd;
+    const iv = ct*(it.ipi_pct/100);
+    totalCusto+=ct; totalIPI+=iv; totalQtd+=it.qtd;
+    return {...it,ct,iv};
+  });
+  const st_val = (totalCusto+totalIPI)*(st_pct/100);
+  const total = totalCusto+totalIPI+st_val+frete+outros;
+  const cmv_un = totalQtd>0?total/totalQtd:0;
+
+  const [y,m,d] = (data||new Date().toISOString().substring(0,10)).split('-');
+  const dataFmt = `${d}/${m}/${y}`;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Capa NF ${nf}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+  body{background:#fff;color:#000;font-size:12px;padding:20px}
+  .topo{border:2px solid #1F3864;border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+  .topo h1{font-size:20px;font-weight:700;color:#1F3864}
+  .topo .nf{font-size:28px;font-weight:700;color:#1F3864}
+  .secao{margin-bottom:14px}
+  .secao h3{font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e5e7eb;padding-bottom:4px;margin-bottom:8px}
+  .dest{font-size:14px;font-weight:700}
+  .dest-sub{font-size:12px;color:#374151}
+  table{width:100%;border-collapse:collapse;font-size:11px}
+  th{background:#1F3864;color:#fff;padding:6px 8px;text-align:left;font-size:10px}
+  th.r{text-align:right}
+  td{padding:5px 8px;border-bottom:1px solid #f3f4f6}
+  td.r{text-align:right}
+  .total-box{background:#1F3864;color:#fff;border-radius:8px;padding:12px 18px;margin-top:14px;display:flex;justify-content:space-between}
+  .cmv-box{background:#dcfce7;border-radius:8px;padding:12px 18px;margin-top:8px;display:flex;justify-content:space-between;align-items:center;border:2px solid #16a34a}
+  @media print{body{padding:10px}.no-print{display:none}}
+</style></head><body>
+<div class="no-print" style="margin-bottom:12px">
+  <button onclick="window.print()" style="background:#1F3864;color:#fff;border:none;padding:8px 18px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">🖨️ Imprimir / Salvar PDF</button>
+  <button onclick="window.close()" style="background:#6b7280;color:#fff;border:none;padding:8px 18px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px">Fechar</button>
+</div>
+<div class="topo">
+  <div>
+    <h1>🛒 FAVA ECOM</h1>
+    <div style="font-size:11px;color:#6b7280">Capa de Nota Fiscal — Separação/Embalagem</div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-size:11px;color:#6b7280">NF / Pedido</div>
+    <div class="nf">#${nf}</div>
+    <div style="font-size:11px;color:#6b7280">${dataFmt}</div>
+  </div>
+</div>
+
+<div class="secao">
+  <h3>Destinatário</h3>
+  <div class="dest">${nome}</div>
+  <div class="dest-sub">${cidade} — ${uf}</div>
+</div>
+
+<div class="secao">
+  <h3>Itens</h3>
+  <table><thead><tr>
+    <th>SKU / Descrição</th><th class="r">Qtd</th><th class="r">Custo Unit.</th><th class="r">IPI%</th><th class="r">IPI R$</th><th class="r">Subtotal</th>
+  </tr></thead><tbody>
+  ${linhas.map(l=>`<tr>
+    <td>${l.sku||'—'}</td>
+    <td class="r">${l.qtd}</td>
+    <td class="r">R$ ${fmt(l.custo)}</td>
+    <td class="r">${l.ipi_pct}%</td>
+    <td class="r">R$ ${fmt(l.iv)}</td>
+    <td class="r"><strong>R$ ${fmt(l.ct+l.iv)}</strong></td>
+  </tr>`).join('')}
+  </tbody></table>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+  <div style="border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px">
+    <div style="font-size:9px;color:#6b7280;font-weight:700">MERCADORIA</div>
+    <div style="font-size:15px;font-weight:700">R$ ${fmt(totalCusto)}</div>
+  </div>
+  <div style="border:1px solid #fed7aa;background:#fff7ed;border-radius:6px;padding:8px 10px">
+    <div style="font-size:9px;color:#6b7280;font-weight:700">IPI TOTAL</div>
+    <div style="font-size:15px;font-weight:700;color:#c2410c">R$ ${fmt(totalIPI)}</div>
+  </div>
+  <div style="border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px">
+    <div style="font-size:9px;color:#6b7280;font-weight:700">ST (${st_pct}%)</div>
+    <div style="font-size:15px;font-weight:700;color:#854d0e">R$ ${fmt(st_val)}</div>
+  </div>
+  <div style="border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px">
+    <div style="font-size:9px;color:#6b7280;font-weight:700">FRETE + OUTROS</div>
+    <div style="font-size:15px;font-weight:700">R$ ${fmt(frete+outros)}</div>
+  </div>
+</div>
+
+<div class="total-box">
+  <div><div style="font-size:10px;opacity:.8">TOTAL GERAL DA NOTA</div><div style="font-size:24px;font-weight:700">R$ ${fmt(total)}</div></div>
+  <div style="text-align:right"><div style="font-size:10px;opacity:.8">QUANTIDADE TOTAL</div><div style="font-size:24px;font-weight:700">${totalQtd} un</div></div>
+</div>
+
+<div class="cmv-box">
+  <div>
+    <div style="font-size:11px;color:#166534;font-weight:700">CMV_BRASIL — Custo real por unidade</div>
+    <div style="font-size:11px;color:#166534">(Mercadoria + IPI + ST + Frete + Outros) ÷ ${totalQtd} unidades</div>
+  </div>
+  <div style="font-size:28px;font-weight:700;color:#166534">R$ ${fmt(cmv_un)}</div>
+</div>
+
+<div style="margin-top:12px;font-size:9px;color:#9ca3af;text-align:center">
+  Gerado pelo Painel Fava Ecom em ${new Date().toLocaleString('pt-BR')}
+</div>
+</body></html>`;
+
+  const w = window.open('','_blank','width=900,height=700');
+  w.document.write(html);
+  w.document.close();
+}
+</script>
