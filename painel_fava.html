@@ -2563,7 +2563,7 @@ function renderDifal(){
 // ══════════════════════════════════════════════════════════════════════
 // PERGUNTAS ML COM IA
 // ══════════════════════════════════════════════════════════════════════
-let perguntasData=[];
+perguntasData=[];
 
 async function carregarPerguntas(){
   if(!tokens.ml){alert('Configure o token ML');return;}
@@ -3012,7 +3012,7 @@ function filtrarPedidos(){
   const uf=document.getElementById('ped-uf')?.value||'';
   const st=document.getElementById('ped-status')?.value||'';
 
-  let lista=pedidosDetalhados.filter(p=>{
+  lista=pedidosDetalhados.filter(p=>{
     if(q&&!String(p.id).includes(q)&&!p.sku.includes(q)&&!p.titulo.toLowerCase().includes(q)) return false;
     if(uf&&p.uf!==uf) return false;
     if(st&&p.status!==st) return false;
@@ -3398,7 +3398,7 @@ function setFiltroGP(f){
 function filtrarGP(){
   const mgMin = (parseFloat(document.getElementById('gp-mg-min')?.value)||15)/100;
   const q = (document.getElementById('gp-search')?.value||'').toLowerCase();
-  let lista = gpData.filter(d=>{
+  let lista =ata.filter(d=>{
     if(q && !d.titulo.toLowerCase().includes(q) && !d.mlb.includes(q) && !d.sku.includes(q)) return false;
     if(gpFiltro==='err') return d.temCMV && d.margem < .10;
     if(gpFiltro==='warn') return d.temCMV && d.margem >= .10 && d.margem < mgMin;
@@ -4121,7 +4121,7 @@ function calcKpisMP(){
 
 function exportarConciliacao(){
   if(!concDados.length){alert('Nada para exportar');return;}
-  let csv='Pedido ML;Data;Bruto ML;Taxa Est;Frete;Liq Estimado;Liq Real MP;Diferenca;Status\n';
+  csv='Pedido ML;Data;Bruto ML;Taxa Est;Frete;Liq Estimado;Liq Real MP;Diferenca;Status\n';
   concDados.forEach(c=>{
     csv+=`${c.pedido};${c.data};${c.bruto.toFixed(2)};${c.taxa_est.toFixed(2)};${c.frete_est.toFixed(2)};${c.liq_est.toFixed(2)};${c.liq_real!==null?c.liq_real.toFixed(2):'pendente'};${c.dif!==null?c.dif.toFixed(2):'—'};${c.status_mp}
 `;
@@ -4368,7 +4368,7 @@ function recalcFluxo(){
 
   // Gera próximos 30 dias
   const dias=[];
-  for(let i=0;i<31;i++){
+  for(i=0;i<31;i++){
     const d=new Date(hoje);d.setDate(d.getDate()+i);
     dias.push(d);
   }
@@ -4629,7 +4629,7 @@ async function carregarAnuncios(){
 
     // Busca detalhes em lotes de 20
     const detalhes = [];
-    for(let i=0; i<items.length; i+=20){
+    for(let i=<items.length; i+=20){
       const lote = items.slice(i,i+20).join(',');
       const r = await mlGet(`items?ids=${lote}&attributes=id,title,price,base_price,listing_type_id,available_quantity,seller_sku,category_id`);
       if(r) detalhes.push(...r.filter(x=>x.body?.id).map(x=>x.body));
@@ -4660,7 +4660,7 @@ async function carregarAnuncios(){
       const frete = freteAnuncio(preco);
       // Margem: só calcula se tiver CMV real no Bling
       // Lucro = Preço - CMV - PIS(1,65%) - COFINS(7,6%) - Taxa ML - Frete
-      let margem = null;
+      margem = null;
       let lucro = 0;
       if(cmv > 0 && preco > 0){
         const pis_r = preco * PIS_A;
@@ -4745,7 +4745,7 @@ function setFiltro(f){
 
 function filtrarAnuncios(){
   const q = (document.getElementById('anunc-search').value||'').toLowerCase();
-  let lista = anunciosData.filter(a=>{
+  let listlista =sData.filter(a=>{
     if(q && !a.titulo.toLowerCase().includes(q) && !a.mlb.includes(q) && !a.sku.includes(q)) return false;
     if(anuncFiltro==='alerta') return a.margem_atual!==null && a.margem_atual<.20;
     if(anuncFiltro==='promo') return a.margem_atual!==null && a.margem_atual>=.20;
