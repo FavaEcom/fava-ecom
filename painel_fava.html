@@ -772,6 +772,23 @@ function fecharCfg(){
 const ML_TAXA={gold_pro:.16,gold_special:.11,gold_premium:.16,classified:.16};
 function taxaML(listing_type){return ML_TAXA[listing_type]||.11;}
 
+// Tabela ICMS por UF
+const ICMS_TB={
+  'AC':{inter:.12,difal:.07},'AL':{inter:.12,difal:.05},'AM':{inter:.12,difal:.06},
+  'AP':{inter:.12,difal:.07},'BA':{inter:.12,difal:.07},'CE':{inter:.12,difal:.08},
+  'DF':{inter:.12,difal:.08},'ES':{inter:.12,difal:.05},'GO':{inter:.12,difal:.07},
+  'MA':{inter:.12,difal:.07},'MG':{inter:.12,difal:.07},'MS':{inter:.12,difal:.05},
+  'MT':{inter:.12,difal:.07},'PA':{inter:.12,difal:.07},'PB':{inter:.12,difal:.07},
+  'PE':{inter:.12,difal:.07},'PI':{inter:.12,difal:.07},'PR':{inter:.12,difal:.00},
+  'RJ':{inter:.12,difal:.08},'RN':{inter:.12,difal:.07},'RO':{inter:.12,difal:.07},
+  'RR':{inter:.12,difal:.07},'RS':{inter:.12,difal:.07},'SC':{inter:.12,difal:.05},
+  'SE':{inter:.12,difal:.07},'SP':{inter:.12,difal:.08},'TO':{inter:.12,difal:.07},
+  'XX':{inter:.12,difal:.085}
+};
+
+// Constantes fiscais
+const PIS=.0165, COFINS=.076;
+
 // ══════════════════════════════════════════════════════════════════════
 // ESTADO GLOBAL
 // ══════════════════════════════════════════════════════════════════════
