@@ -79,16 +79,6 @@ header h1{font-size:15px;font-weight:700;flex:1}
 .state-val{font-size:10px;font-weight:700;color:var(--texto);width:70px;text-align:right}
 
 /* LOADING */
-/* LOGIN */
-.login-screen{position:fixed;inset:0;background:var(--azul);z-index:9999;display:flex;align-items:center;justify-content:center}
-.login-box{background:#fff;border-radius:14px;padding:32px;width:340px;max-width:92vw;text-align:center}
-.login-box h2{font-size:18px;font-weight:700;color:var(--azul);margin-bottom:4px}
-.login-box p{font-size:12px;color:var(--muted);margin-bottom:20px}
-.login-box input{width:100%;border:1px solid var(--borda);border-radius:8px;padding:10px 14px;font-size:14px;outline:none;margin-bottom:12px;text-align:center;letter-spacing:2px}
-.login-box input:focus{border-color:var(--azul2)}
-.login-box button{width:100%;background:var(--azul);color:#fff;border:none;border-radius:8px;padding:10px;font-size:14px;font-weight:700;cursor:pointer}
-.login-box button:hover{background:var(--azul2)}
-.login-erro{color:var(--vermelho);font-size:12px;margin-top:8px;display:none}
 .loading-cover{position:fixed;inset:0;background:rgba(255,255,255,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;font-size:14px;color:var(--muted);gap:12px}
 .spin{width:28px;height:28px;border:3px solid #e5e7eb;border-top-color:var(--azul2);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -353,33 +343,6 @@ function fecharCfg(){
 }
 </script>
 
-<!-- LOGIN -->
-<div class="login-screen" id="login-screen">
-  <div class="login-box">
-    <h2>🔒 Painel Fava Ecom</h2>
-    <p>Digite a senha para acessar</p>
-    <input type="password" id="login-senha" placeholder="••••••••" onkeydown="if(event.key==='Enter')fazerLogin()">
-    <button onclick="fazerLogin()">Entrar</button>
-    <div class="login-erro" id="login-erro">Senha incorreta. Tente novamente.</div>
-  </div>
-</div>
-<script>
-const SENHA_PAINEL = 'fava2024';
-function fazerLogin(){
-  const s = document.getElementById('login-senha').value;
-  if(s === SENHA_PAINEL){
-    localStorage.setItem('fava_auth', btoa(SENHA_PAINEL));
-    document.getElementById('login-screen').style.display='none';
-  } else {
-    document.getElementById('login-erro').style.display='block';
-    document.getElementById('login-senha').value='';
-    document.getElementById('login-senha').focus();
-  }
-}
-if(localStorage.getItem('fava_auth') === btoa(SENHA_PAINEL)){
-  document.getElementById('login-screen').style.display='none';
-}
-</script>
 <!-- LOADING -->
 <div class="loading-cover" id="loading" style="display:none">
   <div class="spin"></div>
@@ -3831,7 +3794,7 @@ function setFiltro(f){
 
 function filtrarAnuncios(){
   const q = (document.getElementById('anunc-search').value||'').toLowerCase();
-  let listlista =sData.filter(a=>{
+  let lista = anunciosData.filter(a=>{
     if(q && !a.titulo.toLowerCase().includes(q) && !a.mlb.includes(q) && !a.sku.includes(q)) return false;
     if(anuncFiltro==='alerta') return a.margem_atual!==null && a.margem_atual<.20;
     if(anuncFiltro==='promo') return a.margem_atual!==null && a.margem_atual>=.20;
