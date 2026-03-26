@@ -1328,7 +1328,7 @@ function abrirModalById(btn, precoAtual, precoSug){
   const mlb = btn.dataset.mlb||'';
   abrirModal(mlb, mlb, precoAtual, precoSug);
 }
-function sugerirRespostaIA(idx, pergunta, mlb){
+async function sugerirRespostaIA(idx, pergunta, mlb){
   if(!claudeKeyPerg){alert('Configure a API Key do Claude');return;}
   const btn=document.querySelector(`#pq-${idx} .btn-ia`);
   if(btn){btn.textContent='⟳ Gerando...';btn.disabled=true;}
