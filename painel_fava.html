@@ -342,9 +342,28 @@ function salvarCfg(){
 <!-- LOADING -->
 <div class="loading-cover" id="loading" style="display:none">
   <div class="spin"></div>
-  <div id="loading-msg
-;
+  <div id="loading-msg" style="margin-top:10px;font-size:12px;color:#6b7280">Carregando...</div>
+</div>
 
+<!-- CONFIG MODAL -->
+<div class="modal-bg" id="modal-cfg" style="display:flex">
+  <div class="modal">
+    <h2>⚙️ Configurar tokens de acesso</h2>
+    <div class="field">
+      <label>Token Bling API v3</label>
+      <input type="password" id="tk-bling" placeholder="access_token do Bling">
+    </div>
+    <div class="field">
+      <label>Access Token ML (APP_USR-...)</label>
+      <input type="password" id="tk-ml" placeholder="APP_USR-...">
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Os tokens ficam salvos localmente no seu navegador.</div>
+    <button class="btn-prim" onclick="salvarCfg()">Salvar e carregar painel</button>
+    <button class="btn-sec" onclick="fecharCfg()" style="margin-top:6px">Cancelar</button>
+  </div>
+</div>
+
+<script>
 // Taxa ML por tipo de anúncio
 const ML_TAXA={gold_pro:.16,gold_special:.11,gold_premium:.16,classified:.16};
 function taxaML(listing_type){return ML_TAXA[listing_type]||.11;}
