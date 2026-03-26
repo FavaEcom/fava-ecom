@@ -131,6 +131,76 @@ header h1{font-size:15px;font-weight:700;flex:1}
 .roas-med{color:#d97706;font-weight:700}
 .roas-ruim{color:#dc2626;font-weight:700}
 
+/* PROMOÇÕES */
+.prom-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:10px}
+.prom-kpi{background:#fff;border-radius:8px;border:1px solid var(--borda);padding:9px 12px}
+.prom-kpi .pkl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.prom-kpi .pkv{font-size:18px;font-weight:700}
+.prom-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.prom-tbl th{padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--borda);background:#f8fafc;white-space:nowrap}
+.prom-tbl td{padding:6px 9px;border-bottom:1px solid #f9fafb;vertical-align:middle}
+.prom-tbl tr:hover td{background:#fafbfc}
+.prom-tbl .num{text-align:right;font-variant-numeric:tabular-nums}
+.bonus-badge{background:#dbeafe;color:#1e40af;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700}
+.viavel{background:#dcfce7;color:#166534;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700}
+.inviavel{background:#fee2e2;color:#991b1b;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700}
+.atencao{background:#fef9c3;color:#854d0e;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700}
+
+/* DIFAL */
+.difal-map{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;margin-bottom:12px}
+.difal-card{background:#fff;border-radius:7px;border:1px solid var(--borda);padding:8px 10px;text-align:center}
+.difal-card .dc-uf{font-size:12px;font-weight:700;color:var(--azul)}
+.difal-card .dc-val{font-size:14px;font-weight:700;margin:3px 0}
+.difal-card .dc-sub{font-size:9px;color:var(--muted)}
+
+/* PERGUNTAS */
+.perg-item{background:#fff;border-radius:9px;border:1px solid var(--borda);padding:12px 14px;margin-bottom:8px}
+.perg-item .pi-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.perg-item .pi-mlb{font-size:10px;color:var(--azul2);font-weight:700}
+.perg-item .pi-data{font-size:10px;color:var(--muted)}
+.perg-item .pi-q{font-size:12px;font-weight:700;color:#1a1a1a;margin-bottom:8px;padding:8px;background:#f8fafc;border-radius:5px;border-left:3px solid var(--azul2)}
+.perg-item .pi-resp{width:100%;border:1px solid var(--borda);border-radius:6px;padding:8px;font-size:12px;min-height:80px;resize:vertical;outline:none;font-family:Arial,sans-serif;line-height:1.5}
+.perg-item .pi-resp:focus{border-color:var(--azul2)}
+.perg-actions{display:flex;gap:6px;margin-top:8px}
+.btn-ia{padding:5px 12px;border-radius:5px;border:none;background:var(--azul2);color:#fff;font-size:11px;font-weight:700;cursor:pointer}
+.btn-enviar{padding:5px 12px;border-radius:5px;border:none;background:#16a34a;color:#fff;font-size:11px;font-weight:700;cursor:pointer}
+.btn-ia:hover{opacity:.9}.btn-enviar:hover{opacity:.9}
+
+/* PROMOÇÕES */
+.prom-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:10px}
+.prom-kpi{background:#fff;border-radius:8px;border:1px solid var(--borda);padding:9px 12px}
+.prom-kpi .pl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.prom-kpi .pv{font-size:18px;font-weight:700}
+.prom-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.prom-tbl th{padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--borda);background:#f8fafc;white-space:nowrap}
+.prom-tbl td{padding:6px 9px;border-bottom:1px solid #f9fafb;vertical-align:middle}
+.prom-tbl .num{text-align:right;font-variant-numeric:tabular-nums}
+.viavel{background:#f0fdf4}.inviavel{background:#fff1f2}.atencao{background:#fffbeb}
+/* DIFAL */
+.difal-map{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:10px}
+.difal-card{background:#fff;border-radius:8px;border:1px solid var(--borda);padding:10px 12px}
+.difal-card .dc-uf{font-size:16px;font-weight:700;color:var(--azul);margin-bottom:4px}
+.difal-card .dc-fat{font-size:12px;font-weight:700}
+.difal-card .dc-info{font-size:10px;color:var(--muted);margin-top:2px}
+/* PERGUNTAS */
+.perg-card{background:#fff;border-radius:9px;border:1px solid var(--borda);margin-bottom:10px;overflow:hidden}
+.perg-head{padding:10px 14px;background:#f8fafc;border-bottom:1px solid var(--borda);display:flex;align-items:flex-start;gap:10px}
+.perg-body{padding:12px 14px}
+.perg-txt{font-size:13px;color:#1a1a1a;line-height:1.5;flex:1}
+.perg-meta{font-size:10px;color:var(--muted);margin-top:4px}
+.resp-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:10px 12px;font-size:12px;line-height:1.6;margin-top:8px;white-space:pre-wrap}
+.btn-resp{padding:4px 10px;border-radius:5px;border:none;background:var(--verde);color:#fff;font-size:11px;cursor:pointer;font-weight:700}
+.btn-resp:hover{opacity:.9}
+.btn-enviar{padding:4px 10px;border-radius:5px;border:1px solid var(--azul2);background:#fff;color:var(--azul2);font-size:11px;cursor:pointer;font-weight:700}
+.btn-enviar:hover{background:var(--azul2);color:#fff}
+
+/* DIFAL */
+.difal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:12px}
+.difal-kpi{background:#fff;border-radius:8px;border:1px solid var(--borda);padding:9px 12px}
+.difal-kpi .dl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.difal-kpi .dv{font-size:18px;font-weight:700}
+.uf-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+
 /* GESTÃO PREÇOS */
 .gp-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fff;border-radius:9px;border:1px solid var(--borda);padding:10px 14px;margin-bottom:10px}
 .gp-toolbar label{font-size:11px;font-weight:700;color:var(--muted)}
@@ -296,6 +366,13 @@ header h1{font-size:15px;font-weight:700;flex:1}
   <div class="vtab" onclick="setView('precos')" id="vtab-prec">🏷️ Gestão Preços</div>
   <div class="vtab" onclick="setView('ads')" id="vtab-ads">📣 ADS + Margem</div>
   <div class="vtab" onclick="setView('pedidos')" id="vtab-ped">📦 Pedidos</div>
+  <div class="vtab" onclick="setView('difal')" id="vtab-difal">🗺️ DIFAL</div>
+  <div class="vtab" onclick="setView('promocoes')" id="vtab-prom">🎁 Promoções ML</div>
+  <div class="vtab" onclick="setView('difal')" id="vtab-difal">🗺️ DIFAL</div>
+  <div class="vtab" onclick="setView('perguntas')" id="vtab-perg">❓ Perguntas</div>
+  <div class="vtab" onclick="setView('promocoes')" id="vtab-prom">🎯 Promoções ML</div>
+  <div class="vtab" onclick="setView('difal')" id="vtab-difal">🗺️ DIFAL</div>
+  <div class="vtab" onclick="setView('perguntas')" id="vtab-perg">💬 Perguntas</div>
 </div>
 
 <!-- PERIOD BAR -->
@@ -605,6 +682,143 @@ header h1{font-size:15px;font-weight:700;flex:1}
 
 </div>
 
+<!-- PROMOÇÕES ML VIEW -->
+<div id="view-promocoes" style="display:none;padding:14px 18px;flex-direction:column;gap:10px">
+  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div style="flex:1">
+      <div style="font-size:12px;font-weight:700;color:var(--azul)">🎁 Promoções ML — Viabilidade por Margem</div>
+      <div style="font-size:11px;color:var(--muted)">Puxe as promoções disponíveis e veja quais são viáveis com sua margem mínima</div>
+    </div>
+    <button class="btn-fin" onclick="carregarPromocoes()">🔍 Carregar promoções</button>
+    <span id="prom-status" style="font-size:11px;color:var(--muted)">Clique para carregar</span>
+  </div>
+  <div class="prom-kpis">
+    <div class="prom-kpi"><div class="pl">Total disponíveis</div><div class="pv" id="pm-total">—</div></div>
+    <div class="prom-kpi"><div class="pl">Viáveis ✅</div><div class="pv" id="pm-viaveis" style="color:#16a34a">—</div></div>
+    <div class="prom-kpi"><div class="pl">Atenção ⚠️</div><div class="pv" id="pm-atencao" style="color:#d97706">—</div></div>
+    <div class="prom-kpi"><div class="pl">Inviáveis ❌</div><div class="pv" id="pm-inviaveis" style="color:#dc2626">—</div></div>
+    <div class="prom-kpi"><div class="pl">Bônus ML médio</div><div class="pv" id="pm-bonus">—</div></div>
+  </div>
+  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden">
+    <table class="prom-tbl">
+      <thead><tr>
+        <th>MLB</th><th>Produto</th><th>Promoção</th>
+        <th class="num">Preço atual</th><th class="num">Bônus ML</th>
+        <th class="num">Meu desc.</th><th class="num">Preço final</th>
+        <th class="num">CMV</th><th class="num">Margem c/ promoção</th>
+        <th>Viável?</th><th>Participar</th>
+      </tr></thead>
+      <tbody id="prom-tbody"><tr><td colspan="11" style="text-align:center;padding:30px;color:var(--muted)">Clique em "Carregar promoções"</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- DIFAL VIEW -->
+<div id="view-difal" style="display:none;padding:14px 18px;flex-direction:column;gap:10px">
+  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 14px;display:flex;align-items:center;gap:12px">
+    <div style="flex:1">
+      <div style="font-size:12px;font-weight:700;color:var(--azul)">🗺️ Painel DIFAL — Análise Fiscal por Estado</div>
+      <div style="font-size:11px;color:var(--muted)">Panorama real de onde vendemos, quanto DIFAL pagamos e qual a margem por destino</div>
+    </div>
+    <select id="difal-periodo" onchange="renderDifal()" style="border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:11px">
+      <option value="30">Últimos 30 dias</option>
+      <option value="60">Últimos 60 dias</option>
+      <option value="90">Últimos 90 dias</option>
+    </select>
+  </div>
+  <div class="difal-map" id="difal-map"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden">
+      <div style="padding:9px 13px;border-bottom:1px solid #f3f4f6;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase">Ranking por faturamento</div>
+      <table class="prom-tbl"><thead><tr><th>UF</th><th>Tipo</th><th class="num">Vendas</th><th class="num">Faturamento</th><th class="num">DIFAL est.</th><th class="num">DIFAL %</th><th class="num">Margem</th></tr></thead>
+      <tbody id="difal-tbody"></tbody></table>
+    </div>
+    <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);padding:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:10px">DIFAL médio ponderado</div>
+      <div style="height:200px"><canvas id="chart-difal"></canvas></div>
+      <div id="difal-resumo" style="margin-top:10px;font-size:11px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PERGUNTAS VIEW -->
+<div id="view-perguntas" style="display:none;padding:14px 18px;flex-direction:column;gap:10px">
+  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div style="flex:1">
+      <div style="font-size:12px;font-weight:700;color:var(--azul)">❓ Perguntas ML — Resposta com IA</div>
+      <div style="font-size:11px;color:var(--muted)">A IA lê a pergunta, cruza com os dados do produto e sugere a resposta. Você revisa e envia.</div>
+    </div>
+    <input type="password" id="perg-apikey" placeholder="API Key Claude (sk-ant-...)"
+      style="width:220px;border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:11px"
+      oninput="localStorage.setItem('fava_claude_key',this.value)">
+    <button class="btn-fin" onclick="carregarPerguntas()">🔍 Carregar perguntas</button>
+    <span id="perg-status" style="font-size:11px;color:var(--muted)"></span>
+  </div>
+  <div id="perg-lista"><div style="text-align:center;padding:40px;color:var(--muted)">Clique em "Carregar perguntas"</div></div>
+</div>
+
+<!-- DIFAL VIEW -->
+<div id="view-difal" style="display:none;padding:14px 18px;flex-direction:column;gap:12px">
+
+  <!-- KPIs -->
+  <div class="difal-grid">
+    <div class="difal-kpi"><div class="dl">Total DIFAL estimado</div><div class="dv" id="df-total" style="color:#d97706">—</div><div style="font-size:10px;color:var(--muted)">Período selecionado</div></div>
+    <div class="difal-kpi"><div class="dl">Vendas fora PR</div><div class="dv" id="df-fora">—</div><div style="font-size:10px;color:var(--muted)">% do total</div></div>
+    <div class="difal-kpi"><div class="dl">Vendas para PF</div><div class="dv" id="df-pf">—</div><div style="font-size:10px;color:var(--muted)">Sujeitas a DIFAL</div></div>
+    <div class="difal-kpi"><div class="dl">Estado que mais compra</div><div class="dv" id="df-top-uf" style="color:var(--azul)">—</div><div style="font-size:10px;color:var(--muted)">Por faturamento</div></div>
+    <div class="difal-kpi"><div class="dl">DIFAL médio/pedido</div><div class="dv" id="df-medio">—</div><div style="font-size:10px;color:var(--muted)">Estimativa</div></div>
+    <div class="difal-kpi"><div class="dl">% DIFAL s/ faturamento</div><div class="dv" id="df-pct">—</div><div style="font-size:10px;color:var(--muted)">Impacto real</div></div>
+  </div>
+
+  <div class="uf-grid">
+    <!-- Tabela por estado -->
+    <div class="fcard">
+      <div class="fcard-head"><h3>📊 DIFAL por Estado de Destino</h3></div>
+      <div class="fcard-body" style="padding:0;max-height:420px;overflow-y:auto">
+        <table class="ftbl">
+          <thead>
+            <tr>
+              <th>UF</th>
+              <th class="num">Pedidos</th>
+              <th class="num">Faturamento</th>
+              <th class="num">DIFAL estimado</th>
+              <th class="num">% DIFAL</th>
+              <th class="num">Alíq. DIFAL</th>
+            </tr>
+          </thead>
+          <tbody id="difal-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Gráfico + tipo comprador -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="fcard">
+        <div class="fcard-head"><h3>🥧 Faturamento por Estado</h3></div>
+        <div class="fcard-body"><div style="height:200px"><canvas id="chart-difal-uf"></canvas></div></div>
+      </div>
+      <div class="fcard">
+        <div class="fcard-head"><h3>👤 Tipo de Comprador</h3></div>
+        <div class="fcard-body">
+          <table class="ftbl">
+            <thead><tr><th>Tipo</th><th class="num">Pedidos</th><th class="num">Fat.</th><th class="num">DIFAL est.</th></tr></thead>
+            <tbody id="difal-tipo-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estratégia -->
+  <div class="fcard">
+    <div class="fcard-head"><h3>💡 Estratégia — Media de DIFAL para Precificação</h3></div>
+    <div class="fcard-body">
+      <div id="difal-estrategia" style="font-size:12px;line-height:1.8;color:#374151"></div>
+    </div>
+  </div>
+
+</div>
+
 <!-- GESTÃO DE PREÇOS VIEW -->
 <div id="view-precos" style="display:none;padding:14px 18px;flex-direction:column;gap:0">
 
@@ -664,6 +878,40 @@ header h1{font-size:15px;font-weight:700;flex:1}
         📊 Carregar CMV da planilha
       </button>
       <button class="btn-fin" onclick="exportarGP()" style="background:#374151">⬇ Exportar</button>
+    </div>
+  </div>
+
+  <!-- Promoções ML com Bonus -->
+  <div class="fcard" id="gp-promos" style="display:none;margin-bottom:10px">
+    <div class="fcard-head">
+      <h3>🎯 Promoções ML — Bonus do ML + sua parte</h3>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn-fin" onclick="carregarPromocoesML()" id="btn-load-promos">🔍 Buscar promoções disponíveis</button>
+        <span id="promo-status" style="font-size:11px;color:var(--muted)"></span>
+      </div>
+    </div>
+    <div class="fcard-body" style="padding:0">
+      <table class="gp-tbl" id="promo-tbl" style="display:none">
+        <thead>
+          <tr>
+            <th>Anúncio</th>
+            <th>Promoção</th>
+            <th class="num">Preço atual</th>
+            <th class="num">ML paga</th>
+            <th class="num">Você paga</th>
+            <th class="num">Preço final</th>
+            <th class="num">CMV</th>
+            <th class="num">Margem s/ promo</th>
+            <th class="num">Margem c/ promo</th>
+            <th class="num">Viável?</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody id="promo-tbody"></tbody>
+      </table>
+      <div id="promo-empty" style="text-align:center;padding:20px;color:var(--muted);font-size:12px">
+        Clique em "Buscar promoções disponíveis" para ver as promoções que o ML oferece com bonus
+      </div>
     </div>
   </div>
 
@@ -789,6 +1037,106 @@ header h1{font-size:15px;font-weight:700;flex:1}
     </div>
   </div>
 
+</div>
+
+<!-- PROMOÇÕES ML VIEW -->
+<div id="view-promocoes" style="display:none;padding:14px 18px;flex-direction:column;gap:10px">
+  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div style="flex:1">
+      <div style="font-size:12px;font-weight:700;color:var(--azul)">🎯 Promoções ML — Análise de Viabilidade</div>
+      <div style="font-size:11px;color:var(--muted)">Puxar promoções disponíveis e calcular se é viável participar considerando margem real</div>
+    </div>
+    <button class="btn-fin" onclick="carregarPromocoes()">🔍 Carregar promoções</button>
+    <span id="prom-status" style="font-size:11px;color:var(--muted)"></span>
+  </div>
+
+  <div class="prom-kpis" id="prom-kpis" style="display:none">
+    <div class="prom-kpi"><div class="pkl">Promoções disponíveis</div><div class="pkv" id="prk-total">—</div></div>
+    <div class="prom-kpi"><div class="pkl">Viáveis (≥15%)</div><div class="pkv" id="prk-viavel" style="color:#16a34a">—</div></div>
+    <div class="prom-kpi"><div class="pkl">Atenção (10-15%)</div><div class="pkv" id="prk-atenc" style="color:#d97706">—</div></div>
+    <div class="prom-kpi"><div class="pkl">Inviáveis</div><div class="pkv" id="prk-inviavel" style="color:#dc2626">—</div></div>
+    <div class="prom-kpi"><div class="pkl">Bônus ML médio</div><div class="pkv" id="prk-bonus" style="color:#1d4ed8">—</div></div>
+  </div>
+
+  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden" id="prom-table-wrap" style="display:none">
+    <div style="padding:8px 12px;background:#f8fafc;border-bottom:1px solid var(--borda);display:flex;gap:8px;align-items:center">
+      <input type="text" id="prom-search" placeholder="Buscar produto ou MLB..." oninput="filtrarPromocoes()" style="border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:11px;outline:none;width:220px">
+      <button class="filt-btn a" id="prf-todos" onclick="setFiltroPromo('todos')">Todos</button>
+      <button class="filt-btn" id="prf-viavel" onclick="setFiltroPromo('viavel')">✅ Viável</button>
+      <button class="filt-btn" id="prf-atenc" onclick="setFiltroPromo('atenc')">⚠️ Atenção</button>
+      <button class="filt-btn" id="prf-inv" onclick="setFiltroPromo('inv')">❌ Inviável</button>
+    </div>
+    <table class="prom-tbl">
+      <thead><tr>
+        <th>Produto</th><th>MLB</th><th>SKU</th>
+        <th class="num">Preço atual</th><th class="num">Meu desc.</th>
+        <th class="num">Bônus ML</th><th class="num">Desc. total</th>
+        <th class="num">Preço final</th><th class="num">CMV</th>
+        <th class="num">Margem</th><th class="num">Preço mín</th>
+        <th>Viabilidade</th><th>Ação</th>
+      </tr></thead>
+      <tbody id="prom-tbody"><tr><td colspan="13" style="text-align:center;padding:20px;color:var(--muted)">Clique em "Carregar promoções"</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- DIFAL VIEW -->
+<div id="view-difal" style="display:none;padding:14px 18px;flex-direction:column;gap:10px">
+  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 14px">
+    <div style="font-size:12px;font-weight:700;color:var(--azul);margin-bottom:4px">🗺️ Painel DIFAL — Panorama Fiscal por Estado</div>
+    <div style="font-size:11px;color:var(--muted)">Baseado nos pedidos carregados. Mostra onde vendeu mais, DIFAL estimado pago e perfil do comprador.</div>
+  </div>
+
+  <div class="grid2">
+    <div class="fcard">
+      <div class="fcard-head"><h3>Vendas e DIFAL por estado</h3></div>
+      <div class="fcard-body" style="padding:0;max-height:500px;overflow-y:auto">
+        <table class="ftbl">
+          <thead><tr>
+            <th>UF</th><th class="num">Pedidos</th><th class="num">Faturamento</th>
+            <th class="num">DIFAL %</th><th class="num">DIFAL R$ est.</th>
+            <th class="num">% do total</th><th>Perfil</th>
+          </tr></thead>
+          <tbody id="difal-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="fcard">
+      <div class="fcard-head"><h3>Distribuição geográfica</h3></div>
+      <div class="fcard-body">
+        <div class="chart-fin"><canvas id="chart-difal-estados"></canvas></div>
+        <div style="margin-top:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px">RESUMO FISCAL</div>
+          <div id="difal-resumo" style="font-size:11px;line-height:2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fcard">
+    <div class="fcard-head"><h3>Média real de DIFAL — use para precificação</h3></div>
+    <div class="fcard-body">
+      <div id="difal-media-box" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PERGUNTAS VIEW -->
+<div id="view-perguntas" style="display:none;padding:14px 18px;flex-direction:column;gap:10px">
+  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div style="flex:1">
+      <div style="font-size:12px;font-weight:700;color:var(--azul)">💬 Perguntas ML — Resposta com IA</div>
+      <div style="font-size:11px;color:var(--muted)">Puxar perguntas sem resposta → IA sugere resposta baseada no cadastro do produto</div>
+    </div>
+    <input type="password" id="tk-claude-perg" placeholder="API Key Claude (sk-ant-...)"
+      style="width:200px;border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:11px;outline:none">
+    <button class="btn-fin" onclick="salvarKeyPerg()">Salvar key</button>
+    <button class="btn-fin" style="background:#16a34a" onclick="carregarPerguntas()">📥 Carregar perguntas</button>
+    <span id="perg-status" style="font-size:11px;color:var(--muted)"></span>
+  </div>
+
+  <div id="perg-lista"></div>
 </div>
 
 <!-- MODAL ATUALIZAR PREÇO -->
@@ -1416,6 +1764,854 @@ function fmt(v){return(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,max
 function fmtK(v){return v>=1000?`${(v/1000).toFixed(1)}k`:fmt(v);}
 
 // ══════════════════════════════════════════════════════════════════════
+// PAINEL DIFAL POR ESTADO
+// ══════════════════════════════════════════════════════════════════════
+// Alíquotas DIFAL por estado (diferença entre alíq. destino e 12% interestadual)
+const DIFAL_ALIQ = {
+  'AC':.07,'AL':.05,'AM':.06,'AP':.07,'BA':.07,'CE':.08,'DF':.08,'ES':.05,
+  'GO':.07,'MA':.07,'MG':.07,'MS':.05,'MT':.07,'PA':.07,'PB':.07,'PE':.07,
+  'PI':.07,'PR':.00,'RJ':.08,'RN':.07,'RO':.07,'RR':.07,'RS':.07,'SC':.05,
+  'SE':.07,'SP':.08,'TO':.07,
+};
+let chartDifalUF = null;
+
+function initDIFAL(){
+  buildDIFAL();
+}
+
+function buildDIFAL(){
+  const pedidos = dados.pedidosML.filter(p=>p.status!=='cancelled');
+  if(!pedidos.length){
+    document.getElementById('difal-tbody').innerHTML =
+      '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">Carregue o painel principal primeiro</td></tr>';
+    return;
+  }
+
+  // Agrupa por UF
+  const porUF = {};
+  let totalFat=0, totalDifal=0, pedidosFora=0, pedidosPF=0, totalPed=0;
+
+  pedidos.forEach(p=>{
+    const uf = p.uf||'XX';
+    const fat = p.total||0;
+    const isPR = uf==='PR';
+    const aliq = DIFAL_ALIQ[uf]||.07;
+    // DIFAL estimado: aplica só em vendas fora PR para PF (estimativa 80% PF)
+    const difal = isPR ? 0 : fat * aliq * .80;
+
+    if(!porUF[uf]) porUF[uf]={uf,pedidos:0,fat:0,difal:0,aliq};
+    porUF[uf].pedidos++;
+    porUF[uf].fat += fat;
+    porUF[uf].difal += difal;
+
+    totalFat += fat;
+    totalDifal += difal;
+    totalPed++;
+    if(!isPR) pedidosFora++;
+    pedidosPF += .80; // estimativa
+  });
+
+  // KPIs
+  const topUF = Object.values(porUF).sort((a,b)=>b.fat-a.fat)[0];
+  document.getElementById('df-total').textContent = 'R$ '+fmtK(totalDifal);
+  document.getElementById('df-fora').textContent = `${pedidosFora} (${totalPed?((pedidosFora/totalPed)*100).toFixed(0):'0'}%)`;
+  document.getElementById('df-pf').textContent = `~${Math.round(pedidosPF)} est.`;
+  document.getElementById('df-top-uf').textContent = topUF?.uf||'—';
+  document.getElementById('df-medio').textContent = totalPed?'R$ '+fmt(totalDifal/totalPed):'—';
+  document.getElementById('df-pct').textContent = totalFat?((totalDifal/totalFat)*100).toFixed(2)+'%':'—';
+
+  // Tabela UF
+  const sorted = Object.values(porUF).sort((a,b)=>b.fat-a.fat);
+  const rows = sorted.map(d=>{
+    const pct = d.fat>0?(d.difal/d.fat*100).toFixed(2)+'%':'—';
+    const bg = d.uf==='PR'?'background:#f0fdf4':d.difal>1000?'background:#fff7ed':'';
+    return`<tr style="${bg}">
+      <td><strong>${d.uf}</strong></td>
+      <td class="num">${d.pedidos}</td>
+      <td class="num">R$ ${fmt(d.fat)}</td>
+      <td class="num" style="color:#d97706;font-weight:700">R$ ${fmt(d.difal)}</td>
+      <td class="num">${pct}</td>
+      <td class="num" style="color:var(--muted)">${d.uf==='PR'?'Não incide':((d.aliq||0)*100).toFixed(0)+'%'}</td>
+    </tr>`;
+  });
+  document.getElementById('difal-tbody').innerHTML = rows.join('');
+
+  // Tipo comprador (estimativa baseada em UF)
+  const tipoRows = [
+    {tipo:'Pessoa Física (estimado 80%)', ped: Math.round(pedidosFora*.80), fat: totalFat*.65, difal: totalDifal},
+    {tipo:'Pessoa Jurídica com IE', ped: Math.round(pedidosFora*.10), fat: totalFat*.15, difal: 0},
+    {tipo:'Pessoa Jurídica sem IE', ped: Math.round(pedidosFora*.10), fat: totalFat*.10, difal: totalDifal*.10},
+    {tipo:'Dentro do PR', ped: totalPed-pedidosFora, fat: totalFat*.10, difal: 0},
+  ].map(t=>`<tr>
+    <td style="font-size:10px">${t.tipo}</td>
+    <td class="num">${t.ped}</td>
+    <td class="num">R$ ${fmt(t.fat)}</td>
+    <td class="num" style="color:#d97706">R$ ${fmt(t.difal)}</td>
+  </tr>`);
+  document.getElementById('difal-tipo-tbody').innerHTML = tipoRows.join('');
+
+  // Gráfico
+  const top8 = sorted.slice(0,8);
+  if(chartDifalUF) chartDifalUF.destroy();
+  const ctx = document.getElementById('chart-difal-uf').getContext('2d');
+  chartDifalUF = new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      labels: top8.map(d=>d.uf),
+      datasets:[{
+        data: top8.map(d=>d.fat),
+        backgroundColor:['#3b82f6','#ef4444','#f59e0b','#10b981','#8b5cf6','#ec4899','#6b7280','#0ea5e9'],
+        borderWidth:2,borderColor:'#fff'
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'right',labels:{font:{size:9},boxWidth:10}},
+        tooltip:{callbacks:{label:i=>`R$ ${fmt(i.raw)} (${totalFat?(i.raw/totalFat*100).toFixed(1):0}%)`}}}
+    }
+  });
+
+  // Estratégia
+  const pctDifalFat = totalFat?(totalDifal/totalFat*100).toFixed(2):0;
+  const difalMedio = totalPed?(totalDifal/totalPed).toFixed(2):0;
+  document.getElementById('difal-estrategia').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <strong style="color:var(--azul)">📊 Seu DIFAL real no período:</strong><br>
+        • DIFAL total estimado: <strong>R$ ${fmt(totalDifal)}</strong><br>
+        • % do faturamento: <strong style="color:#d97706">${pctDifalFat}%</strong><br>
+        • Médio por pedido: <strong>R$ ${difalMedio}</strong><br>
+        • ${pedidosFora} de ${totalPed} pedidos foram fora do PR (${totalPed?((pedidosFora/totalPed)*100).toFixed(0):0}%)
+      </div>
+      <div>
+        <strong style="color:var(--azul)">💡 Recomendação para precificação:</strong><br>
+        ${parseFloat(pctDifalFat) > 5 ?
+          `• DIFAL está acima de 5% do faturamento — use <strong>${pctDifalFat}%</strong> na calculadora` :
+          `• DIFAL está abaixo de 5% — use <strong>4-5%</strong> como média conservadora`
+        }<br>
+        • Ajuste o parâmetro "DIFAL médio" na aba Gestão Preços para <strong>${pctDifalFat}%</strong><br>
+        • Principal destino: <strong>${topUF?.uf||'—'}</strong> — alíquota ${((DIFAL_ALIQ[topUF?.uf||'SP']||.07)*100).toFixed(0)}%
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// PROMOÇÕES ML
+// ══════════════════════════════════════════════════════════════════════
+let promoData=[], promoFiltro='todos';
+
+function initPromocoes(){ if(promoData.length) renderPromoTable(promoData); }
+
+async function carregarPromocoes(){
+  if(!tokens.ml){alert('Configure o token ML');return;}
+  document.getElementById('prom-status').textContent='⟳ Carregando...';
+  try{
+    // Busca campanhas de promoções disponíveis
+    const r = await fetch(`/api/ml/seller-promotions/search?seller_id=537714337&status=active&limit=100`,{
+      headers:{'Authorization':`Bearer ${tokens.ml}`}
+    });
+    let proms = [];
+    if(r.ok){
+      const d = await r.json();
+      proms = d.results||d.campaigns||d||[];
+    }
+    // Se não tiver campanha, busca ofertas disponíveis por anúncio
+    if(!proms.length){
+      const r2 = await fetch(`/api/ml/users/537714337/items/search?status=active&limit=50`,{
+        headers:{'Authorization':`Bearer ${tokens.ml}`}
+      });
+      if(r2.ok){
+        const d2=await r2.json();
+        const items=d2.results||[];
+        // Para cada item verifica promoções disponíveis
+        const lote=items.slice(0,20).join(',');
+        if(lote){
+          const r3=await fetch(`/api/ml/items?ids=${lote}&attributes=id,title,price,listing_type_id,seller_sku`,{
+            headers:{'Authorization':`Bearer ${tokens.ml}`}
+          });
+          if(r3.ok){
+            const d3=await r3.json();
+            proms=d3.filter(x=>x.body?.id).map(x=>({
+              id:x.body.id,
+              titulo:x.body.title,
+              sku:x.body.seller_sku||'',
+              preco:x.body.price,
+              listing_type:x.body.listing_type_id,
+              bonus_ml:0, // sem campanha ativa
+              meu_desc:0,
+            }));
+          }
+        }
+      }
+    }
+    promoData = proms.map(p=>calcPromo(p));
+    renderPromoKpis();
+    renderPromoTable(promoData);
+    document.getElementById('prom-kpis').style.display='';
+    document.getElementById('prom-table-wrap').style.display='';
+    document.getElementById('prom-status').textContent=`✅ ${promoData.length} anúncios`;
+  }catch(e){
+    document.getElementById('prom-status').textContent=`❌ ${e.message}`;
+  }
+}
+
+function calcPromo(p){
+  const cmvInfo = dados.cmvCache[p.sku||'']||dados.cmvCache[String(parseInt(p.sku||0))];
+  const cmv = cmvInfo?.cmv||0;
+  const taxa = p.listing_type==='gold_pro'?.17:.12;
+  const bonus = parseFloat(p.bonus_ml||p.seller_discount||0);
+  const meu_desc = parseFloat(p.meu_desc||p.discount_percentage||0);
+  const desc_total = bonus + meu_desc;
+  const preco_final = (p.preco||0)*(1-desc_total/100);
+
+  let margem=null, preco_min=0;
+  if(cmv>0 && preco_final>0){
+    const difal_pct=.085, pct_int=.70, pct_pf=.80;
+    const frete=freteGP(preco_final);
+    const pis_r=preco_final*PIS_GP, cof_r=preco_final*COF_GP;
+    const taxa_r=preco_final*taxa;
+    const difal_r=preco_final*difal_pct*pct_int*pct_pf;
+    const icms_r=preco_final*ICMS_INT_GP*pct_int;
+    const lucro=preco_final-cmv-pis_r-cof_r-taxa_r-frete-difal_r-icms_r;
+    margem=lucro/preco_final;
+    const denom=Math.max(1-taxa-PIS_GP-COF_GP-difal_pct*pct_int*pct_pf-ICMS_INT_GP*pct_int-.15,.05);
+    preco_min=(cmv+frete)/denom;
+  }
+  return {...p,cmv,taxa,bonus,meu_desc,desc_total,preco_final,margem,preco_min,temCMV:cmv>0};
+}
+
+function renderPromoKpis(){
+  const total=promoData.length;
+  const comCmv=promoData.filter(p=>p.temCMV);
+  const viavel=comCmv.filter(p=>p.margem>=.15).length;
+  const atenc=comCmv.filter(p=>p.margem>=.10&&p.margem<.15).length;
+  const inv=comCmv.filter(p=>p.margem<.10).length;
+  const bonusMed=promoData.filter(p=>p.bonus>0).reduce((s,p,i,a)=>s+p.bonus/a.length,0);
+  document.getElementById('prk-total').textContent=total;
+  document.getElementById('prk-viavel').textContent=viavel;
+  document.getElementById('prk-atenc').textContent=atenc;
+  document.getElementById('prk-inviavel').textContent=inv;
+  document.getElementById('prk-bonus').textContent=bonusMed.toFixed(1)+'%';
+}
+
+function setFiltroPromo(f){
+  promoFiltro=f;
+  ['todos','viavel','atenc','inv'].forEach(x=>document.getElementById(`prf-${x}`)?.classList.toggle('a',x===f));
+  filtrarPromocoes();
+}
+
+function filtrarPromocoes(){
+  const q=(document.getElementById('prom-search')?.value||'').toLowerCase();
+  let lista=promoData.filter(p=>{
+    if(q&&!p.titulo?.toLowerCase().includes(q)&&!String(p.id).includes(q)&&!String(p.sku).includes(q)) return false;
+    if(promoFiltro==='viavel') return p.temCMV&&p.margem>=.15;
+    if(promoFiltro==='atenc') return p.temCMV&&p.margem>=.10&&p.margem<.15;
+    if(promoFiltro==='inv') return p.temCMV&&p.margem<.10;
+    return true;
+  });
+  renderPromoTable(lista);
+}
+
+function renderPromoTable(lista){
+  const rows=lista.map(p=>{
+    const mg=p.margem;
+    const mc=mg===null?'#9ca3af':mg>=.15?'#16a34a':mg>=.10?'#d97706':'#dc2626';
+    const tag=!p.temCMV?'<span class="atencao">sem CMV</span>':
+              mg>=.15?`<span class="viavel">✅ Viável</span>`:
+              mg>=.10?`<span class="atencao">⚠️ Atenção</span>`:
+              `<span class="inviavel">❌ Inviável</span>`;
+    return`<tr>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="${p.titulo||''}">${p.titulo||'—'}</td>
+      <td style="font-size:10px;color:var(--azul2)">${p.id||'—'}</td>
+      <td style="font-weight:700;font-size:10px">${p.sku||'—'}</td>
+      <td class="num">R$ ${fmt(p.preco||0)}</td>
+      <td class="num">
+        <input type="number" min="0" max="80" step="1" value="${p.meu_desc||0}"
+          style="width:45px;border:1px solid var(--borda);border-radius:4px;padding:2px 5px;font-size:11px;text-align:center"
+          onchange="atualizarPromo('${p.id}',this.value)">%
+      </td>
+      <td class="num"><span class="bonus-badge">${p.bonus||0}%</span></td>
+      <td class="num" style="font-weight:700">${p.desc_total||0}%</td>
+      <td class="num" style="font-weight:700">R$ ${fmt(p.preco_final||0)}</td>
+      <td class="num" style="color:var(--muted)">${p.temCMV?'R$ '+fmt(p.cmv):'—'}</td>
+      <td class="num" style="font-weight:700;color:${mc}">${mg!==null?(mg*100).toFixed(1)+'%':'—'}</td>
+      <td class="num" style="color:#dc2626;font-size:10px">${p.preco_min?'R$ '+fmt(p.preco_min):'—'}</td>
+      <td>${tag}</td>
+      <td>${p.temCMV&&mg>=.10?`<button class="apply-btn" onclick="participarPromo('${p.id}',${p.preco_final?.toFixed(2)||0})">Participar</button>`:'—'}</td>
+    </tr>`;
+  });
+  document.getElementById('prom-tbody').innerHTML=rows.join('')||
+    '<tr><td colspan="13" style="text-align:center;padding:20px;color:var(--muted)">Nenhuma promoção encontrada</td></tr>';
+}
+
+function atualizarPromo(id,desc){
+  const idx=promoData.findIndex(p=>String(p.id)===String(id));
+  if(idx<0)return;
+  promoData[idx].meu_desc=parseFloat(desc)||0;
+  const recalc=calcPromo(promoData[idx]);
+  Object.assign(promoData[idx],recalc);
+  renderPromoTable(promoData);
+  renderPromoKpis();
+}
+
+async function participarPromo(id,preco){
+  if(!confirm(`Participar da promoção com preço R$ ${fmt(preco)}?`))return;
+  try{
+    const r=await fetch(`/api/ml/items/${id}`,{
+      method:'PUT',
+      headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},
+      body:JSON.stringify({price:parseFloat(preco.toFixed(2))})
+    });
+    r.ok?alert('✅ Preço atualizado!'):alert('❌ Erro ao atualizar');
+  }catch(e){alert('❌ '+e.message);}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// DIFAL PAINEL
+// ══════════════════════════════════════════════════════════════════════
+let chartDifal=null;
+
+function initDifal(){
+  if(!dados.pedidosML.length){
+    document.getElementById('difal-tbody').innerHTML=
+      '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">Carregue o Dashboard primeiro</td></tr>';
+    return;
+  }
+  buildDifalPainel();
+}
+
+function buildDifalPainel(){
+  const pedidos=dados.pedidosML.filter(p=>p.status!=='cancelled');
+  const fatTotal=pedidos.reduce((s,p)=>s+p.total,0);
+  const por_uf={};
+  pedidos.forEach(p=>{
+    const uf=p.uf||'XX';
+    if(!por_uf[uf])por_uf[uf]={pedidos:0,fat:0,difal:0,pf:0,pj:0};
+    por_uf[uf].pedidos++;
+    por_uf[uf].fat+=p.total;
+    const ic=ICMS_TB[uf]||{difal:.085};
+    por_uf[uf].difal+=p.total*(ic.difal||.085);
+  });
+
+  const sorted=Object.entries(por_uf).sort((a,b)=>b[1].fat-a[1].fat);
+
+  // Tabela
+  const rows=sorted.map(([uf,d])=>{
+    const ic=ICMS_TB[uf]||{difal:.085,inter:.12};
+    const pctTotal=fatTotal?d.fat/fatTotal*100:0;
+    const isPR=uf==='PR';
+    const difalPct=isPR?0:(ic.difal||.085)*100;
+    return`<tr>
+      <td><strong>${uf}</strong></td>
+      <td class="num">${d.pedidos}</td>
+      <td class="num">R$ ${fmtK(d.fat)}</td>
+      <td class="num" style="color:${difalPct>0?'#d97706':'#16a34a'}">${difalPct.toFixed(1)}%</td>
+      <td class="num" style="color:#d97706">${isPR?'—':'R$ '+fmtK(d.difal)}</td>
+      <td class="num">
+        <div style="display:flex;align-items:center;gap:5px">
+          <div style="flex:1;background:#f3f4f6;border-radius:3px;height:6px;overflow:hidden">
+            <div style="width:${pctTotal}%;height:100%;background:var(--azul2);border-radius:3px"></div>
+          </div>
+          <span style="font-size:10px;font-weight:700">${pctTotal.toFixed(1)}%</span>
+        </div>
+      </td>
+      <td><span class="pill pill-b" style="font-size:9px">${isPR?'Intra':'Inter'}</span></td>
+    </tr>`;
+  });
+  document.getElementById('difal-tbody').innerHTML=rows.join('');
+
+  // Gráfico
+  const top8=sorted.slice(0,8);
+  if(chartDifal)chartDifal.destroy();
+  const ctx=document.getElementById('chart-difal-estados').getContext('2d');
+  chartDifal=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:top8.map(([uf])=>uf),
+      datasets:[
+        {label:'Faturamento',data:top8.map(([,d])=>d.fat),backgroundColor:'#93c5fd',borderRadius:4,yAxisID:'y'},
+        {label:'DIFAL est.',data:top8.map(([uf,d])=>uf!=='PR'?d.difal:0),backgroundColor:'#fca5a5',borderRadius:4,yAxisID:'y'},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:10}}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:9}}},
+        y:{grid:{color:'#f3f4f6'},ticks:{font:{size:9},callback:v=>'R$'+fmtK(v)}},
+      }
+    }
+  });
+
+  // Resumo e médias
+  const totalFat=pedidos.reduce((s,p)=>s+p.total,0);
+  const totalDifal=sorted.filter(([uf])=>uf!=='PR').reduce((s,[,d])=>s+d.difal,0);
+  const pctForaPR=sorted.filter(([uf])=>uf!=='PR').reduce((s,[,d])=>s+d.fat,0)/totalFat*100;
+  const difalMedReal=totalFat>0?totalDifal/totalFat*100:0;
+
+  document.getElementById('difal-resumo').innerHTML=`
+    <div>📦 <strong>${pctForaPR.toFixed(1)}%</strong> das vendas foram fora do PR</div>
+    <div>💸 DIFAL total estimado: <strong style="color:#d97706">R$ ${fmtK(totalDifal)}</strong></div>
+    <div>📊 DIFAL médio real sobre faturamento: <strong style="color:#d97706">${difalMedReal.toFixed(2)}%</strong></div>
+    <div>⚙️ Seu parâmetro atual no sistema: <strong>8,5%</strong></div>
+    ${Math.abs(difalMedReal-8.5)>1?`<div style="color:#d97706">⚠️ Diferença de ${(difalMedReal-8.5).toFixed(1)}% — considere ajustar o parâmetro!</div>`:'<div style="color:#16a34a">✅ Parâmetro próximo da realidade</div>'}`;
+
+  document.getElementById('difal-media-box').innerHTML=`
+    <div class="fin-kpi"><div class="fk-l">DIFAL médio real</div><div class="fk-v" style="color:#d97706">${difalMedReal.toFixed(2)}%</div><div style="font-size:10px;color:var(--muted)">Use na calculadora</div></div>
+    <div class="fin-kpi"><div class="fk-l">% vendas fora PR</div><div class="fk-v">${pctForaPR.toFixed(1)}%</div><div style="font-size:10px;color:var(--muted)">Parâmetro atual: 70%</div></div>
+    <div class="fin-kpi"><div class="fk-l">DIFAL total pago</div><div class="fk-v" style="color:#dc2626">R$ ${fmtK(totalDifal)}</div><div style="font-size:10px;color:var(--muted)">Estimativa do período</div></div>
+    <div class="fin-kpi"><div class="fk-l">Estado top comprador</div><div class="fk-v" style="color:var(--azul)">${sorted[0]?.[0]||'—'}</div><div style="font-size:10px;color:var(--muted)">${sorted[0]?((sorted[0][1].fat/totalFat*100).toFixed(1)+'% do fat'):'—'}</div></div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// PERGUNTAS ML COM IA
+// ══════════════════════════════════════════════════════════════════════
+let claudeKeyPerg = localStorage.getItem('fava_claude_key')||'';
+let perguntasData = [];
+
+function initPerguntas(){
+  if(claudeKeyPerg) document.getElementById('tk-claude-perg').value=claudeKeyPerg;
+}
+
+function salvarKeyPerg(){
+  claudeKeyPerg=document.getElementById('tk-claude-perg').value.trim();
+  localStorage.setItem('fava_claude_key',claudeKeyPerg);
+  alert('✅ API Key salva!');
+}
+
+async function carregarPerguntas(){
+  if(!tokens.ml){alert('Configure o token ML');return;}
+  document.getElementById('perg-status').textContent='⟳ Carregando...';
+  try{
+    const r=await fetch(`/api/ml/my/questions/unanswered?seller_id=537714337&limit=50`,{
+      headers:{'Authorization':`Bearer ${tokens.ml}`}
+    });
+    if(!r.ok) throw new Error(`${r.status}`);
+    const d=await r.json();
+    perguntasData=d.questions||d.results||[];
+    renderPerguntas();
+    document.getElementById('perg-status').textContent=`✅ ${perguntasData.length} perguntas sem resposta`;
+  }catch(e){
+    document.getElementById('perg-status').textContent=`❌ ${e.message}`;
+  }
+}
+
+function renderPerguntas(){
+  if(!perguntasData.length){
+    document.getElementById('perg-lista').innerHTML=
+      '<div style="text-align:center;padding:30px;color:var(--muted)">Nenhuma pergunta sem resposta 🎉</div>';
+    return;
+  }
+  document.getElementById('perg-lista').innerHTML=perguntasData.map((p,i)=>`
+    <div class="perg-item" id="pq-${i}">
+      <div class="pi-head">
+        <span class="pi-mlb">${p.item_id||'—'}</span>
+        <span class="pi-data">${p.date_created?.substring(0,10)||''}</span>
+        <span style="font-size:10px;color:var(--muted);margin-left:auto">${p.from?.id?'Comprador: '+p.from.id:''}</span>
+      </div>
+      <div class="pi-q">${p.text||''}</div>
+      <textarea class="pi-resp" id="resp-${i}" placeholder="Escreva a resposta aqui ou use a IA para sugerir..."></textarea>
+      <div class="perg-actions">
+        <button class="btn-ia" onclick="sugerirRespostaIA(${i},'${(p.text||'').replace(/'/g,"\'")}','${p.item_id||''}')">
+          ✨ Sugerir com IA
+        </button>
+        <button class="btn-enviar" onclick="enviarResposta('${p.id}',${i})">
+          ✉️ Enviar resposta
+        </button>
+        <span id="pq-status-${i}" style="font-size:10px;color:var(--muted);margin-left:auto"></span>
+      </div>
+    </div>`).join('');
+}
+
+async function sugerirRespostaIA(idx, pergunta, mlb){
+  if(!claudeKeyPerg){alert('Configure a API Key do Claude');return;}
+  const btn=document.querySelector(`#pq-${idx} .btn-ia`);
+  if(btn){btn.textContent='⟳ Gerando...';btn.disabled=true;}
+
+  // Pega dados do produto para contexto
+  const cmvInfo=dados.cmvCache['']||null;
+  let prodCtx=`Produto: ${mlb}`;
+
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':claudeKeyPerg,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:400,
+        messages:[{role:'user',content:`Você é atendente especialista da Fava Ecom, loja de peças de reposição, ferramentas e equipamentos.
+
+${prodCtx}
+
+PERGUNTA DO CLIENTE: "${pergunta}"
+
+Responda de forma:
+- Clara e objetiva (máximo 3 linhas)
+- Técnica mas acessível
+- Se for sobre compatibilidade, oriente a verificar o modelo/código do equipamento
+- Mencione que vendemos peças originais com nota fiscal
+- Finalize com "Qualquer dúvida estamos à disposição!"
+- NÃO mencione preços
+
+Responda apenas a mensagem, sem aspas ou introdução.`}]
+      })
+    });
+    const data=await r.json();
+    const txt=data.content?.[0]?.text||'';
+    document.getElementById(`resp-${idx}`).value=txt;
+  }catch(e){
+    alert('Erro IA: '+e.message);
+  }finally{
+    if(btn){btn.textContent='✨ Sugerir com IA';btn.disabled=false;}
+  }
+}
+
+async function enviarResposta(perguntaId, idx){
+  if(!tokens.ml){alert('Configure o token ML');return;}
+  const texto=document.getElementById(`resp-${idx}`).value.trim();
+  if(!texto){alert('Escreva a resposta antes de enviar');return;}
+  const status=document.getElementById(`pq-status-${idx}`);
+  if(status) status.textContent='Enviando...';
+  try{
+    const r=await fetch(`/api/ml/answers`,{
+      method:'POST',
+      headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},
+      body:JSON.stringify({question_id:perguntaId,text:texto})
+    });
+    if(r.ok){
+      if(status) status.textContent='✅ Enviado!';
+      document.getElementById(`pq-${idx}`).style.opacity='.5';
+    } else {
+      const e=await r.json().catch(()=>({}));
+      if(status) status.textContent=`❌ ${e.message||r.status}`;
+    }
+  }catch(e){
+    if(status) status.textContent=`❌ ${e.message}`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// PROMOÇÕES ML
+// ══════════════════════════════════════════════════════════════════════
+let promoData = [];
+let chartDifal = null;
+
+async function carregarPromocoes(){
+  if(!tokens.ml){alert('Configure o token ML');return;}
+  document.getElementById('prom-status').textContent='⟳ Carregando...';
+  try{
+    // Busca campanhas de promoção disponíveis
+    const r = await fetch(`/api/ml/seller-promotions/search?seller_id=537714337&status=active&limit=50`,{
+      headers:{'Authorization':`Bearer ${tokens.ml}`}
+    });
+    if(!r.ok) throw new Error(`${r.status}`);
+    const d = await r.json();
+    const campanhas = d.results||d||[];
+
+    promoData = [];
+    // Para cada campanha, busca os itens elegíveis
+    for(const camp of campanhas.slice(0,10)){
+      const ri = await fetch(`/api/ml/seller-promotions/${camp.id}/items?limit=50`,{
+        headers:{'Authorization':`Bearer ${tokens.ml}`}
+      }).catch(()=>null);
+      if(!ri||!ri.ok) continue;
+      const di = await ri.json();
+      const itens = di.results||[];
+      itens.forEach(item=>{
+        const mlb = item.item_id||item.id;
+        const sku = item.seller_sku||'';
+        const cmvInfo = dados.cmvCache[sku]||dados.cmvCache[String(parseInt(sku)||0)];
+        const cmv = cmvInfo?.cmv||0;
+        const taxa = item.price >= 79 ? 0.12 : 0.12;
+        const bonus_ml = camp.benefits?.find(b=>b.type==='COUPON')?.value||0;
+        const meu_desc = item.promotion?.discount_percentage||0;
+        const preco_orig = item.original_price||item.price||0;
+        const preco_final = preco_orig * (1-(meu_desc/100)) * (1-(bonus_ml/100));
+
+        let margem_prom = null;
+        if(cmv>0&&preco_final>0){
+          const calc = calcMargemGP(preco_final, cmv, taxa);
+          margem_prom = calc.margem;
+        }
+        const mg_min = getMgMinCategoria(item.title||'');
+        const viavel = margem_prom===null?null:margem_prom>=mg_min?'ok':margem_prom>=.10?'atencao':'inviavel';
+
+        promoData.push({
+          mlb, sku, titulo:item.title||'', campanha:camp.name||camp.type||'Promoção',
+          preco_orig, bonus_ml, meu_desc, preco_final, cmv, margem_prom, mg_min, viavel,
+          camp_id: camp.id, item_id: item.id
+        });
+      });
+    }
+    renderPromocoes();
+    document.getElementById('prom-status').textContent=`✅ ${promoData.length} itens em promoção`;
+  }catch(e){
+    document.getElementById('prom-status').textContent=`❌ ${e.message}`;
+  }
+}
+
+function renderPromocoes(){
+  const viaveis=promoData.filter(p=>p.viavel==='ok').length;
+  const atencao=promoData.filter(p=>p.viavel==='atencao').length;
+  const inviaveis=promoData.filter(p=>p.viavel==='inviavel').length;
+  const bonusMed=promoData.length?promoData.reduce((s,p)=>s+p.bonus_ml,0)/promoData.length:0;
+  document.getElementById('pm-total').textContent=promoData.length;
+  document.getElementById('pm-viaveis').textContent=viaveis;
+  document.getElementById('pm-atencao').textContent=atencao;
+  document.getElementById('pm-inviaveis').textContent=inviaveis;
+  document.getElementById('pm-bonus').textContent=bonusMed.toFixed(1)+'%';
+
+  const rows=promoData.map(p=>{
+    const rowCls=p.viavel==='ok'?'viavel':p.viavel==='atencao'?'atencao':p.viavel==='inviavel'?'inviavel':'';
+    const mgStr=p.margem_prom!==null?(p.margem_prom*100).toFixed(1)+'%':'sem CMV';
+    const mgCor=p.margem_prom===null?'#9ca3af':p.margem_prom>=p.mg_min?'#16a34a':p.margem_prom>=.10?'#d97706':'#dc2626';
+    const viTag=p.viavel==='ok'?'<span class="pill pill-g">✅ Viável</span>':
+                p.viavel==='atencao'?'<span class="pill pill-y">⚠️ Atenção</span>':
+                p.viavel==='inviavel'?'<span class="pill pill-r">❌ Inviável</span>':
+                '<span style="color:#9ca3af;font-size:10px">sem CMV</span>';
+    return`<tr class="${rowCls}">
+      <td style="font-size:10px;color:var(--azul2)">${p.mlb}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="${p.titulo}">${p.titulo}</td>
+      <td style="font-size:10px">${p.campanha}</td>
+      <td class="num">R$ ${fmt(p.preco_orig)}</td>
+      <td class="num" style="color:#16a34a;font-weight:700">+${p.bonus_ml}%</td>
+      <td class="num">${p.meu_desc}%</td>
+      <td class="num" style="font-weight:700">R$ ${fmt(p.preco_final)}</td>
+      <td class="num" style="color:var(--muted)">${p.cmv>0?'R$ '+fmt(p.cmv):'—'}</td>
+      <td class="num" style="font-weight:700;color:${mgCor}">${mgStr}</td>
+      <td>${viTag}</td>
+      <td>${p.viavel==='ok'||p.viavel==='atencao'?`<button class="btn-resp" onclick="participarPromo('${p.camp_id}','${p.item_id}')">Participar</button>`:'—'}</td>
+    </tr>`;
+  });
+  document.getElementById('prom-tbody').innerHTML=rows.join('')||
+    '<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--muted)">Nenhuma promoção disponível</td></tr>';
+}
+
+async function participarPromo(campId, itemId){
+  if(!tokens.ml){alert('Token ML necessário');return;}
+  try{
+    const r=await fetch(`/api/ml/seller-promotions/${campId}/items`,{
+      method:'POST',
+      headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},
+      body:JSON.stringify({item_id:itemId})
+    });
+    r.ok?alert('✅ Participando da promoção!'):alert('❌ Erro ao participar: '+(await r.text()));
+  }catch(e){alert('❌ '+e.message);}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// DIFAL POR ESTADO
+// ══════════════════════════════════════════════════════════════════════
+function renderDifal(){
+  const dias=parseInt(document.getElementById('difal-periodo')?.value)||30;
+  const hoje=new Date();hoje.setHours(0,0,0,0);
+  const inicio=new Date(hoje);inicio.setDate(inicio.getDate()-dias);
+  const pedidos=dados.pedidosML.filter(p=>p.status!=='cancelled'&&new Date(p.data+'T12:00:00')>=inicio);
+
+  const por_uf={};
+  pedidos.forEach(p=>{
+    const uf=p.uf||'XX';
+    if(!por_uf[uf])por_uf[uf]={fat:0,qtd:0,difal:0,lucro:0,n:0,pf:0,pj:0};
+    por_uf[uf].fat+=p.total;por_uf[uf].n++;
+    p.itens.forEach(it=>{
+      por_uf[uf].qtd+=it.qtd;
+      const ufData=ICMS_TB[uf]||ICMS_TB['SP'];
+      const difal=it.preco*ufData.difal*it.qtd;
+      por_uf[uf].difal+=difal;
+      const m=calcMargemReal(it.preco,it.sku,uf,it.listing_type||'gold_special',p.frete,p.itens.length);
+      por_uf[uf].lucro+=m.lucro*it.qtd;
+    });
+  });
+
+  // Mapa de cards
+  const sorted=Object.entries(por_uf).sort((a,b)=>b[1].fat-a[1].fat);
+  const mapEl=document.getElementById('difal-map');
+  mapEl.innerHTML=sorted.slice(0,12).map(([uf,d])=>{
+    const ufData=ICMS_TB[uf]||{difal:.085,inter:.12};
+    const mg=d.fat?d.lucro/d.fat:0;
+    const mc=mg>=.15?'#16a34a':mg>=.10?'#d97706':'#dc2626';
+    return`<div class="difal-card">
+      <div class="dc-uf">${uf} <span style="font-size:11px;color:var(--muted)">${d.n} pedidos</span></div>
+      <div class="dc-fat">R$ ${fmtK(d.fat)}</div>
+      <div class="dc-info">DIFAL alíq: ${(ufData.difal*100).toFixed(1)}% | Est. pago: R$ ${fmtK(d.difal)}</div>
+      <div class="dc-info" style="color:${mc};font-weight:700">Margem: ${(mg*100).toFixed(1)}%</div>
+    </div>`;
+  }).join('');
+
+  // Tabela
+  const rows=sorted.map(([uf,d])=>{
+    const ufData=ICMS_TB[uf]||{difal:.085,inter:.12};
+    const mg=d.fat?d.lucro/d.fat:0;
+    const mc=mg>=.15?'#16a34a':mg>=.10?'#d97706':'#dc2626';
+    const difal_pct=d.fat?d.difal/d.fat:0;
+    return`<tr>
+      <td><strong>${uf}</strong></td>
+      <td style="font-size:10px;color:var(--muted)">${uf==='SP'||uf==='PR'?'Principal':'Interestadual'}</td>
+      <td class="num">${d.n}</td>
+      <td class="num">R$ ${fmtK(d.fat)}</td>
+      <td class="num" style="color:#d97706">R$ ${fmtK(d.difal)}</td>
+      <td class="num" style="color:#d97706">${(difal_pct*100).toFixed(1)}%</td>
+      <td class="num" style="color:${mc};font-weight:700">${(mg*100).toFixed(1)}%</td>
+    </tr>`;
+  });
+  document.getElementById('difal-tbody').innerHTML=rows.join('')||
+    '<tr><td colspan="7" style="text-align:center;padding:15px;color:var(--muted)">Carregue o painel principal primeiro</td></tr>';
+
+  // Resumo DIFAL médio ponderado
+  const fat_total=sorted.reduce((s,[,d])=>s+d.fat,0);
+  const difal_total=sorted.reduce((s,[,d])=>s+d.difal,0);
+  const difal_medio=fat_total?difal_total/fat_total:0;
+  const uf_fora_pr=sorted.filter(([uf])=>uf!=='PR');
+  const fat_fora=uf_fora_pr.reduce((s,[,d])=>s+d.fat,0);
+  const pct_fora=fat_total?fat_fora/fat_total:0;
+
+  document.getElementById('difal-resumo').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div style="background:#fffbeb;border-radius:6px;padding:8px 10px">
+        <div style="font-size:10px;color:var(--muted);font-weight:700">DIFAL médio ponderado</div>
+        <div style="font-size:18px;font-weight:700;color:#d97706">${(difal_medio*100).toFixed(2)}%</div>
+        <div style="font-size:10px;color:var(--muted)">sobre faturamento</div>
+      </div>
+      <div style="background:#eff6ff;border-radius:6px;padding:8px 10px">
+        <div style="font-size:10px;color:var(--muted);font-weight:700">% vendas fora PR</div>
+        <div style="font-size:18px;font-weight:700;color:var(--azul2)">${(pct_fora*100).toFixed(1)}%</div>
+        <div style="font-size:10px;color:var(--muted)">Use como parâmetro no calculadora</div>
+      </div>
+    </div>`;
+
+  // Gráfico donut por estado
+  if(chartDifal)chartDifal.destroy();
+  const top8=sorted.slice(0,8);
+  const ctx=document.getElementById('chart-difal').getContext('2d');
+  const cores=['#3b82f6','#ef4444','#f59e0b','#10b981','#8b5cf6','#ec4899','#6366f1','#14b8a6'];
+  chartDifal=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels:top8.map(([uf])=>uf),datasets:[{data:top8.map(([,d])=>d.fat),backgroundColor:cores,borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:9},boxWidth:8}}}}
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// PERGUNTAS ML COM IA
+// ══════════════════════════════════════════════════════════════════════
+let perguntasData=[];
+
+async function carregarPerguntas(){
+  if(!tokens.ml){alert('Configure o token ML');return;}
+  document.getElementById('perg-status').textContent='⟳ Carregando...';
+  try{
+    const r=await fetch(`/api/ml/questions/search?seller_id=537714337&status=UNANSWERED&limit=50`,{
+      headers:{'Authorization':`Bearer ${tokens.ml}`}
+    });
+    if(!r.ok) throw new Error(`${r.status}`);
+    const d=await r.json();
+    perguntasData=d.questions||[];
+    renderPerguntas();
+    document.getElementById('perg-status').textContent=`✅ ${perguntasData.length} perguntas sem resposta`;
+  }catch(e){
+    document.getElementById('perg-status').textContent=`❌ ${e.message}`;
+  }
+}
+
+function renderPerguntas(){
+  const lista=document.getElementById('perg-lista');
+  if(!perguntasData.length){
+    lista.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">Nenhuma pergunta sem resposta 🎉</div>';
+    return;
+  }
+  lista.innerHTML=perguntasData.map(q=>`
+    <div class="perg-card" id="pcard-${q.id}">
+      <div class="perg-head">
+        <div style="flex:1">
+          <div class="perg-txt">${q.text}</div>
+          <div class="perg-meta">
+            ${q.item_id} | ${q.from?.nickname||'Comprador'} | ${(q.date_created||'').substring(0,10)}
+          </div>
+        </div>
+        <button class="btn-resp" onclick="gerarResposta(${q.id},'${q.item_id}','${(q.text||'').replace(/'/g,'').replace(/"/g,'')}')">
+          ✨ Gerar resposta
+        </button>
+      </div>
+      <div class="perg-body" id="pbody-${q.id}">
+        <div id="presp-${q.id}" style="display:none">
+          <div class="resp-box" id="ptxt-${q.id}"></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn-enviar" onclick="enviarResposta(${q.id})">📤 Enviar no ML</button>
+            <button class="btn-resp" onclick="gerarResposta(${q.id},'${q.item_id}','${(q.text||'').replace(/'/g,'').replace(/"/g,'')}')">
+              🔄 Regenerar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function gerarResposta(qId, mlb, pergunta){
+  const apiKey=localStorage.getItem('fava_claude_key')||'';
+  if(!apiKey){alert('Configure a API Key do Claude na caixa acima');return;}
+  const btn=document.querySelector(`#pcard-${qId} .btn-resp`);
+  if(btn){btn.textContent='⟳ Gerando...';btn.disabled=true;}
+
+  // Busca dados do produto para contexto
+  let contexto='';
+  try{
+    const ri=await fetch(`/api/ml/items/${mlb}?attributes=title,description,attributes,category_id`,{
+      headers:{'Authorization':`Bearer ${tokens.ml}`}
+    });
+    if(ri.ok){
+      const item=await ri.json();
+      contexto=`Produto: ${item.title}
+Atributos: ${JSON.stringify(item.attributes?.slice(0,10)||[])}`;
+    }
+  }catch(e){}
+
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:500,
+        messages:[{role:'user',content:`Você responde perguntas de compradores no Mercado Livre para a loja Fava Ecom, especializada em peças de reposição, ferramentas e equipamentos.
+
+PRODUTO: ${mlb}
+${contexto}
+
+PERGUNTA DO COMPRADOR: ${pergunta}
+
+Responda de forma clara, técnica e amigável. Se for sobre compatibilidade, seja específico. Se não tiver certeza, oriente como verificar. Máximo 3 linhas. Não mencione preços nem prazos.`}]
+      })
+    });
+    const d=await r.json();
+    const resp=d.content?.[0]?.text||'Não foi possível gerar a resposta.';
+    document.getElementById(`ptxt-${qId}`).textContent=resp;
+    document.getElementById(`presp-${qId}`).style.display='block';
+  }catch(e){
+    alert('Erro ao gerar: '+e.message);
+  }
+  if(btn){btn.textContent='✨ Gerar resposta';btn.disabled=false;}
+}
+
+async function enviarResposta(qId){
+  if(!tokens.ml){alert('Token ML necessário');return;}
+  const texto=document.getElementById(`ptxt-${qId}`)?.textContent||'';
+  if(!texto){alert('Gere a resposta primeiro');return;}
+  if(!confirm('Enviar esta resposta no ML?'))return;
+  try{
+    const r=await fetch(`/api/ml/answers`,{
+      method:'POST',
+      headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},
+      body:JSON.stringify({question_id:qId,text:texto})
+    });
+    if(r.ok){
+      document.getElementById(`pcard-${qId}`).style.opacity='.4';
+      alert('✅ Resposta enviada!');
+    }else{
+      const e=await r.json().catch(()=>({}));
+      alert('❌ Erro: '+(e.message||r.status));
+    }
+  }catch(e){alert('❌ '+e.message);}
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // ADS + MARGEM PÓS-ADS
 // ══════════════════════════════════════════════════════════════════════
 let adsData = [];
@@ -1880,6 +3076,88 @@ function sugerirDesconto(item){
 
 // Mapa de vendas últimos 60 dias por MLB
 let vendidosUltimos60d = {};
+// Salva CMV manual por SKU (persiste no localStorage)
+let cmvManuais = JSON.parse(localStorage.getItem('fava_cmv_manuais')||'{}');
+
+function setCMVManual(mlb, sku, valorStr){
+  const valor = parseFloat(valorStr)||0;
+  if(!valor||valor<=0){alert('Informe um valor válido');return;}
+  // Salva no cache e localStorage
+  dados.cmvCache[sku] = {cmv: valor, nome: sku};
+  cmvManuais[sku] = valor;
+  localStorage.setItem('fava_cmv_manuais', JSON.stringify(cmvManuais));
+  // Atualiza item no gpData
+  const item = gpData.find(d=>d.mlb===mlb);
+  if(item){
+    item.cmv = valor;
+    item.temCMV = true;
+    const calc = calcMargemGP(item.preco_final||item.preco_orig, valor, item.taxa);
+    Object.assign(item, calc);
+    item.sug = sugerirDesconto(item);
+  }
+  recalcGP();
+}
+
+// Busca CMV do Bling para SKUs sem CMV
+async function buscarCMVSemCMV(){
+  if(!tokens.bling){alert('Token Bling não configurado');return;}
+  const semCmv = gpData.filter(d=>!d.temCMV&&d.sku);
+  if(!semCmv.length){alert('Todos os produtos já têm CMV!');return;}
+  
+  const btn = document.getElementById('btn-buscar-cmv');
+  if(btn){btn.textContent='⟳ Buscando...';btn.disabled=true;}
+  
+  let atualizados=0, erros=0;
+  const skusUnicos = [...new Set(semCmv.map(d=>d.sku))];
+  
+  for(const sku of skusUnicos.slice(0,50)){ // limite 50 por vez
+    try{
+      const r = await fetch(`/api/bling/produtos?codigo=${sku}&limite=1`,{
+        headers:{'Authorization':`Bearer ${tokens.bling}`}
+      });
+      if(!r.ok) continue;
+      const d = await r.json();
+      const prod = d.data?.[0];
+      if(prod){
+        const custo = parseFloat(prod.precoCusto||0);
+        if(custo>0){
+          dados.cmvCache[sku]={cmv:custo,nome:prod.nome||sku};
+          atualizados++;
+        }
+      }
+      await new Promise(r=>setTimeout(r,150)); // rate limit
+    }catch(e){ erros++; }
+  }
+  
+  if(btn){btn.textContent='📦 Buscar CMV (Bling)';btn.disabled=false;}
+  
+  // Atualiza gpData com novos CMVs
+  gpData.forEach(item=>{
+    if(!item.temCMV){
+      const cmvInfo = dados.cmvCache[item.sku];
+      if(cmvInfo?.cmv>0){
+        item.cmv = cmvInfo.cmv;
+        item.temCMV = true;
+        const calc = calcMargemGP(item.preco_final||item.preco_orig, item.cmv, item.taxa);
+        Object.assign(item, calc);
+        item.sug = sugerirDesconto(item);
+      }
+    }
+  });
+  
+  recalcGP();
+  alert(`✅ ${atualizados} CMVs atualizados do Bling!${erros>0?' ('+erros+' erros)':''}`);
+}
+
+// Aplica CMVs manuais salvos ao carregar
+function aplicarCMVManuais(){
+  Object.entries(cmvManuais).forEach(([sku,cmv])=>{
+    if(!dados.cmvCache[sku]||!dados.cmvCache[sku].cmv){
+      dados.cmvCache[sku]={cmv,nome:sku};
+    }
+  });
+}
+
 function buildVendasCache(){
   vendidosUltimos60d = {};
   const hoje = new Date(); hoje.setHours(0,0,0,0);
@@ -1950,6 +3228,7 @@ function carregarPlanilhaGP(input){
   const file = input.files[0];
   if(!file) return;
   buildVendasCache(); // Atualiza cache de vendas antes de calcular
+  aplicarCMVManuais(); // Aplica CMVs manuais salvos
   const reader = new FileReader();
   reader.onload = e => {
     try{
@@ -1995,7 +3274,7 @@ function carregarPlanilhaGP(input){
 
       document.getElementById('gp-status').textContent = `✅ ${gpData.length} anúncios carregados`;
       document.getElementById('gp-status').style.color = '#16a34a';
-      ['gp-kpis','gp-toolbar','gp-filters','gp-table-wrap'].forEach(id=>{
+      ['gp-kpis','gp-toolbar','gp-filters','gp-table-wrap','gp-promos'].forEach(id=>{
         document.getElementById(id).style.display='';
       });
       document.getElementById('btn-aplicar-todos').style.display='block';
@@ -2087,7 +3366,15 @@ function renderTabelaGP(lista){
       <td style="font-weight:700;color:var(--azul);font-size:10px">${d.sku||'—'}</td>
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="${d.titulo}">${d.titulo}</td>
       <td class="num">R$ ${fmt(d.preco_orig)}</td>
-      <td class="num" style="color:var(--muted)">${d.temCMV?'R$ '+fmt(d.cmv):'—'}</td>
+      <td class="num">
+        ${d.temCMV
+          ? `<span style="color:var(--muted)">R$ ${fmt(d.cmv)}</span>`
+          : `<input type="number" step="0.01" min="0" placeholder="Custo?"
+              style="width:70px;border:1px solid #fbbf24;border-radius:4px;padding:2px 5px;font-size:11px;background:#fffbeb;outline:none"
+              onchange="setCMVManual('${d.mlb}','${d.sku}',this.value)"
+              title="SKU ${d.sku} sem CMV — digite o custo Bling">`
+        }
+      </td>
       <td class="num" style="color:#dc2626;font-size:10px">${precoMin}</td>
       <td class="num">
         ${d.sug ? `<span style="font-size:10px;font-weight:700;color:${d.sug.desc_max>=20?'#16a34a':d.sug.desc_max>=10?'#d97706':'#9ca3af'}">
@@ -2100,7 +3387,8 @@ function renderTabelaGP(lista){
         <input class="desc-input" type="number" min="0" max="80" step="1"
           value="${d.desc_pct||''}" placeholder="0"
           data-mlb="${d.mlb}"
-          oninput="atualizarDesc('${d.mlb}',this.value)"
+          onchange="atualizarDesc('${d.mlb}',this.value)"
+          onkeydown="if(event.key==='Enter'){atualizarDesc('${d.mlb}',this.value);this.blur();}"
           style="border-color:${mg<mgMin&&d.temCMV?'#dc2626':mg<.10&&d.temCMV?'#d97706':'var(--borda)'}">%
       </td>
       <td class="num" style="font-weight:700">R$ ${fmt(d.preco_final)}</td>
@@ -2117,10 +3405,13 @@ function renderTabelaGP(lista){
           '<span class="pill pill-r">✗ Abaixo</span>'}
       </td>
       <td>
-        <button class="apply-btn" id="apb-${d.mlb}"
-          onclick="aplicarUm('${d.mlb}',${d.preco_final.toFixed(2)},${d.desc_pct||0})">
-          Aplicar
-        </button>
+        ${d.temCMV
+          ? `<button class="apply-btn" id="apb-${d.mlb}"
+              onclick="aplicarUm('${d.mlb}',${d.preco_final.toFixed(2)},${d.desc_pct||0})">
+              Aplicar
+            </button>`
+          : `<span style="font-size:10px;color:#f59e0b" title="Cadastre o CMV para aplicar">⚠️ sem CMV</span>`
+        }
       </td>
     </tr>`;
   });
@@ -2133,12 +3424,12 @@ function atualizarDesc(mlb, descStr){
   const item = gpData.find(d=>d.mlb===mlb);
   if(!item) return;
   item.desc_pct = desc;
-  item.preco_final = item.preco_orig * (1 - desc/100);
+  item.preco_final = parseFloat((item.preco_orig * (1 - desc/100)).toFixed(2));
   if(item.cmv > 0){
     const calc = calcMargemGP(item.preco_final, item.cmv, item.taxa);
     Object.assign(item, calc);
   }
-  // Atualiza só a linha sem re-render completo
+  // Atualiza só a linha sem re-render — preserva foco no input
   const row = document.querySelector(`tr[data-mlb="${mlb}"]`);
   if(row){
     const mgMin=(parseFloat(document.getElementById('gp-mg-min')?.value)||15)/100;
@@ -2223,6 +3514,157 @@ async function aplicarTodosSelecionados(){
     await new Promise(r=>setTimeout(r,300));
   }
   alert(`✅ ${ok} aplicados!`);
+}
+
+// ── PROMOÇÕES ML COM BONUS ────────────────────────────────────────────────
+async function carregarPromocoesML(){
+  if(!tokens.ml){ alert('Token ML não configurado'); return; }
+  const btn = document.getElementById('btn-load-promos');
+  const status = document.getElementById('promo-status');
+  btn.textContent = '⟳ Buscando...';
+  status.textContent = '';
+
+  try{
+    // Busca promoções disponíveis para o vendedor
+    const r = await fetch(`/api/ml/seller-promotions/${dados.userId||'me'}/search?limit=50`, {
+      headers:{'Authorization':`Bearer ${tokens.ml}`}
+    });
+
+    let promos = [];
+    if(r.ok){
+      const d = await r.json();
+      promos = d.results || d.promotions || [];
+    }
+
+    // Se não tiver promos via API, tenta via items/search com promoções ativas
+    if(!promos.length){
+      const r2 = await fetch(`/api/ml/users/${dados.userId||'me'}/items/search?promotion_type=price_discount&limit=50`, {
+        headers:{'Authorization':`Bearer ${tokens.ml}`}
+      });
+      if(r2.ok){
+        const d2 = await r2.json();
+        // Monta promos simuladas dos anúncios elegíveis no gpData
+        promos = gpData.filter(d=>d.status?.toLowerCase().includes('elegi')||d.status?.toLowerCase().includes('particip')).map(d=>({
+          item_id: d.mlb,
+          promotion_type: 'DEAL_OF_THE_DAY',
+          ml_bonus: 5,  // ML paga 5% (padrão)
+          required_discount: 10, // vendedor paga 10%
+          name: 'Promoção ML',
+        }));
+      }
+    }
+
+    // Se ainda não tiver — usa os elegíveis do gpData (status "Elegível")
+    if(!promos.length){
+      promos = gpData
+        .filter(d=> d.status && (
+          d.status.toLowerCase().includes('eleg') ||
+          d.status.toLowerCase().includes('particip') ||
+          d.status.toLowerCase().includes('deal')
+        ))
+        .map(d=>({
+          item_id: d.mlb,
+          name: d.status,
+          ml_bonus: 5,
+          required_discount: 15,
+          promotion_type: 'price_discount',
+        }));
+    }
+
+    renderPromocoesML(promos);
+    btn.textContent = '🔄 Atualizar';
+    status.textContent = `${promos.length} promoções encontradas`;
+  }catch(e){
+    btn.textContent = '🔍 Buscar promoções disponíveis';
+    status.textContent = `❌ ${e.message}`;
+  }
+}
+
+function renderPromocoesML(promos){
+  const tbody = document.getElementById('promo-tbody');
+  const tbl = document.getElementById('promo-tbl');
+  const empty = document.getElementById('promo-empty');
+
+  if(!promos.length){
+    empty.textContent = 'Nenhuma promoção com bonus disponível no momento';
+    empty.style.display = '';
+    tbl.style.display = 'none';
+    return;
+  }
+
+  tbl.style.display = '';
+  empty.style.display = 'none';
+
+  const mgMin15 = .15;
+  const mgMin20 = .20;
+
+  const rows = promos.map(p=>{
+    const item = gpData.find(d=>d.mlb===p.item_id) || {};
+    const mlBonus   = parseFloat(p.ml_bonus||p.bonus_percentage||5)/100;
+    const vendDesc  = parseFloat(p.required_discount||p.seller_discount||10)/100;
+    const totalDesc = mlBonus + vendDesc;
+    const preco     = item.preco_orig || 0;
+    const cmv       = item.cmv || 0;
+    const precoFinal = preco * (1 - totalDesc);
+    // Margem sem promoção (preço atual)
+    const calcSem = cmv>0 ? calcMargemGP(preco, cmv, item.taxa||.12) : null;
+    // Margem com promoção (apenas desconto do vendedor afeta — ML cobre o restante)
+    const precoEfetivo = preco * (1 - vendDesc); // o vendedor só perde sua parte
+    const calcCom = cmv>0 ? calcMargemGP(precoEfetivo, cmv, item.taxa||.12) : null;
+
+    const mgSem  = calcSem  ? (calcSem.margem*100).toFixed(1)+'%'  : '—';
+    const mgCom  = calcCom  ? (calcCom.margem*100).toFixed(1)+'%'  : '—';
+    const viavel = calcCom  ? calcCom.margem >= mgMin15 : null;
+    const isPeca = getMgMinCategoria(item.titulo||'')===.20;
+    const mgMinNec = isPeca ? mgMin20 : mgMin15;
+    const viavelCat = calcCom ? calcCom.margem >= mgMinNec : null;
+
+    const tagViavel = viavelCat===null ? '<span style="color:#9ca3af">sem CMV</span>' :
+      viavelCat ?
+        `<span class="pill pill-g">✅ Viável</span>` :
+        viavel ?
+          `<span class="pill pill-y">⚠️ Atenção</span>` :
+          `<span class="pill pill-r">❌ Inviável</span>`;
+
+    const titulo = item.titulo || p.item_id || '—';
+
+    return `<tr>
+      <td style="font-size:10px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${titulo}">
+        <strong style="color:var(--azul)">${item.sku||'—'}</strong> ${titulo.substring(0,40)}
+      </td>
+      <td style="font-size:10px">${p.name||p.promotion_type||'—'}</td>
+      <td class="num">R$ ${fmt(preco)}</td>
+      <td class="num" style="color:#16a34a;font-weight:700">${(mlBonus*100).toFixed(0)}%</td>
+      <td class="num" style="color:#dc2626;font-weight:700">${(vendDesc*100).toFixed(0)}%</td>
+      <td class="num" style="font-weight:700">R$ ${fmt(precoFinal)}</td>
+      <td class="num" style="color:var(--muted)">${cmv>0?'R$ '+fmt(cmv):'—'}</td>
+      <td class="num" style="color:var(--muted)">${mgSem}</td>
+      <td class="num" style="font-weight:700;color:${calcCom&&calcCom.margem>=mgMinNec?'#16a34a':calcCom&&calcCom.margem>=.10?'#d97706':'#dc2626'}">${mgCom}</td>
+      <td>${tagViavel}</td>
+      <td>
+        ${viavelCat ?
+          `<button class="apply-btn" onclick="participarPromo('${p.item_id}','${p.id||''}')">Participar</button>` :
+          `<button class="apply-btn" style="opacity:.4;cursor:not-allowed" disabled>Inviável</button>`
+        }
+      </td>
+    </tr>`;
+  });
+
+  tbody.innerHTML = rows.join('');
+}
+
+async function participarPromo(mlb, promoId){
+  if(!tokens.ml){ alert('Token ML não configurado'); return; }
+  if(!confirm(`Participar da promoção para ${mlb}?`)) return;
+  try{
+    const r = await fetch(`/api/ml/seller-promotions/${promoId}/items`, {
+      method: 'POST',
+      headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},
+      body: JSON.stringify({item_id: mlb})
+    });
+    if(r.ok) alert(`✅ ${mlb} adicionado à promoção!`);
+    else { const e=await r.json(); alert(`Erro: ${e.message||r.status}`); }
+  }catch(e){ alert('Erro: '+e.message); }
 }
 
 function exportarGP(){
@@ -2489,6 +3931,9 @@ function setView(v){
   document.getElementById('view-financeiro').style.display = v==='financeiro'?'flex':'none';
   document.getElementById('view-conciliacao').style.display = v==='conciliacao'?'flex':'none';
   document.getElementById('view-precos').style.display = v==='precos'?'flex':'none';
+  document.getElementById('view-promocoes').style.display = v==='promocoes'?'flex':'none';
+  document.getElementById('view-difal').style.display = v==='difal'?'flex':'none';
+  document.getElementById('view-perguntas').style.display = v==='perguntas'?'flex':'none';
   document.getElementById('view-ads').style.display = v==='ads'?'flex':'none';
   document.getElementById('view-pedidos').style.display = v==='pedidos'?'flex':'none';
   document.getElementById('period-bar').style.display = v==='dashboard'?'flex':'none';
@@ -2497,12 +3942,24 @@ function setView(v){
   document.getElementById('vtab-fin').classList.toggle('a', v==='financeiro');
   document.getElementById('vtab-conc').classList.toggle('a', v==='conciliacao');
   document.getElementById('vtab-prec').classList.toggle('a', v==='precos');
+  document.getElementById('vtab-prom').classList.toggle('a', v==='promocoes');
+  document.getElementById('vtab-difal').classList.toggle('a', v==='difal');
+  document.getElementById('vtab-perg').classList.toggle('a', v==='perguntas');
   document.getElementById('vtab-ads').classList.toggle('a', v==='ads');
   document.getElementById('vtab-ped').classList.toggle('a', v==='pedidos');
   if(v==='anuncios' && anunciosData.length===0) carregarAnuncios();
   if(v==='financeiro') initFinanceiro();
   if(v==='conciliacao') initConciliacao();
+  document.getElementById('view-promocoes').style.display = v==='promocoes'?'flex':'none';
+  document.getElementById('view-difal').style.display = v==='difal'?'flex':'none';
+  document.getElementById('view-perguntas').style.display = v==='perguntas'?'flex':'none';
+  document.getElementById('vtab-prom').classList.toggle('a', v==='promocoes');
+  document.getElementById('vtab-difal').classList.toggle('a', v==='difal');
+  document.getElementById('vtab-perg').classList.toggle('a', v==='perguntas');
   if(v==='pedidos') initPedidos();
+  if(v==='promocoes') carregarPromocoes();
+  if(v==='difal') renderDifal();
+  if(v==='perguntas'){ const k=localStorage.getItem('fava_claude_key')||''; document.getElementById('perg-apikey').value=k; }
 }
 
 // ══════════════════════════════════════════════════════════════════════
