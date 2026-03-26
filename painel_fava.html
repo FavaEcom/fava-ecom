@@ -691,6 +691,7 @@ header h1{font-size:15px;font-weight:700;flex:1}
           <th onclick="sortGP('preco_orig')" class="num">Preço atual ↕</th>
           <th onclick="sortGP('cmv')" class="num">CMV ↕</th>
           <th onclick="sortGP('preco_min')" class="num">Preço mín ↕</th>
+          <th class="num" title="Desconto máximo sugerido mantendo margem mínima da categoria">💡 Desc. sugerido</th>
           <th class="num">Desconto %</th>
           <th onclick="sortGP('preco_final')" class="num">Preço final ↕</th>
           <th onclick="sortGP('lucro')" class="num">Lucro R$ ↕</th>
@@ -1848,6 +1849,52 @@ function freteGP(preco){
   return 23.65;
 }
 
+// Categorias de margem mínima
+function getMgMinCategoria(titulo){
+  const t = (titulo||'').toLowerCase();
+  // Peças de reposição → 20%
+  const pecas = ['peça','peca','rolamento','eixo','pinhao','pinhão','capacitor','motor','engrenagem',
+    'roleta','ventoinha','freio','haste','pistao','pistão','gaxeta','arruela','parafuso','porca',
+    'reposição','reposicao','kit','conjunto','seg.','segmento','cj '];
+  if(pecas.some(p=>t.includes(p))) return .20;
+  // Produto caro (verificado no preco_orig)
+  return .15;
+}
+
+// Sugere desconto máximo mantendo margem mínima da categoria
+function sugerirDesconto(item){
+  if(!item.cmv||item.cmv<=0) return null;
+  const mgMin = getMgMinCategoria(item.titulo);
+  // Produto parado (sem venda recente) → pode ir a 10%
+  const vendas = vendidosUltimos60d[item.mlb]||0;
+  const mgMinReal = item.preco_orig > 300 || vendas === 0 ? Math.min(mgMin, .10) : mgMin;
+  // Calcula desconto máximo
+  const difal_pct = (parseFloat(document.getElementById('gp-difal')?.value)||8.5)/100;
+  const pct_int   = (parseFloat(document.getElementById('gp-fora-pr')?.value)||70)/100;
+  const pct_pf    = (parseFloat(document.getElementById('gp-pf')?.value)||80)/100;
+  const denom = Math.max(1 - item.taxa - PIS_GP - COF_GP - difal_pct*pct_int*pct_pf - ICMS_INT_GP*pct_int - mgMinReal, .05);
+  const preco_min_cat = (item.cmv + freteGP(item.preco_orig)) / denom;
+  const desc_max = Math.max(0, (1 - preco_min_cat/item.preco_orig) * 100);
+  return {desc_max: Math.floor(desc_max), mgMin: mgMinReal, parado: vendas===0, preco_min_cat};
+}
+
+// Mapa de vendas últimos 60 dias por MLB
+let vendidosUltimos60d = {};
+function buildVendasCache(){
+  vendidosUltimos60d = {};
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const d60 = new Date(hoje); d60.setDate(d60.getDate()-60);
+  dados.pedidosML.filter(p=>p.status!=='cancelled').forEach(p=>{
+    const dt = new Date(p.data+'T12:00:00');
+    if(dt >= d60){
+      p.itens.forEach(it=>{
+        if(!vendidosUltimos60d[it.mlb]) vendidosUltimos60d[it.mlb]=0;
+        vendidosUltimos60d[it.mlb] += it.qtd;
+      });
+    }
+  });
+}
+
 function calcMargemGP(preco, cmv, taxa){
   const mgMin = (parseFloat(document.getElementById('gp-mg-min')?.value)||15)/100;
   const difal_pct = (parseFloat(document.getElementById('gp-difal')?.value)||8.5)/100;
@@ -1863,7 +1910,6 @@ function calcMargemGP(preco, cmv, taxa){
   const lucro   = preco - cmv - pis_r - cof_r - taxa_r - frete - difal_r - icms_r;
   const margem  = preco > 0 ? lucro/preco : 0;
 
-  // Preço mínimo: CMV/(1-taxa-PIS-COF-DIFAL-ICMS-mgMin) + frete
   const denom = Math.max(1 - taxa - PIS_GP - COF_GP - difal_pct*pct_int*pct_pf - ICMS_INT_GP*pct_int - mgMin, .05);
   const preco_min = (cmv + frete) / denom;
 
@@ -1903,6 +1949,7 @@ Agora o cálculo usa o custo real da nota fiscal.`);
 function carregarPlanilhaGP(input){
   const file = input.files[0];
   if(!file) return;
+  buildVendasCache(); // Atualiza cache de vendas antes de calcular
   const reader = new FileReader();
   reader.onload = e => {
     try{
@@ -1933,6 +1980,7 @@ function carregarPlanilhaGP(input){
 
         const calc = calcMargemGP(preco_final > 0 ? preco_final : preco_orig, cmv, taxa);
 
+        const sug = cmv > 0 ? sugerirDesconto({mlb,titulo:String(r[iTitle]||''),cmv,taxa,preco_orig}) : null;
         gpData.push({
           id: idx, mlb, sku,
           titulo: String(r[iTitle]||''),
@@ -1940,6 +1988,7 @@ function carregarPlanilhaGP(input){
           preco_final: preco_final||preco_orig,
           cmv, taxa, status,
           temCMV: cmv > 0,
+          sug, // sugestão inteligente
           ...calc,
         });
       });
@@ -2040,6 +2089,13 @@ function renderTabelaGP(lista){
       <td class="num">R$ ${fmt(d.preco_orig)}</td>
       <td class="num" style="color:var(--muted)">${d.temCMV?'R$ '+fmt(d.cmv):'—'}</td>
       <td class="num" style="color:#dc2626;font-size:10px">${precoMin}</td>
+      <td class="num">
+        ${d.sug ? `<span style="font-size:10px;font-weight:700;color:${d.sug.desc_max>=20?'#16a34a':d.sug.desc_max>=10?'#d97706':'#9ca3af'}">
+          ${d.sug.desc_max}%
+          ${d.sug.parado?'<span title="Sem venda há 60d" style="color:#9ca3af">📦</span>':''}
+          <span style="font-size:9px;color:#9ca3af">(mín ${(d.sug.mgMin*100).toFixed(0)}%)</span>
+        </span>` : '—'}
+      </td>
       <td class="num">
         <input class="desc-input" type="number" min="0" max="80" step="1"
           value="${d.desc_pct||''}" placeholder="0"
