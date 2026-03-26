@@ -374,10 +374,12 @@ if(localStorage.getItem('fava_auth') === btoa(SENHA_PAINEL+':ok')){
 function salvarCfg(){
   const tkB = document.getElementById('tk-bling')?.value.trim()||'';
   const tkM = document.getElementById('tk-ml')?.value.trim()||'';
+  if(!tkB && !tkM){ alert('Informe pelo menos um token'); return; }
   localStorage.setItem('fava_tk4', JSON.stringify({bling:tkB, ml:tkM}));
+  tokens.bling = tkB;
+  tokens.ml    = tkM;
   document.getElementById('modal-cfg').style.display='none';
-  // tokens será inicializado pelo script principal via window.onload
-  window.location.reload();
+  carregarTudo();
 }
 function fecharCfg(){
   document.getElementById('modal-cfg').style.display='none';
@@ -828,7 +830,7 @@ function fecharCfg(){
 </div>
 
 <!-- CONFIG MODAL -->
-<div class="modal-bg" id="modal-cfg" style="display:flex">
+<div class="modal-bg" id="modal-cfg" style="display:none">
   <div class="modal">
     <h2>⚙️ Configurar tokens de acesso</h2>
     <div class="field">
@@ -888,8 +890,11 @@ window.onload=()=>{
     if(tokens.bling||tokens.ml){
       document.getElementById('modal-cfg').style.display='none';
       carregarTudo();
+      return;
     }
   }
+  // Sem token salvo — abre modal de configuração
+  document.getElementById('modal-cfg').style.display='flex';
 };
 
 // ══════════════════════════════════════════════════════════════════════
