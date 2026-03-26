@@ -392,6 +392,12 @@ function recarregar(){
   if(typeof carregarTudo === 'function') carregarTudo();
   else window.location.reload();
 }
+function setView(v){
+  // Stub - real function loads after main script
+  // Wait for main script then call
+  if(typeof _setViewReal === 'function'){ _setViewReal(v); return; }
+  setTimeout(()=>{ if(typeof _setViewReal==='function') _setViewReal(v); },500);
+}
 </script>
 
 <!-- HEADER -->
@@ -1520,7 +1526,6 @@ function buildDIFAL(){
 // ══════════════════════════════════════════════════════════════════════
 // PROMOÇÕES ML
 // ══════════════════════════════════════════════════════════════════════
-let promoData=[], promoFiltro='todos';
 
 function initPromocoes(){ if(promoData.length) renderPromoTable(promoData); }
 
@@ -3830,7 +3835,7 @@ function exportarConciliacao(){
 // ══════════════════════════════════════════════════════════════════════
 let currentView = 'dashboard';
 
-function setView(v){
+function _setViewReal(v){
   currentView = v;
   document.getElementById('view-dashboard').style.display = v==='dashboard'?'flex':'none';
   document.getElementById('view-anuncios').style.display = v==='anuncios'?'flex':'none';
