@@ -98,6 +98,42 @@ header h1{font-size:15px;font-weight:700;flex:1}
 /* EMPTY */
 .empty{text-align:center;padding:30px;color:var(--muted);font-size:12px}
 
+/* GESTÃO PREÇOS */
+.gp-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fff;border-radius:9px;border:1px solid var(--borda);padding:10px 14px;margin-bottom:10px}
+.gp-toolbar label{font-size:11px;font-weight:700;color:var(--muted)}
+.gp-toolbar input[type=range]{width:120px}
+.gp-toolbar input[type=number]{width:60px;border:1px solid var(--borda);border-radius:5px;padding:4px 7px;font-size:12px;font-weight:700;outline:none;text-align:center}
+.gp-toolbar input[type=number]:focus{border-color:var(--azul2)}
+.gp-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:10px}
+.gp-kpi{background:#fff;border-radius:8px;border:1px solid var(--borda);padding:9px 12px}
+.gp-kpi .gkl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.gp-kpi .gkv{font-size:18px;font-weight:700}
+.gp-table-wrap{background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden}
+.gp-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.gp-tbl th{padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--borda);background:#f8fafc;white-space:nowrap;cursor:pointer;user-select:none}
+.gp-tbl th:hover{background:#f0f2f5}
+.gp-tbl td{padding:6px 9px;border-bottom:1px solid #f9fafb;vertical-align:middle}
+.gp-tbl tr:last-child td{border-bottom:none}
+.gp-tbl tr:hover td{background:#fafbfc}
+.gp-tbl .num{text-align:right;font-variant-numeric:tabular-nums}
+.desc-input{width:52px;border:1px solid var(--borda);border-radius:4px;padding:3px 5px;font-size:11px;font-weight:700;text-align:center;outline:none}
+.desc-input:focus{border-color:var(--azul2);background:#eff6ff}
+.mg-bar{display:inline-block;width:50px;height:6px;border-radius:3px;vertical-align:middle;margin-right:4px}
+.row-ok td{background:#f0fdf4}
+.row-warn td{background:#fffbeb}
+.row-err td{background:#fff1f2}
+.gp-filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.gp-filters input{border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:11px;outline:none;width:220px}
+.gp-filters input:focus{border-color:var(--azul2)}
+.filt-btn{padding:4px 10px;border-radius:5px;border:1px solid var(--borda);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--muted)}
+.filt-btn.a{background:var(--azul);color:#fff;border-color:var(--azul)}
+.apply-all-btn{padding:5px 12px;border-radius:5px;border:none;background:#16a34a;color:#fff;font-size:11px;font-weight:700;cursor:pointer}
+.apply-all-btn:hover{opacity:.9}
+.apply-btn{padding:3px 7px;border-radius:4px;border:1px solid var(--verde);background:#fff;color:#166534;font-size:10px;cursor:pointer;font-weight:700}
+.apply-btn:hover{background:#dcfce7}
+.apply-btn.applying{background:#fef9c3;border-color:#d97706;color:#92400e}
+.apply-btn.done{background:#dcfce7;border-color:#16a34a;color:#166534}
+
 /* CONCILIAÇÃO MP */
 .mp-saldo-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:9px;margin-bottom:12px}
 .mp-saldo{background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 13px}
@@ -224,6 +260,7 @@ header h1{font-size:15px;font-weight:700;flex:1}
   <div class="vtab" onclick="setView('anuncios')" id="vtab-anunc">🏷️ Anúncios ML</div>
   <div class="vtab" onclick="setView('financeiro')" id="vtab-fin">💰 Financeiro</div>
   <div class="vtab" onclick="setView('conciliacao')" id="vtab-conc">🏦 Conciliação MP</div>
+  <div class="vtab" onclick="setView('precos')" id="vtab-prec">🏷️ Gestão Preços</div>
 </div>
 
 <!-- PERIOD BAR -->
@@ -371,6 +408,103 @@ header h1{font-size:15px;font-weight:700;flex:1}
         </table>
       </div>
     </div>
+  </div>
+
+</div>
+
+<!-- GESTÃO DE PREÇOS VIEW -->
+<div id="view-precos" style="display:none;padding:14px 18px;flex-direction:column;gap:0">
+
+  <!-- Upload planilha ML -->
+  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div style="flex:1;min-width:180px">
+      <div style="font-size:12px;font-weight:700;color:var(--azul)">🏷️ Gestão de Preços e Descontos ML</div>
+      <div style="font-size:11px;color:var(--muted)">Importe a planilha de promoções do ML → simule descontos → aplique em massa</div>
+    </div>
+    <input type="file" id="gp-xlsx" accept=".xlsx" style="display:none" onchange="carregarPlanilhaGP(this)">
+    <button class="btn-fin" onclick="document.getElementById('gp-xlsx').click()">📂 Importar planilha ML</button>
+    <span id="gp-status" style="font-size:11px;color:var(--muted)">Nenhuma planilha carregada</span>
+    <button class="apply-all-btn" onclick="aplicarTodosSelecionados()" id="btn-aplicar-todos" style="display:none">⚡ Aplicar selecionados no ML</button>
+  </div>
+
+  <!-- KPIs -->
+  <div class="gp-kpis" id="gp-kpis" style="display:none">
+    <div class="gp-kpi"><div class="gkl">Total anúncios</div><div class="gkv" id="gk-total">—</div></div>
+    <div class="gp-kpi"><div class="gkl">Margem OK (≥15%)</div><div class="gkv" id="gk-ok" style="color:#16a34a">—</div></div>
+    <div class="gp-kpi"><div class="gkl">Atenção (10-15%)</div><div class="gkv" id="gk-warn" style="color:#d97706">—</div></div>
+    <div class="gp-kpi"><div class="gkl">Abaixo do mínimo</div><div class="gkv" id="gk-err" style="color:#dc2626">—</div></div>
+    <div class="gp-kpi"><div class="gkl">Sem CMV</div><div class="gkv" id="gk-nocmv" style="color:#9ca3af">—</div></div>
+    <div class="gp-kpi"><div class="gkl">Desconto médio</div><div class="gkv" id="gk-desc">—</div></div>
+  </div>
+
+  <!-- Parâmetros globais -->
+  <div class="gp-toolbar" id="gp-toolbar" style="display:none">
+    <label>Margem mínima:</label>
+    <input type="number" id="gp-mg-min" value="15" min="0" max="50" step="1" oninput="recalcGP()">
+    <span style="font-size:11px;color:var(--muted)">%</span>
+
+    <div style="width:1px;height:20px;background:var(--borda);margin:0 4px"></div>
+
+    <label>DIFAL médio:</label>
+    <input type="number" id="gp-difal" value="8.5" min="0" max="20" step="0.5" oninput="recalcGP()">
+    <span style="font-size:11px;color:var(--muted)">%</span>
+
+    <label>% fora PR:</label>
+    <input type="number" id="gp-fora-pr" value="70" min="0" max="100" step="5" oninput="recalcGP()">
+    <span style="font-size:11px;color:var(--muted)">%</span>
+
+    <label>% PF:</label>
+    <input type="number" id="gp-pf" value="80" min="0" max="100" step="5" oninput="recalcGP()">
+    <span style="font-size:11px;color:var(--muted)">%</span>
+
+    <div style="width:1px;height:20px;background:var(--borda);margin:0 4px"></div>
+
+    <label>Desc. global:</label>
+    <input type="number" id="gp-desc-global" value="" min="0" max="80" step="1" placeholder="Ex: 28">
+    <span style="font-size:11px;color:var(--muted)">%</span>
+    <button class="btn-fin" onclick="aplicarDescGlobal()" style="padding:4px 10px;font-size:11px">Aplicar a todos</button>
+
+    <div style="margin-left:auto;display:flex;gap:6px">
+      <button class="btn-fin" onclick="exportarGP()" style="background:#6b7280">⬇ Exportar planilha</button>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="gp-filters" id="gp-filters" style="display:none">
+    <input type="text" id="gp-search" placeholder="Buscar produto ou MLB..." oninput="filtrarGP()">
+    <button class="filt-btn a" id="gf-todos" onclick="setFiltroGP('todos')">Todos</button>
+    <button class="filt-btn" id="gf-err" onclick="setFiltroGP('err')">⚠️ Abaixo mínimo</button>
+    <button class="filt-btn" id="gf-warn" onclick="setFiltroGP('warn')">🟡 Atenção</button>
+    <button class="filt-btn" id="gf-ok" onclick="setFiltroGP('ok')">✅ OK</button>
+    <button class="filt-btn" id="gf-nocmv" onclick="setFiltroGP('nocmv')">❓ Sem CMV</button>
+    <label style="margin-left:auto;font-size:11px;display:flex;align-items:center;gap:5px">
+      <input type="checkbox" id="gp-sel-all" onchange="toggleSelecionarTodos()"> Selecionar todos visíveis
+    </label>
+  </div>
+
+  <!-- Tabela -->
+  <div class="gp-table-wrap" id="gp-table-wrap" style="display:none">
+    <table class="gp-tbl">
+      <thead>
+        <tr>
+          <th style="width:30px"><input type="checkbox" id="chk-all-head" onchange="toggleSelecionarTodos()"></th>
+          <th onclick="sortGP('sku')">SKU ↕</th>
+          <th onclick="sortGP('titulo')">Produto ↕</th>
+          <th onclick="sortGP('preco_orig')" class="num">Preço atual ↕</th>
+          <th onclick="sortGP('cmv')" class="num">CMV ↕</th>
+          <th onclick="sortGP('preco_min')" class="num">Preço mín ↕</th>
+          <th class="num">Desconto %</th>
+          <th onclick="sortGP('preco_final')" class="num">Preço final ↕</th>
+          <th onclick="sortGP('margem')" class="num">Margem ↕</th>
+          <th class="num">Taxa ML</th>
+          <th class="num">Frete</th>
+          <th class="num">DIFAL est.</th>
+          <th>Status</th>
+          <th>Ação</th>
+        </tr>
+      </thead>
+      <tbody id="gp-tbody"></tbody>
+    </table>
   </div>
 
 </div>
@@ -1070,6 +1204,329 @@ function fmt(v){return(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,max
 function fmtK(v){return v>=1000?`${(v/1000).toFixed(1)}k`:fmt(v);}
 
 // ══════════════════════════════════════════════════════════════════════
+// GESTÃO DE PREÇOS E DESCONTOS
+// ══════════════════════════════════════════════════════════════════════
+const PIS_GP=.0165, COF_GP=.076, ICMS_INT_GP=.12;
+let gpData = [];
+let gpFiltro = 'todos';
+let gpSort = {col:'margem', dir:1};
+let gpSelecionados = new Set();
+
+// Tabela frete ML real (peso 0.5kg por padrão — estimativa)
+function freteGP(preco){
+  if(preco<19) return 6;
+  if(preco<49) return 7.5;
+  if(preco<79) return 8.5;
+  if(preco<100) return 13.85;
+  if(preco<120) return 16.15;
+  if(preco<150) return 18.45;
+  if(preco<200) return 20.75;
+  return 23.65;
+}
+
+function calcMargemGP(preco, cmv, taxa){
+  const mgMin = (parseFloat(document.getElementById('gp-mg-min')?.value)||15)/100;
+  const difal_pct = (parseFloat(document.getElementById('gp-difal')?.value)||8.5)/100;
+  const pct_int = (parseFloat(document.getElementById('gp-fora-pr')?.value)||70)/100;
+  const pct_pf  = (parseFloat(document.getElementById('gp-pf')?.value)||80)/100;
+
+  const frete = freteGP(preco);
+  const pis_r   = preco * PIS_GP;
+  const cof_r   = preco * COF_GP;
+  const taxa_r  = preco * taxa;
+  const difal_r = preco * difal_pct * pct_int * pct_pf;
+  const icms_r  = preco * ICMS_INT_GP * pct_int;
+  const lucro   = preco - cmv - pis_r - cof_r - taxa_r - frete - difal_r - icms_r;
+  const margem  = preco > 0 ? lucro/preco : 0;
+
+  // Preço mínimo: CMV/(1-taxa-PIS-COF-DIFAL-ICMS-mgMin) + frete
+  const denom = Math.max(1 - taxa - PIS_GP - COF_GP - difal_pct*pct_int*pct_pf - ICMS_INT_GP*pct_int - mgMin, .05);
+  const preco_min = (cmv + frete) / denom;
+
+  return {margem, lucro, frete, taxa_r, difal_r, icms_r, pis_r, cof_r, preco_min};
+}
+
+function carregarPlanilhaGP(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const wb = XLSX.read(e.target.result,{type:'array'});
+      const ws = wb.Sheets['Promoções']||wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+
+      // Linha 0 = cabeçalho original
+      const hdr = rows[0];
+      const iTitle=0, iMLB=1, iSKU=2, iPreco=3, iDesc=4, iFinal=5, iStatus=11;
+
+      gpData = [];
+      rows.slice(4).forEach((r,idx)=>{
+        const mlb = String(r[iMLB]||'');
+        if(!mlb.startsWith('MLB')) return;
+        const sku = String(r[iSKU]||'');
+        const preco_orig = parseFloat(r[iPreco])||0;
+        const desc_pct = parseFloat(r[iDesc])||0;
+        const preco_final = parseFloat(r[iFinal])||desc_pct>0?(preco_orig*(1-desc_pct/100)):preco_orig;
+        const status = String(r[iStatus]||'');
+
+        // CMV do cache (Bling)
+        const cmvInfo = dados.cmvCache[sku] || dados.cmvCache[String(parseInt(sku)||0)];
+        const cmv = cmvInfo?.cmv || 0;
+
+        // Taxa ML estimada (12% clássico, 17% premium)
+        const taxa = preco_final >= 79 ? 0.12 : 0.12;
+
+        const calc = calcMargemGP(preco_final > 0 ? preco_final : preco_orig, cmv, taxa);
+
+        gpData.push({
+          id: idx, mlb, sku,
+          titulo: String(r[iTitle]||''),
+          preco_orig, desc_pct,
+          preco_final: preco_final||preco_orig,
+          cmv, taxa, status,
+          temCMV: cmv > 0,
+          ...calc,
+        });
+      });
+
+      document.getElementById('gp-status').textContent = `✅ ${gpData.length} anúncios carregados`;
+      document.getElementById('gp-status').style.color = '#16a34a';
+      ['gp-kpis','gp-toolbar','gp-filters','gp-table-wrap'].forEach(id=>{
+        document.getElementById(id).style.display='';
+      });
+      document.getElementById('btn-aplicar-todos').style.display='block';
+      recalcGP();
+    }catch(ex){
+      document.getElementById('gp-status').textContent = `❌ Erro: ${ex.message}`;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function recalcGP(){
+  // Recalcula margens com parâmetros atuais
+  gpData.forEach(item=>{
+    if(item.cmv > 0){
+      const calc = calcMargemGP(item.preco_final, item.cmv, item.taxa);
+      Object.assign(item, calc);
+    }
+  });
+  renderKpisGP();
+  filtrarGP();
+}
+
+function renderKpisGP(){
+  const mgMin = (parseFloat(document.getElementById('gp-mg-min')?.value)||15)/100;
+  const total = gpData.length;
+  const comCmv = gpData.filter(d=>d.temCMV);
+  const ok   = comCmv.filter(d=>d.margem>=mgMin).length;
+  const warn = comCmv.filter(d=>d.margem>=.10&&d.margem<mgMin).length;
+  const err  = comCmv.filter(d=>d.margem<.10).length;
+  const nocmv= gpData.filter(d=>!d.temCMV).length;
+  const descMed = gpData.filter(d=>d.desc_pct>0).reduce((s,d,i,a)=>s+d.desc_pct/a.length,0);
+
+  document.getElementById('gk-total').textContent = total;
+  document.getElementById('gk-ok').textContent = ok;
+  document.getElementById('gk-warn').textContent = warn;
+  document.getElementById('gk-err').textContent = err;
+  document.getElementById('gk-nocmv').textContent = nocmv;
+  document.getElementById('gk-desc').textContent = descMed.toFixed(1)+'%';
+}
+
+function setFiltroGP(f){
+  gpFiltro = f;
+  ['todos','err','warn','ok','nocmv'].forEach(x=>{
+    document.getElementById(`gf-${x}`)?.classList.toggle('a', x===f);
+  });
+  filtrarGP();
+}
+
+function filtrarGP(){
+  const mgMin = (parseFloat(document.getElementById('gp-mg-min')?.value)||15)/100;
+  const q = (document.getElementById('gp-search')?.value||'').toLowerCase();
+  let lista = gpData.filter(d=>{
+    if(q && !d.titulo.toLowerCase().includes(q) && !d.mlb.includes(q) && !d.sku.includes(q)) return false;
+    if(gpFiltro==='err') return d.temCMV && d.margem < .10;
+    if(gpFiltro==='warn') return d.temCMV && d.margem >= .10 && d.margem < mgMin;
+    if(gpFiltro==='ok') return d.temCMV && d.margem >= mgMin;
+    if(gpFiltro==='nocmv') return !d.temCMV;
+    return true;
+  });
+  lista.sort((a,b)=>{
+    const va=a[gpSort.col]??-999, vb=b[gpSort.col]??-999;
+    return (va>vb?1:-1)*gpSort.dir;
+  });
+  renderTabelaGP(lista);
+}
+
+function sortGP(col){
+  if(gpSort.col===col) gpSort.dir*=-1;
+  else{gpSort.col=col;gpSort.dir=col==='margem'?1:-1;}
+  filtrarGP();
+}
+
+function renderTabelaGP(lista){
+  const mgMin = (parseFloat(document.getElementById('gp-mg-min')?.value)||15)/100;
+  const rows = lista.map(d=>{
+    const mg = d.margem;
+    const mc = mg>=mgMin?'#16a34a':mg>=.10?'#d97706':'#dc2626';
+    const rowCls = !d.temCMV?'':mg>=mgMin?'row-ok':mg>=.10?'row-warn':'row-err';
+    const sel = gpSelecionados.has(d.mlb);
+    const mgBar = d.temCMV
+      ? `<span class="mg-bar" style="background:${mc};width:${Math.min(Math.max(mg*100,0),60)}px"></span>`
+      : '';
+    const mgStr = d.temCMV ? `${(mg*100).toFixed(1)}%` : '<span style="color:#9ca3af">sem CMV</span>';
+    const precoMin = d.temCMV ? `R$ ${fmt(d.preco_min)}` : '—';
+
+    return `<tr class="${rowCls}" data-mlb="${d.mlb}">
+      <td><input type="checkbox" ${sel?'checked':''} onchange="toggleSel('${d.mlb}',this.checked)"></td>
+      <td style="font-weight:700;color:var(--azul);font-size:10px">${d.sku||'—'}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="${d.titulo}">${d.titulo}</td>
+      <td class="num">R$ ${fmt(d.preco_orig)}</td>
+      <td class="num" style="color:var(--muted)">${d.temCMV?'R$ '+fmt(d.cmv):'—'}</td>
+      <td class="num" style="color:#dc2626;font-size:10px">${precoMin}</td>
+      <td class="num">
+        <input class="desc-input" type="number" min="0" max="80" step="1"
+          value="${d.desc_pct||''}" placeholder="0"
+          data-mlb="${d.mlb}"
+          oninput="atualizarDesc('${d.mlb}',this.value)"
+          style="border-color:${mg<mgMin&&d.temCMV?'#dc2626':mg<.10&&d.temCMV?'#d97706':'var(--borda)'}">%
+      </td>
+      <td class="num" style="font-weight:700">R$ ${fmt(d.preco_final)}</td>
+      <td class="num">${mgBar}<span style="font-weight:700;color:${mc}">${mgStr}</span></td>
+      <td class="num" style="color:var(--muted);font-size:10px">${(d.taxa*100).toFixed(0)}%</td>
+      <td class="num" style="color:var(--muted);font-size:10px">${d.temCMV?'R$ '+fmt(d.frete):'—'}</td>
+      <td class="num" style="color:var(--muted);font-size:10px">${d.temCMV?'R$ '+fmt(d.difal_r):'—'}</td>
+      <td>
+        ${!d.temCMV?'<span style="color:#9ca3af;font-size:10px">sem CMV</span>':
+          mg>=mgMin?'<span class="pill pill-g">✓ OK</span>':
+          mg>=.10?'<span class="pill pill-y">⚠ Atenção</span>':
+          '<span class="pill pill-r">✗ Abaixo</span>'}
+      </td>
+      <td>
+        <button class="apply-btn" id="apb-${d.mlb}"
+          onclick="aplicarUm('${d.mlb}',${d.preco_final.toFixed(2)},${d.desc_pct||0})">
+          Aplicar
+        </button>
+      </td>
+    </tr>`;
+  });
+  document.getElementById('gp-tbody').innerHTML = rows.join('')||
+    '<tr><td colspan="14" style="text-align:center;padding:20px;color:var(--muted)">Nenhum anúncio</td></tr>';
+}
+
+function atualizarDesc(mlb, descStr){
+  const desc = parseFloat(descStr)||0;
+  const item = gpData.find(d=>d.mlb===mlb);
+  if(!item) return;
+  item.desc_pct = desc;
+  item.preco_final = item.preco_orig * (1 - desc/100);
+  if(item.cmv > 0){
+    const calc = calcMargemGP(item.preco_final, item.cmv, item.taxa);
+    Object.assign(item, calc);
+  }
+  // Atualiza só a linha sem re-render completo
+  const row = document.querySelector(`tr[data-mlb="${mlb}"]`);
+  if(row){
+    const mgMin=(parseFloat(document.getElementById('gp-mg-min')?.value)||15)/100;
+    const mg=item.margem;
+    const mc=mg>=mgMin?'#16a34a':mg>=.10?'#d97706':'#dc2626';
+    const cells=row.querySelectorAll('td');
+    cells[7].textContent='R$ '+fmt(item.preco_final);
+    cells[8].innerHTML=item.temCMV
+      ?`<span class="mg-bar" style="background:${mc};width:${Math.min(Math.max(mg*100,0),60)}px"></span><span style="font-weight:700;color:${mc}">${(mg*100).toFixed(1)}%</span>`
+      :'<span style="color:#9ca3af">sem CMV</span>';
+    cells[11].textContent=item.temCMV?'R$ '+fmt(item.difal_r):'—';
+    // Update input border
+    const inp=row.querySelector('.desc-input');
+    if(inp) inp.style.borderColor=mg<mgMin&&item.temCMV?'#dc2626':'var(--borda)';
+  }
+  renderKpisGP();
+}
+
+function aplicarDescGlobal(){
+  const desc = parseFloat(document.getElementById('gp-desc-global').value)||0;
+  if(!desc){alert('Informe o desconto global');return;}
+  gpData.forEach(d=>{
+    d.desc_pct = desc;
+    d.preco_final = d.preco_orig * (1-desc/100);
+    if(d.cmv>0) Object.assign(d, calcMargemGP(d.preco_final,d.cmv,d.taxa));
+  });
+  recalcGP();
+}
+
+function toggleSel(mlb, checked){
+  if(checked) gpSelecionados.add(mlb);
+  else gpSelecionados.delete(mlb);
+}
+
+function toggleSelecionarTodos(){
+  const checked = document.getElementById('gp-sel-all')?.checked || document.getElementById('chk-all-head')?.checked;
+  const visíveis = document.querySelectorAll('#gp-tbody tr[data-mlb]');
+  visíveis.forEach(tr=>{
+    const mlb = tr.dataset.mlb;
+    const chk = tr.querySelector('input[type=checkbox]');
+    if(chk) chk.checked = checked;
+    if(checked) gpSelecionados.add(mlb);
+    else gpSelecionados.delete(mlb);
+  });
+}
+
+async function aplicarUm(mlb, preco, desc){
+  if(!tokens.ml){alert('Token ML não configurado');return;}
+  const btn = document.getElementById(`apb-${mlb}`);
+  if(btn){btn.textContent='...';btn.className='apply-btn applying';}
+  try{
+    const body = {price: parseFloat(preco.toFixed(2))};
+    if(desc>0) body.sale_price = parseFloat(preco.toFixed(2));
+    const r = await fetch(`/api/ml/items/${mlb}`,{
+      method:'PUT',
+      headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if(r.ok){
+      if(btn){btn.textContent='✓ OK';btn.className='apply-btn done';}
+    } else {
+      const e=await r.json().catch(()=>({}));
+      if(btn){btn.textContent='✗ Erro';btn.className='apply-btn';}
+      console.error('Erro ML:',e);
+    }
+  }catch(e){
+    if(btn){btn.textContent='✗';btn.className='apply-btn';}
+  }
+}
+
+async function aplicarTodosSelecionados(){
+  if(!gpSelecionados.size){alert('Selecione pelo menos um anúncio');return;}
+  if(!tokens.ml){alert('Token ML não configurado');return;}
+  if(!confirm(`Aplicar preços em ${gpSelecionados.size} anúncios?`))return;
+  let ok=0,err=0;
+  for(const mlb of gpSelecionados){
+    const item = gpData.find(d=>d.mlb===mlb);
+    if(!item) continue;
+    await aplicarUm(mlb, item.preco_final, item.desc_pct);
+    ok++;
+    await new Promise(r=>setTimeout(r,300));
+  }
+  alert(`✅ ${ok} aplicados!`);
+}
+
+function exportarGP(){
+  if(!gpData.length){alert('Nenhum dado para exportar');return;}
+  // Exporta no formato da planilha ML (pode reimportar)
+  const wb = XLSX.utils.book_new();
+  const rows = [['TITLE','ITEM_ID','SKU','ORIGINAL_PRICE','DISCOUNT_PERCENTAGE','FINAL_PRICE','CMV','MARGEM%','PRECO_MIN','STATUS']];
+  gpData.forEach(d=>{
+    rows.push([d.titulo,d.mlb,d.sku,d.preco_orig,d.desc_pct,d.preco_final,d.cmv,(d.margem*100).toFixed(1)+'%',d.preco_min?.toFixed(2)||'',d.status]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:50},{wch:15},{wch:8},{wch:12},{wch:12},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws,'Promoções');
+  XLSX.writeFile(wb,'gestao_precos_fava.xlsx');
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // MERCADO PAGO — CONCILIAÇÃO
 // ══════════════════════════════════════════════════════════════════════
 let tkMP = localStorage.getItem('fava_tk_mp') || '';
@@ -1318,11 +1775,13 @@ function setView(v){
   document.getElementById('view-anuncios').style.display = v==='anuncios'?'flex':'none';
   document.getElementById('view-financeiro').style.display = v==='financeiro'?'flex':'none';
   document.getElementById('view-conciliacao').style.display = v==='conciliacao'?'flex':'none';
+  document.getElementById('view-precos').style.display = v==='precos'?'flex':'none';
   document.getElementById('period-bar').style.display = v==='dashboard'?'flex':'none';
   document.getElementById('vtab-dash').classList.toggle('a', v==='dashboard');
   document.getElementById('vtab-anunc').classList.toggle('a', v==='anuncios');
   document.getElementById('vtab-fin').classList.toggle('a', v==='financeiro');
   document.getElementById('vtab-conc').classList.toggle('a', v==='conciliacao');
+  document.getElementById('vtab-prec').classList.toggle('a', v==='precos');
   if(v==='anuncios' && anunciosData.length===0) carregarAnuncios();
   if(v==='financeiro') initFinanceiro();
   if(v==='conciliacao') initConciliacao();
