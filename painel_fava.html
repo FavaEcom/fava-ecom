@@ -330,12 +330,19 @@ function fecharCfg(){
 <body>
 <script>
 // salvarCfg definido aqui para garantir disponibilidade
+// Tokens global - declarado aqui para salvarCfg ter acesso
+if(typeof tokens === 'undefined') var tokens = {bling:'', ml:''};
+
 function salvarCfg(){
-  tokens.bling=document.getElementById('tk-bling')?.value.trim()||'';
-  tokens.ml=document.getElementById('tk-ml')?.value.trim()||'';
-  localStorage.setItem('fava_tk4',JSON.stringify(tokens));
+  if(typeof tokens === 'undefined') tokens = {bling:'', ml:''};
+  tokens.bling = document.getElementById('tk-bling')?.value.trim()||'';
+  tokens.ml    = document.getElementById('tk-ml')?.value.trim()||'';
+  localStorage.setItem('fava_tk4', JSON.stringify(tokens));
   document.getElementById('modal-cfg').style.display='none';
-  carregarTudo();
+  if(typeof carregarTudo === 'function') carregarTudo();
+}
+function fecharCfg(){
+  document.getElementById('modal-cfg').style.display='none';
 }
 </script>
 
@@ -1734,7 +1741,7 @@ let adsData = [];
 let adsChartFat = null, adsChartRoas = null;
 const PIS_ADS=.0165, COF_ADS=.076, ICMS_ADS=.12, DIFAL_ADS=.085;
 
-function initADS(){
+async function initADS(){
   const hoje = new Date().toISOString().substring(0,10);
   const d30 = new Date(); d30.setDate(d30.getDate()-30);
   document.getElementById('ads-de').value = d30.toISOString().substring(0,10);
@@ -2573,15 +2580,9 @@ function aplicarDescGlobal(){
     d.preco_final = d.preco_orig * (1-desc/100);
     if(d.cmv>0) Object.assign(d, calcMargemGP(d.preco_final,d.cmv,d.taxa));
   });
-  recalcGP();
-}
-
-function toggleSel(mlb, checked){
+  recalcGP(async function toggleSel(mlb, checked){cked){
   if(checked) gpSelecionados.add(mlb);
-  else gpSelecionados.delete(mlb);
-}
-
-function toggleSelecionarTodos(){
+  else gpSelecionados.deleasync function toggleSelecionarTodos(){onarTodos(){
   const checked = document.getElementById('gp-sel-all')?.checked || document.getElementById('chk-all-head')?.checked;
   const visíveis = document.querySelectorAll('#gp-tbody tr[data-mlb]');
   visíveis.forEach(tr=>{
