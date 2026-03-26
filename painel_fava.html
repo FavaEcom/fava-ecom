@@ -321,1016 +321,29 @@ header h1{font-size:15px;font-weight:700;flex:1}
 @media(max-width:700px){.grid2,.grid3{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}}
 </style>
 </head>
+<script>
+
+function fecharCfg(){
+  var m=document.getElementById('modal-cfg');if(m)m.style.display='none';
+}
+</script>
 <body>
+<script>
+// salvarCfg definido aqui para garantir disponibilidade
+function salvarCfg(){
+  tokens.bling=document.getElementById('tk-bling')?.value.trim()||'';
+  tokens.ml=document.getElementById('tk-ml')?.value.trim()||'';
+  localStorage.setItem('fava_tk4',JSON.stringify(tokens));
+  document.getElementById('modal-cfg').style.display='none';
+  carregarTudo();
+}
+</script>
 
 <!-- LOADING -->
 <div class="loading-cover" id="loading" style="display:none">
   <div class="spin"></div>
-  <div id="loading-msg">Carregando dados...</div>
-</div>
-
-<!-- CONFIG MODAL -->
-<div class="modal-bg" id="cfg-modal">
-  <div class="modal">
-    <h2>⚙️ Configurar tokens de acesso</h2>
-    <div class="field">
-      <label>Token Bling API v3</label>
-      <input type="password" id="tk-bling" placeholder="Cole o token do Bling">
-    </div>
-    <div class="field">
-      <label>Access Token ML (APP_USR-...)</label>
-      <input type="password" id="tk-ml" placeholder="Cole o access token do ML">
-    </div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Os tokens ficam salvos localmente no seu navegador.</div>
-    <button class="btn-prim" onclick="salvarCfg()">Salvar e carregar painel</button>
-    <button class="btn-sec" onclick="fecharCfg()">Cancelar</button>
-  </div>
-</div>
-
-<!-- HEADER -->
-<header>
-  <h1>📊 Painel Fava Ecom</h1>
-  <div class="dot wait" id="dot-bling"></div><span class="dlbl" id="lbl-bling">Bling</span>
-  &nbsp;
-  <div class="dot wait" id="dot-ml"></div><span class="dlbl" id="lbl-ml">ML</span>
-  <button class="btn-reload" onclick="recarregar()">⟳ Atualizar</button>
-  <button class="btn-reload" onclick="abrirCfg()">⚙️ Tokens</button>
-</header>
-
-<!-- VIEW TABS -->
-<div class="view-tabs">
-  <div class="vtab a" onclick="setView('dashboard')" id="vtab-dash">📊 Dashboard</div>
-  <div class="vtab" onclick="setView('anuncios')" id="vtab-anunc">🏷️ Anúncios ML</div>
-  <div class="vtab" onclick="setView('financeiro')" id="vtab-fin">💰 Financeiro</div>
-  <div class="vtab" onclick="setView('conciliacao')" id="vtab-conc">🏦 Conciliação MP</div>
-  <div class="vtab" onclick="setView('precos')" id="vtab-prec">🏷️ Gestão Preços</div>
-  <div class="vtab" onclick="setView('ads')" id="vtab-ads">📣 ADS + Margem</div>
-  <div class="vtab" onclick="setView('pedidos')" id="vtab-ped">📦 Pedidos</div>
-  <div class="vtab" onclick="setView('difal')" id="vtab-difal">🗺️ DIFAL</div>
-  <div class="vtab" onclick="setView('promocoes')" id="vtab-prom">🎁 Promoções ML</div>
-  <div class="vtab" onclick="setView('difal')" id="vtab-difal">🗺️ DIFAL</div>
-  <div class="vtab" onclick="setView('perguntas')" id="vtab-perg">❓ Perguntas</div>
-  <div class="vtab" onclick="setView('promocoes')" id="vtab-prom">🎯 Promoções ML</div>
-  <div class="vtab" onclick="setView('difal')" id="vtab-difal">🗺️ DIFAL</div>
-  <div class="vtab" onclick="setView('perguntas')" id="vtab-perg">💬 Perguntas</div>
-</div>
-
-<!-- PERIOD BAR -->
-<div class="period-bar" id="period-bar">
-  <div class="ptab a" onclick="setPeriod('today')">Hoje</div>
-  <div class="ptab" onclick="setPeriod('yesterday')">Ontem</div>
-  <div class="ptab" onclick="setPeriod('7d')">7 dias</div>
-  <div class="ptab" onclick="setPeriod('30d')">30 dias</div>
-  <div class="ptab" onclick="setPeriod('mes')">Mês atual</div>
-  <div class="ptab" onclick="setPeriod('mes-ant')">Mês anterior</div>
-  <div class="spacer"></div>
-  <span class="last-update" id="last-update"></span>
-</div>
-
-<!-- ANÚNCIOS ML VIEW -->
-<div id="view-anuncios" style="display:none;padding:14px 18px;flex-direction:column;gap:10px">
-
-  <!-- KPIs anúncios -->
-  <div class="anunc-kpis" id="anunc-kpis">
-    <div class="kpi"><div class="kl">Total Anúncios</div><div class="kv" id="an-total">—</div></div>
-    <div class="kpi"><div class="kl">Margem Negativa</div><div class="kv" style="color:var(--vermelho)" id="an-neg">—</div></div>
-    <div class="kpi"><div class="kl">Abaixo 20%</div><div class="kv" style="color:var(--amarelo)" id="an-baixo">—</div></div>
-    <div class="kpi"><div class="kl">Acima 20% (promo ok)</div><div class="kv" style="color:var(--verde)" id="an-promo">—</div></div>
-    <div class="kpi"><div class="kl">Vendas hoje</div><div class="kv" id="an-vendas">—</div></div>
-    <div class="kpi"><div class="kl">Fat. hoje</div><div class="kv" id="an-fat">—</div></div>
-  </div>
-
-  <!-- Filtros -->
-  <div class="anunc-filters">
-    <input type="text" id="anunc-search" placeholder="Buscar produto ou MLB..." style="width:240px" oninput="filtrarAnuncios()">
-    <button class="filter-btn a" id="f-todos" onclick="setFiltro('todos')">Todos</button>
-    <button class="filter-btn" id="f-alerta" onclick="setFiltro('alerta')">⚠️ Alerta margem</button>
-    <button class="filter-btn" id="f-promo" onclick="setFiltro('promo')">🏷️ Pode dar desconto</button>
-    <button class="filter-btn" id="f-fora" onclick="setFiltro('fora')">📊 Preço fora</button>
-    <button class="filter-btn" onclick="carregarAnuncios()" style="margin-left:auto">⟳ Atualizar</button>
-  </div>
-
-  <!-- Tabela -->
-  <div class="anunc-table-wrap">
-    <table class="anunc-table" id="anunc-table">
-      <thead>
-        <tr>
-          <th onclick="sortAnunc('mlb')">MLB ↕</th>
-          <th onclick="sortAnunc('titulo')">Produto ↕</th>
-          <th onclick="sortAnunc('vendas_hoje')" class="num">Vendas hoje ↕</th>
-          <th onclick="sortAnunc('preco_atual')" class="num">Preço atual ↕</th>
-          <th onclick="sortAnunc('cmv')" class="num">CMV ↕</th>
-          <th onclick="sortAnunc('margem_atual')" class="num">Margem atual ↕</th>
-          <th onclick="sortAnunc('preco_sugerido')" class="num">Preço sugerido ↕</th>
-          <th class="num">Δ Preço</th>
-          <th>Status</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody id="anunc-body">
-        <tr><td colspan="10" class="empty"><span class="spin"></span> Clique em "Atualizar" para carregar anúncios</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- FINANCEIRO VIEW -->
-<div id="view-financeiro" style="display:none;padding:14px 18px;flex-direction:column;gap:0">
-
-  <!-- KPIs Financeiros -->
-  <div class="fin-grid" id="fin-kpis">
-    <div class="fin-kpi"><div class="fk-l">A Receber (30d)</div><div class="fk-v" id="fk-receber" style="color:#166534">—</div><div class="fk-d">Vendas ML + Shopee</div></div>
-    <div class="fin-kpi"><div class="fk-l">A Pagar (30d)</div><div class="fk-v" id="fk-pagar" style="color:#dc2626">—</div><div class="fk-d">Fornecedores</div></div>
-    <div class="fin-kpi"><div class="fk-l">Vence Hoje</div><div class="fk-v" id="fk-hoje" style="color:#d97706">—</div><div class="fk-d">Boletos do dia</div></div>
-    <div class="fin-kpi"><div class="fk-l">Vence Semana</div><div class="fk-v" id="fk-semana" style="color:#d97706">—</div><div class="fk-d">Próximos 7 dias</div></div>
-    <div class="fin-kpi"><div class="fk-l">Saldo Previsto</div><div class="fk-v" id="fk-saldo">—</div><div class="fk-d">Receber − Pagar</div></div>
-    <div class="fin-kpi"><div class="fk-l">Repasse ML (méd)</div><div class="fk-v" id="fk-repasse" style="color:#1d4ed8">—</div><div class="fk-d">Últimos 30 dias</div></div>
-  </div>
-
-  <!-- Gráfico fluxo + Config -->
-  <div class="fin-2col" style="margin-bottom:12px">
-    <div class="fcard" style="grid-column:1/-1">
-      <div class="fcard-head">
-        <h3>Fluxo de caixa — próximos 30 dias</h3>
-        <div style="display:flex;gap:6px;align-items:center">
-          <span style="font-size:10px;color:var(--muted)">Prazo repasse ML:</span>
-          <input type="number" id="prazo-repasse" value="15" min="1" max="60" style="width:45px;border:1px solid var(--borda);border-radius:4px;padding:3px 5px;font-size:11px" oninput="recalcFluxo()">
-          <span style="font-size:10px;color:var(--muted)">dias</span>
-          <input type="file" id="xlsx-boletos" accept=".xlsx,.xlsm" style="display:none" onchange="carregarBoletos(this)">
-          <button class="btn-fin" onclick="document.getElementById('xlsx-boletos').click()">📂 Importar boletos</button>
-        </div>
-      </div>
-      <div class="fcard-body"><div class="chart-fin"><canvas id="chart-fluxo"></canvas></div></div>
-    </div>
-  </div>
-
-  <div class="fin-2col">
-    <!-- Contas a receber -->
-    <div class="fcard">
-      <div class="fcard-head"><h3>💰 A Receber — Previsão ML</h3><span style="font-size:10px;color:var(--muted)" id="receber-lbl"></span></div>
-      <div class="fcard-body" style="padding:0">
-        <table class="ftbl">
-          <thead><tr><th>Data venda</th><th>Previsão repasse</th><th class="num">Valor</th><th>Status</th></tr></thead>
-          <tbody id="tbody-receber"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Carregue o painel principal primeiro</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Contas a pagar -->
-    <div class="fcard">
-      <div class="fcard-head"><h3>📋 A Pagar — Boletos Fornecedores</h3><span style="font-size:10px;color:var(--muted)" id="pagar-lbl"></span></div>
-      <div class="fcard-body" style="padding:0">
-        <table class="ftbl">
-          <thead><tr><th>Fornecedor</th><th>NF</th><th>Vencimento</th><th class="num">Valor</th><th>Status</th></tr></thead>
-          <tbody id="tbody-pagar"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">Importe a planilha de boletos</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div class="fin-2col">
-    <!-- Gastos por fornecedor -->
-    <div class="fcard">
-      <div class="fcard-head"><h3>🏭 Compras por Fornecedor (mês)</h3></div>
-      <div class="fcard-body" style="padding:0">
-        <table class="ftbl">
-          <thead><tr><th>Fornecedor</th><th class="num">NFs</th><th class="num">Total</th><th class="num">A pagar</th></tr></thead>
-          <tbody id="tbody-fornec"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Importe a planilha</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Lançamentos manuais -->
-    <div class="fcard">
-      <div class="fcard-head"><h3>✏️ Lançamentos do dia a dia</h3></div>
-      <div class="fcard-body">
-        <div class="fin-form">
-          <input type="date" id="lanc-data">
-          <input type="text" id="lanc-desc" placeholder="Descrição">
-          <input type="number" id="lanc-valor" placeholder="Valor" step="0.01">
-          <select id="lanc-tipo"><option value="saida">Saída</option><option value="entrada">Entrada</option><option value="fixo">Fixo mensal</option></select>
-        </div>
-        <div style="display:flex;gap:6px;margin-bottom:10px">
-          <input type="text" id="lanc-cat" placeholder="Categoria (ex: Aluguel, Energia, Funcionário)" style="flex:1;border:1px solid var(--borda);border-radius:5px;padding:5px 8px;font-size:11px">
-          <button class="btn-fin" onclick="addLancamento()">+ Adicionar</button>
-        </div>
-        <table class="ftbl">
-          <thead><tr><th>Data</th><th>Descrição</th><th>Cat.</th><th class="num">Valor</th><th></th></tr></thead>
-          <tbody id="tbody-lanc"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<!-- PEDIDOS VIEW -->
-<div id="view-pedidos" style="display:none;padding:14px 18px;flex-direction:column;gap:0">
-
-  <!-- KPIs -->
-  <div class="ped-kpis" id="ped-kpis">
-    <div class="ped-kpi"><div class="pkl">Total pedidos</div><div class="pkv" id="pk-total">—</div></div>
-    <div class="ped-kpi"><div class="pkl">Faturamento</div><div class="pkv" id="pk-fat">—</div></div>
-    <div class="ped-kpi"><div class="pkl">Lucro total</div><div class="pkv" id="pk-lucro">—</div></div>
-    <div class="ped-kpi"><div class="pkl">Margem média</div><div class="pkv" id="pk-mg">—</div></div>
-    <div class="ped-kpi"><div class="pkl">DIFAL total pago</div><div class="pkv" id="pk-difal" style="color:#d97706">—</div></div>
-    <div class="ped-kpi"><div class="pkl">Frete total pago</div><div class="pkv" id="pk-frete">—</div></div>
-    <div class="ped-kpi"><div class="pkl">Sem CMV</div><div class="pkv" id="pk-nocmv" style="color:#9ca3af">—</div></div>
-    <div class="ped-kpi"><div class="pkl">Ticket médio</div><div class="pkv" id="pk-tick">—</div></div>
-  </div>
-
-  <!-- Filtros -->
-  <div class="ped-filters">
-    <input type="text" id="ped-search" placeholder="Buscar pedido, SKU ou produto..." oninput="filtrarPedidos()" style="width:240px">
-    <select id="ped-uf" onchange="filtrarPedidos()" style="border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:11px;outline:none">
-      <option value="">Todos os estados</option>
-    </select>
-    <select id="ped-status" onchange="filtrarPedidos()" style="border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:11px;outline:none">
-      <option value="">Todos os status</option>
-      <option value="paid">Pago</option>
-      <option value="shipped">Enviado</option>
-      <option value="delivered">Entregue</option>
-    </select>
-    <button class="filt-btn a" id="pf-todos" onclick="setPedFiltro('todos')">Todos</button>
-    <button class="filt-btn" id="pf-mg-neg" onclick="setPedFiltro('neg')">⛔ Margem negativa</button>
-    <button class="filt-btn" id="pf-mg-low" onclick="setPedFiltro('low')">⚠️ Abaixo 15%</button>
-    <button class="filt-btn" id="pf-ok" onclick="setPedFiltro('ok')">✅ Margem OK</button>
-    <button class="btn-fin" onclick="exportarPedidos()" style="margin-left:auto">⬇ Exportar CSV</button>
-  </div>
-
-  <!-- Tabela -->
-  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden">
-    <table class="ped-tbl">
-      <thead>
-        <tr>
-          <th onclick="sortPed('id')">Pedido ↕</th>
-          <th onclick="sortPed('data')">Data ↕</th>
-          <th onclick="sortPed('sku')">SKU</th>
-          <th>Produto</th>
-          <th>UF</th>
-          <th class="num" onclick="sortPed('preco')">Preço ↕</th>
-          <th class="num" onclick="sortPed('cmv')">CMV ↕</th>
-          <th class="num" onclick="sortPed('taxa_r')">Taxa ML ↕</th>
-          <th class="num" onclick="sortPed('frete_un')">Frete ↕</th>
-          <th class="num" onclick="sortPed('difal')">DIFAL ↕</th>
-          <th class="num" onclick="sortPed('pis_r')">PIS+COF ↕</th>
-          <th class="num" onclick="sortPed('cred_taxa')">Créd. taxa ↕</th>
-          <th class="num" onclick="sortPed('lucro')">Lucro ↕</th>
-          <th class="num" onclick="sortPed('margem')">Margem ↕</th>
-        </tr>
-      </thead>
-      <tbody id="ped-tbody">
-        <tr><td colspan="14" style="text-align:center;padding:30px;color:var(--muted)">Carregue o painel principal primeiro (período desejado)</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- ADS + MARGEM PÓS-ADS VIEW -->
-<div id="view-ads" style="display:none;padding:14px 18px;flex-direction:column;gap:12px">
-
-  <!-- Config período -->
-  <div class="fcard">
-    <div class="fcard-body" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <label style="font-size:11px;font-weight:700">📣 ADS Mercado Livre — Métricas e Margem Pós-ADS</label>
-      <input type="date" id="ads-de" style="border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:12px;outline:none">
-      <span style="font-size:11px">até</span>
-      <input type="date" id="ads-ate" style="border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:12px;outline:none">
-      <button class="btn-fin" onclick="carregarADS()">🔍 Carregar ADS</button>
-      <button class="btn-fin" style="background:#16a34a" onclick="carregarPedidosComADS()">📦 Cruzar com Pedidos</button>
-      <button class="btn-fin" style="background:#6b7280" onclick="exportarADS()">⬇ Exportar</button>
-      <span id="ads-status" style="font-size:11px;color:var(--muted)"></span>
-    </div>
-  </div>
-
-  <!-- KPIs ADS -->
-  <div class="ads-kpis">
-    <div class="ads-kpi"><div class="akl">Gasto Total ADS</div><div class="akv" id="ak-gasto" style="color:#dc2626">—</div><div class="akd">No período</div></div>
-    <div class="ads-kpi"><div class="akl">Faturamento via ADS</div><div class="akv" id="ak-fat-ads" style="color:#16a34a">—</div><div class="akd">Vendas atribuídas</div></div>
-    <div class="ads-kpi"><div class="akl">ROAS</div><div class="akv" id="ak-roas">—</div><div class="akd">Retorno por R$1 investido</div></div>
-    <div class="ads-kpi"><div class="akl">% Gasto / Fatur.</div><div class="akv" id="ak-pct-ads">—</div><div class="akd">Custo ADS sobre receita</div></div>
-    <div class="ads-kpi"><div class="akl">Cliques</div><div class="akv" id="ak-cliques">—</div><div class="akd">Total de cliques</div></div>
-    <div class="ads-kpi"><div class="akl">Impressões</div><div class="akv" id="ak-impress">—</div><div class="akd">Visualizações</div></div>
-    <div class="ads-kpi"><div class="akl">CTR</div><div class="akv" id="ak-ctr">—</div><div class="akd">Taxa de clique</div></div>
-    <div class="ads-kpi"><div class="akl">Margem Média pós-ADS</div><div class="akv" id="ak-mg-ads">—</div><div class="akd">Com custo ADS descontado</div></div>
-  </div>
-
-  <!-- Gráficos -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-    <div class="fcard">
-      <div class="fcard-head"><h3>Gasto ADS vs Faturamento diário</h3></div>
-      <div class="fcard-body"><div style="height:180px"><canvas id="chart-ads-fat"></canvas></div></div>
-    </div>
-    <div class="fcard">
-      <div class="fcard-head"><h3>ROAS por anúncio (top 15)</h3></div>
-      <div class="fcard-body"><div style="height:180px"><canvas id="chart-roas"></canvas></div></div>
-    </div>
-  </div>
-
-  <!-- Tabela por anúncio -->
-  <div class="fcard">
-    <div class="fcard-head">
-      <h3>📊 Métricas por anúncio — Margem pós-ADS</h3>
-      <span style="font-size:10px;color:var(--muted)">Margem = (Receita - CMV - Taxas - Frete - DIFAL - Gasto ADS) / Receita</span>
-    </div>
-    <div class="fcard-body" style="padding:0;max-height:450px;overflow-y:auto">
-      <table class="ads-tbl">
-        <thead>
-          <tr>
-            <th>SKU / MLB</th>
-            <th>Produto</th>
-            <th class="num">Impressões</th>
-            <th class="num">Cliques</th>
-            <th class="num">CTR</th>
-            <th class="num">Vendas</th>
-            <th class="num">Receita</th>
-            <th class="num">Gasto ADS</th>
-            <th class="num">% ADS</th>
-            <th class="num">ROAS</th>
-            <th class="num">Margem s/ ADS</th>
-            <th class="num">Margem c/ ADS</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="ads-tbody">
-          <tr><td colspan="13" style="text-align:center;padding:30px;color:var(--muted)">
-            Clique em "Carregar ADS" para buscar métricas
-          </td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Pedidos com ADS -->
-  <div class="fcard" id="ads-pedidos-card" style="display:none">
-    <div class="fcard-head"><h3>📦 Pedidos com Margem Real pós-ADS</h3></div>
-    <div class="fcard-body" style="padding:0;max-height:350px;overflow-y:auto">
-      <table class="ads-tbl">
-        <thead>
-          <tr>
-            <th>Pedido</th><th>Data</th><th>Produto</th><th>UF</th>
-            <th class="num">Preço</th><th class="num">CMV</th>
-            <th class="num">Taxa ML</th><th class="num">Frete</th>
-            <th class="num">DIFAL</th><th class="num">ADS est.</th>
-            <th class="num">Lucro</th><th class="num">Margem</th>
-          </tr>
-        </thead>
-        <tbody id="ads-pedidos-tbody"></tbody>
-      </table>
-    </div>
-  </div>
-
-</div>
-
-<!-- PROMOÇÕES ML VIEW -->
-<div id="view-promocoes" style="display:none;padding:14px 18px;flex-direction:column;gap:10px">
-  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-    <div style="flex:1">
-      <div style="font-size:12px;font-weight:700;color:var(--azul)">🎁 Promoções ML — Viabilidade por Margem</div>
-      <div style="font-size:11px;color:var(--muted)">Puxe as promoções disponíveis e veja quais são viáveis com sua margem mínima</div>
-    </div>
-    <button class="btn-fin" onclick="carregarPromocoes()">🔍 Carregar promoções</button>
-    <span id="prom-status" style="font-size:11px;color:var(--muted)">Clique para carregar</span>
-  </div>
-  <div class="prom-kpis">
-    <div class="prom-kpi"><div class="pl">Total disponíveis</div><div class="pv" id="pm-total">—</div></div>
-    <div class="prom-kpi"><div class="pl">Viáveis ✅</div><div class="pv" id="pm-viaveis" style="color:#16a34a">—</div></div>
-    <div class="prom-kpi"><div class="pl">Atenção ⚠️</div><div class="pv" id="pm-atencao" style="color:#d97706">—</div></div>
-    <div class="prom-kpi"><div class="pl">Inviáveis ❌</div><div class="pv" id="pm-inviaveis" style="color:#dc2626">—</div></div>
-    <div class="prom-kpi"><div class="pl">Bônus ML médio</div><div class="pv" id="pm-bonus">—</div></div>
-  </div>
-  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden">
-    <table class="prom-tbl">
-      <thead><tr>
-        <th>MLB</th><th>Produto</th><th>Promoção</th>
-        <th class="num">Preço atual</th><th class="num">Bônus ML</th>
-        <th class="num">Meu desc.</th><th class="num">Preço final</th>
-        <th class="num">CMV</th><th class="num">Margem c/ promoção</th>
-        <th>Viável?</th><th>Participar</th>
-      </tr></thead>
-      <tbody id="prom-tbody"><tr><td colspan="11" style="text-align:center;padding:30px;color:var(--muted)">Clique em "Carregar promoções"</td></tr></tbody>
-    </table>
-  </div>
-</div>
-
-<!-- DIFAL VIEW -->
-<div id="view-difal" style="display:none;padding:14px 18px;flex-direction:column;gap:10px">
-  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 14px;display:flex;align-items:center;gap:12px">
-    <div style="flex:1">
-      <div style="font-size:12px;font-weight:700;color:var(--azul)">🗺️ Painel DIFAL — Análise Fiscal por Estado</div>
-      <div style="font-size:11px;color:var(--muted)">Panorama real de onde vendemos, quanto DIFAL pagamos e qual a margem por destino</div>
-    </div>
-    <select id="difal-periodo" onchange="renderDifal()" style="border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:11px">
-      <option value="30">Últimos 30 dias</option>
-      <option value="60">Últimos 60 dias</option>
-      <option value="90">Últimos 90 dias</option>
-    </select>
-  </div>
-  <div class="difal-map" id="difal-map"></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-    <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden">
-      <div style="padding:9px 13px;border-bottom:1px solid #f3f4f6;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase">Ranking por faturamento</div>
-      <table class="prom-tbl"><thead><tr><th>UF</th><th>Tipo</th><th class="num">Vendas</th><th class="num">Faturamento</th><th class="num">DIFAL est.</th><th class="num">DIFAL %</th><th class="num">Margem</th></tr></thead>
-      <tbody id="difal-tbody"></tbody></table>
-    </div>
-    <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);padding:12px">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:10px">DIFAL médio ponderado</div>
-      <div style="height:200px"><canvas id="chart-difal"></canvas></div>
-      <div id="difal-resumo" style="margin-top:10px;font-size:11px"></div>
-    </div>
-  </div>
-</div>
-
-<!-- PERGUNTAS VIEW -->
-<div id="view-perguntas" style="display:none;padding:14px 18px;flex-direction:column;gap:10px">
-  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-    <div style="flex:1">
-      <div style="font-size:12px;font-weight:700;color:var(--azul)">❓ Perguntas ML — Resposta com IA</div>
-      <div style="font-size:11px;color:var(--muted)">A IA lê a pergunta, cruza com os dados do produto e sugere a resposta. Você revisa e envia.</div>
-    </div>
-    <input type="password" id="perg-apikey" placeholder="API Key Claude (sk-ant-...)"
-      style="width:220px;border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:11px"
-      oninput="localStorage.setItem('fava_claude_key',this.value)">
-    <button class="btn-fin" onclick="carregarPerguntas()">🔍 Carregar perguntas</button>
-    <span id="perg-status" style="font-size:11px;color:var(--muted)"></span>
-  </div>
-  <div id="perg-lista"><div style="text-align:center;padding:40px;color:var(--muted)">Clique em "Carregar perguntas"</div></div>
-</div>
-
-<!-- DIFAL VIEW -->
-<div id="view-difal" style="display:none;padding:14px 18px;flex-direction:column;gap:12px">
-
-  <!-- KPIs -->
-  <div class="difal-grid">
-    <div class="difal-kpi"><div class="dl">Total DIFAL estimado</div><div class="dv" id="df-total" style="color:#d97706">—</div><div style="font-size:10px;color:var(--muted)">Período selecionado</div></div>
-    <div class="difal-kpi"><div class="dl">Vendas fora PR</div><div class="dv" id="df-fora">—</div><div style="font-size:10px;color:var(--muted)">% do total</div></div>
-    <div class="difal-kpi"><div class="dl">Vendas para PF</div><div class="dv" id="df-pf">—</div><div style="font-size:10px;color:var(--muted)">Sujeitas a DIFAL</div></div>
-    <div class="difal-kpi"><div class="dl">Estado que mais compra</div><div class="dv" id="df-top-uf" style="color:var(--azul)">—</div><div style="font-size:10px;color:var(--muted)">Por faturamento</div></div>
-    <div class="difal-kpi"><div class="dl">DIFAL médio/pedido</div><div class="dv" id="df-medio">—</div><div style="font-size:10px;color:var(--muted)">Estimativa</div></div>
-    <div class="difal-kpi"><div class="dl">% DIFAL s/ faturamento</div><div class="dv" id="df-pct">—</div><div style="font-size:10px;color:var(--muted)">Impacto real</div></div>
-  </div>
-
-  <div class="uf-grid">
-    <!-- Tabela por estado -->
-    <div class="fcard">
-      <div class="fcard-head"><h3>📊 DIFAL por Estado de Destino</h3></div>
-      <div class="fcard-body" style="padding:0;max-height:420px;overflow-y:auto">
-        <table class="ftbl">
-          <thead>
-            <tr>
-              <th>UF</th>
-              <th class="num">Pedidos</th>
-              <th class="num">Faturamento</th>
-              <th class="num">DIFAL estimado</th>
-              <th class="num">% DIFAL</th>
-              <th class="num">Alíq. DIFAL</th>
-            </tr>
-          </thead>
-          <tbody id="difal-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Gráfico + tipo comprador -->
-    <div style="display:flex;flex-direction:column;gap:12px">
-      <div class="fcard">
-        <div class="fcard-head"><h3>🥧 Faturamento por Estado</h3></div>
-        <div class="fcard-body"><div style="height:200px"><canvas id="chart-difal-uf"></canvas></div></div>
-      </div>
-      <div class="fcard">
-        <div class="fcard-head"><h3>👤 Tipo de Comprador</h3></div>
-        <div class="fcard-body">
-          <table class="ftbl">
-            <thead><tr><th>Tipo</th><th class="num">Pedidos</th><th class="num">Fat.</th><th class="num">DIFAL est.</th></tr></thead>
-            <tbody id="difal-tipo-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Estratégia -->
-  <div class="fcard">
-    <div class="fcard-head"><h3>💡 Estratégia — Media de DIFAL para Precificação</h3></div>
-    <div class="fcard-body">
-      <div id="difal-estrategia" style="font-size:12px;line-height:1.8;color:#374151"></div>
-    </div>
-  </div>
-
-</div>
-
-<!-- GESTÃO DE PREÇOS VIEW -->
-<div id="view-precos" style="display:none;padding:14px 18px;flex-direction:column;gap:0">
-
-  <!-- Upload planilha ML -->
-  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-    <div style="flex:1;min-width:180px">
-      <div style="font-size:12px;font-weight:700;color:var(--azul)">🏷️ Gestão de Preços e Descontos ML</div>
-      <div style="font-size:11px;color:var(--muted)">Importe a planilha de promoções do ML → simule descontos → aplique em massa</div>
-    </div>
-    <input type="file" id="gp-xlsx" accept=".xlsx" style="display:none" onchange="carregarPlanilhaGP(this)">
-    <button class="btn-fin" onclick="document.getElementById('gp-xlsx').click()">📂 Importar planilha ML</button>
-    <span id="gp-status" style="font-size:11px;color:var(--muted)">Nenhuma planilha carregada</span>
-    <button class="apply-all-btn" onclick="aplicarTodosSelecionados()" id="btn-aplicar-todos" style="display:none">⚡ Aplicar selecionados no ML</button>
-  </div>
-
-  <!-- KPIs -->
-  <div class="gp-kpis" id="gp-kpis" style="display:none">
-    <div class="gp-kpi"><div class="gkl">Total anúncios</div><div class="gkv" id="gk-total">—</div></div>
-    <div class="gp-kpi"><div class="gkl">Margem OK (≥15%)</div><div class="gkv" id="gk-ok" style="color:#16a34a">—</div></div>
-    <div class="gp-kpi"><div class="gkl">Atenção (10-15%)</div><div class="gkv" id="gk-warn" style="color:#d97706">—</div></div>
-    <div class="gp-kpi"><div class="gkl">Abaixo do mínimo</div><div class="gkv" id="gk-err" style="color:#dc2626">—</div></div>
-    <div class="gp-kpi"><div class="gkl">Sem CMV</div><div class="gkv" id="gk-nocmv" style="color:#9ca3af">—</div></div>
-    <div class="gp-kpi"><div class="gkl">Desconto médio</div><div class="gkv" id="gk-desc">—</div></div>
-  </div>
-
-  <!-- Parâmetros globais -->
-  <div class="gp-toolbar" id="gp-toolbar" style="display:none">
-    <label>Margem mínima:</label>
-    <input type="number" id="gp-mg-min" value="15" min="0" max="50" step="1" oninput="recalcGP()">
-    <span style="font-size:11px;color:var(--muted)">%</span>
-
-    <div style="width:1px;height:20px;background:var(--borda);margin:0 4px"></div>
-
-    <label>DIFAL médio:</label>
-    <input type="number" id="gp-difal" value="8.5" min="0" max="20" step="0.5" oninput="recalcGP()">
-    <span style="font-size:11px;color:var(--muted)">%</span>
-
-    <label>% fora PR:</label>
-    <input type="number" id="gp-fora-pr" value="70" min="0" max="100" step="5" oninput="recalcGP()">
-    <span style="font-size:11px;color:var(--muted)">%</span>
-
-    <label>% PF:</label>
-    <input type="number" id="gp-pf" value="80" min="0" max="100" step="5" oninput="recalcGP()">
-    <span style="font-size:11px;color:var(--muted)">%</span>
-
-    <div style="width:1px;height:20px;background:var(--borda);margin:0 4px"></div>
-
-    <label>Desc. global:</label>
-    <input type="number" id="gp-desc-global" value="" min="0" max="80" step="1" placeholder="Ex: 28">
-    <span style="font-size:11px;color:var(--muted)">%</span>
-    <button class="btn-fin" onclick="aplicarDescGlobal()" style="padding:4px 10px;font-size:11px">Aplicar a todos</button>
-
-    <div style="margin-left:auto;display:flex;gap:6px">
-      <input type="file" id="cmv-xlsx" accept=".xlsx,.xlsm" style="display:none" onchange="carregarCMVPlanilha(this)">
-      <button class="btn-fin" onclick="document.getElementById('cmv-xlsx').click()"
-        style="background:#6b7280" title="Carrega CMV real do FAVA_ESTOQUE_V5.xlsx">
-        📊 Carregar CMV da planilha
-      </button>
-      <button class="btn-fin" onclick="exportarGP()" style="background:#374151">⬇ Exportar</button>
-    </div>
-  </div>
-
-  <!-- Promoções ML com Bonus -->
-  <div class="fcard" id="gp-promos" style="display:none;margin-bottom:10px">
-    <div class="fcard-head">
-      <h3>🎯 Promoções ML — Bonus do ML + sua parte</h3>
-      <div style="display:flex;gap:6px;align-items:center">
-        <button class="btn-fin" onclick="carregarPromocoesML()" id="btn-load-promos">🔍 Buscar promoções disponíveis</button>
-        <span id="promo-status" style="font-size:11px;color:var(--muted)"></span>
-      </div>
-    </div>
-    <div class="fcard-body" style="padding:0">
-      <table class="gp-tbl" id="promo-tbl" style="display:none">
-        <thead>
-          <tr>
-            <th>Anúncio</th>
-            <th>Promoção</th>
-            <th class="num">Preço atual</th>
-            <th class="num">ML paga</th>
-            <th class="num">Você paga</th>
-            <th class="num">Preço final</th>
-            <th class="num">CMV</th>
-            <th class="num">Margem s/ promo</th>
-            <th class="num">Margem c/ promo</th>
-            <th class="num">Viável?</th>
-            <th>Ação</th>
-          </tr>
-        </thead>
-        <tbody id="promo-tbody"></tbody>
-      </table>
-      <div id="promo-empty" style="text-align:center;padding:20px;color:var(--muted);font-size:12px">
-        Clique em "Buscar promoções disponíveis" para ver as promoções que o ML oferece com bonus
-      </div>
-    </div>
-  </div>
-
-  <!-- Filtros -->
-  <div class="gp-filters" id="gp-filters" style="display:none">
-    <input type="text" id="gp-search" placeholder="Buscar produto ou MLB..." oninput="filtrarGP()">
-    <button class="filt-btn a" id="gf-todos" onclick="setFiltroGP('todos')">Todos</button>
-    <button class="filt-btn" id="gf-err" onclick="setFiltroGP('err')">⚠️ Abaixo mínimo</button>
-    <button class="filt-btn" id="gf-warn" onclick="setFiltroGP('warn')">🟡 Atenção</button>
-    <button class="filt-btn" id="gf-ok" onclick="setFiltroGP('ok')">✅ OK</button>
-    <button class="filt-btn" id="gf-nocmv" onclick="setFiltroGP('nocmv')">❓ Sem CMV</button>
-    <label style="margin-left:auto;font-size:11px;display:flex;align-items:center;gap:5px">
-      <input type="checkbox" id="gp-sel-all" onchange="toggleSelecionarTodos()"> Selecionar todos visíveis
-    </label>
-  </div>
-
-  <!-- Tabela -->
-  <div class="gp-table-wrap" id="gp-table-wrap" style="display:none">
-    <table class="gp-tbl">
-      <thead>
-        <tr>
-          <th style="width:30px"><input type="checkbox" id="chk-all-head" onchange="toggleSelecionarTodos()"></th>
-          <th onclick="sortGP('sku')">SKU ↕</th>
-          <th onclick="sortGP('titulo')">Produto ↕</th>
-          <th onclick="sortGP('preco_orig')" class="num">Preço atual ↕</th>
-          <th onclick="sortGP('cmv')" class="num">CMV ↕</th>
-          <th onclick="sortGP('preco_min')" class="num">Preço mín ↕</th>
-          <th class="num" title="Desconto máximo sugerido mantendo margem mínima da categoria">💡 Desc. sugerido</th>
-          <th class="num">Desconto %</th>
-          <th onclick="sortGP('preco_final')" class="num">Preço final ↕</th>
-          <th onclick="sortGP('lucro')" class="num">Lucro R$ ↕</th>
-          <th onclick="sortGP('margem')" class="num">Margem % ↕</th>
-          <th class="num">Taxa ML</th>
-          <th class="num">Frete</th>
-          <th class="num">DIFAL est.</th>
-          <th>Status</th>
-          <th>Ação</th>
-        </tr>
-      </thead>
-      <tbody id="gp-tbody"></tbody>
-    </table>
-  </div>
-
-</div>
-
-<!-- CONCILIAÇÃO MP VIEW -->
-<div id="view-conciliacao" style="display:none;padding:14px 18px;flex-direction:column;gap:12px">
-
-  <!-- Config token MP -->
-  <div class="fcard">
-    <div class="fcard-body" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <div style="flex:1;min-width:200px">
-        <div style="font-size:12px;font-weight:700;color:var(--azul)">🏦 Mercado Pago — Conciliação Financeira</div>
-        <div style="font-size:11px;color:var(--muted)">Saldo real, extrato e conciliação pedido a pedido</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <input type="password" id="tk-mp" placeholder="Access Token MP (APP_USR-...)"
-          style="width:260px;border:1px solid var(--borda);border-radius:5px;padding:6px 10px;font-size:11px;outline:none">
-        <button class="btn-fin" onclick="salvarTkMP()">Salvar e carregar</button>
-      </div>
-      <div class="dot wait" id="dot-mp" style="width:8px;height:8px;border-radius:50%;flex-shrink:0"></div>
-      <span id="lbl-mp" style="font-size:11px;color:var(--muted)">MP: não conectado</span>
-    </div>
-  </div>
-
-  <!-- KPIs saldo MP -->
-  <div class="mp-saldo-row">
-    <div class="mp-saldo"><div class="sl">Saldo Disponível</div><div class="sv" id="mp-disp" style="color:#16a34a">—</div><div style="font-size:10px;color:var(--muted)">Pode sacar agora</div></div>
-    <div class="mp-saldo"><div class="sl">Saldo Pendente</div><div class="sv" id="mp-pend" style="color:#d97706">—</div><div style="font-size:10px;color:var(--muted)">Aguardando liberação</div></div>
-    <div class="mp-saldo"><div class="sl">Total na Conta</div><div class="sv" id="mp-total" style="color:var(--azul)">—</div><div style="font-size:10px;color:var(--muted)">Disponível + Pendente</div></div>
-    <div class="mp-saldo"><div class="sl">Entrou Hoje</div><div class="sv" id="mp-hoje" style="color:#16a34a">—</div><div style="font-size:10px;color:var(--muted)">Depósitos do dia</div></div>
-    <div class="mp-saldo"><div class="sl">Estornos (30d)</div><div class="sv" id="mp-estorno" style="color:#dc2626">—</div><div style="font-size:10px;color:var(--muted)">Devoluções</div></div>
-    <div class="mp-saldo"><div class="sl">Diferença</div><div class="sv" id="mp-diff">—</div><div style="font-size:10px;color:var(--muted)">Previsto − Realizado</div></div>
-  </div>
-
-  <!-- Filtros -->
-  <div class="fcard">
-    <div class="fcard-body" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <label style="font-size:11px;font-weight:700">Período:</label>
-      <input type="date" id="conc-de">
-      <span style="font-size:11px">até</span>
-      <input type="date" id="conc-ate">
-      <button class="btn-fin" onclick="carregarConciliacao()">🔍 Carregar</button>
-      <button class="btn-fin" style="background:#16a34a" onclick="exportarConciliacao()">⬇ Exportar CSV</button>
-      <span id="conc-status" style="font-size:11px;color:var(--muted)"></span>
-    </div>
-  </div>
-
-  <!-- Tabelas lado a lado -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-
-    <!-- Movimentações MP -->
-    <div class="fcard">
-      <div class="fcard-head"><h3>💳 Movimentações Mercado Pago</h3><span id="mp-mov-lbl" style="font-size:10px;color:var(--muted)"></span></div>
-      <div class="fcard-body" style="padding:0;max-height:400px;overflow-y:auto">
-        <table class="ftbl">
-          <thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th class="num">Bruto</th><th class="num">Taxa</th><th class="num">Líquido</th></tr></thead>
-          <tbody id="tbody-mp-mov"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">Carregue as movimentações</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Conciliação por pedido -->
-    <div class="fcard">
-      <div class="fcard-head"><h3>🔁 Conciliação por Pedido ML × MP</h3><span id="conc-lbl" style="font-size:10px;color:var(--muted)"></span></div>
-      <div class="fcard-body" style="padding:0;max-height:400px;overflow-y:auto">
-        <table class="ftbl">
-          <thead><tr><th>Pedido ML</th><th>Data</th><th class="num">Bruto ML</th><th class="num">Tx ML</th><th class="num">Frete</th><th class="num">Líq. MP</th><th class="num">Dif.</th></tr></thead>
-          <tbody id="tbody-conc"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">Carregue as movimentações</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- Pendentes de liberação -->
-  <div class="fcard">
-    <div class="fcard-head"><h3>⏳ Pendentes de Liberação</h3><span id="pend-lbl" style="font-size:10px;color:var(--muted)"></span></div>
-    <div class="fcard-body" style="padding:0">
-      <table class="ftbl">
-        <thead><tr><th>Data venda</th><th>Previsão liberação</th><th>Pedido</th><th class="num">Valor bruto</th><th class="num">Valor líquido est.</th><th>Status</th></tr></thead>
-        <tbody id="tbody-pend"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">Carregue as movimentações</td></tr></tbody>
-      </table>
-    </div>
-  </div>
-
-</div>
-
-<!-- PROMOÇÕES ML VIEW -->
-<div id="view-promocoes" style="display:none;padding:14px 18px;flex-direction:column;gap:10px">
-  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-    <div style="flex:1">
-      <div style="font-size:12px;font-weight:700;color:var(--azul)">🎯 Promoções ML — Análise de Viabilidade</div>
-      <div style="font-size:11px;color:var(--muted)">Puxar promoções disponíveis e calcular se é viável participar considerando margem real</div>
-    </div>
-    <button class="btn-fin" onclick="carregarPromocoes()">🔍 Carregar promoções</button>
-    <span id="prom-status" style="font-size:11px;color:var(--muted)"></span>
-  </div>
-
-  <div class="prom-kpis" id="prom-kpis" style="display:none">
-    <div class="prom-kpi"><div class="pkl">Promoções disponíveis</div><div class="pkv" id="prk-total">—</div></div>
-    <div class="prom-kpi"><div class="pkl">Viáveis (≥15%)</div><div class="pkv" id="prk-viavel" style="color:#16a34a">—</div></div>
-    <div class="prom-kpi"><div class="pkl">Atenção (10-15%)</div><div class="pkv" id="prk-atenc" style="color:#d97706">—</div></div>
-    <div class="prom-kpi"><div class="pkl">Inviáveis</div><div class="pkv" id="prk-inviavel" style="color:#dc2626">—</div></div>
-    <div class="prom-kpi"><div class="pkl">Bônus ML médio</div><div class="pkv" id="prk-bonus" style="color:#1d4ed8">—</div></div>
-  </div>
-
-  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden" id="prom-table-wrap" style="display:none">
-    <div style="padding:8px 12px;background:#f8fafc;border-bottom:1px solid var(--borda);display:flex;gap:8px;align-items:center">
-      <input type="text" id="prom-search" placeholder="Buscar produto ou MLB..." oninput="filtrarPromocoes()" style="border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:11px;outline:none;width:220px">
-      <button class="filt-btn a" id="prf-todos" onclick="setFiltroPromo('todos')">Todos</button>
-      <button class="filt-btn" id="prf-viavel" onclick="setFiltroPromo('viavel')">✅ Viável</button>
-      <button class="filt-btn" id="prf-atenc" onclick="setFiltroPromo('atenc')">⚠️ Atenção</button>
-      <button class="filt-btn" id="prf-inv" onclick="setFiltroPromo('inv')">❌ Inviável</button>
-    </div>
-    <table class="prom-tbl">
-      <thead><tr>
-        <th>Produto</th><th>MLB</th><th>SKU</th>
-        <th class="num">Preço atual</th><th class="num">Meu desc.</th>
-        <th class="num">Bônus ML</th><th class="num">Desc. total</th>
-        <th class="num">Preço final</th><th class="num">CMV</th>
-        <th class="num">Margem</th><th class="num">Preço mín</th>
-        <th>Viabilidade</th><th>Ação</th>
-      </tr></thead>
-      <tbody id="prom-tbody"><tr><td colspan="13" style="text-align:center;padding:20px;color:var(--muted)">Clique em "Carregar promoções"</td></tr></tbody>
-    </table>
-  </div>
-</div>
-
-<!-- DIFAL VIEW -->
-<div id="view-difal" style="display:none;padding:14px 18px;flex-direction:column;gap:10px">
-  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 14px">
-    <div style="font-size:12px;font-weight:700;color:var(--azul);margin-bottom:4px">🗺️ Painel DIFAL — Panorama Fiscal por Estado</div>
-    <div style="font-size:11px;color:var(--muted)">Baseado nos pedidos carregados. Mostra onde vendeu mais, DIFAL estimado pago e perfil do comprador.</div>
-  </div>
-
-  <div class="grid2">
-    <div class="fcard">
-      <div class="fcard-head"><h3>Vendas e DIFAL por estado</h3></div>
-      <div class="fcard-body" style="padding:0;max-height:500px;overflow-y:auto">
-        <table class="ftbl">
-          <thead><tr>
-            <th>UF</th><th class="num">Pedidos</th><th class="num">Faturamento</th>
-            <th class="num">DIFAL %</th><th class="num">DIFAL R$ est.</th>
-            <th class="num">% do total</th><th>Perfil</th>
-          </tr></thead>
-          <tbody id="difal-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="fcard">
-      <div class="fcard-head"><h3>Distribuição geográfica</h3></div>
-      <div class="fcard-body">
-        <div class="chart-fin"><canvas id="chart-difal-estados"></canvas></div>
-        <div style="margin-top:12px">
-          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px">RESUMO FISCAL</div>
-          <div id="difal-resumo" style="font-size:11px;line-height:2"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="fcard">
-    <div class="fcard-head"><h3>Média real de DIFAL — use para precificação</h3></div>
-    <div class="fcard-body">
-      <div id="difal-media-box" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px"></div>
-    </div>
-  </div>
-</div>
-
-<!-- PERGUNTAS VIEW -->
-<div id="view-perguntas" style="display:none;padding:14px 18px;flex-direction:column;gap:10px">
-  <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-    <div style="flex:1">
-      <div style="font-size:12px;font-weight:700;color:var(--azul)">💬 Perguntas ML — Resposta com IA</div>
-      <div style="font-size:11px;color:var(--muted)">Puxar perguntas sem resposta → IA sugere resposta baseada no cadastro do produto</div>
-    </div>
-    <input type="password" id="tk-claude-perg" placeholder="API Key Claude (sk-ant-...)"
-      style="width:200px;border:1px solid var(--borda);border-radius:5px;padding:5px 9px;font-size:11px;outline:none">
-    <button class="btn-fin" onclick="salvarKeyPerg()">Salvar key</button>
-    <button class="btn-fin" style="background:#16a34a" onclick="carregarPerguntas()">📥 Carregar perguntas</button>
-    <span id="perg-status" style="font-size:11px;color:var(--muted)"></span>
-  </div>
-
-  <div id="perg-lista"></div>
-</div>
-
-<!-- MODAL ATUALIZAR PREÇO -->
-<div class="modal-preco" id="modal-preco" style="display:none">
-  <div class="box">
-    <h3 id="modal-titulo">Atualizar preço</h3>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:8px" id="modal-info"></div>
-    <input type="number" id="modal-preco-input" step="0.01" min="0" placeholder="Novo preço (R$)">
-    <div style="display:flex;gap:8px">
-      <button class="btn-prim" style="flex:1" onclick="confirmarPreco()">Aplicar no ML</button>
-      <button style="flex:1;padding:9px;border:1px solid var(--borda);border-radius:7px;background:#fff;cursor:pointer;font-size:13px" onclick="fecharModal()">Cancelar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MAIN (dashboard) -->
-<div class="main" id="view-dashboard" style="display:flex;flex-direction:column;gap:12px;padding:14px 18px">
-
-  <!-- KPIs -->
-  <div class="kpi-row" id="kpi-row">
-    <div class="kpi"><div class="kpi-accent">💰</div><div class="kl">Faturamento</div><div class="kv" id="k-fat">—</div><div class="kd" id="k-fat-d"></div></div>
-    <div class="kpi"><div class="kpi-accent">📦</div><div class="kl">Pedidos</div><div class="kv" id="k-ped">—</div><div class="kd" id="k-ped-d"></div></div>
-    <div class="kpi"><div class="kpi-accent">🎯</div><div class="kl">Ticket Médio</div><div class="kv" id="k-tick">—</div><div class="kd" id="k-tick-d"></div></div>
-    <div class="kpi"><div class="kpi-accent">📈</div><div class="kl">Margem Média</div><div class="kv" id="k-mg">—</div><div class="kd" id="k-mg-d"></div></div>
-    <div class="kpi"><div class="kpi-accent">💸</div><div class="kl">Lucro Estimado</div><div class="kv" id="k-lucro">—</div><div class="kd" id="k-lucro-d"></div></div>
-    <div class="kpi"><div class="kpi-accent">🏷️</div><div class="kl">SKUs vendidos</div><div class="kv" id="k-sku">—</div><div class="kd" id="k-sku-d"></div></div>
-  </div>
-
-  <!-- GRÁFICO VENDAS DIÁRIAS + CANAL SPLIT -->
-  <div class="grid2">
-    <div class="card">
-      <div class="card-head"><h3>Faturamento diário</h3><span style="font-size:10px;color:var(--muted)" id="chart-period-lbl"></span></div>
-      <div class="card-body"><div class="chart-wrap"><canvas id="chart-fat"></canvas></div></div>
-    </div>
-    <div class="card">
-      <div class="card-head"><h3>Vendas por canal</h3></div>
-      <div class="card-body">
-        <div class="chart-wrap"><canvas id="chart-canal"></canvas></div>
-        <div id="canal-detalhe" style="margin-top:10px"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- FATURAMENTO MENSAL -->
-  <div class="card">
-    <div class="card-head">
-      <h3>📅 Faturamento por mês</h3>
-      <div style="display:flex;gap:8px;align-items:center">
-        <span style="font-size:10px;color:var(--muted)">Últimos 6 meses</span>
-        <select id="chart-mensal-canal" onchange="renderChartMensal()" style="border:1px solid var(--borda);border-radius:4px;padding:3px 7px;font-size:11px;outline:none">
-          <option value="todos">Todos os canais</option>
-          <option value="ML">Mercado Livre</option>
-          <option value="Shopee">Shopee</option>
-          <option value="Site">Site</option>
-        </select>
-      </div>
-    </div>
-    <div class="card-body">
-      <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px">
-        <div class="chart-wrap"><canvas id="chart-mensal"></canvas></div>
-        <div id="mensal-resumo" style="display:flex;flex-direction:column;gap:6px;justify-content:center"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ADS + MARGEM PÓS-ADS -->
-  <div class="grid2">
-    <div class="card">
-      <div class="card-head"><h3>📣 ADS Mercado Livre</h3><span style="font-size:10px;color:var(--muted)">Investimento vs retorno</span></div>
-      <div class="card-body">
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
-          <div style="background:#f0fdf4;border-radius:7px;padding:9px;text-align:center">
-            <div style="font-size:10px;color:var(--muted);font-weight:700">Vendido via ADS</div>
-            <div style="font-size:17px;font-weight:700;color:#16a34a" id="ads-vendido">—</div>
-          </div>
-          <div style="background:#fff7ed;border-radius:7px;padding:9px;text-align:center">
-            <div style="font-size:10px;color:var(--muted);font-weight:700">Custo ADS</div>
-            <div style="font-size:17px;font-weight:700;color:#d97706" id="ads-custo">—</div>
-          </div>
-          <div style="background:#eff6ff;border-radius:7px;padding:9px;text-align:center">
-            <div style="font-size:10px;color:var(--muted);font-weight:700">ROAS</div>
-            <div style="font-size:17px;font-weight:700;color:#2563eb" id="ads-roas">—</div>
-          </div>
-        </div>
-        <div class="chart-wrap" style="height:140px"><canvas id="chart-ads"></canvas></div>
-        <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">⚠️ Dados de ADS disponíveis na aba ADS + Margem após carregar</div>
-      </div>
-    </div>
-
-    <!-- TOP ANÚNCIOS -->
-    <div class="card">
-      <div class="card-head">
-        <h3>🏆 Top anúncios</h3>
-        <select id="top-canal-sel" onchange="renderTopAnuncios()" style="border:1px solid var(--borda);border-radius:4px;padding:3px 7px;font-size:11px;outline:none">
-          <option value="todos">Todos</option>
-          <option value="ML">ML</option>
-          <option value="Shopee">Shopee</option>
-        </select>
-      </div>
-      <div class="card-body" style="padding:0">
-        <table class="tbl">
-          <thead><tr><th>#</th><th>Produto</th><th class="num">Qtd</th><th class="num">Fat.</th><th class="num">Margem</th></tr></thead>
-          <tbody id="body-top-anuncios"><tr><td colspan="5" class="empty">Carregando...</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- SKU RANKINGS -->
-  <div class="grid2">
-    <div class="card">
-      <div class="card-head">
-        <h3>Ranking — Faturamento</h3>
-        <span style="font-size:10px;color:var(--muted)" id="rank-fat-lbl"></span>
-      </div>
-      <div class="card-body" style="padding:0">
-        <table class="tbl" id="tbl-rank-fat">
-          <thead><tr><th>#</th><th>SKU / Produto</th><th>Canal</th><th class="num">Qtd</th><th class="num">Faturamento</th><th class="num">Margem</th></tr></thead>
-          <tbody id="body-rank-fat"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-head">
-        <h3>Ranking — Margem real</h3>
-        <span style="font-size:10px;color:var(--muted)">Preço ML − CMV Bling − taxas − frete − impostos</span>
-      </div>
-      <div class="card-body" style="padding:0">
-        <table class="tbl" id="tbl-rank-mg">
-          <thead><tr><th>#</th><th>SKU / Produto</th><th class="num">CMV</th><th class="num">Preço</th><th class="num">Lucro</th><th class="num">Margem</th></tr></thead>
-          <tbody id="body-rank-mg"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- ESTADOS + PEDIDOS RECENTES -->
-  <div class="grid2">
-    <div class="card">
-      <div class="card-head">
-        <h3>🗺️ Vendas por estado</h3>
-        <span style="font-size:10px;color:var(--muted)">DIFAL estimado por destino</span>
-      </div>
-      <div class="card-body" style="padding:0">
-        <table class="tbl">
-          <thead><tr><th>UF</th><th class="num">Pedidos</th><th class="num">Faturamento</th><th class="num">% Fat.</th><th class="num">DIFAL est.</th><th class="num">ICMS inter.</th></tr></thead>
-          <tbody id="body-estados"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-head"><h3>Pedidos recentes</h3></div>
-      <div class="card-body" style="padding:0">
-        <table class="tbl">
-          <thead><tr><th>Pedido</th><th>Produto</th><th>UF</th><th class="num">Valor</th><th class="num">Margem</th><th>Status</th></tr></thead>
-          <tbody id="body-pedidos"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- COMPARATIVO MÊS -->
-  <div class="card" id="card-comparativo">
-    <div class="card-head"><h3>Comparativo — Mês atual vs mês anterior</h3></div>
-    <div class="card-body">
-      <div class="grid3" id="comp-grid">
-        <div class="empty" style="grid-column:1/-1">Selecione "Mês atual" ou "Mês anterior" para ver o comparativo</div>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<script>
-// ══════════════════════════════════════════════════════════════════════
-// CONSTANTES FISCAIS
-// ══════════════════════════════════════════════════════════════════════
-const PIS=.0165, COFINS=.076, ICMS_PR=.195;
-const ICMS_TB={
-  PR:{inter:.12,interno:.195,difal:0},SP:{inter:.12,interno:.18,difal:.06},
-  MG:{inter:.12,interno:.18,difal:.06},RJ:{inter:.12,interno:.20,difal:.08},
-  SC:{inter:.12,interno:.17,difal:.05},RS:{inter:.12,interno:.17,difal:.05},
-  GO:{inter:.07,interno:.19,difal:.12},BA:{inter:.07,interno:.205,difal:.135},
-  PE:{inter:.07,interno:.205,difal:.135},CE:{inter:.07,interno:.20,difal:.13},
-  MT:{inter:.07,interno:.19,difal:.12},MS:{inter:.07,interno:.17,difal:.10},
-  ES:{inter:.07,interno:.17,difal:.10},DF:{inter:.07,interno:.18,difal:.11},
-  PA:{inter:.07,interno:.19,difal:.12},AM:{inter:.07,interno:.20,difal:.13},
-  MA:{inter:.07,interno:.18,difal:.11},PI:{inter:.07,interno:.18,difal:.11},
-  RN:{inter:.07,interno:.18,difal:.11},PB:{inter:.07,interno:.18,difal:.11},
-  AL:{inter:.07,interno:.19,difal:.12},SE:{inter:.07,interno:.19,difal:.12},
-  TO:{inter:.07,interno:.18,difal:.11},AC:{inter:.07,interno:.17,difal:.10},
-  RO:{inter:.07,interno:.175,difal:.105},RR:{inter:.07,interno:.17,difal:.10},
-  AP:{inter:.07,interno:.18,difal:.11},
-};
+  <div id="loading-msg
+;
 
 // Taxa ML por tipo de anúncio
 const ML_TAXA={gold_pro:.16,gold_special:.11,gold_premium:.16,classified:.16};
@@ -1364,14 +377,7 @@ window.onload=()=>{
 // CONFIG
 // ══════════════════════════════════════════════════════════════════════
 function abrirCfg(){document.getElementById('cfg-modal').style.display='flex';}
-function fecharCfg(){document.getElementById('cfg-modal').style.display='none';}
-function salvarCfg(){
-  tokens.bling=document.getElementById('tk-bling').value.trim();
-  tokens.ml=document.getElementById('tk-ml').value.trim();
-  localStorage.setItem('fava_dash_tk',JSON.stringify(tokens));
-  fecharCfg();
-  carregarTudo();
-}
+
 
 // ══════════════════════════════════════════════════════════════════════
 // PERÍODO
@@ -2281,7 +1287,7 @@ function renderPerguntas(){
       <div class="pi-q">${p.text||''}</div>
       <textarea class="pi-resp" id="resp-${i}" placeholder="Escreva a resposta aqui ou use a IA para sugerir..."></textarea>
       <div class="perg-actions">
-        <button class="btn-ia" onclick="sugerirRespostaIA(${i},'${(p.text||'').replace(/'/g,"\'")}','${p.item_id||''}')">
+        <button class="btn-ia" data-idx="${i}" data-item="${p.item_id||''}" onclick="sugerirRespostaIAById(this)">
           ✨ Sugerir com IA
         </button>
         <button class="btn-enviar" onclick="enviarResposta('${p.id}',${i})">
@@ -2292,7 +1298,18 @@ function renderPerguntas(){
     </div>`).join('');
 }
 
-async function sugerirRespostaIA(idx, pergunta, mlb){
+async 
+function sugerirRespostaIAById(btn){
+  const idx = parseInt(btn.dataset.idx||0);
+  const item = btn.dataset.item||'';
+  const p = (window._promoList||[])[idx];
+  if(p) sugerirRespostaIA(idx, p.text||'', item);
+}
+function abrirModalById(btn, precoAtual, precoSug){
+  const mlb = btn.dataset.mlb||'';
+  abrirModal(mlb, mlb, precoAtual, precoSug);
+}
+function sugerirRespostaIA(idx, pergunta, mlb){
   if(!claudeKeyPerg){alert('Configure a API Key do Claude');return;}
   const btn=document.querySelector(`#pq-${idx} .btn-ia`);
   if(btn){btn.textContent='⟳ Gerando...';btn.disabled=true;}
@@ -2563,7 +1580,6 @@ function renderDifal(){
 // ══════════════════════════════════════════════════════════════════════
 // PERGUNTAS ML COM IA
 // ══════════════════════════════════════════════════════════════════════
-perguntasData=[];
 
 async function carregarPerguntas(){
   if(!tokens.ml){alert('Configure o token ML');return;}
@@ -2588,16 +1604,20 @@ function renderPerguntas(){
     lista.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">Nenhuma pergunta sem resposta 🎉</div>';
     return;
   }
+  // Salva perguntas em mapa para acesso pelo id
+  window._pergMap = {};
+  perguntasData.forEach(q=>{ window._pergMap[q.id]=q; });
+
   lista.innerHTML=perguntasData.map(q=>`
     <div class="perg-card" id="pcard-${q.id}">
       <div class="perg-head">
         <div style="flex:1">
-          <div class="perg-txt">${q.text}</div>
+          <div class="perg-txt">${q.text||''}</div>
           <div class="perg-meta">
-            ${q.item_id} | ${q.from?.nickname||'Comprador'} | ${(q.date_created||'').substring(0,10)}
+            ${q.item_id||''} | ${q.from?.nickname||'Comprador'} | ${(q.date_created||'').substring(0,10)}
           </div>
         </div>
-        <button class="btn-resp" onclick="gerarResposta(${q.id},'${q.item_id}','${(q.text||'').replace(/'/g,'').replace(/"/g,'')}')">
+        <button class="btn-resp" data-qid="${q.id}" onclick="gerarRespostaById(this.dataset.qid)">
           ✨ Gerar resposta
         </button>
       </div>
@@ -2605,14 +1625,20 @@ function renderPerguntas(){
         <div id="presp-${q.id}" style="display:none">
           <div class="resp-box" id="ptxt-${q.id}"></div>
           <div style="display:flex;gap:8px;margin-top:8px">
-            <button class="btn-enviar" onclick="enviarResposta(${q.id})">📤 Enviar no ML</button>
-            <button class="btn-resp" onclick="gerarResposta(${q.id},'${q.item_id}','${(q.text||'').replace(/'/g,'').replace(/"/g,'')}')">
+            <button class="btn-enviar" data-qid="${q.id}" onclick="enviarResposta(this.dataset.qid)">📤 Enviar no ML</button>
+            <button class="btn-resp" data-qid="${q.id}" onclick="gerarRespostaById(this.dataset.qid)">
               🔄 Regenerar
             </button>
           </div>
         </div>
       </div>
     </div>`).join('');
+}
+
+function gerarRespostaById(qId){
+  const q = window._pergMap?.[qId]||window._pergMap?.[parseInt(qId)];
+  if(!q){console.error('Pergunta não encontrada:',qId);return;}
+  gerarResposta(q.id, q.item_id, q.text||'');
 }
 
 async function gerarResposta(qId, mlb, pergunta){
@@ -4629,7 +3655,8 @@ async function carregarAnuncios(){
 
     // Busca detalhes em lotes de 20
     const detalhes = [];
-    for(let i=<items.length; i+=20){
+    const ilen=items.length;
+    for(let i=0; i<ilen; i+=20){
       const lote = items.slice(i,i+20).join(',');
       const r = await mlGet(`items?ids=${lote}&attributes=id,title,price,base_price,listing_type_id,available_quantity,seller_sku,category_id`);
       if(r) detalhes.push(...r.filter(x=>x.body?.id).map(x=>x.body));
@@ -4812,8 +3839,8 @@ function renderAnuncTable(lista){
       <td>${badge}</td>
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap">
-          <button class="btn-price" onclick="abrirModal('${a.mlb}','${a.titulo.replace(/'/g,'')}',${a.preco_atual},${a.preco_sugerido})">Preço</button>
-          ${mc!==null&&mc>=.20?`<button class="btn-promo" onclick="abrirModal('${a.mlb}','${a.titulo.replace(/'/g,'')}',${a.preco_atual},${(a.preco_atual*0.90).toFixed(2)})">-10%</button>`:''}
+          <button class="btn-price" data-mlb="${a.mlb}" onclick="abrirModalById(this,${a.preco_atual},${a.preco_sugerido})">Preço</button>
+          ${mc!==null&&mc>=.20?`<button class="btn-promo" data-mlb="${a.mlb}" data-p1="${a.preco_atual}" data-p2="${(a.preco_atual*0.90).toFixed(2)}" onclick="abrirModal(this.dataset.mlb,this.dataset.mlb,parseFloat(this.dataset.p1),parseFloat(this.dataset.p2))">-10%</button>`:''}
         </div>
       </td>
     </tr>`;
