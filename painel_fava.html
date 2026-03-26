@@ -495,7 +495,8 @@ header h1{font-size:15px;font-weight:700;flex:1}
           <th onclick="sortGP('preco_min')" class="num">Preço mín ↕</th>
           <th class="num">Desconto %</th>
           <th onclick="sortGP('preco_final')" class="num">Preço final ↕</th>
-          <th onclick="sortGP('margem')" class="num">Margem ↕</th>
+          <th onclick="sortGP('lucro')" class="num">Lucro R$ ↕</th>
+          <th onclick="sortGP('margem')" class="num">Margem % ↕</th>
           <th class="num">Taxa ML</th>
           <th class="num">Frete</th>
           <th class="num">DIFAL est.</th>
@@ -1394,6 +1395,8 @@ function renderTabelaGP(lista){
           style="border-color:${mg<mgMin&&d.temCMV?'#dc2626':mg<.10&&d.temCMV?'#d97706':'var(--borda)'}">%
       </td>
       <td class="num" style="font-weight:700">R$ ${fmt(d.preco_final)}</td>
+      <td class="num" style="font-weight:700;color:${mc}">${d.temCMV?'R$ '+fmt(d.lucro):'—'}</td>
+      <td class="num" style="font-weight:700;color:${mc}">${d.temCMV?'R$ '+fmt(d.lucro):'—'}</td>
       <td class="num">${mgBar}<span style="font-weight:700;color:${mc}">${mgStr}</span></td>
       <td class="num" style="color:var(--muted);font-size:10px">${(d.taxa*100).toFixed(0)}%</td>
       <td class="num" style="color:var(--muted);font-size:10px">${d.temCMV?'R$ '+fmt(d.frete):'—'}</td>
@@ -1413,7 +1416,7 @@ function renderTabelaGP(lista){
     </tr>`;
   });
   document.getElementById('gp-tbody').innerHTML = rows.join('')||
-    '<tr><td colspan="14" style="text-align:center;padding:20px;color:var(--muted)">Nenhum anúncio</td></tr>';
+    '<tr><td colspan="15" style="text-align:center;padding:20px;color:var(--muted)">Nenhum anúncio</td></tr>';
 }
 
 function atualizarDesc(mlb, descStr){
@@ -1434,10 +1437,11 @@ function atualizarDesc(mlb, descStr){
     const mc=mg>=mgMin?'#16a34a':mg>=.10?'#d97706':'#dc2626';
     const cells=row.querySelectorAll('td');
     cells[7].textContent='R$ '+fmt(item.preco_final);
-    cells[8].innerHTML=item.temCMV
+    cells[8].innerHTML=item.temCMV?`<span style="font-weight:700;color:${mc}">R$ ${fmt(item.lucro)}</span>`:'—';
+    cells[9].innerHTML=item.temCMV
       ?`<span class="mg-bar" style="background:${mc};width:${Math.min(Math.max(mg*100,0),60)}px"></span><span style="font-weight:700;color:${mc}">${(mg*100).toFixed(1)}%</span>`
       :'<span style="color:#9ca3af">sem CMV</span>';
-    cells[11].textContent=item.temCMV?'R$ '+fmt(item.difal_r):'—';
+    cells[12].textContent=item.temCMV?'R$ '+fmt(item.difal_r):'—';
     // Update input border
     const inp=row.querySelector('.desc-input');
     if(inp) inp.style.borderColor=mg<mgMin&&item.temCMV?'#dc2626':'var(--borda)';
