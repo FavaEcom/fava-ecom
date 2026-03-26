@@ -1043,29 +1043,22 @@ async function fetchPedidosBling(de,ate){
 // BUSCAR CMV NO BLING
 // ══════════════════════════════════════════════════════════════════════
 async function fetchCMVs(skus){
-  // Sequencial com delay para evitar 429 do Bling (~30 req/min)
   let ok=0, erros=0;
   for(let i=0; i<skus.length; i++){
-    const sku = skus[i];
+    const sku=skus[i];
     try{
-      const r = await blingGet(`produtos?criterio=1&tipo=T&codigo=${encodeURIComponent(sku)}&limite=1`);
-      const prod = r?.data?.[0];
+      const r=await blingGet(`produtos?criterio=1&tipo=T&codigo=${encodeURIComponent(sku)}&limite=1`);
+      const prod=r?.data?.[0];
       if(prod){
-          // precoCusto = custo Bling (já inclui IPI+ST)
-          // NÃO usar preco (preço de venda)
-          const custoB = parseFloat(prod.precoCusto||0);
-          dados.cmvCache[sku]={
-            nome: prod.nome||prod.descricao||sku,
-            cmv:  custoB,
-            custo: custoB,
-          };
-        }
+        const custoB=parseFloat(prod.precoCusto||0);
+        dados.cmvCache[sku]={nome:prod.nome||sku,cmv:custoB,custo:custoB};
+        ok++;
       }
     }catch(e){
       erros++;
       if(String(e.message).includes('429')) await new Promise(r=>setTimeout(r,3000));
     }
-    if(i%5===0) showLoading(`CMV Bling: ${i+1}/${skus.length} SKUs... (${ok} ok${erros?' | '+erros+' err':''})`);
+    if(i%5===0) showLoading(`CMV Bling: ${i+1}/${skus.length} SKUs... (${ok} ok)`);
     await new Promise(r=>setTimeout(r,400));
   }
 }
