@@ -330,16 +330,13 @@ function fecharCfg(){
 <body>
 <script>
 // salvarCfg definido aqui para garantir disponibilidade
-// Tokens global - declarado aqui para salvarCfg ter acesso
-if(typeof tokens === 'undefined') var tokens = {bling:'', ml:''};
-
 function salvarCfg(){
-  if(typeof tokens === 'undefined') tokens = {bling:'', ml:''};
-  tokens.bling = document.getElementById('tk-bling')?.value.trim()||'';
-  tokens.ml    = document.getElementById('tk-ml')?.value.trim()||'';
-  localStorage.setItem('fava_tk4', JSON.stringify(tokens));
+  const tkB = document.getElementById('tk-bling')?.value.trim()||'';
+  const tkM = document.getElementById('tk-ml')?.value.trim()||'';
+  localStorage.setItem('fava_tk4', JSON.stringify({bling:tkB, ml:tkM}));
   document.getElementById('modal-cfg').style.display='none';
-  if(typeof carregarTudo === 'function') carregarTudo();
+  // tokens será inicializado pelo script principal via window.onload
+  window.location.reload();
 }
 function fecharCfg(){
   document.getElementById('modal-cfg').style.display='none';
