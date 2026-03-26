@@ -2580,9 +2580,15 @@ function aplicarDescGlobal(){
     d.preco_final = d.preco_orig * (1-desc/100);
     if(d.cmv>0) Object.assign(d, calcMargemGP(d.preco_final,d.cmv,d.taxa));
   });
-  recalcGP(async function toggleSel(mlb, checked){cked){
+  recalcGP();
+}
+
+async function toggleSel(mlb, checked){
   if(checked) gpSelecionados.add(mlb);
-  else gpSelecionados.deleasync function toggleSelecionarTodos(){onarTodos(){
+  else gpSelecionados.delete(mlb);
+}
+
+async function toggleSelecionarTodos(){
   const checked = document.getElementById('gp-sel-all')?.checked || document.getElementById('chk-all-head')?.checked;
   const visíveis = document.querySelectorAll('#gp-tbody tr[data-mlb]');
   visíveis.forEach(tr=>{
