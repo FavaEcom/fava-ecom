@@ -376,10 +376,8 @@ function salvarCfg(){
   const tkM = document.getElementById('tk-ml')?.value.trim()||'';
   if(!tkB && !tkM){ alert('Informe pelo menos um token'); return; }
   localStorage.setItem('fava_tk4', JSON.stringify({bling:tkB, ml:tkM}));
-  tokens.bling = tkB;
-  tokens.ml    = tkM;
   document.getElementById('modal-cfg').style.display='none';
-  carregarTudo();
+  window.location.reload();
 }
 function fecharCfg(){
   document.getElementById('modal-cfg').style.display='none';
@@ -4657,7 +4655,7 @@ async function confirmarPreco(){
 // ══════════════════════════════════════════════════════════════════════
 // DEVOLUÇÕES
 // ══════════════════════════════════════════════════════════════════════
-let devolucoesData = [];
+devolucoesData = [];
 let devolucoesCache = JSON.parse(localStorage.getItem('fava_devolucoes')||'[]');
 
 function initDevolucoes(){
