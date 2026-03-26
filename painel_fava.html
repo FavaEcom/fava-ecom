@@ -1818,8 +1818,7 @@ function renderTabelaPedidos(lista){
 
 function exportarPedidos(){
   if(!pedidosDetalhados.length){alert('Sem dados para exportar');return;}
-  let csv='Pedido;Data;SKU;Produto;UF;Preço;CMV;Taxa ML;Frete;DIFAL;PIS+COF;Créd.Taxa;Lucro;Margem%
-';
+  let csv='Pedido;Data;SKU;Produto;UF;Preco;CMV;Taxa ML;Frete;DIFAL;PIS+COF;Cred.Taxa;Lucro;Margem%\n';
   pedidosDetalhados.forEach(p=>{
     csv+=`${p.id};${p.data};${p.sku};"${p.titulo}";${p.uf};${p.preco.toFixed(2)};${p.cmv.toFixed(2)};${p.taxa_r.toFixed(2)};${p.frete_un.toFixed(2)};${p.difal.toFixed(2)};${(p.pis_r+p.cof_r).toFixed(2)};${(p.cred_taxa+p.cred_frete).toFixed(2)};${p.temCMV?p.lucro.toFixed(2):'sem CMV'};${p.margem!==null?(p.margem*100).toFixed(1)+'%':'sem CMV'}
 `;
