@@ -1321,8 +1321,7 @@ function renderPerguntas(){
     </div>`).join('');
 }
 
-async 
-function sugerirRespostaIAById(btn){
+async function sugerirRespostaIAById(btn){
   const idx = parseInt(btn.dataset.idx||0);
   const item = btn.dataset.item||'';
   const p = (window._promoList||[])[idx];
@@ -2447,7 +2446,7 @@ function setFiltroGP(f){
 function filtrarGP(){
   const mgMin = (parseFloat(document.getElementById('gp-mg-min')?.value)||15)/100;
   const q = (document.getElementById('gp-search')?.value||'').toLowerCase();
-  let lista =ata.filter(d=>{
+  let lista = gpData.filter(d=>{
     if(q && !d.titulo.toLowerCase().includes(q) && !d.mlb.includes(q) && !d.sku.includes(q)) return false;
     if(gpFiltro==='err') return d.temCMV && d.margem < .10;
     if(gpFiltro==='warn') return d.temCMV && d.margem >= .10 && d.margem < mgMin;
