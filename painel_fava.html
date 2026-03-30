@@ -821,15 +821,50 @@ function salvarCfg(){
       <span id="prom-status" style="font-size:12px;color:var(--muted)">Importe a planilha para começar</span>
     </div>
 
+    <!-- regras de margem mínima -->
+    <div style="background:#fff;border:1px solid var(--borda);border-radius:9px;padding:10px 14px;margin-bottom:10px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+        <strong style="font-size:12px;color:#92400e">⚙️ Regras de margem mínima</strong>
+        <span style="font-size:11px;color:var(--muted)">Padrão por faixa de preço:</span>
+        <label style="font-size:11px;display:flex;align-items:center;gap:4px">
+          Peças (R$0-50): <input type="number" id="regra-mg-50" value="20" min="5" max="60" step="1"
+            style="width:45px;border:1px solid #d1d5db;border-radius:4px;padding:2px 5px;font-size:11px;text-align:center">%
+        </label>
+        <label style="font-size:11px;display:flex;align-items:center;gap:4px">
+          Médios (R$50-200): <input type="number" id="regra-mg-200" value="18" min="5" max="60" step="1"
+            style="width:45px;border:1px solid #d1d5db;border-radius:4px;padding:2px 5px;font-size:11px;text-align:center">%
+        </label>
+        <label style="font-size:11px;display:flex;align-items:center;gap:4px">
+          Caros (+R$200): <input type="number" id="regra-mg-alto" value="15" min="5" max="60" step="1"
+            style="width:45px;border:1px solid #d1d5db;border-radius:4px;padding:2px 5px;font-size:11px;text-align:center">%
+        </label>
+        <button onclick="aplicarRegrasMargemMinima()" style="padding:5px 12px;font-size:11px;font-weight:700;background:#92400e;color:#fff;border:none;border-radius:5px;cursor:pointer">
+          Aplicar regras padrão
+        </button>
+        <button onclick="calcularDescontoPorMargem()" style="padding:5px 12px;font-size:11px;font-weight:700;background:#1F3864;color:#fff;border:none;border-radius:5px;cursor:pointer">
+          🎯 Calcular desc. máximo por margem mínima
+        </button>
+        <button onclick="salvarMargensMinimas()" style="padding:5px 12px;font-size:11px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:5px;cursor:pointer">
+          💾 Salvar margens mínimas
+        </button>
+      </div>
+      <div id="regras-info" style="font-size:10px;color:var(--muted)">
+        As margens mínimas ficam salvas por produto — ao reabrir a planilha no futuro, os mínimos já aparecem preenchidos.
+      </div>
+    </div>
+
     <!-- ação em massa -->
     <div id="prom-acao" style="display:none;background:#fff;border:1px solid var(--borda);border-radius:9px;padding:10px 14px;margin-bottom:10px">
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <strong style="font-size:12px" id="prom-sel-count">0 selecionados</strong>
-        <span style="font-size:12px;color:var(--muted)">Aplicar desconto %:</span>
+        <span style="font-size:12px;color:var(--muted)">Ou aplicar % fixo:</span>
         <input type="number" id="prom-desc-pct" value="10" min="5" max="80" step="1"
           style="width:60px;border:1px solid var(--borda);border-radius:5px;padding:4px 7px;font-size:13px;font-weight:700;text-align:center;outline:none">
         <button onclick="aplicarDescSelecionados()" style="padding:5px 14px;font-size:12px;font-weight:700;background:#1F3864;color:#fff;border:none;border-radius:6px;cursor:pointer">
           Aplicar nos selecionados
+        </button>
+        <button onclick="aplicarDescontoMaximoTodos()" style="padding:5px 14px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer">
+          🎯 Aplicar desc. máximo em todos
         </button>
         <button onclick="zerarDescSelecionados()" style="padding:5px 12px;font-size:12px;font-weight:700;background:#fff;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;cursor:pointer">
           Zerar desconto
@@ -875,14 +910,13 @@ function salvarCfg(){
               <th style="padding:7px 8px;width:32px;border-bottom:1px solid var(--borda)"></th>
               <th style="padding:7px 8px;text-align:left;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;white-space:nowrap">Produto</th>
               <th style="padding:7px 8px;text-align:left;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">SKU</th>
-              <th style="padding:7px 8px;text-align:left;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">MLB</th>
               <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Preço</th>
               <th style="padding:7px 8px;text-align:center;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Desc.%</th>
               <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Preço final</th>
               <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">CMV</th>
-              <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Frete est.</th>
               <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Margem</th>
               <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Mg c/desc.</th>
+              <th style="padding:7px 8px;text-align:center;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;background:#fef9c3;color:#92400e" title="Margem mínima salva por produto">Mg.Mín%</th>
               <th style="padding:7px 8px;text-align:center;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Status</th>
             </tr>
           </thead>
@@ -1471,47 +1505,13 @@ async function importarPlanilhaML(input){
         });
       }catch(e){}
 
-      // Fallback 3: busca direto na API Bling para os SKUs sem CMV (em lote, silencioso)
-      const semCmv = itens.filter(it=>!it.cmv && it.sku).slice(0,50);
-      if(semCmv.length && tokens.bling){
-        if(st) st.textContent = `⟳ Buscando CMV no Bling para ${semCmv.length} produtos sem custo...`;
-        for(const it of semCmv){
-          try{
-            const rb = await fetch(`/api/bling/produtos?criterio=1&tipo=T&codigo=${encodeURIComponent(it.sku)}&limite=1`,
-              {headers:{'Authorization':`Bearer ${tokens.bling}`}});
-            if(rb.ok){
-              const db = await rb.json();
-              const pb = (db.data||[])[0];
-              if(pb){
-                const rb2 = await fetch(`/api/bling/produtos/${pb.id}`,
-                  {headers:{'Authorization':`Bearer ${tokens.bling}`}});
-                if(rb2.ok){
-                  const db2 = await rb2.json();
-                  const prod = db2.data||pb;
-                  const custo = parseFloat(prod.precoCusto||0);
-                  if(custo>0){
-                    it.cmv = custo;
-                    it.margem = calcMargemProm(it.preco, custo, 0.16);
-                    it.margemComDesc = calcMargemProm(it.preco*(1-it.descPct/100), custo, 0.16);
-                    // Salva no banco local para próximas vezes
-                    try{
-                      const bc = JSON.parse(localStorage.getItem('fava_cmv_banco')||'{}');
-                      bc[it.sku] = {cmvBr:custo, cmvPr:custo, nome:prod.descricao||it.titulo};
-                      localStorage.setItem('fava_cmv_banco', JSON.stringify(bc));
-                    }catch(e){}
-                    // Salva no servidor
-                    fetch('/api/db/produto',{method:'POST',headers:{'Content-Type':'application/json'},
-                      body:JSON.stringify({sku:it.sku,nome:it.titulo,custo,custo_br:custo})}).catch(()=>{});
-                  }
-                }
-              }
-            }
-            await new Promise(r=>setTimeout(r,150));
-          }catch(e){}
-        }
-      }
+
 
       const comCmv = itens.filter(i=>i.cmv>0).length;
+      const semCmvCount = itens.length - comCmv;
+      // Carrega margens mínimas salvas e aplica padrão por faixa
+      aplicarMgMinimasSalvas(itens);
+
       // Ordena: produtos com CMV primeiro, depois sem CMV
       itens.sort((a,b)=>{
         if(a.cmv>0 && b.cmv<=0) return -1;
@@ -1528,7 +1528,14 @@ async function importarPlanilhaML(input){
         const el=document.getElementById(id); if(el) el.style.display='';
       });
       document.getElementById('prom-kpis').style.display='grid';
-      if(st) st.textContent = `✅ ${itens.length} produtos | ${comCmv} com CMV${comCmv<itens.length?' (restante: sincronize o Bling em 🗄️ DB)':''}`;
+      if(st){
+        if(comCmv===0){
+          st.innerHTML = `✅ ${itens.length} produtos carregados | <span style="color:#dc2626;font-weight:700">0 com CMV</span> — 
+            <strong>Execute o importar_todas_nfe_v2.py</strong> para popular o banco, ou use a calculadora para buscar produtos pelo Bling (cria cache de CMV)`;
+        } else {
+          st.textContent = `✅ ${itens.length} produtos | ${comCmv} com CMV${semCmvCount>0?' | '+semCmvCount+' sem CMV (use filtro ✅ Só com CMV)':''}`;
+        }
+      }
     }catch(err){
       if(st) st.textContent = `❌ Erro ao ler planilha: ${err.message}`;
       console.error(err);
@@ -1599,22 +1606,29 @@ function renderPromoTabela(lista){
                       `<span class="pill" style="font-size:9px;background:#f3f4f6;color:#6b7280">${p.status||'—'}</span>`;
     const precoComDesc = p.preco*(1-p.descEditado/100);
 
+    const mgMinSalva = (p.mgMin||0)*100;
+    const descMaxCalc = calcDescMaximo(p.preco, p.cmv, p.mgMin||0);
     return `<tr style="${p.selecionado?'background:#eff6ff':''}" id="prom-tr-${i}">
       <td style="padding:5px 8px;text-align:center"><input type="checkbox" ${p.selecionado?'checked':''} onchange="togglePromo(${i},this.checked)"></td>
-      <td style="padding:5px 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.titulo}">${p.titulo}</td>
-      <td style="padding:5px 8px;font-weight:700;color:#1F3864">${p.sku||'—'}</td>
-      <td style="padding:5px 8px;font-size:10px;color:#6b7280">${p.id}</td>
+      <td style="padding:5px 8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.titulo}">${p.titulo}</td>
+      <td style="padding:5px 8px;font-weight:700;color:#1F3864;white-space:nowrap">${p.sku||'<span style=color:#9ca3af>'+p.id+'</span>'}</td>
       <td style="padding:5px 8px;text-align:right;font-weight:700">R$${p.preco.toFixed(2)}</td>
       <td style="padding:5px 8px;text-align:center">
         <input type="number" value="${p.descEditado||''}" min="5" max="80" step="1" placeholder="%" 
           style="width:50px;border:1px solid #d1d5db;border-radius:4px;padding:2px 4px;text-align:center;font-size:11px;font-weight:700"
           oninput="atualizarDescItem(${i},this.value)">
+        ${descMaxCalc>0?'<div style="font-size:9px;color:#16a34a">máx '+descMaxCalc+'%</div>':''}
       </td>
       <td id="pd-preco-${i}" style="padding:5px 8px;text-align:right;color:var(--azul2);font-weight:700">R$${precoComDesc.toFixed(2)}</td>
-      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${p.cmv?'R$'+p.cmv.toFixed(2):'—'}</td>
-      <td style="padding:5px 8px;text-align:right;color:var(--muted)">R$${p.frete.toFixed(2)}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${p.cmv?'R$'+p.cmv.toFixed(2):'<span style=color:#f59e0b>⚠️</span>'}</td>
       <td style="padding:5px 8px;text-align:right;color:${mgCor};font-weight:700">${mgStr}</td>
       <td id="pd-mg-${i}" style="padding:5px 8px;text-align:right;color:${mgDescCor};font-weight:700">${mgDescStr}</td>
+      <td style="padding:5px 8px;text-align:center;background:#fefce8">
+        <input type="number" value="${mgMinSalva||''}" min="0" max="60" step="1" placeholder="%" 
+          style="width:42px;border:1px solid #fde68a;border-radius:4px;padding:2px 4px;text-align:center;font-size:11px;font-weight:700;background:#fefce8"
+          title="Margem mínima deste produto — salva no banco"
+          onchange="atualizarMgMin(${i},this.value)" oninput="atualizarMgMin(${i},this.value)">
+      </td>
       <td style="padding:5px 8px;text-align:center">${statusTag}</td>
     </tr>`;
   }).join('');
@@ -1739,6 +1753,148 @@ async function aplicarDescontoPromoAPI(){
 }
 
 
+
+
+// ── Gestão de Margem Mínima por produto ─────────────────────────────
+// Armazenamento: localStorage + servidor
+let mgMinimas = {}; // { sku: 0.20, id: 0.15, ... }
+
+function carregarMgMinimas(){
+  try{ mgMinimas = JSON.parse(localStorage.getItem('fava_mg_minimas')||'{}'); }catch(e){}
+}
+
+function salvarMgMinimasLocal(){
+  try{ localStorage.setItem('fava_mg_minimas', JSON.stringify(mgMinimas)); }catch(e){}
+}
+
+async function salvarMargensMinimas(){
+  salvarMgMinimasLocal();
+  // Salva no servidor para cada produto com margem mínima definida
+  let salvos = 0;
+  for(const [key, mg] of Object.entries(mgMinimas)){
+    if(mg>0){
+      try{
+        await fetch('/api/db/produto',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({sku:key, margem_minima:mg})});
+        salvos++;
+      }catch(e){}
+    }
+  }
+  const el = document.getElementById('regras-info');
+  if(el) el.textContent = `✅ ${salvos} margens mínimas salvas no banco — ficam carregadas na próxima sessão`;
+  setTimeout(()=>{ if(el) el.textContent = 'As margens mínimas ficam salvas por produto.'; }, 4000);
+}
+
+function atualizarMgMin(idx, val){
+  const item = promoDataFiltrada[idx];
+  if(!item) return;
+  const pct = parseFloat(val)||0;
+  item.mgMin = pct/100;
+  const origIdx = promoData.indexOf(item);
+  if(origIdx>=0) promoData[origIdx].mgMin = pct/100;
+  // Salva no dicionário local
+  if(item.sku) mgMinimas[item.sku] = pct/100;
+  if(item.id)  mgMinimas[item.id]  = pct/100;
+  salvarMgMinimasLocal();
+  // Atualiza hint de desc.máximo na mesma linha
+  const tr = document.getElementById(`prom-tr-${idx}`);
+  if(tr){
+    const desc = calcDescMaximo(item.preco, item.cmv, pct/100);
+    const hint = tr.querySelectorAll('td')[4]?.querySelector('div');
+    if(hint) hint.textContent = desc>0 ? 'máx '+desc+'%' : '';
+  }
+}
+
+// Calcula desconto máximo dado margem mínima
+function calcDescMaximo(preco, cmv, mgMin){
+  if(!cmv || !preco || mgMin<=0) return 0;
+  // precoMin = CMV / (1 - mgMin - taxas_fixas)
+  // taxas: ML 16% + PIS/COFINS 3.65% + frete estimado % 
+  const fretePct = preco<=50?0.18 : preco<=100?0.13 : preco<=200?0.10 : 0.08;
+  const taxasFixas = 0.16 + 0.0365 + fretePct;
+  const precoMin = cmv / (1 - mgMin - taxasFixas);
+  if(precoMin >= preco) return 0; // já está no limite
+  const descMax = Math.floor((1 - precoMin/preco)*100);
+  return Math.max(0, Math.min(descMax, 80));
+}
+
+// Aplica regras padrão de margem mínima por faixa de preço
+function aplicarRegrasMargemMinima(){
+  const mg50  = (parseFloat(document.getElementById('regra-mg-50')?.value)||20)/100;
+  const mg200 = (parseFloat(document.getElementById('regra-mg-200')?.value)||18)/100;
+  const mgAlto= (parseFloat(document.getElementById('regra-mg-alto')?.value)||15)/100;
+  let n=0;
+  promoData.forEach(p=>{
+    if(!p.mgMin){ // só aplica onde ainda não há mínimo definido
+      const mg = p.preco<=50 ? mg50 : p.preco<=200 ? mg200 : mgAlto;
+      p.mgMin = mg;
+      if(p.sku) mgMinimas[p.sku] = mg;
+      if(p.id)  mgMinimas[p.id]  = mg;
+      n++;
+    }
+  });
+  promoDataFiltrada = [...promoData];
+  salvarMgMinimasLocal();
+  renderPromoTabela(promoDataFiltrada);
+  const el = document.getElementById('regras-info');
+  if(el) el.textContent = `✅ Regras aplicadas em ${n} produtos sem mínimo definido`;
+}
+
+// Calcula o desconto máximo para cada produto e aplica
+function calcularDescontoPorMargem(){
+  let n=0, semCmv=0, semMin=0;
+  promoDataFiltrada.forEach((p,i)=>{
+    if(!p.cmv){ semCmv++; return; }
+    const mgMin = p.mgMin || (p.preco<=50?0.20 : p.preco<=200?0.18 : 0.15);
+    const desc = calcDescMaximo(p.preco, p.cmv, mgMin);
+    if(desc<5){ semMin++; return; } // desconto mínimo é 5% no ML
+    p.descEditado = desc;
+    p.margemComDesc = calcMargemProm(p.preco*(1-desc/100), p.cmv, 0.16);
+    const origIdx = promoData.indexOf(p);
+    if(origIdx>=0){ promoData[origIdx].descEditado=desc; promoData[origIdx].margemComDesc=p.margemComDesc; }
+    n++;
+  });
+  renderPromoTabela(promoDataFiltrada);
+  const el = document.getElementById('regras-info');
+  if(el) el.textContent = `✅ ${n} produtos com desconto calculado | ${semCmv} sem CMV | ${semMin} já no limite`;
+}
+
+// Aplicar desconto máximo calculado em TODOS e mandar para ML
+async function aplicarDescontoMaximoTodos(){
+  calcularDescontoPorMargem();
+  const comDesc = promoData.filter(p=>p.descEditado>=5 && p.cmv>0);
+  if(!comDesc.length){ alert('Nenhum produto com desconto calculado. Clique em "Calcular desc. máximo por margem mínima" primeiro.'); return; }
+  if(!tokens.ml){ alert('Configure o token ML em ⚙️'); return; }
+  if(!confirm(`Aplicar desconto máximo via API ML em ${comDesc.length} produtos?\nOs preços serão alterados no Mercado Livre.`)) return;
+  const st = document.getElementById('prom-status');
+  let ok=0, erros=0;
+  for(const p of comDesc){
+    try{
+      const novoPreco = parseFloat((p.preco*(1-p.descEditado/100)).toFixed(2));
+      const r = await fetch(`/api/ml/items/${p.id}`,{
+        method:'PUT', headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},
+        body:JSON.stringify({price:novoPreco})
+      });
+      if(r.ok) ok++; else erros++;
+      if(st) st.textContent = `⟳ ${ok+erros}/${comDesc.length}...`;
+      await new Promise(r=>setTimeout(r,250));
+    }catch(e){ erros++; }
+  }
+  if(st) st.textContent = `✅ ${ok} atualizados no ML${erros?' | ❌ '+erros+' erros':''}`;
+}
+
+// Carrega margens mínimas salvas ao importar planilha
+function aplicarMgMinimasSalvas(itens){
+  carregarMgMinimas();
+  itens.forEach(p=>{
+    const mg = mgMinimas[p.sku] || mgMinimas[p.id] || 0;
+    if(mg>0) p.mgMin = mg;
+    else{
+      // Padrão por faixa de preço se não houver mínimo salvo
+      p.mgMin = p.preco<=50?0.20 : p.preco<=200?0.18 : 0.15;
+    }
+  });
+}
 
 function ordenarPromos(criterio){
   if(!criterio) return;
