@@ -1535,13 +1535,13 @@ function renderPromoTabela(lista){
       <td style="padding:5px 8px;text-align:center">
         <input type="number" value="${p.descEditado||''}" min="5" max="80" step="1" placeholder="%" 
           style="width:50px;border:1px solid #d1d5db;border-radius:4px;padding:2px 4px;text-align:center;font-size:11px;font-weight:700"
-          onchange="atualizarDescItem(${i},this.value)" oninput="atualizarDescItem(${i},this.value)">
+          oninput="atualizarDescItem(${i},this.value)">
       </td>
-      <td style="padding:5px 8px;text-align:right;color:var(--azul2);font-weight:700">R$${precoComDesc.toFixed(2)}</td>
+      <td id="pd-preco-${i}" style="padding:5px 8px;text-align:right;color:var(--azul2);font-weight:700">R$${precoComDesc.toFixed(2)}</td>
       <td style="padding:5px 8px;text-align:right;color:var(--muted)">${p.cmv?'R$'+p.cmv.toFixed(2):'—'}</td>
       <td style="padding:5px 8px;text-align:right;color:var(--muted)">R$${p.frete.toFixed(2)}</td>
       <td style="padding:5px 8px;text-align:right;color:${mgCor};font-weight:700">${mgStr}</td>
-      <td style="padding:5px 8px;text-align:right;color:${mgDescCor};font-weight:700">${mgDescStr}</td>
+      <td id="pd-mg-${i}" style="padding:5px 8px;text-align:right;color:${mgDescCor};font-weight:700">${mgDescStr}</td>
       <td style="padding:5px 8px;text-align:center">${statusTag}</td>
     </tr>`;
   }).join('');
@@ -1563,18 +1563,16 @@ function atualizarDescItem(idx, val){
   const origIdx = promoData.indexOf(item);
   if(origIdx>=0){ promoData[origIdx].descEditado=pct; promoData[origIdx].margemComDesc=item.margemComDesc; }
 
-  // Atualiza DOM da linha diretamente — sem re-renderizar tudo
-  const tr = document.getElementById(`prom-tr-${idx}`);
-  if(!tr) return;
-  const tds = tr.querySelectorAll('td');
-  // td[6] = Preço com desc, td[9] = Margem atual, td[10] = Margem c/desc
+  // Atualiza células por ID — direto, sem re-renderizar
   const precoDesc = item.preco*(1-pct/100);
-  if(tds[6]) tds[6].textContent = 'R$'+precoDesc.toFixed(2);
-  if(tds[10]){
+  const elPreco = document.getElementById(`pd-preco-${idx}`);
+  if(elPreco) elPreco.textContent = 'R$'+precoDesc.toFixed(2);
+
+  const elMg = document.getElementById(`pd-mg-${idx}`);
+  if(elMg){
     const mg = item.margemComDesc;
-    tds[10].textContent = mg!==null ? (mg*100).toFixed(1)+'%' : '—';
-    tds[10].style.color = mg===null ? 'var(--muted)' : mg>=.20 ? 'var(--verde)' : mg>=.10 ? 'var(--amarelo)' : 'var(--vermelho)';
-    tds[10].style.fontWeight = '700';
+    elMg.textContent = mg!==null ? (mg*100).toFixed(1)+'%' : '—';
+    elMg.style.color = mg===null ? 'var(--muted)' : mg>=.20 ? 'var(--verde)' : mg>=.10 ? 'var(--amarelo)' : 'var(--vermelho)';
   }
 }
 
