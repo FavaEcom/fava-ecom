@@ -1696,6 +1696,8 @@ function renderPromoTabela(lista){
   if(!tbody) return;
 
   tbody.innerHTML = lista.map((p,i)=>{
+    const taxa_item = p.taxa || 0.16;
+    const frete_item = p.frete || 0;
     const mgCor = p.margem!==null ? (p.margem>=.20?'var(--verde)':p.margem>=.10?'var(--amarelo)':'var(--vermelho)') : 'var(--muted)';
     const mgDescCor = p.margemComDesc!==null ? (p.margemComDesc>=.20?'var(--verde)':p.margemComDesc>=.10?'var(--amarelo)':'var(--vermelho)') : 'var(--muted)';
     const mgComDescReal = calcMargemProm(p.preco*(1-(p.descEditado||0)/100), p.cmv, taxa_item, frete_item);
@@ -1708,8 +1710,6 @@ function renderPromoTabela(lista){
     const precoComDesc = p.preco*(1-p.descEditado/100);
 
     const mgMinSalva = (p.mgMin||0)*100;
-    const taxa_item = p.taxa || 0.16;
-    const frete_item = p.frete || 0;
     const descMaxCalc = calcDescMaximo(p.preco, p.cmv, p.mgMin||0, taxa_item, frete_item);
     if(p.cmv > 0 && descMaxCalc > 0 && !p.descEditado) p.descEditado = descMaxCalc;
     return `<tr style="${p.selecionado?'background:#eff6ff':''}" id="prom-tr-${i}">
