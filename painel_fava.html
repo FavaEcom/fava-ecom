@@ -566,16 +566,23 @@ function fazerLogin(){
     aplicarPermissoesPerfil();
     // Se já tem tokens salvos, carrega direto após login
     const sv = localStorage.getItem('fava_tk4');
+    let temTokens = false;
     if(sv){
       try{
         const tk = JSON.parse(sv);
         if(tk.bling||tk.ml){
           tokens.bling = tk.bling||'';
           tokens.ml    = tk.ml||'';
+          temTokens = true;
           (document.getElementById('modal-cfg')||{style:{}}).style.display='none';
-          carregarTudo(); // chama aqui pois window.onload já executou
+          carregarTudo();
         }
       }catch(e){}
+    }
+    // Se não tem tokens, garante que a tela de configuração aparece
+    if(!temTokens){
+      const mc = document.getElementById('modal-cfg');
+      if(mc) mc.style.display = 'flex';
     }
   } else {
     (document.getElementById('login-erro')||{style:{}}).style.display = 'block';
