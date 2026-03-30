@@ -1229,39 +1229,44 @@ async function mostrarStatusDB(){
 
 // Força renovação manual do Bling
 
-async function sincBlingAnuncios(btnEl){
-  if(btnEl){btnEl.textContent='⟳ Baixando...';btnEl.disabled=true;}
+
+
+
+
+// Força renovação manual do token ML
+
+async function sincBlingAnuncios(el){
+  if(el){el.textContent='Baixando...';el.disabled=true;}
   try{
-    const r = await fetch('/api/sync/bling-anuncios');
-    if(btnEl){btnEl.textContent='✅ Aguarde ~1min';}
-    setTimeout(()=>{if(btnEl){btnEl.textContent='📥 Sync Anúncios';btnEl.disabled=false;}},10000);
-    setTimeout(()=>{ carregarAnuncios(); },35000);
-    alert('Sync de anuncios Bling iniciado! Aguarde ~1 minuto e a aba Anuncios sera preenchida.');
+    await fetch('/api/sync/bling-anuncios');
+    if(el){el.textContent='OK - Aguarde';}
+    setTimeout(function(){if(el){el.textContent='Sync Anuncios';el.disabled=false;}},10000);
+    setTimeout(function(){carregarAnuncios();},35000);
+    alert('Sync iniciado! Aguarde 1 minuto e abra a aba Anuncios.');
   }catch(e){
-    if(btnEl){btnEl.textContent='📥 Sync Anúncios';btnEl.disabled=false;}
+    if(el){el.textContent='Sync Anuncios';el.disabled=false;}
     alert('Erro: '+e.message);
   }
 }
 
 async function forcarRenovacaoBling(){
-  const btn = document.getElementById('btn-renovar-bling');
-  if(btn){ btn.textContent='⟳'; btn.disabled=true; }
+  var btn=document.getElementById('btn-renovar-bling');
+  if(btn){btn.textContent='...';btn.disabled=true;}
   try{
-    const ok = await renovarTokenBling();
+    var ok=await renovarTokenBling();
     if(ok){
-      if(btn){ btn.textContent='✅ Bling'; btn.style.background='rgba(34,197,94,.3)'; }
-      setTimeout(()=>{ if(btn){btn.textContent='🔑 Renovar Bling';btn.disabled=false;btn.style.background='rgba(251,146,60,.3)';} },3000);
+      if(btn){btn.textContent='OK Bling';btn.style.background='rgba(34,197,94,.3)';}
+      setTimeout(function(){if(btn){btn.textContent='Renovar Bling';btn.disabled=false;btn.style.background='rgba(251,146,60,.3)';}},3000);
       carregarTudo();
-    } else {
-      if(btn){ btn.textContent='❌ Falhou'; btn.disabled=false; }
-      alert('Nao foi possivel renovar o token Bling. Verifique o refresh token em Tokens.');
+    }else{
+      if(btn){btn.textContent='Falhou';btn.disabled=false;}
+      alert('Nao foi possivel renovar o token Bling. Verifique o refresh token.');
     }
   }catch(e){
-    if(btn){ btn.textContent='🔑 Renovar Bling'; btn.disabled=false; }
+    if(btn){btn.textContent='Renovar Bling';btn.disabled=false;}
   }
 }
 
-// Força renovação manual do token ML
 async function forcarRenovacaoML(){
   const btn = document.getElementById('btn-renovar-ml');
   if(btn){ btn.textContent='🔄 Renovando...'; btn.disabled=true; }
