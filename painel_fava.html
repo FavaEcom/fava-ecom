@@ -1210,7 +1210,7 @@ async function mlGet(path){
 // ══════════════════════════════════════════════════════════════════════
 function showLoading(msg){document.getElementById('loading').style.display='flex';document.getElementById('loading-msg').textContent=msg||'Carregando...';}
 function hideLoading(){document.getElementById('loading').style.display='none';}
-function setDot(a,s,l){document.getElementById(`dot-${a}`).className=`dot ${s}`;document.getElementById(`lbl-${a}`).textContent=l;}
+function setDot(a,s,l){const d=document.getElementById(`dot-${a}`);const lb=document.getElementById(`lbl-${a}`);if(d)d.className=`dot ${s}`;if(lb)lb.textContent=l;}
 function recarregar(){dados.cmvCache={};carregarTudo();}
 function fmt(v){return(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtK(v){return v>=1000?`${(v/1000).toFixed(1)}k`:fmt(v);}
@@ -3578,16 +3578,10 @@ let currentView = 'dashboard';
 
 function setView(v){
   currentView = v;
-  document.getElementById('view-dashboard').style.display = v==='dashboard'?'flex':'none';
-  document.getElementById('view-anuncios').style.display = v==='anuncios'?'flex':'none';
-  document.getElementById('view-financeiro').style.display = v==='financeiro'?'flex':'none';
-  document.getElementById('view-conciliacao').style.display = v==='conciliacao'?'flex':'none';
-  document.getElementById('view-precos').style.display = v==='precos'?'flex':'none';
-  document.getElementById('view-promocoes').style.display = v==='promocoes'?'flex':'none';
-  document.getElementById('view-difal').style.display = v==='difal'?'flex':'none';
-  document.getElementById('view-perguntas').style.display = v==='perguntas'?'flex':'none';
-  document.getElementById('view-ads').style.display = v==='ads'?'flex':'none';
-  document.getElementById('view-pedidos').style.display = v==='pedidos'?'flex':'none';
+  ['dashboard','anuncios','financeiro','conciliacao','precos','promocoes','difal','perguntas','ads','pedidos'].forEach(name=>{
+    const el=document.getElementById('view-'+name);
+    if(el) el.style.display = v===name?'flex':'none';
+  });
   document.getElementById('period-bar').style.display = v==='dashboard'?'flex':'none';
   document.getElementById('vtab-dash').classList.toggle('a', v==='dashboard');
   document.getElementById('vtab-anunc').classList.toggle('a', v==='anuncios');
