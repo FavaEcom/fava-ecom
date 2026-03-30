@@ -1866,8 +1866,7 @@ function exportarOrc(){
   const mcPad=(parseFloat(document.getElementById('orc-mc').value)||30)/100;
   const frete=parseFloat(document.getElementById('orc-frete').value)||0;
   const taxas=parseFloat(document.getElementById('orc-taxas').value)||0;
-  let csv='Item;SKU;Produto;QTD;CMV Unit;MC%;Preco Unit;Total;PIS;COFINS;ICMS;DIFAL;Margem%
-';
+  let csv='Item;SKU;Produto;QTD;CMV Unit;MC%;Preco Unit;Total;PIS;COFINS;ICMS;DIFAL;Margem%\n';
   orcItems.forEach((it,i)=>{
     if(it.cmvUnit<=0) return;
     const r=calcItemOrc(it.cmvUnit,it.mc,icmsSaida,difal);
@@ -2170,8 +2169,7 @@ function irParaAnuncio(){
     // Tenta extrair marca do nome
     const marcasEl=document.getElementById('an-marcas');
     if(marcasEl){
-      const marcaMatch=marcasEl.value.split('
-').find(l=>{
+      const marcaMatch=marcasEl.value.split('\n').find(l=>{
         const m=l.split(':')[0].trim().toLowerCase();
         return prodAtual.nome.toLowerCase().includes(m);
       });
@@ -2200,8 +2198,7 @@ function anMontarPrompt(p){
   const inst=document.getElementById('an-bloco-inst').value;
   const marcasTxt=document.getElementById('an-marcas').value;
   const tom=document.getElementById('an-tom').value||'tecnico';
-  const infoMarca=marcasTxt.split('
-').find(l=>l.toLowerCase().startsWith((p.marca||'').toLowerCase()+':'))?.split(':').slice(1).join(':').trim()||'';
+  const infoMarca=marcasTxt.split('\n').find(l=>l.toLowerCase().startsWith((p.marca||'').toLowerCase()+':'))?.split(':').slice(1).join(':').trim()||'';
   const bl=[...anAtivos];
   return `Você é um especialista em e-commerce brasileiro criando anúncios profissionais para a Fava Ecom, loja especializada em peças de reposição, ferramentas e equipamentos.
 
@@ -2279,10 +2276,8 @@ async function anGerar(){
 function anRenderRes(txt, p){
   const panel=document.getElementById('an-painel');
   panel.innerHTML=''; panel._txt=txt;
-  const t60  = txt.match(/TÍTULO CURTO[:\s]+([^
-]+)/i)?.[1]?.trim()||'';
-  const t120 = txt.match(/TÍTULO LONGO[:\s]+([^
-]+)/i)?.[1]?.trim()||'';
+  const t60  = txt.match(/TÍTULO CURTO[:\s]+([^\n]+)/i)?.[1]?.trim()||'';
+  const t120 = txt.match(/TÍTULO LONGO[:\s]+([^\n]+)/i)?.[1]?.trim()||'';
 
   let html='';
   if(t60||t120){
@@ -2311,15 +2306,13 @@ function anRenderRes(txt, p){
     <div style="padding:10px 12px">
       <div class="desc-block-an" id="an-desc-fmt">${anFmtTxt(txt)}</div>
       <div class="desc-block-an" id="an-desc-raw" style="display:none;font-family:monospace;font-size:11px">${anEsc(txt)}</div>
-      <div style="font-size:10px;color:#6b7280;margin-top:5px">${txt.length} chars | ${txt.split('
-').length} linhas</div>
+      <div style="font-size:10px;color:#6b7280;margin-top:5px">${txt.length} chars | ${txt.split('\n').length} linhas</div>
     </div>
   </div>`;
   panel.innerHTML=html;
 }
 
-function anFmtTxt(t){return t.split('
-').map(l=>{
+function anFmtTxt(t){return t.split('\n').map(l=>{
   if(l.startsWith('==='))return`<hr style="border:none;border-top:2px solid #1F3864;margin:10px 0;opacity:.2">`;
   if(/^[A-ZÁÉÍÓÚ\s]{6,}$/.test(l.trim()))return`<strong style="color:#1F3864;font-size:12px">${anEsc(l)}</strong>`;
   if(l.match(/^[•✅✓🚀💬🔒🏪🛒⭐]/))return`<span style="display:block;padding-left:4px">${anEsc(l)}</span>`;
@@ -2393,10 +2386,8 @@ async function anGerarMassa(){
       const p={sku:it.cProd,nome:it.xProd,marca:'',familia:'',fornecedor:'',codfab:'',
                compat:'',ficha:'',peso:'',tipo:'Produto',extra:''};
       const txt=await chamarClaudeAn(anMontarPrompt(p));
-      const t60=txt.match(/TÍTULO CURTO[:\s]+([^
-]+)/i)?.[1]?.trim()||'';
-      const t120=txt.match(/TÍTULO LONGO[:\s]+([^
-]+)/i)?.[1]?.trim()||'';
+      const t60=txt.match(/TÍTULO CURTO[:\s]+([^\n]+)/i)?.[1]?.trim()||'';
+      const t120=txt.match(/TÍTULO LONGO[:\s]+([^\n]+)/i)?.[1]?.trim()||'';
       anMassaResult.push({...p,txt,t60,t120,ok:true});
       const idx2=anMassaResult.length-1;
       tr.innerHTML=`<td style="padding:5px 8px"><strong>${it.cProd}</strong></td>
@@ -2420,11 +2411,9 @@ function anVerR(idx){const r=anMassaResult[idx];if(r&&r.txt)anRenderRes(r.txt,r)
 
 function anExportar(){
   if(!anMassaResult.length){alert('Gere primeiro');return;}
-  let csv='SKU;Produto;Marca;Título 60c;Título 120c;Descrição
-';
+  let csv='SKU;Produto;Marca;Título 60c;Título 120c;Descrição\n';
   anMassaResult.forEach(r=>{
-    csv+=`${r.sku||''};${r.nome||''};${r.marca||''};${(r.t60||'').replace(/;/g,',')};${(r.t120||'').replace(/;/g,',')};${(r.txt||'').replace(/
-/g,' | ').replace(/;/g,',')}
+    csv+=`${r.sku||''};${r.nome||''};${r.marca||''};${(r.t60||'').replace(/;/g,',')};${(r.t120||'').replace(/;/g,',')};${(r.txt||'').replace(/\n/g,' | ').replace(/;/g,',')}
 `;
   });
   const a=document.createElement('a');
