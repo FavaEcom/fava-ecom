@@ -154,6 +154,31 @@ header h1{font-size:14px;font-weight:700;flex:1}
 .orc-input-sku button{padding:3px 7px;font-size:10px;border:1px solid #2E75B6;border-radius:4px;background:#eff6ff;color:#1d4ed8;cursor:pointer;white-space:nowrap}
 .cliente-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:9px 11px;margin-bottom:10px}
 .cliente-box .ct{font-size:10px;font-weight:700;text-transform:uppercase;color:#166534;margin-bottom:6px}
+/* NF XML */
+.nf-item-row{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;margin-bottom:5px}
+.nf-item-row:hover{border-color:#bfdbfe;background:#f8faff}
+.nf-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;margin:1px}
+.nf-badge-icms{background:#dbeafe;color:#1e40af}
+.nf-badge-ipi{background:#fef3c7;color:#92400e}
+.nf-badge-st{background:#fee2e2;color:#991b1b}
+.nf-badge-pis{background:#dcfce7;color:#166534}
+.nf-cmv-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:5px;padding:5px 8px;margin-top:5px;font-size:11px}
+
+/* ANÚNCIO */
+.titulo-box-an{background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:10px 13px;margin-bottom:8px}
+.titulo-box-an .lbl{font-size:10px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.titulo-box-an .val{font-size:13px;font-weight:700;color:#1e3a8a;line-height:1.4}
+.titulo-box-an .chars{font-size:10px;color:#6b7280;margin-top:3px}
+.desc-block-an{background:#f8fafc;border:1px solid #e5e7eb;border-radius:7px;padding:12px 14px;white-space:pre-wrap;font-size:12px;line-height:1.7;color:#374151;max-height:60vh;overflow-y:auto}
+.chk-an{display:inline-flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;padding:3px 8px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;transition:.15s;user-select:none;margin:2px}
+.chk-an.on{background:#1F3864;color:#fff;border-color:#1F3864}
+.an-layout{display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 82px)}
+.an-left{background:#fff;border-right:1px solid #e0e4ea;overflow-y:auto;padding:13px}
+.an-right{overflow-y:auto;padding:13px}
+.copy-btn-an{padding:5px 12px;font-size:11px;border-radius:5px;border:1px solid #2E75B6;background:#fff;color:#2E75B6;cursor:pointer;font-weight:700}
+.copy-btn-an:hover,.copy-btn-an.ok{background:#2E75B6;color:#fff}
+.copy-btn-an.ok{background:#16a34a;border-color:#16a34a}
+
 @media print{
   header,.tabs,.orc-left,#btn-print,#btn-export-orc{display:none!important}
   .orc-layout{grid-template-columns:1fr;height:auto}
@@ -174,6 +199,7 @@ header h1{font-size:14px;font-weight:700;flex:1}
   <div class="tab ativo" onclick="switchTab('unitario')">Produto único</div>
   <div class="tab" onclick="switchTab('massa')">Precificação em massa (NF)</div>
   <div class="tab" onclick="switchTab('orcamento')">📄 Orçamento</div>
+  <div class="tab" onclick="switchTab('anuncio')">✍️ Anúncio</div>
 </div>
 
 <div class="layout">
@@ -257,6 +283,23 @@ header h1{font-size:14px;font-weight:700;flex:1}
       <input type="hidden" id="ipi-p" value="0">
       <input type="hidden" id="st-v" value="0">
       <input type="hidden" id="tem-st" value="nao">
+    </div>
+
+    <!-- NF-e XML Import -->
+    <div id="nf-xml-section" style="margin-bottom:8px">
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:7px 10px;font-size:11px;color:#1e40af;margin-bottom:6px;cursor:pointer"
+        onclick="toggleNfXml()">
+        📎 <strong>Importar NF-e XML</strong> — preenche automaticamente com ICMS, IPI, ST, PIS, COFINS reais da nota
+        <span id="nf-xml-arr" style="float:right">▼</span>
+      </div>
+      <div id="nf-xml-body" style="display:none">
+        <div class="field">
+          <label>Selecione o arquivo XML da NF-e</label>
+          <input type="file" id="nf-xml-file" accept=".xml" onchange="lerXmlNF(this)">
+        </div>
+        <div id="nf-xml-alert"></div>
+        <div id="nf-xml-resultado"></div>
+      </div>
     </div>
 
     <div id="cmv-box" class="cmv-box" style="display:none">
@@ -514,6 +557,83 @@ header h1{font-size:14px;font-weight:700;flex:1}
   </div>
 </div>
 
+<!-- ═══════════════════ ANÚNCIO ═══════════════════ -->
+<div id="painel-anuncio" class="an-layout" style="display:none">
+
+  <div class="an-left">
+    <div class="sec">Produto</div>
+    <div id="an-prod-info" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:7px 10px;font-size:11px;color:#1e40af;margin-bottom:8px">
+      Carregue um produto na aba <strong>Produto único</strong> para auto-preencher
+    </div>
+    <div class="field"><label>Nome do produto *</label>
+      <input type="text" id="an-nome" placeholder="Ex: Pinhão do Volante 1 Traço Super">
+    </div>
+    <div class="row2">
+      <div class="field"><label>SKU</label><input type="text" id="an-sku" placeholder="Ex: 2806"></div>
+      <div class="field"><label>Tipo</label>
+        <select id="an-tipo"><option>Peça</option><option>Kit</option><option>Acessório</option><option>Ferramenta</option><option>Equipamento</option></select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Marca</label><input type="text" id="an-marca" placeholder="Ex: Menegotti"></div>
+      <div class="field"><label>Família / Categoria</label><input type="text" id="an-familia" placeholder="Ex: Peças para Betoneiras"></div>
+    </div>
+    <div class="field"><label>Fornecedor</label><input type="text" id="an-fornecedor"></div>
+    <div class="field"><label>Código fabricante</label><input type="text" id="an-codfab"></div>
+    <div class="field"><label>Compatibilidade / Aplicações</label>
+      <textarea id="an-compat" rows="3" placeholder="Compatível com betoneiras Menegotti 400L Prime..."></textarea>
+    </div>
+    <div class="field"><label>Ficha técnica (separe com |)</label>
+      <textarea id="an-ficha" rows="2" placeholder="Material: Aço | Peso: 0,66kg | Dimensões: 13x7x7cm"></textarea>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Peso (kg)</label><input type="number" id="an-peso" step="0.001" placeholder="0.660"></div>
+      <div class="field"><label>Tom</label>
+        <select id="an-tom"><option value="tecnico">Técnico</option><option value="acessivel">Acessível</option><option value="vendedor">Persuasivo</option></select>
+      </div>
+    </div>
+    <div class="field"><label>Info adicional</label>
+      <textarea id="an-extra" rows="2" placeholder="Qualquer info relevante..."></textarea>
+    </div>
+
+    <div class="sec">Blocos do anúncio</div>
+    <div id="an-chks" style="margin-bottom:8px"></div>
+
+    <button class="btn btn-blue" id="an-btn-gerar" onclick="anGerar()">✨ Gerar com IA</button>
+
+    <div class="sec" style="margin-top:10px">Em massa (via NF XML)</div>
+    <div id="an-massa-lista" style="font-size:11px;color:#6b7280;margin-bottom:6px">
+      Importe uma NF-e XML na aba <strong>Produto único</strong> para gerar em massa.
+    </div>
+    <button id="an-btn-massa" class="btn btn-out" onclick="anGerarMassa()" style="display:none">✨ Gerar em massa (NF)</button>
+    <div class="field" style="margin-top:5px"><label>Pausa entre gerações (s)</label>
+      <input type="number" id="an-pausa" value="2" min="1" max="10">
+    </div>
+
+    <div class="sec">Config — Bloco Fava Ecom</div>
+    <textarea id="an-bloco-inst" rows="7" style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:6px 9px;font-size:11px;resize:vertical">🏪 FAVA ECOM — Sua loja especializada em peças, ferramentas e equipamentos.
+
+✅ Produtos originais com procedência garantida
+🚀 Envio rápido para todo o Brasil
+💬 Atendimento especializado para dúvidas técnicas
+🔒 Compra segura pelo Mercado Livre
+
+Somos especialistas em peças de reposição e ferramentas profissionais.</textarea>
+    <div class="sec">Marcas (nome: descrição — uma por linha)</div>
+    <textarea id="an-marcas" rows="6" style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:6px 9px;font-size:11px;resize:vertical">Menegotti: marca líder nacional em betoneiras e guinchos, com mais de 60 anos de tradição na construção civil brasileira
+CSM: especialista em componentes e sistemas para máquinas de construção, fornecedora oficial de peças originais
+Kala: distribuidora nacional de ferramentas e equipamentos para construção civil e uso geral
+MOR: marca tradicional brasileira de ferramentas e utensílios, presente no mercado há décadas
+Vonder: fabricante nacional de ferramentas elétricas e manuais com foco em qualidade e custo-benefício</textarea>
+    <button class="btn btn-out" onclick="anSalvarCfg()" style="margin-top:5px">Salvar config</button>
+  </div>
+
+  <div id="an-painel" class="an-right">
+    <div class="loading" style="text-align:center;padding:50px;color:#9ca3af">✍️<br><br>Preencha os dados e clique em <strong>Gerar com IA</strong></div>
+  </div>
+
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ══════════════════════════════════════════════════════════════════════
@@ -652,8 +772,10 @@ function switchTab(t){
   document.getElementById('painel-massa').style.display=t==='massa'?'':'none';
   // Orçamento usa layout próprio (fora do .layout principal)
   const lo=document.querySelector('.layout');
-  if(lo) lo.style.display=t==='orcamento'?'none':'grid';
+  if(lo) lo.style.display=(t==='orcamento'||t==='anuncio')?'none':'grid';
   document.getElementById('painel-orcamento').style.display=t==='orcamento'?'grid':'none';
+  document.getElementById('painel-anuncio').style.display=t==='anuncio'?'grid':'none';
+  if(t==='anuncio') anInit();
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -813,7 +935,8 @@ function mostrarCardProd(){
       <span>Peso: <strong>${prodAtual.peso}kg</strong></span>
       ${prodAtual.mlb?`<span>MLB: <strong>${prodAtual.mlb}</strong></span>`:''}
       <span>Estoque: <strong>${prodAtual.estoque}</strong></span>
-    </div>`;
+    </div>
+    <button onclick="irParaAnuncio()" style="margin-top:6px;padding:4px 10px;font-size:11px;font-weight:700;background:#1F3864;color:#fff;border:none;border-radius:5px;cursor:pointer;width:100%">✍️ Gerar anúncio para este produto</button>`;
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1763,6 +1886,550 @@ TOTAL;;;;;;${(subtotal+frete+taxas).toFixed(2)};`;
   const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download=`orcamento_${document.getElementById('orc-num').value||Date.now()}.csv`;a.click();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// LEITURA DE NF-e XML
+// ══════════════════════════════════════════════════════════════════════
+function toggleNfXml(){
+  const b=document.getElementById('nf-xml-body');
+  const a=document.getElementById('nf-xml-arr');
+  const open=b.style.display==='none';
+  b.style.display=open?'':'none';
+  a.textContent=open?'▲':'▼';
+}
+
+// Pega texto de uma tag XML (busca em qualquer namespace)
+function xmlVal(el, tag){
+  const nodes=el.getElementsByTagName(tag);
+  return nodes.length ? (nodes[0].textContent||'').trim() : '';
+}
+
+// Pega valor numérico de múltiplas tags possíveis (first match)
+function xmlNum(el, ...tags){
+  for(const tag of tags){
+    const nodes=el.getElementsByTagName(tag);
+    if(nodes.length){ const v=parseFloat(nodes[0].textContent); if(!isNaN(v)) return v; }
+  }
+  return 0;
+}
+
+function lerXmlNF(input){
+  const file=input.files[0];
+  if(!file){return;}
+  const alertEl=document.getElementById('nf-xml-alert');
+  alertEl.innerHTML='<div class="alert alert-info"><span class="spin"></span> Lendo XML...</div>';
+  document.getElementById('nf-xml-resultado').innerHTML='';
+
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const parser=new DOMParser();
+      const doc=parser.parseFromString(e.target.result,'text/xml');
+      const erros=doc.getElementsByTagName('parsererror');
+      if(erros.length){alertEl.innerHTML='<div class="alert alert-err">❌ XML inválido ou corrompido</div>';return;}
+
+      // Dados da NF
+      const ide=doc.getElementsByTagName('ide')[0];
+      const emit=doc.getElementsByTagName('emit')[0];
+      const dest=doc.getElementsByTagName('dest')[0];
+      const total=doc.getElementsByTagName('ICMSTot')[0];
+
+      const nNF   = xmlVal(doc,'nNF');
+      const emitNome = emit ? xmlVal(emit,'xNome') : '—';
+      const emitCNPJ = emit ? xmlVal(emit,'CNPJ') : '—';
+      const destNome = dest ? xmlVal(dest,'xNome') : '—';
+      const dhEmi = xmlVal(doc,'dhEmi').substring(0,10);
+
+      // Itens da NF
+      const detNodes=doc.getElementsByTagName('det');
+      if(!detNodes.length){alertEl.innerHTML='<div class="alert alert-warn">⚠️ Nenhum item encontrado no XML</div>';return;}
+
+      let itensNF=[];
+      for(let i=0;i<detNodes.length;i++){
+        const det=detNodes[i];
+        const prod=det.getElementsByTagName('prod')[0];
+        const imp=det.getElementsByTagName('imposto')[0];
+        if(!prod) continue;
+
+        const cProd   = xmlVal(prod,'cProd');
+        const xProd   = xmlVal(prod,'xProd');
+        const qCom    = xmlNum(prod,'qCom');
+        const vUnCom  = xmlNum(prod,'vUnCom');
+        const vProd   = xmlNum(prod,'vProd');
+
+        // IPI (pode ser IPITrib ou IPINT)
+        const vIPI    = xmlNum(imp||det,'vIPI');
+        const pIPI    = xmlNum(imp||det,'pIPI');
+
+        // ICMS — vários CSTs possíveis (ICMS00, ICMS10, ICMS20, ICMS40, ICMS51, ICMS60, etc)
+        const icmsEl  = imp ? imp.getElementsByTagName('ICMS')[0] : null;
+        let pICMS=0, vICMS=0, cst='';
+        if(icmsEl){
+          pICMS = xmlNum(icmsEl,'pICMS');
+          vICMS = xmlNum(icmsEl,'vICMS');
+          // Detecta CST/CSOSN
+          const icmsChildren=icmsEl.children;
+          if(icmsChildren.length) cst=icmsChildren[0].tagName.replace('ICMS','CST ').replace('SN','SN ');
+        }
+
+        // Substituição Tributária
+        const vICMSST = xmlNum(imp||det,'vICMSST','vICMSSTRet');
+
+        // PIS e COFINS crédito real da NF
+        const vPIS    = xmlNum(imp||det,'vPIS');
+        const pPIS    = xmlNum(imp||det,'pPIS');
+        const vCOFINS = xmlNum(imp||det,'vCOFINS');
+        const pCOFINS = xmlNum(imp||det,'pCOFINS');
+
+        // Custo unitário real (vProd sem IPI; IPI é custo adicional)
+        const custoBruto  = vProd/Math.max(qCom,1); // valor por unidade sem IPI
+        const ipiUn       = vIPI/Math.max(qCom,1);
+        const stUn        = vICMSST/Math.max(qCom,1);
+        const pisUn       = vPIS/Math.max(qCom,1);
+        const cofinsUn    = vCOFINS/Math.max(qCom,1);
+        const icmsUn      = vICMS/Math.max(qCom,1);
+
+        // CMV real = custo total - créditos (Lucro Real)
+        // Crédito ICMS: só se não tem ST (ST já está no custo sem crédito)
+        const temST       = vICMSST>0;
+        const custoTotal  = custoBruto + ipiUn + stUn; // custo de aquisição por unidade
+        const credICMS    = temST ? 0 : icmsUn;         // crédito ICMS real da NF
+        const credPIS     = pisUn;
+        const credCOFINS  = cofinsUn;
+        const cmvReal     = Math.max(custoTotal - credICMS - credPIS - credCOFINS, custoTotal*0.35);
+
+        itensNF.push({
+          item:i+1, cProd, xProd, qCom, vUnCom, vProd, custoBruto,
+          pIPI, ipiUn, vICMSST, stUn, temST,
+          pICMS, icmsUn, vPIS, pisUn, vCOFINS, cofinsUn, pPIS, pCOFINS,
+          custoTotal, credICMS, credPIS, credCOFINS, cmvReal, cst
+        });
+      }
+
+      alertEl.innerHTML='';
+      renderNfItens(itensNF, {nNF, emitNome, emitCNPJ, destNome, dhEmi, total});
+    }catch(err){
+      alertEl.innerHTML=`<div class="alert alert-err">❌ Erro ao processar XML: ${err.message}</div>`;
+      console.error(err);
+    }
+  };
+  reader.readAsText(file,'UTF-8');
+}
+
+function renderNfItens(itens, nf){
+  const wrap=document.getElementById('nf-xml-resultado');
+  let html=`
+  <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:7px;padding:9px 11px;margin-bottom:8px;font-size:11px">
+    <strong>📄 NF ${nf.nNF}</strong> — ${nf.emitNome} | ${nf.dhEmi}
+    <span style="float:right;color:#6b7280">${itens.length} itens</span>
+  </div>
+  <div style="font-size:10px;color:#6b7280;margin-bottom:6px;padding:4px 8px;background:#fffbeb;border-radius:5px;border:1px solid #fde68a">
+    💡 <strong>CMV Real</strong> = Custo NF + IPI + ST − Créd.ICMS − Créd.PIS − Créd.COFINS (valores reais da NF, sem estimativas)
+  </div>`;
+
+  itens.forEach(it=>{
+    const mcCor = it.cmvReal>0?'':'#9ca3af';
+    html+=`
+    <div class="nf-item-row">
+      <div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:11px;font-weight:700;color:#1e40af">${it.cProd} — ${it.xProd}</div>
+          <div style="font-size:10px;color:#6b7280;margin-top:2px">
+            Qtd: <strong>${it.qCom}</strong> | 
+            Vl.Unit NF: <strong>R$ ${fmt(it.custoBruto)}</strong> | 
+            Custo total: <strong>R$ ${fmt(it.custoTotal)}</strong>
+          </div>
+          <div style="margin-top:3px">
+            <span class="nf-badge nf-badge-icms">ICMS ${it.pICMS.toFixed(1)}% = R$ ${fmt(it.icmsUn)}</span>
+            ${it.pIPI>0?`<span class="nf-badge nf-badge-ipi">IPI ${it.pIPI.toFixed(1)}% = R$ ${fmt(it.ipiUn)}</span>`:''}
+            ${it.temST?`<span class="nf-badge nf-badge-st">ST = R$ ${fmt(it.stUn)}</span>`:''}
+            <span class="nf-badge nf-badge-pis">PIS ${it.pPIS.toFixed(2)}% = R$ ${fmt(it.pisUn)}</span>
+            <span class="nf-badge nf-badge-pis">COF ${it.pCOFINS.toFixed(2)}% = R$ ${fmt(it.cofinsUn)}</span>
+            ${it.temST?'<span style="font-size:9px;color:#991b1b">⚠️ ST: sem créd.ICMS</span>':''}
+          </div>
+        </div>
+        <div class="nf-cmv-box" style="min-width:180px">
+          <div style="color:#166534;font-weight:700;font-size:12px">CMV Real: R$ ${fmt(it.cmvReal)}</div>
+          <div style="color:#6b7280;font-size:10px;margin-top:2px">
+            ${fmt(it.custoBruto)}${it.ipiUn>0?` +IPI${fmt(it.ipiUn)}`:''}${it.stUn>0?` +ST${fmt(it.stUn)}`:''} 
+            −Créd(${fmt(it.credICMS+it.credPIS+it.credCOFINS)})
+          </div>
+          <button onclick="aplicarItemNF(${JSON.stringify(it).replace(/"/g,'&quot;')})"
+            style="margin-top:5px;padding:4px 10px;font-size:10px;font-weight:700;background:#1F3864;color:#fff;border:none;border-radius:5px;cursor:pointer;width:100%">
+            ✓ Usar este item na calculadora
+          </button>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  // Botão importar todos
+  html+=`<button onclick="importarTodosNF(${JSON.stringify(itens).replace(/"/g,'&quot;')})"
+    style="width:100%;margin-top:6px;padding:7px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer">
+    📋 Importar todos para o Orçamento
+  </button>`;
+
+  wrap.innerHTML=html;
+  // Registra itens para geração em massa de anúncios
+  if(typeof anRegistrarItensNF === 'function') anRegistrarItensNF(itens);
+}
+
+function aplicarItemNF(it){
+  // Preenche a calculadora com os dados reais da NF
+  setModo('manual');
+  document.getElementById('custo-manual').value = it.custoBruto.toFixed(4);
+  document.getElementById('ipi-manual').value   = it.pIPI.toFixed(2);
+  document.getElementById('st-manual').value    = it.stUn.toFixed(4);
+  document.getElementById('tem-st-manual').value= it.temST ? 'sim' : 'nao';
+  document.getElementById('icms-entrada').value  = it.pICMS.toFixed(2);
+  document.getElementById('peso-r').value        = '0.5'; // usuário preenche
+  // Preenche campos de crédito reais
+  recalcCMV();
+
+  // Atualiza prodAtual para exibir card
+  prodAtual={id:null,nome:it.xProd,codigo:it.cProd,custo:it.cmvReal,peso:.5,l:0,a:0,p:0,estoque:'—'};
+  mostrarCardProd();
+  document.getElementById('sku').value=it.cProd;
+  // Scroll up
+  document.querySelector('.left').scrollTo({top:0,behavior:'smooth'});
+}
+
+function importarTodosNF(itens){
+  // Muda para tab Orçamento e preenche os itens
+  switchTab('orcamento');
+  // Aguarda render
+  setTimeout(()=>{
+    itens.slice(0, ORC_ROWS).forEach((it,i)=>{
+      orcItems[i]={...orcItems[i], sku:it.cProd, nome:it.xProd, cmvUnit:it.cmvReal, qtd:it.qCom, manual:true};
+      const skuEl=document.getElementById(`orc-sku-${i+1}`);
+      const nomeEl=document.getElementById(`orc-nome-${i+1}`);
+      const cmvEl=document.getElementById(`orc-cmv-${i+1}`);
+      const qtdEl=document.getElementById(`orc-qtd-${i+1}`);
+      if(skuEl)  skuEl.value=it.cProd;
+      if(nomeEl) nomeEl.textContent=it.xProd;
+      if(cmvEl)  cmvEl.value=it.cmvReal.toFixed(4);
+      if(qtdEl)  qtdEl.value=it.qCom;
+    });
+    calcOrc();
+  }, 200);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// GERADOR DE ANÚNCIOS (integrado)
+// ══════════════════════════════════════════════════════════════════════
+const AN_BLOCOS=[
+  {id:'titulo',    lb:'Títulos 60c/120c', on:true},
+  {id:'apresenta', lb:'Apresentação',     on:true},
+  {id:'curiosidade',lb:'Curiosidade téc.',on:true},
+  {id:'marca',     lb:'Sobre a marca',    on:true},
+  {id:'beneficios',lb:'Benefícios',       on:true},
+  {id:'ficha',     lb:'Ficha técnica',    on:true},
+  {id:'compat',    lb:'Compatibilidade',  on:true},
+  {id:'cuidados',  lb:'Cuidados / uso',   on:true},
+  {id:'inst',      lb:'Bloco Fava Ecom',  on:true},
+  {id:'hashtags',  lb:'Hashtags SEO',     on:true},
+];
+let anAtivos=new Set(AN_BLOCOS.filter(b=>b.on).map(b=>b.id));
+let anNfItens=[]; // itens da NF para geração em massa
+let anMassaResult=[];
+
+function anInit(){
+  anRenderChks();
+  anCarregarCfg();
+}
+
+function anRenderChks(){
+  const w=document.getElementById('an-chks');if(!w)return;
+  w.innerHTML=AN_BLOCOS.map(b=>`<span class="chk-an ${anAtivos.has(b.id)?'on':''}"
+    onclick="anToggleB('${b.id}')">${b.lb}</span>`).join('');
+}
+function anToggleB(id){anAtivos.has(id)?anAtivos.delete(id):anAtivos.add(id);anRenderChks();}
+
+function anSalvarCfg(){
+  const cfg={inst:document.getElementById('an-bloco-inst').value,marcas:document.getElementById('an-marcas').value};
+  localStorage.setItem('fava_ad_cfg',JSON.stringify(cfg));
+  // Notificação inline
+  const btn=event.target;btn.textContent='✅ Salvo!';setTimeout(()=>btn.textContent='Salvar config',1500);
+}
+function anCarregarCfg(){
+  const c=JSON.parse(localStorage.getItem('fava_ad_cfg')||'{}');
+  if(c.inst){const el=document.getElementById('an-bloco-inst');if(el)el.value=c.inst;}
+  if(c.marcas){const el=document.getElementById('an-marcas');if(el)el.value=c.marcas;}
+}
+
+function irParaAnuncio(){
+  if(!prodAtual){switchTab('anuncio');return;}
+  // Auto-preenche com dados do produto Bling
+  switchTab('anuncio');
+  setTimeout(()=>{
+    const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
+    set('an-nome',  prodAtual.nome);
+    set('an-sku',   prodAtual.codigo);
+    set('an-peso',  prodAtual.peso);
+    // Tenta extrair marca do nome
+    const marcasEl=document.getElementById('an-marcas');
+    if(marcasEl){
+      const marcaMatch=marcasEl.value.split('
+').find(l=>{
+        const m=l.split(':')[0].trim().toLowerCase();
+        return prodAtual.nome.toLowerCase().includes(m);
+      });
+      if(marcaMatch) set('an-marca', marcaMatch.split(':')[0].trim());
+    }
+    document.getElementById('an-prod-info').innerHTML=
+      `✅ Produto carregado: <strong>${prodAtual.nome}</strong> | SKU: ${prodAtual.codigo} | ${prodAtual.peso}kg`;
+    document.getElementById('an-prod-info').style.color='#166534';
+    document.getElementById('an-prod-info').style.background='#f0fdf4';
+    document.getElementById('an-prod-info').style.borderColor='#bbf7d0';
+  }, 150);
+}
+
+// Chamada à API do Claude (mesma do gerador standalone)
+async function chamarClaudeAn(prompt){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})
+  });
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(`API ${r.status}: ${e.error?.message||JSON.stringify(e)}`);}
+  const d=await r.json();return d.content?.[0]?.text||'';
+}
+
+function anMontarPrompt(p){
+  const inst=document.getElementById('an-bloco-inst').value;
+  const marcasTxt=document.getElementById('an-marcas').value;
+  const tom=document.getElementById('an-tom').value||'tecnico';
+  const infoMarca=marcasTxt.split('
+').find(l=>l.toLowerCase().startsWith((p.marca||'').toLowerCase()+':'))?.split(':').slice(1).join(':').trim()||'';
+  const bl=[...anAtivos];
+  return `Você é um especialista em e-commerce brasileiro criando anúncios profissionais para a Fava Ecom, loja especializada em peças de reposição, ferramentas e equipamentos.
+
+PRODUTO:
+- SKU: ${p.sku||'—'}
+- Nome: ${p.nome}
+- Marca: ${p.marca||'—'}
+- Família/Categoria: ${p.familia||'—'}
+- Tipo: ${p.tipo||'Produto'}
+- Fornecedor: ${p.fornecedor||'—'}
+- Código fabricante: ${p.codfab||'—'}
+- Peso: ${p.peso||'—'} kg
+${p.ficha?`- Ficha técnica: ${p.ficha}`:''}
+${p.compat?`- Compatibilidade: ${p.compat}`:''}
+${p.extra?`- Informações extras: ${p.extra}`:''}
+${infoMarca?`
+SOBRE A MARCA ${(p.marca||'').toUpperCase()}:
+${infoMarca}`:''}
+
+TOM: ${tom==='tecnico'?'técnico e profissional':tom==='acessivel'?'acessível e direto':'persuasivo e vendedor'}
+
+BLOCO INSTITUCIONAL (use este texto exatamente no bloco Fava Ecom):
+${inst}
+
+GERE o anúncio com os blocos marcados com ✓ abaixo:
+${bl.includes('titulo')?`✓ TÍTULOS:
+- TÍTULO CURTO (máx 60 caracteres exatos): palavra-chave principal + marca + complemento
+- TÍTULO LONGO (máx 120 caracteres exatos): mais descritivo com marca, compatibilidade e diferencial`:''}
+${bl.includes('apresenta')?'✓ APRESENTAÇÃO DO PRODUTO: 2-3 frases diretas sobre o que é e para que serve':''}
+${bl.includes('curiosidade')?'✓ CURIOSIDADE TÉCNICA: 1 parágrafo com informação técnica interessante':''}
+${bl.includes('marca')?`✓ SOBRE A MARCA ${p.marca||''}: 1 parágrafo destacando tradição e credibilidade`:''}
+${bl.includes('beneficios')?'✓ BENEFÍCIOS: lista com 6-8 bullet points com emoji ou •':''}
+${bl.includes('ficha')?'✓ FICHA TÉCNICA: dados técnicos formatados em linhas "Campo: Valor"':''}
+${bl.includes('compat')?'✓ COMPATIBILIDADE: lista clara de modelos/equipamentos compatíveis':''}
+${bl.includes('cuidados')?'✓ CUIDADOS E MODO DE USO: instrução de instalação e cuidados':''}
+${bl.includes('inst')?'✓ BLOCO FAVA ECOM: use o texto institucional exato fornecido acima':''}
+${bl.includes('hashtags')?'✓ HASHTAGS SEO: 15-20 palavras-chave relevantes separadas por espaço (sem #)':''}
+
+REGRAS:
+- NUNCA inclua informações fiscais (NCM, CFOP, CEST, impostos)
+- NUNCA mencione preço
+- Português brasileiro
+- Cada bloco começa com === NOME DO BLOCO === em linha separada
+- Seja específico, evite frases genéricas`;
+}
+
+async function anGerar(){
+  const p={
+    sku:    document.getElementById('an-sku').value,
+    nome:   document.getElementById('an-nome').value,
+    marca:  document.getElementById('an-marca').value,
+    familia:document.getElementById('an-familia').value,
+    fornecedor:document.getElementById('an-fornecedor').value,
+    codfab: document.getElementById('an-codfab').value,
+    compat: document.getElementById('an-compat').value,
+    ficha:  document.getElementById('an-ficha').value,
+    peso:   document.getElementById('an-peso').value,
+    tipo:   document.getElementById('an-tipo').value,
+    extra:  document.getElementById('an-extra').value,
+  };
+  if(!p.nome){alert('Informe o nome do produto');return;}
+  const btn=document.getElementById('an-btn-gerar');
+  btn.disabled=true;btn.textContent='⏳ Gerando...';
+  document.getElementById('an-painel').innerHTML=
+    `<div style="text-align:center;padding:50px;color:#9ca3af"><span class="spin"></span>Gerando anúncio para <strong>${p.nome}</strong>...</div>`;
+  try{
+    const txt=await chamarClaudeAn(anMontarPrompt(p));
+    anRenderRes(txt, p);
+  }catch(e){
+    document.getElementById('an-painel').innerHTML=
+      `<div class="alert alert-err" style="margin:20px">❌ ${e.message}<br><br>Verifique se a URL é HTTPS (Railway)</div>`;
+  }finally{btn.disabled=false;btn.textContent='✨ Gerar com IA';}
+}
+
+function anRenderRes(txt, p){
+  const panel=document.getElementById('an-painel');
+  panel.innerHTML=''; panel._txt=txt;
+  const t60  = txt.match(/TÍTULO CURTO[:\s]+([^
+]+)/i)?.[1]?.trim()||'';
+  const t120 = txt.match(/TÍTULO LONGO[:\s]+([^
+]+)/i)?.[1]?.trim()||'';
+
+  let html='';
+  if(t60||t120){
+    html+=`<div class="card" style="margin-bottom:10px">
+      <div class="card-head" style="padding:8px 12px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between">
+        <strong style="font-size:11px;color:#6b7280;text-transform:uppercase">Títulos</strong>
+        <div style="display:flex;gap:5px">
+          ${t60?`<button class="copy-btn-an" onclick="anCp(this,\`${t60.replace(/`/g,"'")}\`)">Copiar 60c</button>`:''}
+          ${t120?`<button class="copy-btn-an" onclick="anCp(this,\`${t120.replace(/`/g,"'")}\`)">Copiar 120c</button>`:''}
+        </div>
+      </div>
+      <div style="padding:10px 12px">
+        ${t60?`<div class="titulo-box-an"><div class="lbl">Título curto (≤60c)</div><div class="val">${t60}</div><div class="chars">${t60.length}/60 ${t60.length>60?'⚠️ EXCEDE':'✅'}</div></div>`:''}
+        ${t120?`<div class="titulo-box-an" style="background:#f0fdf4;border-color:#bbf7d0"><div class="lbl" style="color:#166534">Título longo (≤120c)</div><div class="val" style="color:#14532d">${t120}</div><div class="chars">${t120.length}/120 ${t120.length>120?'⚠️ EXCEDE':'✅'}</div></div>`:''}
+      </div>
+    </div>`;
+  }
+  html+=`<div class="card">
+    <div class="card-head" style="padding:8px 12px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between">
+      <strong style="font-size:11px;color:#6b7280;text-transform:uppercase">Descrição completa</strong>
+      <div style="display:flex;gap:5px">
+        <button class="copy-btn-an" id="an-btn-cp" onclick="anCpDesc()">Copiar tudo</button>
+        <button class="btn-sm" onclick="anBruto()">Bruto</button>
+      </div>
+    </div>
+    <div style="padding:10px 12px">
+      <div class="desc-block-an" id="an-desc-fmt">${anFmtTxt(txt)}</div>
+      <div class="desc-block-an" id="an-desc-raw" style="display:none;font-family:monospace;font-size:11px">${anEsc(txt)}</div>
+      <div style="font-size:10px;color:#6b7280;margin-top:5px">${txt.length} chars | ${txt.split('
+').length} linhas</div>
+    </div>
+  </div>`;
+  panel.innerHTML=html;
+}
+
+function anFmtTxt(t){return t.split('
+').map(l=>{
+  if(l.startsWith('==='))return`<hr style="border:none;border-top:2px solid #1F3864;margin:10px 0;opacity:.2">`;
+  if(/^[A-ZÁÉÍÓÚ\s]{6,}$/.test(l.trim()))return`<strong style="color:#1F3864;font-size:12px">${anEsc(l)}</strong>`;
+  if(l.match(/^[•✅✓🚀💬🔒🏪🛒⭐]/))return`<span style="display:block;padding-left:4px">${anEsc(l)}</span>`;
+  return anEsc(l);
+}).join('<br>');}
+function anEsc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function anBruto(){
+  const f=document.getElementById('an-desc-fmt'),r=document.getElementById('an-desc-raw');
+  const s=r.style.display==='none';f.style.display=s?'none':'';r.style.display=s?'':'none';
+}
+function anCpDesc(){
+  const p=document.getElementById('an-painel');
+  if(p._txt)navigator.clipboard.writeText(p._txt).then(()=>{
+    const b=document.getElementById('an-btn-cp');b.textContent='✓ Copiado!';b.className='copy-btn-an ok';
+    setTimeout(()=>{b.textContent='Copiar tudo';b.className='copy-btn-an';},2000);
+  });
+}
+function anCp(btn,txt){
+  navigator.clipboard.writeText(txt).then(()=>{
+    btn.textContent='✓ Copiado!';btn.className='copy-btn-an ok';
+    setTimeout(()=>{btn.textContent='Copiar';btn.className='copy-btn-an';},2000);
+  });
+}
+
+// ── GERAÇÃO EM MASSA via NF XML ─────────────────────────────────────────────
+function anRegistrarItensNF(itens){
+  // Chamado quando NF XML é importado
+  anNfItens=itens;
+  const btn=document.getElementById('an-btn-massa');
+  const info=document.getElementById('an-massa-lista');
+  if(btn&&info&&itens.length){
+    btn.style.display='';
+    info.innerHTML=`✅ <strong>${itens.length} itens</strong> da NF prontos para geração em massa.<br>
+    ${itens.slice(0,5).map(it=>`<span style="display:block;color:#374151">• ${it.cProd} — ${it.xProd}</span>`).join('')}
+    ${itens.length>5?`<span style="color:#9ca3af">...e mais ${itens.length-5}</span>`:''}`;
+  }
+}
+
+async function anGerarMassa(){
+  if(!anNfItens.length){alert('Importe uma NF XML primeiro');return;}
+  if(!confirm(`Gerar anúncios para ${anNfItens.length} produtos da NF?`))return;
+  const btn=document.getElementById('an-btn-massa');btn.disabled=true;btn.textContent='⏳ Gerando...';
+  anMassaResult=[];
+  const pausa=(parseFloat(document.getElementById('an-pausa').value)||2)*1000;
+  const panel=document.getElementById('an-painel');
+  panel.innerHTML=`<div class="card"><div style="padding:10px 12px">
+    <div id="an-prog" style="font-size:12px;margin-bottom:8px">Iniciando...</div>
+    <table style="width:100%;border-collapse:collapse;font-size:11px">
+      <thead><tr style="background:#f8fafc">
+        <th style="padding:5px 8px;text-align:left">SKU</th>
+        <th style="padding:5px 8px;text-align:left">Produto</th>
+        <th style="padding:5px 8px">Status</th>
+        <th style="padding:5px 8px">Ação</th>
+      </tr></thead>
+      <tbody id="an-mtbody"></tbody>
+    </table>
+    <button id="an-btn-export" onclick="anExportar()" style="display:none;margin-top:8px;padding:6px 14px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer">⬇️ Exportar CSV</button>
+  </div></div>`;
+
+  for(let i=0;i<anNfItens.length;i++){
+    const it=anNfItens[i];
+    document.getElementById('an-prog').innerHTML=
+      `<span class="spin"></span>${i+1}/${anNfItens.length}: <strong>${it.xProd}</strong>`;
+    const tbody=document.getElementById('an-mtbody');
+    const tr=document.createElement('tr');tr.id=`anmr-${i}`;
+    tr.innerHTML=`<td style="padding:5px 8px"><strong>${it.cProd}</strong></td>
+      <td style="padding:5px 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.xProd}</td>
+      <td style="padding:5px 8px;text-align:center"><span class="spin"></span></td><td>—</td>`;
+    tbody.appendChild(tr);
+    try{
+      const p={sku:it.cProd,nome:it.xProd,marca:'',familia:'',fornecedor:'',codfab:'',
+               compat:'',ficha:'',peso:'',tipo:'Produto',extra:''};
+      const txt=await chamarClaudeAn(anMontarPrompt(p));
+      const t60=txt.match(/TÍTULO CURTO[:\s]+([^
+]+)/i)?.[1]?.trim()||'';
+      const t120=txt.match(/TÍTULO LONGO[:\s]+([^
+]+)/i)?.[1]?.trim()||'';
+      anMassaResult.push({...p,txt,t60,t120,ok:true});
+      const idx2=anMassaResult.length-1;
+      tr.innerHTML=`<td style="padding:5px 8px"><strong>${it.cProd}</strong></td>
+        <td style="padding:5px 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.xProd}</td>
+        <td style="padding:5px 8px;text-align:center"><span style="background:#dcfce7;color:#166534;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700">✅ OK</span></td>
+        <td style="padding:5px 8px"><button class="btn-sm" onclick="anVerR(${idx2})">Ver</button></td>`;
+    }catch(e){
+      anMassaResult.push({sku:it.cProd,nome:it.xProd,txt:'',ok:false,erro:e.message});
+      tr.innerHTML=`<td style="padding:5px 8px">${it.cProd}</td><td style="padding:5px 8px">${it.xProd}</td>
+        <td style="padding:5px 8px;text-align:center"><span style="background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700">❌ Erro</span></td><td>—</td>`;
+    }
+    if(i<anNfItens.length-1) await new Promise(r=>setTimeout(r,pausa));
+  }
+  document.getElementById('an-prog').innerHTML=
+    `✅ Concluído! ${anMassaResult.filter(r=>r.ok).length}/${anNfItens.length} gerados.`;
+  const expBtn=document.getElementById('an-btn-export');if(expBtn)expBtn.style.display='';
+  btn.disabled=false;btn.textContent='✨ Gerar em massa (NF)';
+}
+
+function anVerR(idx){const r=anMassaResult[idx];if(r&&r.txt)anRenderRes(r.txt,r);}
+
+function anExportar(){
+  if(!anMassaResult.length){alert('Gere primeiro');return;}
+  let csv='SKU;Produto;Marca;Título 60c;Título 120c;Descrição
+';
+  anMassaResult.forEach(r=>{
+    csv+=`${r.sku||''};${r.nome||''};${r.marca||''};${(r.t60||'').replace(/;/g,',')};${(r.t120||'').replace(/;/g,',')};${(r.txt||'').replace(/
+/g,' | ').replace(/;/g,',')}
+`;
+  });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download='anuncios_fava.csv';a.click();
 }
 
 </script>
