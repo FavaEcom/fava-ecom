@@ -1037,7 +1037,7 @@ let massaData = []; // resultado da precificação em massa
 // ══════════════════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════════════════
-window.onload=()=>{
+window.onload=async ()=>{
   const sv=localStorage.getItem('fava_tk4')||localStorage.getItem('fava_dash_tk');
   if(sv){tokens=JSON.parse(sv);document.getElementById('tk-bling').value=tokens.bling||'';document.getElementById('tk-ml').value=tokens.ml||'';}
   else{tokens.bling='590eed8f0b2fb1998e3f60335cef2a17bf5b2135fc69ec4a5ae925f520a8';document.getElementById('tk-bling').value=tokens.bling;localStorage.setItem('fava_tk4',JSON.stringify(tokens));}
@@ -1046,8 +1046,44 @@ window.onload=()=>{
   const elCk=document.getElementById('tk-claude');
   if(ck&&elCk) elCk.value=ck;
   testar();renderTags();renderMg();renderTiers();renderMgMassa();
-  // init banco CMV count
-  { const n=Object.keys(cmvBanco).length; document.querySelectorAll('.cmv-banco-cnt').forEach(el=>el.textContent=n+' SKUs no banco'); }
+
+  // ── Carrega CMV do banco PostgreSQL Railway ──
+  const RAILWAY = 'https://web-production-5aa0f.up.railway.app';
+  try{
+    document.querySelectorAll('.cmv-banco-cnt').forEach(el=>el.textContent='⟳ Carregando...');
+    const r = await fetch(RAILWAY+'/api/db/produtos');
+    if(r.ok){
+      const produtos = await r.json();
+      let n=0;
+      produtos.forEach(p=>{
+        if(!p.sku) return;
+        const sku = String(p.sku).trim();
+        const cmvBr = p.custo_br||p.custo||0;
+        const cmvPr = p.custo_pr||p.custo_br||p.custo||0;
+        if(cmvBr>0||cmvPr>0){
+          cmvBanco[sku] = {
+            nome: p.nome||sku,
+            cmvBr: cmvBr,
+            cmvPr: cmvPr,
+            custo: p.custo||cmvBr,
+            ipi: p.ipi||0,
+            cred_icms: p.cred_icms||0,
+            estoque: p.estoque||0,
+            dt: new Date().toISOString().slice(0,10),
+            fonte: 'db'
+          };
+          n++;
+        }
+      });
+      document.querySelectorAll('.cmv-banco-cnt').forEach(el=>el.textContent=n+' SKUs no banco');
+      console.log(`✅ Calculadora: ${n} produtos carregados do banco`);
+    }
+  }catch(e){
+    // Fallback: localStorage
+    const n=Object.keys(cmvBanco).length;
+    document.querySelectorAll('.cmv-banco-cnt').forEach(el=>el.textContent=n+' SKUs (local)');
+    console.warn('Banco Railway indisponível, usando localStorage:', e);
+  }
 };
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1959,28 +1995,56 @@ async function buscarSkuOrc(idx){
   if(!sku) return;
   const btn = document.getElementById(`orc-btn-${idx}`);
   btn.textContent='...'; btn.disabled=true;
+  const RAILWAY = 'https://web-production-5aa0f.up.railway.app';
   try{
-    const r=await fetch(`/api/bling/produtos?pagina=1&limite=5&criterio=1&tipo=T&codigo=${encodeURIComponent(sku)}`,
+    // 1. Tenta banco local (cmvBanco) primeiro — mais rápido
+    const local = cmvBanco[sku] || cmvBanco[String(parseInt(sku))] || null;
+    if(local && local.cmvPr>0){
+      orcItems[idx-1]={...orcItems[idx-1], sku, nome:local.nome||sku, cmvUnit:local.cmvPr, manual:false};
+      document.getElementById(`orc-nome-${idx}`).textContent=local.nome||sku;
+      document.getElementById(`orc-cmv-${idx}`).value=local.cmvPr.toFixed(4);
+      calcOrc();
+      return;
+    }
+    // 2. Tenta banco Railway
+    try{
+      const rdb = await fetch(RAILWAY+`/api/db/produtos`);
+      if(rdb.ok){
+        const prods = await rdb.json();
+        const prod = prods.find(p=>String(p.sku).trim()===sku||String(p.sku).trim()===String(parseInt(sku)));
+        if(prod && (prod.custo_pr||prod.custo_br)>0){
+          const cmvPr = prod.custo_pr||prod.custo_br||0;
+          cmvBanco[sku] = {nome:prod.nome||sku, cmvBr:prod.custo_br||0, cmvPr, custo:prod.custo||0, dt:new Date().toISOString().slice(0,10)};
+          orcItems[idx-1]={...orcItems[idx-1], sku, nome:prod.nome||sku, cmvUnit:cmvPr, manual:false};
+          document.getElementById(`orc-nome-${idx}`).textContent=prod.nome||sku;
+          document.getElementById(`orc-cmv-${idx}`).value=cmvPr.toFixed(4);
+          calcOrc();
+          return;
+        }
+      }
+    }catch(e2){}
+    // 3. Fallback: Bling API
+    if(!tokens.bling){ alert('SKU não encontrado no banco. Configure o token Bling em ⚙️ Tokens.'); return; }
+    const r=await fetch(RAILWAY+`/api/bling/produtos?pagina=1&limite=5&criterio=1&tipo=T&codigo=${encodeURIComponent(sku)}`,
       {headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});
-    if(!r.ok){alert(`Bling erro ${r.status}`);return;}
+    if(!r.ok){alert(`Bling erro ${r.status}. SKU não encontrado no banco local.`);return;}
     const d=await r.json();
     let lista=d.data||[];
-    if(!lista.length){alert('Produto não encontrado');return;}
+    if(!lista.length){alert('Produto não encontrado no Bling nem no banco');return;}
     const p=lista[0];
-    // Busca detalhe para pegar precoCusto
     let prod=p;
     try{
-      const r2=await fetch(`/api/bling/produtos/${p.id}`,{headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});
+      const r2=await fetch(RAILWAY+`/api/bling/produtos/${p.id}`,{headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});
       if(r2.ok){const d2=await r2.json();prod=d2.data||p;}
     }catch(e){}
     const custo=parseFloat(prod.precoCusto||prod.custoMedio||0);
-    // Calcula CMV PR a partir do precoCusto
     const ipi=(parseFloat(prod.ipi)||0)/100;
     const custoNF=custo/(1+ipi);
     const credPis=custoNF*PIS, credCofins=custoNF*COFINS, credIcms=custoNF*ICMS_PR;
     const cmvPrCalc=Math.max(custoNF-credIcms-credPis-credCofins, custoNF*0.35);
-    orcItems[idx-1]={...orcItems[idx-1], sku:prod.codigo||sku, nome:prod.nome||'', cmvUnit:cmvPrCalc, manual:false};
-    document.getElementById(`orc-nome-${idx}`).textContent=prod.nome||'';
+    cmvBanco[sku]={nome:prod.descricao||sku, cmvBr:custo, cmvPr:cmvPrCalc, custo, dt:new Date().toISOString().slice(0,10)};
+    orcItems[idx-1]={...orcItems[idx-1], sku:prod.codigo||sku, nome:prod.descricao||prod.nome||'', cmvUnit:cmvPrCalc, manual:false};
+    document.getElementById(`orc-nome-${idx}`).textContent=prod.descricao||prod.nome||'';
     document.getElementById(`orc-cmv-${idx}`).value=cmvPrCalc.toFixed(4);
     calcOrc();
   }catch(e){alert(`Erro: ${e.message}`);}
