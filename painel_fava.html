@@ -369,11 +369,11 @@ function salvarCfg(){
   
   localStorage.setItem('fava_tk4', JSON.stringify({bling:tkB, ml:tkM}));
   salvarTokenStore();
-  document.getElementById('modal-cfg').style.display='none';
+  (document.getElementById('modal-cfg')||{style:{}}).style.display ='none';
   carregarTudo();
 }
 function fecharCfg(){
-  document.getElementById('modal-cfg').style.display='none';
+  (document.getElementById('modal-cfg')||{style:{}}).style.display ='none';
 }
 </script>
 
@@ -508,17 +508,17 @@ function selecionarPerfil(perfil){
   });
   const nomes = {admin:'Fabiano (Admin)', financeiro:'Financeiro (Esposa)', operacao:'Operação (Funcionário)'};
   (document.getElementById('login-perfil-nome')||{}).textContent = nomes[perfil];
-  document.getElementById('login-form').style.display = 'block';
-  document.getElementById('login-perfis').style.opacity = '0.5';
+  (document.getElementById('login-form')||{style:{}}).style.display = 'block';
+  (document.getElementById('login-perfis')||{style:{}}).style.opacity = '0.5';
   setTimeout(()=>document.getElementById('login-senha').focus(), 100);
 }
 
 function voltarPerfis(){
   loginPerfilSel = null;
-  document.getElementById('login-form').style.display = 'none';
-  document.getElementById('login-perfis').style.opacity = '1';
+  (document.getElementById('login-form')||{style:{}}).style.display = 'none';
+  (document.getElementById('login-perfis')||{style:{}}).style.opacity = '1';
   document.getElementById('login-senha').value = '';
-  document.getElementById('login-erro').style.display = 'none';
+  (document.getElementById('login-erro')||{style:{}}).style.display = 'none';
 }
 
 function fazerLogin(){
@@ -528,19 +528,19 @@ function fazerLogin(){
     perfilAtivo = loginPerfilSel;
     localStorage.setItem('fava_perfil', perfilAtivo);
     sessionStorage.setItem('fava_perfil_sess', perfilAtivo);
-    document.getElementById('login-bg').style.display = 'none';
+    (document.getElementById('login-bg')||{style:{}}).style.display = 'none';
     aplicarPermissoesPerfil();
     // Se já tem tokens salvos, carrega direto
     const sv = localStorage.getItem('fava_tk4');
     if(sv){
       const tk = JSON.parse(sv);
       if(tk.bling||tk.ml){
-        document.getElementById('modal-cfg').style.display='none';
+        (document.getElementById('modal-cfg')||{style:{}}).style.display ='none';
         // Tokens serão carregados pelo window.onload
       }
     }
   } else {
-    document.getElementById('login-erro').style.display = 'block';
+    (document.getElementById('login-erro')||{style:{}}).style.display = 'block';
     document.getElementById('login-senha').value = '';
     document.getElementById('login-senha').focus();
   }
@@ -569,7 +569,7 @@ window.onload=async ()=>{
   const perfilSalvo = sessionStorage.getItem('fava_perfil_sess');
   if(perfilSalvo && SENHAS[perfilSalvo]){
     perfilAtivo = perfilSalvo;
-    document.getElementById('login-bg').style.display = 'none';
+    (document.getElementById('login-bg')||{style:{}}).style.display = 'none';
     aplicarPermissoesPerfil();
   }
 
@@ -584,7 +584,7 @@ window.onload=async ()=>{
 
   // Carrega painel se tem tokens e perfil
   if((tokens.bling||tokens.ml) && perfilAtivo){
-    document.getElementById('modal-cfg').style.display='none';
+    (document.getElementById('modal-cfg')||{style:{}}).style.display ='none';
     carregarTudo();
   }
   
@@ -745,7 +745,7 @@ function agendarRenovacao(){
 // ══════════════════════════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════════════════════════
-function abrirCfg(){document.getElementById('cfg-modal').style.display='flex';}
+function abrirCfg(){(document.getElementById('cfg-modal')||{style:{}}).style.display ='flex';}
 
 
 // ══════════════════════════════════════════════════════════════════════
@@ -824,7 +824,7 @@ async function fetchPedidosML(de,ate){
     const pedidos=[];
     let offset=0,total=999;
     while(offset<total&&offset<300){
-      const r=await mlGet(`orders/search?seller=537714337&order.date_created.from=${de}T00:00:00.000-03:00&order.date_created.to=${ate}T23:59:59.000-03:00&sort=date_desc&limit=100&offset=${offset}`);
+      const r=await mlGet(`orders/search?seller=537714337&order.date_created.from=${de}T00:00:00.000-03:00&order.date_created.to=${ate}T23:59:59.000-03:00&order.status=paid&sort=date_desc&limit=50&offset=${offset}`);
       if(!r||!r.results)break;
       total=r.paging?.total||0;
       if(!r.results.length)break;
@@ -852,6 +852,7 @@ async function fetchPedidosML(de,ate){
         });
       }
       offset+=50;
+      await new Promise(r=>setTimeout(r,100));
       if(offset>=total)break;
     }
 
@@ -996,10 +997,8 @@ function renderKPIs(todos, itens){
   (document.getElementById('k-fat')||{}).textContent ='R$ '+fmt(fat);
   (document.getElementById('k-ped')||{}).textContent =nPed;
   (document.getElementById('k-tick')||{}).textContent ='R$ '+fmt(ticket);
-  (document.getElementById('k-mg')||{}).textContent =(mg*100).toFixed(1)+'%';
-  document.getElementById('k-mg').style.color=mg>=.20?'var(--verde)':mg>=.10?'var(--amarelo)':'var(--vermelho)';
-  (document.getElementById('k-lucro')||{}).textContent ='R$ '+fmt(lucroTotal);
-  document.getElementById('k-lucro').style.color=lucroTotal>0?'var(--verde)':'var(--vermelho)';
+  const _kmg=document.getElementById('k-mg');if(_kmg){_kmg.textContent=(mg*100).toFixed(1)+'%';_kmg.style.color=mg>=.20?'var(--verde)':mg>=.10?'var(--amarelo)':'var(--vermelho)';}
+  const _kluc=document.getElementById('k-lucro');if(_kluc){_kluc.textContent='R$ '+fmt(lucroTotal);_kluc.style.color=lucroTotal>0?'var(--verde)':'var(--vermelho)';}
   (document.getElementById('k-sku')||{}).textContent =skus;
 }
 
@@ -1209,7 +1208,7 @@ async function mlGet(path){
 // UI HELPERS
 // ══════════════════════════════════════════════════════════════════════
 function showLoading(msg){document.getElementById('loading').style.display='flex';document.getElementById('loading-msg').textContent=msg||'Carregando...';}
-function hideLoading(){document.getElementById('loading').style.display='none';}
+function hideLoading(){(document.getElementById('loading')||{style:{}}).style.display ='none';}
 function setDot(a,s,l){const d=document.getElementById(`dot-${a}`);const lb=document.getElementById(`lbl-${a}`);if(d)d.className=`dot ${s}`;if(lb)lb.textContent=l;}
 function recarregar(){dados.cmvCache={};carregarTudo();}
 function fmt(v){return(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -1398,8 +1397,8 @@ async function carregarPromocoes(){
     promoData = proms.map(p=>calcPromo(p));
     renderPromoKpis();
     renderPromoTable(promoData);
-    document.getElementById('prom-kpis').style.display='';
-    document.getElementById('prom-table-wrap').style.display='';
+    (document.getElementById('prom-kpis')||{style:{}}).style.display ='';
+    (document.getElementById('prom-table-wrap')||{style:{}}).style.display ='';
     (document.getElementById('prom-status')||{}).textContent =`✅ ${promoData.length} anúncios`;
   }catch(e){
     (document.getElementById('prom-status')||{}).textContent =`❌ ${e.message}`;
@@ -2242,7 +2241,7 @@ function renderADS(){
 }
 
 function renderPedidosComADS(){
-  document.getElementById('ads-pedidos-card').style.display='block';
+  (document.getElementById('ads-pedidos-card')||{style:{}}).style.display ='block';
   const pedidos = dados.pedidosML.filter(p=>p.status!=='cancelled').slice(0,50);
 
   // Gasto ADS total / total pedidos = custo ADS por pedido (estimativa)
@@ -2298,7 +2297,7 @@ async function carregarPedidosComADS(){
     alert('Carregue o Dashboard primeiro para ter os pedidos');return;
   }
   renderPedidosComADS();
-  document.getElementById('ads-pedidos-card').style.display='block';
+  (document.getElementById('ads-pedidos-card')||{style:{}}).style.display ='block';
 }
 
 function renderChartADS(sorted){
@@ -2789,7 +2788,7 @@ function carregarPlanilhaGP(input){
       ['gp-kpis','gp-toolbar','gp-filters','gp-table-wrap','gp-promos'].forEach(id=>{
         document.getElementById(id).style.display='';
       });
-      document.getElementById('btn-aplicar-todos').style.display='block';
+      (document.getElementById('btn-aplicar-todos')||{style:{}}).style.display ='block';
       recalcGP();
     }catch(ex){
       (document.getElementById('gp-status')||{}).textContent = `❌ Erro: ${ex.message}`;
@@ -3692,7 +3691,7 @@ function carregarBoletos(input){
       renderKpisFinanceiros();
       renderChartBoletos();
       (document.getElementById('boletos-status')||{}).textContent = `✅ ${boletosData.length} boletos carregados`;
-      document.getElementById('boletos-status').style.color = '#16a34a';
+      (document.getElementById('boletos-status')||{style:{}}).style.color = '#16a34a';
     }catch(ex){alert('Erro ao ler planilha: '+ex.message);}
   };
   reader.readAsArrayBuffer(file);
@@ -3925,7 +3924,7 @@ function addCustoFixo(){
   localStorage.setItem('fava_custos_fixos',JSON.stringify(custosFixos));
   document.getElementById('cf-nome').value='';
   document.getElementById('cf-valor').value='';
-  document.getElementById('custo-form').style.display='none';
+  (document.getElementById('custo-form')||{style:{}}).style.display ='none';
   renderCustoFixos();
   recalcFluxo();
   renderKpisFinanceiros();
@@ -4259,11 +4258,11 @@ function abrirModal(mlb, titulo, precoAtual, precoSug){
   (document.getElementById('modal-info')||{}).innerHTML =
     `<strong>${titulo.substring(0,60)}</strong><br>Preço atual: R$ ${fmt(precoAtual)} | Sugerido: R$ ${fmt(precoSug)}`;
   document.getElementById('modal-preco-input').value = precoSug.toFixed(2);
-  document.getElementById('modal-preco').style.display = 'flex';
+  (document.getElementById('modal-preco')||{style:{}}).style.display = 'flex';
 }
 
 function fecharModal(){
-  document.getElementById('modal-preco').style.display='none';
+  (document.getElementById('modal-preco')||{style:{}}).style.display ='none';
   modalMLB=null;
 }
 
