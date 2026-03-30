@@ -1657,10 +1657,10 @@ function renderPromoTabela(lista){
       <td style="padding:5px 8px;font-weight:700;color:#1F3864;white-space:nowrap">${p.sku||'<span style=color:#9ca3af>'+p.id+'</span>'}</td>
       <td style="padding:5px 8px;text-align:right;font-weight:700">R$${p.preco.toFixed(2)}</td>
       <td style="padding:5px 8px;text-align:center">
-        <input type="number" value="${p.descEditado||''}" min="5" max="80" step="1" placeholder="%" 
-          style="width:50px;border:1px solid #d1d5db;border-radius:4px;padding:2px 4px;text-align:center;font-size:11px;font-weight:700"
+        <input type="number" value="${p.descEditado>0?p.descEditado:''}" min="5" max="80" step="1" placeholder="—"
+          style="width:50px;border:1px solid #d1d5db;border-radius:4px;padding:2px 4px;text-align:center;font-size:11px;font-weight:700;${p.cmv<=0?'background:#fff7ed':''}"
           oninput="atualizarDescItem(${i},this.value)">
-        ${p.cmv>0 && descMaxCalc>0 ? '<div style="font-size:9px;color:#16a34a">máx '+descMaxCalc+'%</div>' : p.cmv<=0 ? '<div style="font-size:9px;color:#f59e0b">sem CMV</div>' : ''}
+        ${p.cmv>0 && descMaxCalc>0 ? '<div style="font-size:9px;color:#16a34a;font-weight:700">máx '+descMaxCalc+'%</div>' : p.cmv<=0 ? '<div style="font-size:9px;color:#f59e0b">sem CMV</div>' : '<div style="font-size:9px;color:#9ca3af">no limit</div>'}
       </td>
       <td id="pd-preco-${i}" style="padding:5px 8px;text-align:right;color:var(--azul2);font-weight:700">R$${precoComDesc.toFixed(2)}</td>
       <td style="padding:5px 8px;text-align:right;color:var(--muted)">${p.cmv?'R$'+p.cmv.toFixed(2):'<span style=color:#f59e0b>⚠️</span>'}</td>
@@ -5092,26 +5092,29 @@ async function carregarAnuncios(){
 
     // 2. Monta anunciosData cruzando com CMV
     anunciosData = listings.map(l=>{
-      const sku = l.sku||'';
+      const sku = String(l.sku||'').trim();
       const cmvInfo = cmvLookup(sku);
-      const cmv = parseFloat(l.cmv)||cmvInfo?.cmv||0;
+      const cmv = parseFloat(l.cmv)||parseFloat(l.cmv_br)||cmvInfo?.cmv||0;
       const preco = parseFloat(l.preco)||0;
-      const sale_fee = parseFloat(l.sale_fee)||0;
-      const taxa = sale_fee>0 ? sale_fee/100 : (l.listing_type==='gold_pro'?.17:.12);
+      // sale_fee: decimal (0.12) da API ML ou percentual (12.0) do banco — normalizar
+      const sfRaw = parseFloat(l.sale_fee)||0;
+      const taxa = sfRaw > 1 ? sfRaw/100 : sfRaw > 0 ? sfRaw : (l.listing_type==='gold_pro'?.17:.12);
       const frete = parseFloat(l.frete_medio)||0;
-      const pis = preco*0.0065, cofins = preco*0.03;
-      const freteL = frete * (1-0.0365); // frete líquido (crédito PIS/COFINS)
+      const pis = preco>0 ? preco*0.0065 : 0;
+      const cofins = preco>0 ? preco*0.03 : 0;
+      const freteL = frete>0 ? frete*(1-0.0365) : 0;
       let margem_atual = null, lucro = 0;
-      if(cmv>0 && preco>0){
+      if(cmv>0 && preco>0 && taxa>0){
         lucro = preco - cmv - preco*taxa - freteL - pis - cofins;
-        margem_atual = lucro/preco;
+        margem_atual = isNaN(lucro/preco) ? null : lucro/preco;
       }
       return {
-        id: l.id, sku, titulo: l.titulo, preco,
-        taxa, frete, freteL, cmv, margem_atual, lucro,
-        listing_type: l.listing_type,
-        free_shipping: l.free_shipping,
-        sale_fee, status: l.status,
+        id: l.id||'', sku, titulo: String(l.titulo||''), preco,
+        taxa, frete, freteL,
+        cmv, margem_atual, lucro: isNaN(lucro)?0:lucro,
+        listing_type: l.listing_type||'',
+        free_shipping: parseInt(l.free_shipping||0),
+        sale_fee: sfRaw, status: l.status||'',
         margem_minima: parseFloat(l.margem_minima)||0,
       };
     });
@@ -5129,10 +5132,67 @@ async function carregarAnuncios(){
 
 
 async function carregarAnunciosML(){
-  // Busca todos os anúncios ativos direto da API ML
   const tbody = document.getElementById('anunc-tbody');
+
+  // Tenta primeiro pelo Bling /anuncios (tem taxa e frete prontos)
+  if(tokens.bling){
+    try{
+      if(tbody) tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:15px;color:#9ca3af"><div class="spin" style="margin:0 auto 8px"></div>Buscando do Bling (anúncios ML)...</td></tr>';
+      const det = [];
+      let pagina = 1;
+      while(true){
+        const r = await fetch(`/api/bling/anuncios?pagina=${pagina}&limite=100`,
+          {headers:{'Authorization':`Bearer ${tokens.bling}`}});
+        if(!r.ok) break;
+        const d = await r.json();
+        const items = d.data||[];
+        if(!items.length) break;
+        items.forEach(it=>{
+          det.push({
+            id: it.idSite||it.id||'',
+            sku: String(it.sku||it.codigo||'').trim(),
+            titulo: it.nome||it.titulo||'',
+            preco: parseFloat(it.preco||0),
+            sale_fee: parseFloat(it.percentualComissao||it.taxa||0),
+            listing_type: it.tipoAnuncio||'',
+            free_shipping: it.freteGratis?1:0,
+            status: it.situacao||'active',
+            frete_medio: parseFloat(it.frete||0),
+            margem_minima: 0,
+            cmv: 0,
+          });
+        });
+        if(items.length < 100) break;
+        pagina++;
+        await new Promise(r=>setTimeout(r,200));
+      }
+      if(det.length > 0){
+        // Cruza CMV
+        det.forEach(l=>{ const ci=cmvLookup(l.sku); if(ci?.cmv) l.cmv=ci.cmv; });
+        anunciosData = det.map(l=>{
+          const sku = String(l.sku||'').trim();
+          const cmvInfo = cmvLookup(sku);
+          const cmv = parseFloat(l.cmv)||cmvInfo?.cmv||0;
+          const preco = parseFloat(l.preco)||0;
+          const sfRaw = parseFloat(l.sale_fee)||0;
+          const taxa = sfRaw>1?sfRaw/100:sfRaw>0?sfRaw:.12;
+          const frete = parseFloat(l.frete_medio)||0;
+          const freteL = frete*(1-0.0365);
+          const pis=preco*.0065,cofins=preco*.03;
+          let margem_atual=null,lucro=0;
+          if(cmv>0&&preco>0&&taxa>0){lucro=preco-cmv-preco*taxa-freteL-pis-cofins;margem_atual=lucro/preco;}
+          return{...l,sku,cmv,taxa,freteL,margem_atual:isNaN(margem_atual)?null:margem_atual};
+        });
+        renderAnuncios();
+        console.log(`Bling anúncios: ${det.length}`);
+        return;
+      }
+    }catch(e){ console.warn('Bling /anuncios falhou:', e); }
+  }
+
+  // Fallback: ML API com scroll
   if(!tokens.ml){
-    if(tbody) tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:#dc2626">❌ Token ML não configurado — abra ⚙️ e configure</td></tr>';
+    if(tbody) tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:#dc2626">❌ Tokens não configurados — abra ⚙️</td></tr>';
     return;
   }
   try{
@@ -5197,16 +5257,17 @@ function renderAnuncios(){
   }
   tbody.innerHTML = lista.map(a=>{
     const mgCor = a.margem_atual===null?'var(--muted)':a.margem_atual>=.20?'var(--verde)':a.margem_atual>=.10?'var(--amarelo)':'var(--vermelho)';
-    const mgStr = a.margem_atual!==null ? (a.margem_atual*100).toFixed(1)+'%' : a.cmv?'—':'⚠️';
-    const freteTxt = a.frete>0 ? 'R$'+a.freteL.toFixed(2) : '<span style="color:#f59e0b" title="Frete não disponível — sync em andamento">—</span>';
+    const mgStr = a.margem_atual!==null ? (a.margem_atual*100).toFixed(1)+'%' : (a.cmv>0?'—':'<span style="color:#f59e0b;font-size:9px">sem CMV</span>');
+    const freteTxt = a.frete>0 ? '<strong>R$'+a.freteL.toFixed(2)+'</strong><span style="font-size:9px;color:#9ca3af"> liq</span>' : '<span style="color:#9ca3af">—</span>';
+    const taxaTxt = a.taxa>0 ? (a.taxa*100).toFixed(0)+'%' : '—';
     return `<tr>
-      <td style="padding:5px 8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px" title="${a.titulo}">${a.titulo}</td>
-      <td style="padding:5px 8px;font-weight:700;color:#1F3864;font-size:11px">${a.sku||'—'}</td>
-      <td style="padding:5px 8px;font-size:10px;color:#6b7280">${a.id}</td>
-      <td style="padding:5px 8px;text-align:right;font-weight:700">R$${a.preco.toFixed(2)}</td>
-      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${a.cmv?'R$'+a.cmv.toFixed(2):'<span style=color:#f59e0b>⚠️</span>'}</td>
-      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${(a.taxa*100).toFixed(0)}%</td>
-      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${freteTxt}</td>
+      <td style="padding:5px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px" title="${a.titulo}">${a.titulo}</td>
+      <td style="padding:5px 8px;font-weight:700;color:#1F3864;font-size:11px;white-space:nowrap">${a.sku||'<span style=color:#9ca3af>—</span>'}</td>
+      <td style="padding:5px 8px;font-size:10px;color:#6b7280;white-space:nowrap">${a.id}</td>
+      <td style="padding:5px 8px;text-align:right;font-weight:700">R$${(a.preco||0).toFixed(2)}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${a.cmv>0?'R$'+a.cmv.toFixed(2):'<span style="color:#f59e0b">sem CMV</span>'}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${taxaTxt}</td>
+      <td style="padding:5px 8px;text-align:right">${freteTxt}</td>
       <td style="padding:5px 8px;text-align:right;color:${mgCor};font-weight:700">${mgStr}</td>
       <td style="padding:5px 8px;text-align:center"><span class="pill ${a.free_shipping?'pill-g':'pill-b'}" style="font-size:9px">${a.free_shipping?'Grátis':'Comprador'}</span></td>
     </tr>`;

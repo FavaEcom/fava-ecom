@@ -487,6 +487,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/historico': self._post_historico,
             '/api/db/nf': self._post_nf,
             '/api/db/listing': self._post_listing,
+            '/api/db/listings-batch': self._post_listings_batch,
             '/api/auth/tokens': self._post_tokens,
             '/api/cmv-cache': self._post_cmv,
         }
@@ -539,28 +540,73 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         """GET /api/db/listings — retorna anúncios ML com CMV cruzado."""
         try:
             rows = exe("""
-                SELECT l.id, l.sku, l.titulo, l.preco, l.sale_fee, l.listing_type,
-                       l.free_shipping, l.status, l.margem_minima, l.frete_medio,
-                       p.custo_br as cmv, p.custo_pr, p.nome as nome_produto
+                SELECT l.id, l.sku, l.titulo, l.preco,
+                       l.sale_fee, l.listing_type, l.free_shipping, l.status,
+                       l.margem_minima, l.frete_medio,
+                       COALESCE(p.custo_br, 0) as cmv,
+                       COALESCE(p.custo_pr, 0) as cmv_pr
                 FROM ml_listings l
                 LEFT JOIN produtos p ON p.sku = l.sku
+                WHERE l.id IS NOT NULL
                 ORDER BY l.titulo
             """, fetchall=True)
             self._ok(rows)
         except Exception as e: self._err(500, str(e))
 
     def _post_listing(self):
-        """POST /api/db/listing — salva margem_minima e frete_medio de um anúncio."""
+        """POST /api/db/listing — upsert completo de um anúncio ML."""
         try:
             d = self._body()
             mlb = d.get('id','')
             if not mlb: self._err(400,'id obrigatorio'); return
-            p = '%s' if IS_PG else '?'
-            fields = {k:v for k,v in d.items() if k in ('margem_minima','frete_medio','sku') and v is not None}
-            if fields:
-                for col, val in fields.items():
-                    exe(f"UPDATE ml_listings SET {col}={p} WHERE id={p}", (val, mlb))
-            self._ok({'ok':True})
+            sku        = str(d.get('sku','') or '').strip()
+            titulo     = str(d.get('titulo','') or '').strip()
+            preco      = float(d.get('preco',0) or 0)
+            sale_fee   = float(d.get('sale_fee',0) or 0)
+            ltype      = str(d.get('listing_type','') or '')
+            free_ship  = int(d.get('free_shipping',0) or 0)
+            status_it  = str(d.get('status','active') or 'active')
+            frete      = float(d.get('frete_medio',0) or 0)
+            mg_min     = float(d.get('margem_minima',0) or 0)
+            cmv        = float(d.get('cmv',0) or 0)
+            c = 'ON CONFLICT(id) DO UPDATE SET sku=EXCLUDED.sku,titulo=EXCLUDED.titulo,preco=EXCLUDED.preco,sale_fee=EXCLUDED.sale_fee,listing_type=EXCLUDED.listing_type,free_shipping=EXCLUDED.free_shipping,status=EXCLUDED.status,frete_medio=EXCLUDED.frete_medio,margem_minima=EXCLUDED.margem_minima' if IS_PG else                 'ON CONFLICT(id) DO UPDATE SET sku=excluded.sku,titulo=excluded.titulo,preco=excluded.preco,sale_fee=excluded.sale_fee,listing_type=excluded.listing_type,free_shipping=excluded.free_shipping,status=excluded.status,frete_medio=excluded.frete_medio,margem_minima=excluded.margem_minima'
+            exe(f"INSERT INTO ml_listings (id,sku,titulo,preco,sale_fee,listing_type,free_shipping,status,frete_medio,margem_minima) VALUES ({qmark(10)}) {c}",
+                (mlb,sku,titulo,preco,sale_fee,ltype,free_ship,status_it,frete,mg_min))
+            # Se tem CMV, atualiza também a tabela produtos
+            if cmv > 0 and sku:
+                upsert_produto(sku, titulo, custo=cmv, custo_br=cmv)
+            self._ok({'ok':True,'id':mlb})
+        except Exception as e: self._err(500, str(e))
+
+    def _post_listings_batch(self):
+        """POST /api/db/listings-batch — upsert em lote de anúncios ML."""
+        try:
+            d = self._body()
+            listings = d.get('listings',[])
+            ok, errs = 0, 0
+            for item in listings:
+                try:
+                    mlb    = str(item.get('id','') or '').strip()
+                    if not mlb: continue
+                    sku    = str(item.get('sku','') or '').strip()
+                    titulo = str(item.get('titulo','') or '').strip()
+                    preco  = float(item.get('preco',0) or 0)
+                    sf     = float(item.get('sale_fee',0) or 0)
+                    ltype  = str(item.get('listing_type','') or '')
+                    fs     = int(item.get('free_shipping',0) or 0)
+                    st     = str(item.get('status','active') or 'active')
+                    frete  = float(item.get('frete_medio',0) or 0)
+                    mg     = float(item.get('margem_minima',0) or 0)
+                    cmv    = float(item.get('cmv',0) or 0)
+                    c = 'ON CONFLICT(id) DO UPDATE SET sku=EXCLUDED.sku,titulo=EXCLUDED.titulo,preco=EXCLUDED.preco,sale_fee=EXCLUDED.sale_fee,listing_type=EXCLUDED.listing_type,free_shipping=EXCLUDED.free_shipping,status=EXCLUDED.status,frete_medio=EXCLUDED.frete_medio,margem_minima=EXCLUDED.margem_minima' if IS_PG else                         'ON CONFLICT(id) DO UPDATE SET sku=excluded.sku,titulo=excluded.titulo,preco=excluded.preco,sale_fee=excluded.sale_fee,listing_type=excluded.listing_type,free_shipping=excluded.free_shipping,status=excluded.status,frete_medio=excluded.frete_medio,margem_minima=excluded.margem_minima'
+                    exe(f"INSERT INTO ml_listings (id,sku,titulo,preco,sale_fee,listing_type,free_shipping,status,frete_medio,margem_minima) VALUES ({qmark(10)}) {c}",
+                        (mlb,sku,titulo,preco,sf,ltype,fs,st,frete,mg))
+                    if cmv > 0 and sku:
+                        upsert_produto(sku, titulo, custo=cmv, custo_br=cmv)
+                    ok += 1
+                except Exception as e2:
+                    errs += 1
+            self._ok({'ok':ok,'errors':errs})
         except Exception as e: self._err(500, str(e))
 
     def _get_status(self):
