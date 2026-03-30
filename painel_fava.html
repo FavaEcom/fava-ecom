@@ -515,6 +515,7 @@ function fecharCfg(){
   </div>
   <span class="last-update" id="last-update"></span>
   <button class="btn-reload" onclick="recarregar()">↻ Atualizar</button>
+  <button class="btn-reload" id="btn-renovar-ml" onclick="forcarRenovacaoML()" style="background:rgba(239,68,68,.3);border-color:rgba(239,68,68,.5)" title="Renovar token ML expirado">🔑 Renovar ML</button>
   <button class="btn-reload" onclick="document.getElementById('modal-cfg').style.display='flex'">⚙️</button>
 </header>
 
@@ -793,9 +794,10 @@ function fecharCfg(){
 
     <!-- Controles topo -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-      <button class="btn-reload" onclick="carregarPromocoes()" style="background:var(--azul);color:#fff;padding:7px 14px;font-size:12px">
+      <button class="btn-reload" onclick="carregarPromocoes()" style="background:var(--azul);color:#fff;padding:7px 14px;font-size:12px;border:none;border-radius:6px;cursor:pointer;font-weight:700">
         ↻ Carregar anúncios ativos
       </button>
+      <button onclick="selecionarTodosAplicar()" style="background:#16a34a;color:#fff;padding:7px 14px;font-size:12px;border:none;border-radius:6px;cursor:pointer;font-weight:700">⚡ Aplicar em TODOS</button>
       <input type="text" id="prom-busca" placeholder="Buscar produto ou SKU..."
         oninput="filtrarPromos()" style="border:1px solid var(--borda);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:220px">
       <span id="prom-status" style="font-size:12px;color:var(--muted)">Clique em Carregar para listar seus anúncios</span>
@@ -1108,6 +1110,33 @@ function carregarTokenStore(){
   if(document.getElementById('tk-ml'))    document.getElementById('tk-ml').value    = tokens.ml;
 }
 
+
+// Força renovação manual do token ML
+async function forcarRenovacaoML(){
+  const btn = document.getElementById('btn-renovar-ml');
+  if(btn){ btn.textContent='🔄 Renovando...'; btn.disabled=true; }
+  setDot('ml','wait','Renovando...');
+  try{
+    const ok = await renovarTokenML();
+    if(ok){
+      if(btn){ btn.textContent='✅ Renovado'; btn.style.background='rgba(34,197,94,.3)'; }
+      setTimeout(()=>{ if(btn){btn.textContent='🔑 Renovar ML';btn.disabled=false;btn.style.background='rgba(239,68,68,.3)';} },3000);
+      await carregarTudo();
+    } else {
+      // Refresh token não funcionou — mostrar instrução
+      if(btn){ btn.textContent='🔑 Renovar ML'; btn.disabled=false; }
+      setDot('ml','err','ML token expirado');
+      const msg = `Token ML expirado e refresh não funcionou.\n\nOpções:\n1. Cole um novo access token em ⚙️ Tokens\n2. Rode novamente o script de autorização ML`;
+      if(confirm(msg + '\n\nAbrir configurações?')){
+        document.getElementById('modal-cfg').style.display='flex';
+      }
+    }
+  }catch(e){
+    if(btn){ btn.textContent='🔑 Renovar ML'; btn.disabled=false; }
+    console.error('Renovar ML erro:', e);
+  }
+}
+
 // ML — renova via refresh_token
 async function renovarTokenML(){
   const rt = tokenStore.ml.refresh;
@@ -1240,6 +1269,24 @@ function getDatas(){
   }
 }
 
+
+
+// Aplica desconto em TODOS os anúncios de uma vez
+async function selecionarTodosAplicar(){
+  if(!tokens.ml){ alert('Configure o token ML em ⚙️'); return; }
+  const desc = parseFloat(prompt('Desconto em % para TODOS os anúncios ativos:\n(ex: 10 para 10%)', '10')||'0');
+  if(!desc || desc <= 0 || desc >= 100) return;
+  if(!promoData.length){
+    const carregar = confirm(`Ainda não carregou os anúncios.\n\nCarregar e aplicar ${desc}% em TODOS agora?`);
+    if(!carregar) return;
+    await carregarPromocoes();
+    if(!promoData.length){ alert('Nenhum anúncio carregado'); return; }
+  }
+  if(!confirm(`⚠️ Aplicar desconto de ${desc}% em TODOS os ${promoData.length} anúncios ativos no Mercado Livre?\n\nIsso altera os preços direto no ML.`)) return;
+  promoData.forEach(p=>p.selecionado=true);
+  document.getElementById('prom-desc-pct').value = desc;
+  await aplicarDescontoPromo();
+}
 
 // ══════════════════════════════════════════════════════════════════════
 // PROMOÇÕES — GESTÃO DE DESCONTOS ML
