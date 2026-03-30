@@ -372,9 +372,6 @@ function salvarCfg(){
   (document.getElementById('modal-cfg')||{style:{}}).style.display ='none';
   carregarTudo();
 }
-function fecharCfg(){
-  (document.getElementById('modal-cfg')||{style:{}}).style.display ='none';
-}
 </script>
 
 <!-- LOGIN -->
@@ -2149,9 +2146,8 @@ function buildDIFAL(){
 // ══════════════════════════════════════════════════════════════════════
 // PROMOÇÕES ML
 // ══════════════════════════════════════════════════════════════════════
-let promoData=[], promoFiltro='todos';
+let promoFiltro='todos';
 
-function initPromocoes(){ if(promoData.length) renderPromoTable(promoData); }
 
 
 function calcPromo(p){
@@ -2179,19 +2175,6 @@ function calcPromo(p){
   return {...p,cmv,taxa,bonus,meu_desc,desc_total,preco_final,margem,preco_min,temCMV:cmv>0};
 }
 
-function renderPromoKpis(){
-  const total=promoData.length;
-  const comCmv=promoData.filter(p=>p.temCMV);
-  const viavel=comCmv.filter(p=>p.margem>=.15).length;
-  const atenc=comCmv.filter(p=>p.margem>=.10&&p.margem<.15).length;
-  const inv=comCmv.filter(p=>p.margem<.10).length;
-  const bonusMed=promoData.filter(p=>p.bonus>0).reduce((s,p,i,a)=>s+p.bonus/a.length,0);
-  (document.getElementById('prk-total')||{}).textContent =total;
-  (document.getElementById('prk-viavel')||{}).textContent =viavel;
-  (document.getElementById('prk-atenc')||{}).textContent =atenc;
-  (document.getElementById('prk-inviavel')||{}).textContent =inv;
-  (document.getElementById('prk-bonus')||{}).textContent =bonusMed.toFixed(1)+'%';
-}
 
 function setFiltroPromo(f){
   promoFiltro=f;
@@ -2506,17 +2489,6 @@ chartDifal = null;
 
 
 
-async function participarPromo(campId, itemId){
-  if(!tokens.ml){alert('Token ML necessário');return;}
-  try{
-    const r=await fetch(`/api/ml/seller-promotions/${campId}/items`,{
-      method:'POST',
-      headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},
-      body:JSON.stringify({item_id:itemId})
-    });
-    r.ok?alert('✅ Participando da promoção!'):alert('❌ Erro ao participar: '+(await r.text()));
-  }catch(e){alert('❌ '+e.message);}
-}
 
 // ══════════════════════════════════════════════════════════════════════
 // DIFAL POR ESTADO
@@ -2615,59 +2587,7 @@ function renderDifal(){
 // PERGUNTAS ML COM IA
 // ══════════════════════════════════════════════════════════════════════
 
-async function carregarPerguntas(){
-  if(!tokens.ml){alert('Configure o token ML');return;}
-  (document.getElementById('perg-status')||{}).textContent ='⟳ Carregando...';
-  try{
-    const r=await fetch(`/api/ml/questions/search?seller_id=537714337&status=UNANSWERED&limit=50`,{
-      headers:{'Authorization':`Bearer ${tokens.ml}`}
-    });
-    if(!r.ok) throw new Error(`${r.status}`);
-    const d=await r.json();
-    perguntasData=d.questions||[];
-    renderPerguntas();
-    (document.getElementById('perg-status')||{}).textContent =`✅ ${perguntasData.length} perguntas sem resposta`;
-  }catch(e){
-    (document.getElementById('perg-status')||{}).textContent =`❌ ${e.message}`;
-  }
-}
 
-function renderPerguntas(){
-  const lista=document.getElementById('perg-lista');
-  if(!perguntasData.length){
-    lista.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">Nenhuma pergunta sem resposta 🎉</div>';
-    return;
-  }
-  // Salva perguntas em mapa para acesso pelo id
-  window._pergMap = {};
-  perguntasData.forEach(q=>{ window._pergMap[q.id]=q; });
-
-  lista.innerHTML=perguntasData.map(q=>`
-    <div class="perg-card" id="pcard-${q.id}">
-      <div class="perg-head">
-        <div style="flex:1">
-          <div class="perg-txt">${q.text||''}</div>
-          <div class="perg-meta">
-            ${q.item_id||''} | ${q.from?.nickname||'Comprador'} | ${(q.date_created||'').substring(0,10)}
-          </div>
-        </div>
-        <button class="btn-resp" data-qid="${q.id}" onclick="gerarRespostaById(this.dataset.qid)">
-          ✨ Gerar resposta
-        </button>
-      </div>
-      <div class="perg-body" id="pbody-${q.id}">
-        <div id="presp-${q.id}" style="display:none">
-          <div class="resp-box" id="ptxt-${q.id}"></div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button class="btn-enviar" data-qid="${q.id}" onclick="enviarResposta(this.dataset.qid)">📤 Enviar no ML</button>
-            <button class="btn-resp" data-qid="${q.id}" onclick="gerarRespostaById(this.dataset.qid)">
-              🔄 Regenerar
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>`).join('');
-}
 
 function gerarRespostaById(qId){
   const q = window._pergMap?.[qId]||window._pergMap?.[parseInt(qId)];
@@ -2721,26 +2641,6 @@ Responda de forma clara, técnica e amigável. Se for sobre compatibilidade, sej
   if(btn){btn.textContent='✨ Gerar resposta';btn.disabled=false;}
 }
 
-async function enviarResposta(qId){
-  if(!tokens.ml){alert('Token ML necessário');return;}
-  const texto=document.getElementById(`ptxt-${qId}`)?.textContent||'';
-  if(!texto){alert('Gere a resposta primeiro');return;}
-  if(!confirm('Enviar esta resposta no ML?'))return;
-  try{
-    const r=await fetch(`/api/ml/answers`,{
-      method:'POST',
-      headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},
-      body:JSON.stringify({question_id:qId,text:texto})
-    });
-    if(r.ok){
-      (document.getElementById(`pcard-${qId}`)||{style:{}}).style.opacity='.4';
-      alert('✅ Resposta enviada!');
-    }else{
-      const e=await r.json().catch(()=>({}));
-      alert('❌ Erro: '+(e.message||r.status));
-    }
-  }catch(e){alert('❌ '+e.message);}
-}
 
 // ══════════════════════════════════════════════════════════════════════
 // ADS + MARGEM PÓS-ADS
@@ -3817,19 +3717,6 @@ function renderPromocoesML(promos){
   tbody.innerHTML = rows.join('');
 }
 
-async function participarPromo(mlb, promoId){
-  if(!tokens.ml){ alert('Token ML não configurado'); return; }
-  if(!confirm(`Participar da promoção para ${mlb}?`)) return;
-  try{
-    const r = await fetch(`/api/ml/seller-promotions/${promoId}/items`, {
-      method: 'POST',
-      headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},
-      body: JSON.stringify({item_id: mlb})
-    });
-    if(r.ok) alert(`✅ ${mlb} adicionado à promoção!`);
-    else { const e=await r.json(); alert(`Erro: ${e.message||r.status}`); }
-  }catch(e){ alert('Erro: '+e.message); }
-}
 
 function exportarGP(){
   if(!gpData.length){alert('Nenhum dado para exportar');return;}
