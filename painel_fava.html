@@ -507,7 +507,7 @@ function selecionarPerfil(perfil){
     if(el) el.style.borderColor = p===perfil ? '#1F3864' : '#e5e7eb';
   });
   const nomes = {admin:'Fabiano (Admin)', financeiro:'Financeiro (Esposa)', operacao:'Operação (Funcionário)'};
-  document.getElementById('login-perfil-nome').textContent = nomes[perfil];
+  (document.getElementById('login-perfil-nome')||{}).textContent = nomes[perfil];
   document.getElementById('login-form').style.display = 'block';
   document.getElementById('login-perfis').style.opacity = '0.5';
   setTimeout(()=>document.getElementById('login-senha').focus(), 100);
@@ -807,7 +807,7 @@ async function carregarTudo(){
     }
 
     renderTudo();
-    document.getElementById('last-update').textContent='Atualizado: '+new Date().toLocaleTimeString('pt-BR');
+    (document.getElementById('last-update')||{}).textContent ='Atualizado: '+new Date().toLocaleTimeString('pt-BR');
   }catch(e){
     console.error(e);
     alert('Erro ao carregar: '+e.message);
@@ -952,8 +952,8 @@ function calcMargemReal(preco, sku, uf, listing_type, frete, qtd){
 function renderTudo(){
   const todos=[...dados.pedidosML,...dados.pedidosBling].filter(p=>p.status!=='cancelled');
   if(!todos.length){
-    document.getElementById('k-fat').textContent='R$ 0';
-    document.getElementById('k-ped').textContent='0';
+    (document.getElementById('k-fat')||{}).textContent ='R$ 0';
+    (document.getElementById('k-ped')||{}).textContent ='0';
     renderRankingVazio();return;
   }
 
@@ -993,14 +993,14 @@ function renderKPIs(todos, itens){
   const mg=fatTotal?lucroTotal/fatTotal:0;
   const skus=new Set(itens.map(i=>i.sku).filter(Boolean)).size;
 
-  document.getElementById('k-fat').textContent='R$ '+fmt(fat);
-  document.getElementById('k-ped').textContent=nPed;
-  document.getElementById('k-tick').textContent='R$ '+fmt(ticket);
-  document.getElementById('k-mg').textContent=(mg*100).toFixed(1)+'%';
+  (document.getElementById('k-fat')||{}).textContent ='R$ '+fmt(fat);
+  (document.getElementById('k-ped')||{}).textContent =nPed;
+  (document.getElementById('k-tick')||{}).textContent ='R$ '+fmt(ticket);
+  (document.getElementById('k-mg')||{}).textContent =(mg*100).toFixed(1)+'%';
   document.getElementById('k-mg').style.color=mg>=.20?'var(--verde)':mg>=.10?'var(--amarelo)':'var(--vermelho)';
-  document.getElementById('k-lucro').textContent='R$ '+fmt(lucroTotal);
+  (document.getElementById('k-lucro')||{}).textContent ='R$ '+fmt(lucroTotal);
   document.getElementById('k-lucro').style.color=lucroTotal>0?'var(--verde)':'var(--vermelho)';
-  document.getElementById('k-sku').textContent=skus;
+  (document.getElementById('k-sku')||{}).textContent =skus;
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1050,7 +1050,7 @@ function renderChartCanal(todos){
   });
 
   const total=vals.reduce((s,v)=>s+v,0);
-  document.getElementById('canal-detalhe').innerHTML=labels.map((c,i)=>`
+  (document.getElementById('canal-detalhe')||{}).innerHTML =labels.map((c,i)=>`
     <div class="bar-row" style="margin-bottom:4px">
       <span style="font-size:10px;color:var(--muted);width:50px">${c}</span>
       <div class="bar-bg"><div class="bar-fg" style="width:${total?vals[i]/total*100:0}%;background:${cores[i]}"></div></div>
@@ -1074,7 +1074,7 @@ function renderRankingFat(itens){
   });
   const rank=Object.values(por_sku).sort((a,b)=>b.fat-a.fat).slice(0,20);
   const maxFat=rank[0]?.fat||1;
-  document.getElementById('body-rank-fat').innerHTML=rank.map((r,i)=>{
+  (document.getElementById('body-rank-fat')||{}).innerHTML =rank.map((r,i)=>{
     const mg=r.n?r.margem_soma/r.n:0;
     const mc=mg>=.20?'pill-g':mg>=.10?'pill-y':'pill-r';
     return`<tr>
@@ -1104,7 +1104,7 @@ function renderRankingMg(itens){
   });
   const rank=Object.values(por_sku).filter(r=>r.n>0&&r.fat>0).map(r=>({...r,mg:r.fat?r.lucro/r.fat:0,cmv_med:r.n?r.cmv_sum/r.n:0,preco_med:r.n?r.preco_sum/r.n:0})).sort((a,b)=>b.mg-a.mg).slice(0,20);
 
-  document.getElementById('body-rank-mg').innerHTML=rank.map((r,i)=>{
+  (document.getElementById('body-rank-mg')||{}).innerHTML =rank.map((r,i)=>{
     const mc=r.mg>=.20?'pill-g':r.mg>=.10?'pill-y':'pill-r';
     return`<tr>
       <td><strong>${i+1}</strong></td>
@@ -1188,7 +1188,7 @@ function renderRankingVazio(){
   ['body-rank-fat','body-rank-mg','body-pedidos'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.innerHTML='<tr><td colspan="6" class="empty">Sem dados no período</td></tr>';
   });
-  document.getElementById('estados-body').innerHTML='<div class="empty">Sem dados</div>';
+  (document.getElementById('estados-body')||{}).innerHTML ='<div class="empty">Sem dados</div>';
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1234,7 +1234,7 @@ function initDIFAL(){
 function buildDIFAL(){
   const pedidos = dados.pedidosML.filter(p=>p.status!=='cancelled');
   if(!pedidos.length){
-    document.getElementById('difal-tbody').innerHTML =
+    (document.getElementById('difal-tbody')||{}).innerHTML =
       '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">Carregue o painel principal primeiro</td></tr>';
     return;
   }
@@ -1265,9 +1265,9 @@ function buildDIFAL(){
 
   // KPIs
   const topUF = Object.values(porUF).sort((a,b)=>b.fat-a.fat)[0];
-  document.getElementById('df-total').textContent = 'R$ '+fmtK(totalDifal);
+  (document.getElementById('df-total')||{}).textContent = 'R$ '+fmtK(totalDifal);
   document.getElementById('df-fora').textContent = `${pedidosFora} (${totalPed?((pedidosFora/totalPed)*100).toFixed(0):'0'}%)`;
-  document.getElementById('df-pf').textContent = `~${Math.round(pedidosPF)} est.`;
+  (document.getElementById('df-pf')||{}).textContent = `~${Math.round(pedidosPF)} est.`;
   document.getElementById('df-top-uf').textContent = topUF?.uf||'—';
   document.getElementById('df-medio').textContent = totalPed?'R$ '+fmt(totalDifal/totalPed):'—';
   document.getElementById('df-pct').textContent = totalFat?((totalDifal/totalFat)*100).toFixed(2)+'%':'—';
@@ -1286,7 +1286,7 @@ function buildDIFAL(){
       <td class="num" style="color:var(--muted)">${d.uf==='PR'?'Não incide':((d.aliq||0)*100).toFixed(0)+'%'}</td>
     </tr>`;
   });
-  document.getElementById('difal-tbody').innerHTML = rows.join('');
+  (document.getElementById('difal-tbody')||{}).innerHTML = rows.join('');
 
   // Tipo comprador (estimativa baseada em UF)
   const tipoRows = [
@@ -1300,7 +1300,7 @@ function buildDIFAL(){
     <td class="num">R$ ${fmt(t.fat)}</td>
     <td class="num" style="color:#d97706">R$ ${fmt(t.difal)}</td>
   </tr>`);
-  document.getElementById('difal-tipo-tbody').innerHTML = tipoRows.join('');
+  (document.getElementById('difal-tipo-tbody')||{}).innerHTML = tipoRows.join('');
 
   // Gráfico
   const top8 = sorted.slice(0,8);
@@ -1325,7 +1325,7 @@ function buildDIFAL(){
   // Estratégia
   const pctDifalFat = totalFat?(totalDifal/totalFat*100).toFixed(2):0;
   const difalMedio = totalPed?(totalDifal/totalPed).toFixed(2):0;
-  document.getElementById('difal-estrategia').innerHTML = `
+  (document.getElementById('difal-estrategia')||{}).innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div>
         <strong style="color:var(--azul)">📊 Seu DIFAL real no período:</strong><br>
@@ -1355,7 +1355,7 @@ function initPromocoes(){ if(promoData.length) renderPromoTable(promoData); }
 
 async function carregarPromocoes(){
   if(!tokens.ml){alert('Configure o token ML');return;}
-  document.getElementById('prom-status').textContent='⟳ Carregando...';
+  (document.getElementById('prom-status')||{}).textContent ='⟳ Carregando...';
   try{
     // Busca campanhas de promoções disponíveis
     const r = await fetch(`/api/ml/seller-promotions/search?seller_id=537714337&status=active&limit=100`,{
@@ -1400,9 +1400,9 @@ async function carregarPromocoes(){
     renderPromoTable(promoData);
     document.getElementById('prom-kpis').style.display='';
     document.getElementById('prom-table-wrap').style.display='';
-    document.getElementById('prom-status').textContent=`✅ ${promoData.length} anúncios`;
+    (document.getElementById('prom-status')||{}).textContent =`✅ ${promoData.length} anúncios`;
   }catch(e){
-    document.getElementById('prom-status').textContent=`❌ ${e.message}`;
+    (document.getElementById('prom-status')||{}).textContent =`❌ ${e.message}`;
   }
 }
 
@@ -1438,11 +1438,11 @@ function renderPromoKpis(){
   const atenc=comCmv.filter(p=>p.margem>=.10&&p.margem<.15).length;
   const inv=comCmv.filter(p=>p.margem<.10).length;
   const bonusMed=promoData.filter(p=>p.bonus>0).reduce((s,p,i,a)=>s+p.bonus/a.length,0);
-  document.getElementById('prk-total').textContent=total;
-  document.getElementById('prk-viavel').textContent=viavel;
-  document.getElementById('prk-atenc').textContent=atenc;
-  document.getElementById('prk-inviavel').textContent=inv;
-  document.getElementById('prk-bonus').textContent=bonusMed.toFixed(1)+'%';
+  (document.getElementById('prk-total')||{}).textContent =total;
+  (document.getElementById('prk-viavel')||{}).textContent =viavel;
+  (document.getElementById('prk-atenc')||{}).textContent =atenc;
+  (document.getElementById('prk-inviavel')||{}).textContent =inv;
+  (document.getElementById('prk-bonus')||{}).textContent =bonusMed.toFixed(1)+'%';
 }
 
 function setFiltroPromo(f){
@@ -1524,7 +1524,7 @@ let chartDifal=null;
 
 function initDifal(){
   if(!dados.pedidosML.length){
-    document.getElementById('difal-tbody').innerHTML=
+    (document.getElementById('difal-tbody')||{}).innerHTML =
       '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">Carregue o Dashboard primeiro</td></tr>';
     return;
   }
@@ -1569,7 +1569,7 @@ function buildDifalPainel(){
       <td><span class="pill pill-b" style="font-size:9px">${isPR?'Intra':'Inter'}</span></td>
     </tr>`;
   });
-  document.getElementById('difal-tbody').innerHTML=rows.join('');
+  (document.getElementById('difal-tbody')||{}).innerHTML =rows.join('');
 
   // Gráfico
   const top8=sorted.slice(0,8);
@@ -1599,14 +1599,14 @@ function buildDifalPainel(){
   const pctForaPR=sorted.filter(([uf])=>uf!=='PR').reduce((s,[,d])=>s+d.fat,0)/totalFat*100;
   const difalMedReal=totalFat>0?totalDifal/totalFat*100:0;
 
-  document.getElementById('difal-resumo').innerHTML=`
+  (document.getElementById('difal-resumo')||{}).innerHTML =`
     <div>📦 <strong>${pctForaPR.toFixed(1)}%</strong> das vendas foram fora do PR</div>
     <div>💸 DIFAL total estimado: <strong style="color:#d97706">R$ ${fmtK(totalDifal)}</strong></div>
     <div>📊 DIFAL médio real sobre faturamento: <strong style="color:#d97706">${difalMedReal.toFixed(2)}%</strong></div>
     <div>⚙️ Seu parâmetro atual no sistema: <strong>8,5%</strong></div>
     ${Math.abs(difalMedReal-8.5)>1?`<div style="color:#d97706">⚠️ Diferença de ${(difalMedReal-8.5).toFixed(1)}% — considere ajustar o parâmetro!</div>`:'<div style="color:#16a34a">✅ Parâmetro próximo da realidade</div>'}`;
 
-  document.getElementById('difal-media-box').innerHTML=`
+  (document.getElementById('difal-media-box')||{}).innerHTML =`
     <div class="fin-kpi"><div class="fk-l">DIFAL médio real</div><div class="fk-v" style="color:#d97706">${difalMedReal.toFixed(2)}%</div><div style="font-size:10px;color:var(--muted)">Use na calculadora</div></div>
     <div class="fin-kpi"><div class="fk-l">% vendas fora PR</div><div class="fk-v">${pctForaPR.toFixed(1)}%</div><div style="font-size:10px;color:var(--muted)">Parâmetro atual: 70%</div></div>
     <div class="fin-kpi"><div class="fk-l">DIFAL total pago</div><div class="fk-v" style="color:#dc2626">R$ ${fmtK(totalDifal)}</div><div style="font-size:10px;color:var(--muted)">Estimativa do período</div></div>
@@ -1631,7 +1631,7 @@ function salvarKeyPerg(){
 
 async function carregarPerguntas(){
   if(!tokens.ml){alert('Configure o token ML');return;}
-  document.getElementById('perg-status').textContent='⟳ Carregando...';
+  (document.getElementById('perg-status')||{}).textContent ='⟳ Carregando...';
   try{
     const r=await fetch(`/api/ml/my/questions/unanswered?seller_id=537714337&limit=50`,{
       headers:{'Authorization':`Bearer ${tokens.ml}`}
@@ -1640,19 +1640,19 @@ async function carregarPerguntas(){
     const d=await r.json();
     perguntasData=d.questions||d.results||[];
     renderPerguntas();
-    document.getElementById('perg-status').textContent=`✅ ${perguntasData.length} perguntas sem resposta`;
+    (document.getElementById('perg-status')||{}).textContent =`✅ ${perguntasData.length} perguntas sem resposta`;
   }catch(e){
-    document.getElementById('perg-status').textContent=`❌ ${e.message}`;
+    (document.getElementById('perg-status')||{}).textContent =`❌ ${e.message}`;
   }
 }
 
 function renderPerguntas(){
   if(!perguntasData.length){
-    document.getElementById('perg-lista').innerHTML=
+    (document.getElementById('perg-lista')||{}).innerHTML =
       '<div style="text-align:center;padding:30px;color:var(--muted)">Nenhuma pergunta sem resposta 🎉</div>';
     return;
   }
-  document.getElementById('perg-lista').innerHTML=perguntasData.map((p,i)=>`
+  (document.getElementById('perg-lista')||{}).innerHTML =perguntasData.map((p,i)=>`
     <div class="perg-item" id="pq-${i}">
       <div class="pi-head">
         <span class="pi-mlb">${p.item_id||'—'}</span>
@@ -1758,7 +1758,7 @@ chartDifal = null;
 
 async function carregarPromocoes(){
   if(!tokens.ml){alert('Configure o token ML');return;}
-  document.getElementById('prom-status').textContent='⟳ Carregando...';
+  (document.getElementById('prom-status')||{}).textContent ='⟳ Carregando...';
   try{
     // Busca campanhas de promoção disponíveis
     const r = await fetch(`/api/ml/seller-promotions/search?seller_id=537714337&status=active&limit=50`,{
@@ -1804,9 +1804,9 @@ async function carregarPromocoes(){
       });
     }
     renderPromocoes();
-    document.getElementById('prom-status').textContent=`✅ ${promoData.length} itens em promoção`;
+    (document.getElementById('prom-status')||{}).textContent =`✅ ${promoData.length} itens em promoção`;
   }catch(e){
-    document.getElementById('prom-status').textContent=`❌ ${e.message}`;
+    (document.getElementById('prom-status')||{}).textContent =`❌ ${e.message}`;
   }
 }
 
@@ -1815,11 +1815,11 @@ function renderPromocoes(){
   const atencao=promoData.filter(p=>p.viavel==='atencao').length;
   const inviaveis=promoData.filter(p=>p.viavel==='inviavel').length;
   const bonusMed=promoData.length?promoData.reduce((s,p)=>s+p.bonus_ml,0)/promoData.length:0;
-  document.getElementById('pm-total').textContent=promoData.length;
-  document.getElementById('pm-viaveis').textContent=viaveis;
-  document.getElementById('pm-atencao').textContent=atencao;
-  document.getElementById('pm-inviaveis').textContent=inviaveis;
-  document.getElementById('pm-bonus').textContent=bonusMed.toFixed(1)+'%';
+  (document.getElementById('pm-total')||{}).textContent =promoData.length;
+  (document.getElementById('pm-viaveis')||{}).textContent =viaveis;
+  (document.getElementById('pm-atencao')||{}).textContent =atencao;
+  (document.getElementById('pm-inviaveis')||{}).textContent =inviaveis;
+  (document.getElementById('pm-bonus')||{}).textContent =bonusMed.toFixed(1)+'%';
 
   const rows=promoData.map(p=>{
     const rowCls=p.viavel==='ok'?'viavel':p.viavel==='atencao'?'atencao':p.viavel==='inviavel'?'inviavel':'';
@@ -1925,7 +1925,7 @@ function renderDifal(){
   const fat_fora=uf_fora_pr.reduce((s,[,d])=>s+d.fat,0);
   const pct_fora=fat_total?fat_fora/fat_total:0;
 
-  document.getElementById('difal-resumo').innerHTML=`
+  (document.getElementById('difal-resumo')||{}).innerHTML =`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <div style="background:#fffbeb;border-radius:6px;padding:8px 10px">
         <div style="font-size:10px;color:var(--muted);font-weight:700">DIFAL médio ponderado</div>
@@ -1957,7 +1957,7 @@ function renderDifal(){
 
 async function carregarPerguntas(){
   if(!tokens.ml){alert('Configure o token ML');return;}
-  document.getElementById('perg-status').textContent='⟳ Carregando...';
+  (document.getElementById('perg-status')||{}).textContent ='⟳ Carregando...';
   try{
     const r=await fetch(`/api/ml/questions/search?seller_id=537714337&status=UNANSWERED&limit=50`,{
       headers:{'Authorization':`Bearer ${tokens.ml}`}
@@ -1966,9 +1966,9 @@ async function carregarPerguntas(){
     const d=await r.json();
     perguntasData=d.questions||[];
     renderPerguntas();
-    document.getElementById('perg-status').textContent=`✅ ${perguntasData.length} perguntas sem resposta`;
+    (document.getElementById('perg-status')||{}).textContent =`✅ ${perguntasData.length} perguntas sem resposta`;
   }catch(e){
-    document.getElementById('perg-status').textContent=`❌ ${e.message}`;
+    (document.getElementById('perg-status')||{}).textContent =`❌ ${e.message}`;
   }
 }
 
@@ -2102,7 +2102,7 @@ async function carregarADS(){
   const ate = document.getElementById('ads-ate').value;
   if(!de||!ate){alert('Informe o período');return;}
 
-  document.getElementById('ads-status').textContent = '⟳ Buscando métricas ADS...';
+  (document.getElementById('ads-status')||{}).textContent = '⟳ Buscando métricas ADS...';
 
   try{
     // Busca campanhas ativas
@@ -2142,9 +2142,9 @@ async function buscarMetricasADS(de, ate){
     const d = await r.json();
     adsData = d.results || d.data || [];
     renderADS();
-    document.getElementById('ads-status').textContent = `✅ ${adsData.length} anúncios com ADS`;
+    (document.getElementById('ads-status')||{}).textContent = `✅ ${adsData.length} anúncios com ADS`;
   }catch(e){
-    document.getElementById('ads-status').textContent = `❌ Erro: ${e.message}`;
+    (document.getElementById('ads-status')||{}).textContent = `❌ Erro: ${e.message}`;
     renderADSvazio();
     renderPedidosComADS();
   }
@@ -2152,19 +2152,19 @@ async function buscarMetricasADS(de, ate){
 
 function renderADSvazio(){
   // Quando não tem ADS ativo, mostra tabela com pedidos e margem sem ADS
-  document.getElementById('ads-tbody').innerHTML =
+  (document.getElementById('ads-tbody')||{}).innerHTML =
     '<tr><td colspan="13" style="text-align:center;padding:20px;color:var(--muted)">Sem campanhas ADS ativas no período — use "Cruzar com Pedidos" para ver margem real</td></tr>';
   // Zera KPIs
   ['ak-gasto','ak-fat-ads','ak-roas','ak-pct-ads','ak-cliques','ak-impress','ak-ctr'].forEach(id=>{
     document.getElementById(id).textContent='R$ 0' in ['ak-gasto','ak-fat-ads']?'R$ 0':'0';
   });
-  document.getElementById('ak-gasto').textContent='R$ 0';
-  document.getElementById('ak-fat-ads').textContent='—';
-  document.getElementById('ak-roas').textContent='—';
-  document.getElementById('ak-pct-ads').textContent='0%';
-  document.getElementById('ak-cliques').textContent='0';
-  document.getElementById('ak-impress').textContent='0';
-  document.getElementById('ak-ctr').textContent='0%';
+  (document.getElementById('ak-gasto')||{}).textContent ='R$ 0';
+  (document.getElementById('ak-fat-ads')||{}).textContent ='—';
+  (document.getElementById('ak-roas')||{}).textContent ='—';
+  (document.getElementById('ak-pct-ads')||{}).textContent ='0%';
+  (document.getElementById('ak-cliques')||{}).textContent ='0';
+  (document.getElementById('ak-impress')||{}).textContent ='0';
+  (document.getElementById('ak-ctr')||{}).textContent ='0%';
 }
 
 function renderADS(){
@@ -2177,14 +2177,14 @@ function renderADS(){
   const ctr  = totalImp>0 ? totalClick/totalImp : 0;
   const pctAds = totalFat>0 ? totalGasto/totalFat : 0;
 
-  document.getElementById('ak-gasto').textContent = 'R$ '+fmt(totalGasto);
-  document.getElementById('ak-fat-ads').textContent = 'R$ '+fmtK(totalFat);
-  document.getElementById('ak-roas').textContent = roas.toFixed(2)+'x';
+  (document.getElementById('ak-gasto')||{}).textContent = 'R$ '+fmt(totalGasto);
+  (document.getElementById('ak-fat-ads')||{}).textContent = 'R$ '+fmtK(totalFat);
+  (document.getElementById('ak-roas')||{}).textContent = roas.toFixed(2)+'x';
   document.getElementById('ak-roas').className = 'akv '+(roas>=3?'roas-bom':roas>=1.5?'roas-med':'roas-ruim');
-  document.getElementById('ak-pct-ads').textContent = (pctAds*100).toFixed(1)+'%';
-  document.getElementById('ak-cliques').textContent = totalClick.toLocaleString('pt-BR');
-  document.getElementById('ak-impress').textContent = fmtK(totalImp);
-  document.getElementById('ak-ctr').textContent = (ctr*100).toFixed(2)+'%';
+  (document.getElementById('ak-pct-ads')||{}).textContent = (pctAds*100).toFixed(1)+'%';
+  (document.getElementById('ak-cliques')||{}).textContent = totalClick.toLocaleString('pt-BR');
+  (document.getElementById('ak-impress')||{}).textContent = fmtK(totalImp);
+  (document.getElementById('ak-ctr')||{}).textContent = (ctr*100).toFixed(2)+'%';
 
   // Tabela por anúncio
   const sorted = [...adsData].sort((a,b)=>(b.cost||b.spent||0)-(a.cost||a.spent||0));
@@ -2443,18 +2443,18 @@ function renderKpisPedidos(lista){
   const nocmv=lista.filter(p=>!p.temCMV).length;
   const tick=total?fat/total:0;
 
-  document.getElementById('pk-total').textContent=total;
-  document.getElementById('pk-fat').textContent='R$ '+fmtK(fat);
+  (document.getElementById('pk-total')||{}).textContent =total;
+  (document.getElementById('pk-fat')||{}).textContent ='R$ '+fmtK(fat);
   const lel=document.getElementById('pk-lucro');
   lel.textContent='R$ '+fmtK(lucro);
   lel.style.color=lucro>=0?'#16a34a':'#dc2626';
   const mel=document.getElementById('pk-mg');
   mel.textContent=(mg*100).toFixed(1)+'%';
   mel.style.color=mg>=.15?'#16a34a':mg>=.10?'#d97706':'#dc2626';
-  document.getElementById('pk-difal').textContent='R$ '+fmtK(difal);
-  document.getElementById('pk-frete').textContent='R$ '+fmtK(frete);
-  document.getElementById('pk-nocmv').textContent=nocmv;
-  document.getElementById('pk-tick').textContent='R$ '+fmt(tick);
+  (document.getElementById('pk-difal')||{}).textContent ='R$ '+fmtK(difal);
+  (document.getElementById('pk-frete')||{}).textContent ='R$ '+fmtK(frete);
+  (document.getElementById('pk-nocmv')||{}).textContent =nocmv;
+  (document.getElementById('pk-tick')||{}).textContent ='R$ '+fmt(tick);
 }
 
 function renderTabelaPedidos(lista){
@@ -2792,7 +2792,7 @@ function carregarPlanilhaGP(input){
       document.getElementById('btn-aplicar-todos').style.display='block';
       recalcGP();
     }catch(ex){
-      document.getElementById('gp-status').textContent = `❌ Erro: ${ex.message}`;
+      (document.getElementById('gp-status')||{}).textContent = `❌ Erro: ${ex.message}`;
     }
   };
   reader.readAsArrayBuffer(file);
@@ -2820,12 +2820,12 @@ function renderKpisGP(){
   const nocmv= gpData.filter(d=>!d.temCMV).length;
   const descMed = gpData.filter(d=>d.desc_pct>0).reduce((s,d,i,a)=>s+d.desc_pct/a.length,0);
 
-  document.getElementById('gk-total').textContent = total;
-  document.getElementById('gk-ok').textContent = ok;
-  document.getElementById('gk-warn').textContent = warn;
-  document.getElementById('gk-err').textContent = err;
-  document.getElementById('gk-nocmv').textContent = nocmv;
-  document.getElementById('gk-desc').textContent = descMed.toFixed(1)+'%';
+  (document.getElementById('gk-total')||{}).textContent = total;
+  (document.getElementById('gk-ok')||{}).textContent = ok;
+  (document.getElementById('gk-warn')||{}).textContent = warn;
+  (document.getElementById('gk-err')||{}).textContent = err;
+  (document.getElementById('gk-nocmv')||{}).textContent = nocmv;
+  (document.getElementById('gk-desc')||{}).textContent = descMed.toFixed(1)+'%';
 }
 
 function setFiltroGP(f){
@@ -3388,9 +3388,9 @@ async function carregarSaldoMP(){
     const d = await r.json();
     dot.style.background = '#4ade80';
     lbl.textContent = `MP ✓ ${d.nickname||d.email||''}`;
-    document.getElementById('mp-disp').textContent = 'Conectado ✓';
-    document.getElementById('mp-pend').textContent = '—';
-    document.getElementById('mp-total').textContent = '—';
+    (document.getElementById('mp-disp')||{}).textContent = 'Conectado ✓';
+    (document.getElementById('mp-pend')||{}).textContent = '—';
+    (document.getElementById('mp-total')||{}).textContent = '—';
   }catch(e){
     dot.style.background = '#f87171';
     lbl.textContent = `MP ✗ (${e.message})`;
@@ -3403,7 +3403,7 @@ async function carregarConciliacao(){
   const ate = document.getElementById('conc-ate').value;
   if(!de||!ate){ alert('Informe o período'); return; }
 
-  document.getElementById('conc-status').textContent = '⟳ Carregando...';
+  (document.getElementById('conc-status')||{}).textContent = '⟳ Carregando...';
 
   try{
     // Busca movimentações do MP (releases/liquidations)
@@ -3422,9 +3422,9 @@ async function carregarConciliacao(){
     renderMovimentacoes();
     cruzarPedidos();
     calcKpisMP();
-    document.getElementById('conc-status').textContent = `✅ ${mpMovs.length} movimentações`;
+    (document.getElementById('conc-status')||{}).textContent = `✅ ${mpMovs.length} movimentações`;
   }catch(e){
-    document.getElementById('conc-status').textContent = `❌ Erro: ${e.message}`;
+    (document.getElementById('conc-status')||{}).textContent = `❌ Erro: ${e.message}`;
   }
 }
 
@@ -3453,7 +3453,7 @@ function renderMovimentacoes(){
   });
   document.getElementById('tbody-mp-mov').innerHTML = rows.join('')||
     '<tr><td colspan="6" style="text-align:center;padding:15px;color:var(--muted)">Sem movimentações</td></tr>';
-  document.getElementById('mp-mov-lbl').textContent = `${mpMovs.length} registros`;
+  (document.getElementById('mp-mov-lbl')||{}).textContent = `${mpMovs.length} registros`;
 }
 
 function cruzarPedidos(){
@@ -3510,7 +3510,7 @@ function renderConciliacao(){
   });
   document.getElementById('tbody-conc').innerHTML = rows.join('')||
     '<tr><td colspan="7" style="text-align:center;padding:15px;color:var(--muted)">Sem dados</td></tr>';
-  document.getElementById('conc-lbl').textContent = `${concDados.length} pedidos`;
+  (document.getElementById('conc-lbl')||{}).textContent = `${concDados.length} pedidos`;
 }
 
 function renderPendentes(){
@@ -3537,7 +3537,7 @@ function renderPendentes(){
   });
   document.getElementById('tbody-pend').innerHTML = rows.join('')||
     '<tr><td colspan="6" style="text-align:center;padding:15px;color:var(--muted)">Nenhum pendente — todos conciliados!</td></tr>';
-  document.getElementById('pend-lbl').textContent = `${pendentes.length} pendentes`;
+  (document.getElementById('pend-lbl')||{}).textContent = `${pendentes.length} pendentes`;
 }
 
 function calcKpisMP(){
@@ -3553,8 +3553,8 @@ function calcKpisMP(){
   const totalReal = concDados.filter(c=>c.liq_real!==null).reduce((s,c)=>s+c.liq_real,0);
   const dif = totalReal - totalPrev;
 
-  document.getElementById('mp-hoje').textContent = 'R$ '+fmt(entrou_hoje);
-  document.getElementById('mp-estorno').textContent = 'R$ '+fmt(estornos);
+  (document.getElementById('mp-hoje')||{}).textContent = 'R$ '+fmt(entrou_hoje);
+  (document.getElementById('mp-estorno')||{}).textContent = 'R$ '+fmt(estornos);
   const difEl = document.getElementById('mp-diff');
   difEl.textContent = 'R$ '+fmt(Math.abs(dif));
   difEl.style.color = Math.abs(dif)<10?'#16a34a':dif<0?'#dc2626':'#d97706';
@@ -3578,34 +3578,28 @@ let currentView = 'dashboard';
 
 function setView(v){
   currentView = v;
+  const safe=(id,fn)=>{const el=document.getElementById(id);if(el)fn(el);};
   ['dashboard','anuncios','financeiro','conciliacao','precos','promocoes','difal','perguntas','ads','pedidos'].forEach(name=>{
-    const el=document.getElementById('view-'+name);
-    if(el) el.style.display = v===name?'flex':'none';
+    safe('view-'+name, el=>el.style.display = v===name?'flex':'none');
   });
-  document.getElementById('period-bar').style.display = v==='dashboard'?'flex':'none';
-  document.getElementById('vtab-dash').classList.toggle('a', v==='dashboard');
-  document.getElementById('vtab-anunc').classList.toggle('a', v==='anuncios');
-  document.getElementById('vtab-fin').classList.toggle('a', v==='financeiro');
-  document.getElementById('vtab-conc').classList.toggle('a', v==='conciliacao');
-  document.getElementById('vtab-prec').classList.toggle('a', v==='precos');
-  document.getElementById('vtab-prom').classList.toggle('a', v==='promocoes');
-  document.getElementById('vtab-difal').classList.toggle('a', v==='difal');
-  document.getElementById('vtab-perg').classList.toggle('a', v==='perguntas');
-  document.getElementById('vtab-ads').classList.toggle('a', v==='ads');
-  document.getElementById('vtab-ped').classList.toggle('a', v==='pedidos');
+  safe('period-bar', el=>el.style.display = v==='dashboard'?'flex':'none');
+  safe('vtab-dash',  el=>el.classList.toggle('a', v==='dashboard'));
+  safe('vtab-anunc', el=>el.classList.toggle('a', v==='anuncios'));
+  safe('vtab-fin',   el=>el.classList.toggle('a', v==='financeiro'));
+  safe('vtab-conc',  el=>el.classList.toggle('a', v==='conciliacao'));
+  safe('vtab-prec',  el=>el.classList.toggle('a', v==='precos'));
+  safe('vtab-prom',  el=>el.classList.toggle('a', v==='promocoes'));
+  safe('vtab-difal', el=>el.classList.toggle('a', v==='difal'));
+  safe('vtab-perg',  el=>el.classList.toggle('a', v==='perguntas'));
+  safe('vtab-ads',   el=>el.classList.toggle('a', v==='ads'));
+  safe('vtab-ped',   el=>el.classList.toggle('a', v==='pedidos'));
   if(v==='anuncios' && anunciosData.length===0) carregarAnuncios();
   if(v==='financeiro') initFinanceiro();
   if(v==='conciliacao') initConciliacao();
-  document.getElementById('view-promocoes').style.display = v==='promocoes'?'flex':'none';
-  document.getElementById('view-difal').style.display = v==='difal'?'flex':'none';
-  document.getElementById('view-perguntas').style.display = v==='perguntas'?'flex':'none';
-  document.getElementById('vtab-prom').classList.toggle('a', v==='promocoes');
-  document.getElementById('vtab-difal').classList.toggle('a', v==='difal');
-  document.getElementById('vtab-perg').classList.toggle('a', v==='perguntas');
   if(v==='pedidos') initPedidos();
   if(v==='promocoes') carregarPromocoes();
   if(v==='difal') renderDifal();
-  if(v==='perguntas'){ const k=localStorage.getItem('fava_claude_key')||''; document.getElementById('perg-apikey').value=k; }
+  if(v==='perguntas'){ const k=localStorage.getItem('fava_claude_key')||''; safe('perg-apikey',el=>el.value=k); }
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -3663,7 +3657,7 @@ function renderReceber(){
   });
 
   document.getElementById('tbody-receber').innerHTML = rows.join('')||'<tr><td colspan="4" style="text-align:center;padding:15px;color:var(--muted)">Sem dados</td></tr>';
-  document.getElementById('receber-lbl').textContent = `${Object.keys(por_data).length} dias de venda`;
+  (document.getElementById('receber-lbl')||{}).textContent = `${Object.keys(por_data).length} dias de venda`;
 }
 
 // ── BOLETOS: importa da planilha xlsx ──────────────────────────────────────
@@ -3697,7 +3691,7 @@ function carregarBoletos(input){
       recalcFluxo();
       renderKpisFinanceiros();
       renderChartBoletos();
-      document.getElementById('boletos-status').textContent = `✅ ${boletosData.length} boletos carregados`;
+      (document.getElementById('boletos-status')||{}).textContent = `✅ ${boletosData.length} boletos carregados`;
       document.getElementById('boletos-status').style.color = '#16a34a';
     }catch(ex){alert('Erro ao ler planilha: '+ex.message);}
   };
@@ -3730,7 +3724,7 @@ function renderBoletos(){
     </tr>`;
   });
   document.getElementById('tbody-pagar').innerHTML = rows.join('')||'<tr><td colspan="5" style="text-align:center;padding:15px;color:var(--muted)">Importe a planilha</td></tr>';
-  document.getElementById('pagar-lbl').textContent = `${boletosData.length} boletos`;
+  (document.getElementById('pagar-lbl')||{}).textContent = `${boletosData.length} boletos`;
 }
 
 function renderFornecedores(){
@@ -4025,15 +4019,15 @@ function renderKpisFinanceiros(){
   const d30ant=new Date(hoje);d30ant.setDate(d30ant.getDate()-30);
   const fat30=dados.pedidosML.filter(p=>p.status!=='cancelled'&&new Date(p.data+'T12:00:00')>=d30ant).reduce((s,p)=>s+p.total,0);
 
-  document.getElementById('fk-receber').textContent='R$ '+fmtK(receber);
-  document.getElementById('fk-pagar').textContent='R$ '+fmtK(pagar);
-  document.getElementById('fk-hoje').textContent='R$ '+fmtK(hoje_val);
-  document.getElementById('fk-semana').textContent='R$ '+fmtK(semana_val);
+  (document.getElementById('fk-receber')||{}).textContent ='R$ '+fmtK(receber);
+  (document.getElementById('fk-pagar')||{}).textContent ='R$ '+fmtK(pagar);
+  (document.getElementById('fk-hoje')||{}).textContent ='R$ '+fmtK(hoje_val);
+  (document.getElementById('fk-semana')||{}).textContent ='R$ '+fmtK(semana_val);
   const saldo=receber-pagar;
   const fks=document.getElementById('fk-saldo');
   fks.textContent='R$ '+fmtK(Math.abs(saldo));
   fks.style.color=saldo>=0?'#16a34a':'#dc2626';
-  document.getElementById('fk-repasse').textContent='R$ '+fmtK(fat30);
+  (document.getElementById('fk-repasse')||{}).textContent ='R$ '+fmtK(fat30);
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -4047,7 +4041,7 @@ let modalMLB = null;
 const PIS_A=.0165, COF_A=.076, ICMS_A=.12; // médias para margem dos anúncios
 
 async function carregarAnuncios(){
-  document.getElementById('anunc-body').innerHTML =
+  (document.getElementById('anunc-body')||{}).innerHTML =
     '<tr><td colspan="10" class="empty"><span class="spin"></span> Carregando anúncios...</td></tr>';
 
   try{
@@ -4139,7 +4133,7 @@ async function carregarAnuncios(){
     renderAnuncKpis();
     filtrarAnuncios();
   }catch(e){
-    document.getElementById('anunc-body').innerHTML =
+    (document.getElementById('anunc-body')||{}).innerHTML =
       `<tr><td colspan="10" class="empty">Erro: ${e.message}</td></tr>`;
   }
 }
@@ -4163,12 +4157,12 @@ function renderAnuncKpis(){
   const vendas = anunciosData.reduce((s,a)=>s+a.vendas_hoje,0);
   const fat = anunciosData.reduce((s,a)=>s+a.fat_hoje,0);
 
-  document.getElementById('an-total').textContent = total;
-  document.getElementById('an-neg').textContent = negativa;
-  document.getElementById('an-baixo').textContent = baixo;
-  document.getElementById('an-promo').textContent = promo;
-  document.getElementById('an-vendas').textContent = vendas+' un';
-  document.getElementById('an-fat').textContent = 'R$ '+fmtK(fat);
+  (document.getElementById('an-total')||{}).textContent = total;
+  (document.getElementById('an-neg')||{}).textContent = negativa;
+  (document.getElementById('an-baixo')||{}).textContent = baixo;
+  (document.getElementById('an-promo')||{}).textContent = promo;
+  (document.getElementById('an-vendas')||{}).textContent = vendas+' un';
+  (document.getElementById('an-fat')||{}).textContent = 'R$ '+fmtK(fat);
 }
 
 function setFiltro(f){
@@ -4206,7 +4200,7 @@ function sortAnunc(col){
 
 function renderAnuncTable(lista){
   if(!lista.length){
-    document.getElementById('anunc-body').innerHTML=
+    (document.getElementById('anunc-body')||{}).innerHTML =
       '<tr><td colspan="10" class="empty">Nenhum anúncio encontrado</td></tr>';
     return;
   }
@@ -4255,14 +4249,14 @@ function renderAnuncTable(lista){
     </tr>`;
   }).join('');
 
-  document.getElementById('anunc-body').innerHTML = rows;
+  (document.getElementById('anunc-body')||{}).innerHTML = rows;
 }
 
 // MODAL PREÇO
 function abrirModal(mlb, titulo, precoAtual, precoSug){
   modalMLB = mlb;
-  document.getElementById('modal-titulo').textContent = 'Atualizar preço';
-  document.getElementById('modal-info').innerHTML =
+  (document.getElementById('modal-titulo')||{}).textContent = 'Atualizar preço';
+  (document.getElementById('modal-info')||{}).innerHTML =
     `<strong>${titulo.substring(0,60)}</strong><br>Preço atual: R$ ${fmt(precoAtual)} | Sugerido: R$ ${fmt(precoSug)}`;
   document.getElementById('modal-preco-input').value = precoSug.toFixed(2);
   document.getElementById('modal-preco').style.display = 'flex';
