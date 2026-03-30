@@ -861,19 +861,7 @@ function salvarCfg(){
           💾 Salvar margens mínimas
         </button>
       </div>
-      <div style="display:flex;gap:12px;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #f3f4f6;flex-wrap:wrap">
-        <label style="font-size:11px;display:flex;align-items:center;gap:6px;color:var(--texto)">
-          Frete médio (R$):
-          <input type="number" id="prom-frete-medio" value="0" min="0" step="0.50"
-            style="width:70px;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;font-size:12px;font-weight:700;text-align:center;outline:none"
-            oninput="recalcularTodasMargens()" placeholder="0,00">
-          <span style="font-size:10px;color:var(--muted)">(frete que você paga ao ML — varia por produto/peso. Coloque a média real.)</span>
-        </label>
       </div>
-      <div id="regras-info" style="font-size:10px;color:var(--muted);margin-top:6px">
-        As margens mínimas ficam salvas por produto — ao reabrir a planilha no futuro, os mínimos já aparecem preenchidos.
-      </div>
-    </div>
 
     <!-- ação em massa -->
     <div id="prom-acao" style="display:none;background:#fff;border:1px solid var(--borda);border-radius:9px;padding:10px 14px;margin-bottom:10px">
@@ -1453,14 +1441,10 @@ let promoPlanilhaRows = []; // linhas originais da planilha para exportar
 
 // Frete médio configurável pelo usuário (não estimativa de %)
 // O usuário informa o frete médio real dos seus produtos
-function getFreteMedioConfig(){
-  return parseFloat(document.getElementById('prom-frete-medio')?.value||'0') || 0;
-}
-
 function calcFreteProm(preco){
   // Usa o frete médio configurado pelo usuário
   // Se não configurado, usa R$0 (margem sem frete = margem bruta)
-  return getFreteMedioConfig();
+  return 0;
 }
 
 
@@ -1468,7 +1452,7 @@ function calcFreteProm(preco){
 function recalcularTodasMargens(){
   promoData.forEach(p=>{
     if(p.cmv && p.preco){
-      p.frete = getFreteMedioConfig();
+      p.frete = 0;
       p.margem = calcMargemProm(p.preco, p.cmv, 0.16);
       p.margemComDesc = calcMargemProm(p.preco*(1-p.descEditado/100), p.cmv, 0.16);
     }
@@ -1478,16 +1462,13 @@ function recalcularTodasMargens(){
   renderPromoKpis();
 }
 
-function calcMargemProm(preco, cmv, taxa_ml){
+function calcMargemProm(preco, cmv, taxa_ml, frete_liq){
   if(!preco || !cmv) return null;
-  const taxa = taxa_ml || 0.16;
-  const frete = getFreteMedioConfig(); // frete configurado pelo usuário
+  const taxa = taxa_ml > 0 ? taxa_ml : 0.16;
+  const frete = frete_liq || 0; // frete liquido real do banco por MLB
   const pis = preco * 0.0065;
   const cofins = preco * 0.03;
-  // Crédito PIS/COFINS sobre frete (Lucro Real)
-  const credFretePisCof = frete * 0.0365;
-  const freteL = frete - credFretePisCof; // frete líquido
-  const lucro = preco - cmv - preco*taxa - freteL - pis - cofins;
+  const lucro = preco - cmv - preco*taxa - frete - pis - cofins;
   return lucro / preco;
 }
 
@@ -1596,6 +1577,40 @@ async function importarPlanilhaML(input){
       // Carrega margens mínimas salvas e aplica padrão por faixa
       aplicarMgMinimasSalvas(itens);
 
+      // Cruzar frete real por MLB do banco de anúncios
+      try{
+        const rLst = await fetch('/api/db/listings');
+        if(rLst.ok){
+          const lstDb = await rLst.json();
+          const freteMap = {};
+          const taxaMap = {};
+          const cmvDbMap = {};
+          lstDb.forEach(l=>{
+            if(l.id){ 
+              freteMap[l.id] = parseFloat(l.frete_medio)||0;
+              taxaMap[l.id]  = parseFloat(l.sale_fee)||0;
+              if(parseFloat(l.cmv)>0) cmvDbMap[l.sku||''] = parseFloat(l.cmv);
+            }
+          });
+          itens.forEach(it=>{
+            // Frete real por MLB
+            const frete = freteMap[it.id] || 0;
+            it.frete = frete;
+            // Taxa real por MLB (sale_fee vem como %, ex: 12.0)
+            const sfRaw = taxaMap[it.id] || 0;
+            it.taxa = sfRaw > 1 ? sfRaw/100 : sfRaw > 0 ? sfRaw : 0.16;
+            // CMV do banco se não veio da planilha
+            if(!it.cmv && cmvDbMap[it.sku]) it.cmv = cmvDbMap[it.sku];
+            // Recalcular margem com dados reais
+            if(it.cmv > 0){
+              it.margem = calcMargemProm(it.preco, it.cmv, it.taxa, frete);
+              it.margemComDesc = calcMargemProm(it.preco*(1-it.descPct/100), it.cmv, it.taxa, frete);
+            }
+          });
+          console.log('Frete e taxa cruzados do banco por MLB');
+        }
+      }catch(e){ console.warn('Frete DB:', e); }
+
       // Ordena: produtos com CMV primeiro, depois sem CMV
       itens.sort((a,b)=>{
         if(a.cmv>0 && b.cmv<=0) return -1;
@@ -1684,18 +1699,25 @@ function renderPromoTabela(lista){
     const mgCor = p.margem!==null ? (p.margem>=.20?'var(--verde)':p.margem>=.10?'var(--amarelo)':'var(--vermelho)') : 'var(--muted)';
     const mgDescCor = p.margemComDesc!==null ? (p.margemComDesc>=.20?'var(--verde)':p.margemComDesc>=.10?'var(--amarelo)':'var(--vermelho)') : 'var(--muted)';
     const mgStr = !p.cmv ? '<span style="color:#f59e0b;font-size:10px">⚠️sem CMV</span>' : p.margem!==null ? (p.margem*100).toFixed(1)+'%' : '—';
-    const mgDescStr = p.margemComDesc!==null ? (p.margemComDesc*100).toFixed(1)+'%' : '—';
+    const mgDescStr = mgComDescReal!==null ? (mgComDescReal*100).toFixed(1)+'%' : '—';
+    const mgDescCor2 = mgComDescReal!==null ? (mgComDescReal>=.20?'var(--verde)':mgComDescReal>=.10?'var(--amarelo)':'var(--vermelho)') : 'var(--muted)';
     const statusTag = p.status==='Elegível' ? '<span class="pill pill-g" style="font-size:9px">Elegível</span>' :
                       p.status==='Ativo' ? '<span class="pill pill-b" style="font-size:9px">Ativo</span>' :
                       `<span class="pill" style="font-size:9px;background:#f3f4f6;color:#6b7280">${p.status||'—'}</span>`;
     const precoComDesc = p.preco*(1-p.descEditado/100);
 
     const mgMinSalva = (p.mgMin||0)*100;
-    const descMaxCalc = calcDescMaximo(p.preco, p.cmv, p.mgMin||0);
+    const taxa_item = p.taxa || 0.16;
+    const frete_item = p.frete || 0;
+    const descMaxCalc = calcDescMaximo(p.preco, p.cmv, p.mgMin||0, taxa_item, frete_item);
+    // Pré-preencher desconto com o máximo se campo ainda não foi editado
+    if(p.cmv > 0 && descMaxCalc > 0 && !p.descEditado) p.descEditado = descMaxCalc;
+    const mgComDescReal = calcMargemProm(p.preco*(1-(p.descEditado||0)/100), p.cmv, taxa_item, frete_item);
     return `<tr style="${p.selecionado?'background:#eff6ff':''}" id="prom-tr-${i}">
       <td style="padding:5px 8px;text-align:center"><input type="checkbox" ${p.selecionado?'checked':''} onchange="togglePromo(${i},this.checked)"></td>
       <td style="padding:5px 8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.titulo}">${p.titulo}</td>
-      <td style="padding:5px 8px;font-weight:700;color:#1F3864;white-space:nowrap">${p.sku||'<span style=color:#9ca3af>'+p.id+'</span>'}</td>
+      <td style="padding:5px 8px;font-weight:700;color:#1F3864;white-space:nowrap">${p.sku||'—'}</td>
+      <td style="padding:5px 8px;font-size:10px;color:#6b7280;white-space:nowrap">${p.id}</td>
       <td style="padding:5px 8px;text-align:right;font-weight:700">R$${p.preco.toFixed(2)}</td>
       <td style="padding:5px 8px;text-align:center">
         <input type="number" value="${p.descEditado>0?p.descEditado:''}" min="5" max="80" step="1" placeholder="—"
@@ -1705,9 +1727,9 @@ function renderPromoTabela(lista){
       </td>
       <td id="pd-preco-${i}" style="padding:5px 8px;text-align:right;color:var(--azul2);font-weight:700">R$${precoComDesc.toFixed(2)}</td>
       <td style="padding:5px 8px;text-align:right;color:var(--muted)">${p.cmv?'R$'+p.cmv.toFixed(2):'<span style=color:#f59e0b>⚠️</span>'}</td>
-      <td style="padding:5px 8px;text-align:right;color:var(--muted);font-size:10px">${getFreteMedioConfig()>0?'R$'+getFreteMedioConfig().toFixed(2):'<span title="Configure o frete médio acima" style=color:#f59e0b>—</span>'}</td>
+      
       <td style="padding:5px 8px;text-align:right;color:${mgCor};font-weight:700">${mgStr}</td>
-      <td id="pd-mg-${i}" style="padding:5px 8px;text-align:right;color:${mgDescCor};font-weight:700">${mgDescStr}</td>
+      <td id="pd-mg-${i}" style="padding:5px 8px;text-align:right;color:${mgDescCor2||mgDescCor};font-weight:700">${mgDescStr}</td>
       <td style="padding:5px 8px;text-align:center;background:#fefce8">
         <input type="number" value="${mgMinSalva||''}" min="0" max="60" step="1" placeholder="%" 
           style="width:42px;border:1px solid #fde68a;border-radius:4px;padding:2px 4px;text-align:center;font-size:11px;font-weight:700;background:#fefce8"
@@ -1891,14 +1913,19 @@ function atualizarMgMin(idx, val){
 }
 
 // Calcula desconto máximo dado margem mínima
-function calcDescMaximo(preco, cmv, mgMin){
-  if(!cmv || cmv<=0 || !preco || mgMin<=0) return 0; // sem CMV não sugere
-  // precoMin = CMV / (1 - mgMin - taxas_fixas)
-  // taxas: ML 16% + PIS/COFINS 3.65% + frete estimado % 
-  const fretePct = preco<=50?0.18 : preco<=100?0.13 : preco<=200?0.10 : 0.08;
-  const taxasFixas = 0.16 + 0.0365 + fretePct;
-  const precoMin = cmv / (1 - mgMin - taxasFixas);
-  if(precoMin >= preco) return 0; // já está no limite
+function calcDescMaximo(preco, cmv, mgMin, taxa, frete_liq){
+  if(!cmv || cmv<=0 || !preco) return 0;
+  const mg = mgMin > 0 ? mgMin : 0;
+  const tx = taxa > 0 ? taxa : 0.16;
+  const fr = frete_liq || 0;
+  const pis_cof = 0.0365;
+  // precoMin onde margem = mgMin
+  // preco - cmv - preco*tx - fr - preco*pis_cof = preco*mgMin
+  // preco*(1 - tx - pis_cof - mgMin) = cmv + fr
+  const denom = 1 - tx - pis_cof - mg;
+  if(denom <= 0) return 0;
+  const precoMin = (cmv + fr) / denom;
+  if(precoMin >= preco) return 0;
   const descMax = Math.floor((1 - precoMin/preco)*100);
   return Math.max(0, Math.min(descMax, 80));
 }
@@ -3557,7 +3584,7 @@ function exportarPedidos(){
     csv+=`${p.id};${p.data};${p.sku};"${p.titulo}";${p.uf};${p.preco.toFixed(2)};${p.cmv.toFixed(2)};${p.taxa_r.toFixed(2)};${p.frete_un.toFixed(2)};${p.difal.toFixed(2)};${(p.pis_r+p.cof_r).toFixed(2)};${(p.cred_taxa+p.cred_frete).toFixed(2)};${p.temCMV?p.lucro.toFixed(2):'sem CMV'};${p.margem!==null?(p.margem*100).toFixed(1)+'%':'sem CMV'}
 `;
   });
-  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pedidos_margem_real.csv';a.click();
 }
 
@@ -4610,7 +4637,7 @@ function exportarConciliacao(){
     csv+=`${c.pedido};${c.data};${c.bruto.toFixed(2)};${c.taxa_est.toFixed(2)};${c.frete_est.toFixed(2)};${c.liq_est.toFixed(2)};${c.liq_real!==null?c.liq_real.toFixed(2):'pendente'};${c.dif!==null?c.dif.toFixed(2):'—'};${c.status_mp}
 `;
   });
-  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='conciliacao_mp.csv';a.click();
 }
 
@@ -5301,15 +5328,15 @@ function renderAnuncios(){
     const mgStr = a.margem_atual!==null ? (a.margem_atual*100).toFixed(1)+'%' : (a.cmv>0?'—':'<span style="color:#f59e0b;font-size:9px">sem CMV</span>');
     const freteTxt = a.frete>0 ? '<strong>R$'+a.freteL.toFixed(2)+'</strong><span style="font-size:9px;color:#9ca3af"> liq</span>' : '<span style="color:#9ca3af">—</span>';
     const taxaTxt = a.taxa>0 ? (a.taxa*100).toFixed(0)+'%' : '—';
-    return `<tr>
+    return `<tr style="border-bottom:1px solid #f9fafb">
       <td style="padding:5px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px" title="${a.titulo}">${a.titulo}</td>
-      <td style="padding:5px 8px;font-weight:700;color:#1F3864;font-size:11px;white-space:nowrap">${a.sku||'<span style=color:#9ca3af>—</span>'}</td>
-      <td style="padding:5px 8px;font-size:10px;color:#6b7280;white-space:nowrap">${a.id}</td>
+      <td style="padding:5px 8px;font-weight:700;color:#1F3864;font-size:11px">${a.sku||'—'}</td>
+      <td style="padding:5px 8px;font-size:10px;color:#6b7280">${a.id}</td>
       <td style="padding:5px 8px;text-align:right;font-weight:700">R$${(a.preco||0).toFixed(2)}</td>
-      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${a.cmv>0?'R$'+a.cmv.toFixed(2):'<span style="color:#f59e0b">sem CMV</span>'}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${a.cmv>0?'R$'+a.cmv.toFixed(2):'<span style="color:#f59e0b;font-size:9px">sem CMV</span>'}</td>
       <td style="padding:5px 8px;text-align:right;color:var(--muted)">${taxaTxt}</td>
-      <td style="padding:5px 8px;text-align:right">${freteTxt}</td>
-      <td style="padding:5px 8px;text-align:right;color:${mgCor};font-weight:700">${mgStr}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${freteTxt}</td>
+      <td style="padding:5px 8px;text-align:right;font-weight:700;color:${mgCor}">${mgStr}</td>
       <td style="padding:5px 8px;text-align:center"><span class="pill ${a.free_shipping?'pill-g':'pill-b'}" style="font-size:9px">${a.free_shipping?'Grátis':'Comprador'}</span></td>
     </tr>`;
   }).join('');
