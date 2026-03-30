@@ -429,12 +429,53 @@ def sync_ml_listings():
     print(f'[ML] {salvos} anúncios salvos no banco')
     return salvos
 
+
+def sync_bling_anuncios():
+    """Sincroniza anúncios ML do Bling → banco (tem SKU, MLB, taxa, frete)."""
+    if not _bling_token.get('access'): return 0
+    print('[SYNC] Anúncios Bling...')
+    n = 0
+    pagina = 1
+    while True:
+        d = bling_get('anuncios', pagina)
+        if not d: break
+        items = d.get('data', [])
+        if not items: break
+        for it in items:
+            try:
+                mlb    = str(it.get('idSite') or it.get('idAnuncio') or '').strip()
+                sku    = str(it.get('codigo') or it.get('sku') or '').strip()
+                titulo = str(it.get('nome') or it.get('titulo') or '').strip()
+                preco  = float(it.get('preco') or 0)
+                taxa   = float(it.get('percentualComissao') or it.get('taxa') or 0)
+                frete  = float(it.get('frete') or 0)
+                ltype  = str(it.get('tipoAnuncio') or '').lower()
+                free_s = 1 if 'premium' in ltype or 'gold_pro' in ltype else 0
+                status = str(it.get('situacao') or 'active').lower()
+                # CMV do produto Bling
+                cmv    = float(it.get('precoCusto') or 0)
+                if not mlb or not mlb.startswith('MLB'): continue
+                c = 'ON CONFLICT(id) DO UPDATE SET sku=EXCLUDED.sku,titulo=EXCLUDED.titulo,preco=EXCLUDED.preco,sale_fee=EXCLUDED.sale_fee,listing_type=EXCLUDED.listing_type,free_shipping=EXCLUDED.free_shipping,status=EXCLUDED.status,frete_medio=EXCLUDED.frete_medio' if IS_PG else                     'ON CONFLICT(id) DO UPDATE SET sku=excluded.sku,titulo=excluded.titulo,preco=excluded.preco,sale_fee=excluded.sale_fee,listing_type=excluded.listing_type,free_shipping=excluded.free_shipping,status=excluded.status,frete_medio=excluded.frete_medio'
+                exe(f"INSERT INTO ml_listings (id,sku,titulo,preco,sale_fee,listing_type,free_shipping,status,frete_medio) VALUES ({qmark(9)}) {c}",
+                    (mlb,sku,titulo,preco,taxa,ltype,free_s,status,frete))
+                if cmv > 0 and sku:
+                    upsert_produto(sku, titulo, custo=cmv, custo_br=cmv)
+                n += 1
+            except Exception as e:
+                print(f'[BLING] anuncio erro: {e}')
+        if len(items) < 100: break
+        pagina += 1
+        time.sleep(0.3)
+    print(f'[BLING] {n} anúncios salvos')
+    return n
+
 def sync_all():
     n1 = sync_produtos()
     n2 = sync_pedidos()
     n3 = sync_ml_listings() if _ml_token.get('access') else 0
+    n4 = sync_bling_anuncios() if _bling_token.get('access') else 0
     sync_frete_por_anuncio()
-    msg = f'produtos={n1} pedidos={n2} listings_ml={n3}'
+    msg = f'produtos={n1} pedidos={n2} listings_ml={n3} listings_bling={n4}'
     p = '%s' if IS_PG else '?'
     try: exe(f"INSERT INTO sync_log (tipo,resultado) VALUES ({p},{p})", ('sync', msg))
     except: pass
@@ -475,6 +516,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/status': self._get_status,
             '/api/cmv-cache': self._get_cmv_compat,
             '/api/sync/now': self._sync_now,
+            '/api/sync/bling-anuncios': self._sync_bling_anuncios,
         }
         if clean in routes: routes[clean]()
         elif clean.startswith('/api/'): self._proxy('GET')
@@ -620,6 +662,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                       'ultimo_sync':last,'bling_ok':bool(_bling_token.get('access')),
                       'ml_ok':bool(_ml_token.get('access'))})
         except Exception as e: self._err(500, str(e))
+
+    def _sync_bling_anuncios(self):
+        threading.Thread(target=sync_bling_anuncios, daemon=True).start()
+        self._ok({'ok':True,'msg':'Sync Bling anuncios iniciado'})
 
     def _sync_now(self):
         threading.Thread(target=sync_all, daemon=True).start()
