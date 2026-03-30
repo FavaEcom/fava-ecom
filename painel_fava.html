@@ -369,6 +369,12 @@ function salvarCfg(){
   
   localStorage.setItem('fava_tk4', JSON.stringify({bling:tkB, ml:tkM}));
   salvarTokenStore();
+  // Envia tokens ao servidor Railway para sync automático
+  fetch('/api/auth/tokens',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({bling_access:tkB,bling_refresh:tkRBling,ml_access:tkM,ml_refresh:tkRML})
+  }).then(r=>r.json()).then(d=>{if(d.ok) console.log('✅ Tokens no servidor — sync automático ativo');})
+    .catch(e=>console.warn('[tokens servidor]',e));
   (document.getElementById('modal-cfg')||{style:{}}).style.display ='none';
   carregarTudo();
 }
@@ -513,6 +519,7 @@ function salvarCfg(){
   <span class="last-update" id="last-update"></span>
   <button class="btn-reload" onclick="recarregar()">↻ Atualizar</button>
   <button class="btn-reload" id="btn-renovar-ml" onclick="forcarRenovacaoML()" style="background:rgba(239,68,68,.3);border-color:rgba(239,68,68,.5)" title="Renovar token ML expirado">🔑 Renovar ML</button>
+  <button class="btn-reload" id="btn-db-status" onclick="mostrarStatusDB()" title="Status do banco de dados">🗄️ DB</button>
   <button class="btn-reload" onclick="document.getElementById('modal-cfg').style.display='flex'">⚙️</button>
 </header>
 
@@ -1040,35 +1047,39 @@ window.onload=async ()=>{
   
   // Carrega CMV manuais salvos
   if(typeof aplicarCMVManuais === 'function') aplicarCMVManuais();
-  // ─ 1. Importa banco CMV da Calculadora (localStorage) ─
+  // ─ Carrega CMV e produtos do banco PostgreSQL do Railway ─
   try{
-    const bancoCal = JSON.parse(localStorage.getItem('fava_cmv_banco')||'{}');
-    let importados = 0;
-    Object.entries(bancoCal).forEach(([sku, d])=>{
-      if(d.cmvBr > 0 && (!dados.cmvCache[sku] || !dados.cmvCache[sku].cmv)){
-        dados.cmvCache[sku] = {cmv: d.cmvBr, nome: d.nome||sku, fonte:'calc'};
-        importados++;
-      }
-    });
-    if(importados > 0) console.log(`✅ Banco CMV: ${importados} SKUs importados da Calculadora`);
-  }catch(e){ console.warn('Banco CMV import error:', e); }
-
-  // ─ 2. Carrega CMV do servidor Railway (enviado pelo script Python) ─
-  try{
-    const rCmv = await fetch('/api/cmv-cache');
-    if(rCmv.ok){
-      const cmvServidor = await rCmv.json();
-      let nServ = 0;
-      Object.entries(cmvServidor).forEach(([sku, d])=>{
-        // Servidor tem prioridade sobre localStorage (dado mais recente das NFs)
-        if(d.cmv > 0){
-          dados.cmvCache[sku] = {cmv: d.cmv, cmvPr: d.cmvPr||d.cmv, nome: d.nome||sku, fonte:'nfe'};
-          nServ++;
+    const rProd = await fetch('/api/db/produtos');
+    if(rProd.ok){
+      const produtos = await rProd.json();
+      let n = 0;
+      produtos.forEach(p=>{
+        if(p.sku && (p.custo_br>0||p.custo>0)){
+          dados.cmvCache[p.sku] = {
+            cmv: p.custo_br||p.custo||0,
+            cmvPr: p.custo_pr||p.custo_br||p.custo||0,
+            nome: p.nome||p.sku,
+            estoque: p.estoque||0,
+            ipi: p.ipi||0,
+            cred_icms: p.cred_icms||0,
+            fonte: 'db'
+          };
+          n++;
         }
       });
-      if(nServ > 0) console.log(`✅ CMV servidor: ${nServ} SKUs carregados das NFs`);
+      console.log(`✅ Banco DB: ${n} produtos carregados do PostgreSQL`);
     }
-  }catch(e){ console.warn('CMV servidor error:', e); }
+  }catch(e){
+    // Fallback: tenta carregar do localStorage
+    try{
+      const bancoCal = JSON.parse(localStorage.getItem('fava_cmv_banco')||'{}');
+      let n2 = 0;
+      Object.entries(bancoCal).forEach(([sku,d])=>{
+        if(d.cmvBr>0){ dados.cmvCache[sku]={cmv:d.cmvBr,nome:d.nome||sku,fonte:'local'}; n2++; }
+      });
+      if(n2>0) console.log(`✅ Fallback localStorage: ${n2} SKUs`);
+    }catch(e2){}
+  }
 };
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1107,6 +1118,27 @@ function carregarTokenStore(){
   if(document.getElementById('tk-ml'))    document.getElementById('tk-ml').value    = tokens.ml;
 }
 
+
+
+async function mostrarStatusDB(){
+  try{
+    const r = await fetch('/api/db/status');
+    const d = await r.json();
+    const btn = document.getElementById('btn-db-status');
+    const msg = `🗄️ Banco de Dados:\n` +
+      `Produtos/CMV: ${d.produtos}\n` +
+      `Histórico compras: ${d.historico}\n` +
+      `Pedidos: ${d.pedidos}\n` +
+      `Boletos: ${d.boletos}\n` +
+      `Bling token: ${d.bling_ok ? '✅' : '❌'}\n` +
+      `Último sync: ${d.ultimo_sync?.resultado||'nunca'} (${d.ultimo_sync?.created_at||''})\n\n` +
+      `Sincronizar agora?`;
+    if(confirm(msg)){
+      await fetch('/api/sync/now');
+      setTimeout(()=>location.reload(), 5000);
+    }
+  }catch(e){ alert('Banco: '+e.message); }
+}
 
 // Força renovação manual do token ML
 async function forcarRenovacaoML(){

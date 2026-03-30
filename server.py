@@ -1,7 +1,10 @@
 """
-FAVA ECOM — Servidor para Deploy (Railway)
-Proxy para APIs Bling e ML + serve arquivos HTML
-+ rota /api/cmv-cache para receber CMV do script Python local
+FAVA ECOM — Servidor Railway v3
+================================
+- Proxy para Bling / ML / MP
+- Banco PostgreSQL persistente (ou SQLite como fallback)
+- Sincronização automática com Bling a cada 1h
+- API /api/db/* para o painel consumir
 """
 
 import http.server
@@ -9,11 +12,19 @@ import urllib.request
 import urllib.error
 import json
 import os
+import threading
+import time
+from datetime import datetime, date, timedelta
 
 PORTA = int(os.environ.get('PORT', 8080))
+DATABASE_URL = os.environ.get('DATABASE_URL', '')
 
-# Arquivo onde o CMV fica salvo no servidor
-CMV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cmv_cache.json')
+BLING_ACCESS  = os.environ.get('BLING_ACCESS', '')
+BLING_REFRESH = os.environ.get('BLING_REFRESH', '')
+BLING_CLIENT  = os.environ.get('BLING_CLIENT', '19df6720532752f6888d5f0aad392bc8829974d3')
+BLING_SECRET  = os.environ.get('BLING_SECRET', '590eed8f0b2fb1998e3f60335cef2a17bf5b2135fc69ec4a5ae925f520a8')
+ML_ACCESS     = os.environ.get('ML_ACCESS', '')
+ML_REFRESH    = os.environ.get('ML_REFRESH', '')
 
 PROXY = {
     '/api/bling/': 'https://www.bling.com.br/Api/v3/',
@@ -21,145 +32,528 @@ PROXY = {
     '/api/mp/':    'https://api.mercadopago.com/',
 }
 
-class Handler(http.server.SimpleHTTPRequestHandler):
+_db = None
+_db_lock = threading.Lock()
+_bling_token = {'access': BLING_ACCESS, 'refresh': BLING_REFRESH}
+_ml_token    = {'access': ML_ACCESS,    'refresh': ML_REFRESH}
 
+# ────────────────────────────────────────────────────────────────
+# BANCO DE DADOS
+# ────────────────────────────────────────────────────────────────
+def get_db():
+    global _db
+    if _db:
+        try:
+            cur = _db.cursor()
+            cur.execute('SELECT 1')
+            return _db
+        except:
+            _db = None
+
+    if DATABASE_URL:
+        try:
+            import psycopg2
+            _db = psycopg2.connect(DATABASE_URL, sslmode='require')
+            _db.autocommit = True
+            print('[DB] PostgreSQL conectado')
+            return _db
+        except Exception as e:
+            print(f'[DB] PostgreSQL falhou ({e}) — usando SQLite')
+
+    import sqlite3
+    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fava.db')
+    _db = sqlite3.connect(db_path, check_same_thread=False)
+    _db.row_factory = sqlite3.Row
+    print(f'[DB] SQLite: {db_path}')
+    return _db
+
+IS_PG = bool(DATABASE_URL)
+
+def criar_tabelas():
+    db = get_db()
+    sqls = []
+    if IS_PG:
+        sqls = [
+            """CREATE TABLE IF NOT EXISTS produtos (
+                sku TEXT PRIMARY KEY, nome TEXT, marca TEXT, familia TEXT,
+                custo REAL DEFAULT 0, custo_br REAL DEFAULT 0, custo_pr REAL DEFAULT 0,
+                estoque INTEGER DEFAULT 0, ipi REAL DEFAULT 0, cred_icms REAL DEFAULT 0,
+                fornecedor TEXT, preco_venda REAL DEFAULT 0,
+                updated_at TIMESTAMP DEFAULT NOW())""",
+            """CREATE TABLE IF NOT EXISTS historico_compras (
+                id SERIAL PRIMARY KEY, nf TEXT, fornecedor TEXT, data_emissao TEXT,
+                sku TEXT, nome TEXT, qtd REAL DEFAULT 0, vunit REAL DEFAULT 0,
+                vtot REAL DEFAULT 0, ipi_p REAL DEFAULT 0, ipi_un REAL DEFAULT 0,
+                icms_p REAL DEFAULT 0, cred_pc REAL DEFAULT 0, custo_r REAL DEFAULT 0,
+                cmv_br REAL DEFAULT 0, cmv_pr REAL DEFAULT 0, ncm TEXT, cfop TEXT,
+                created_at TIMESTAMP DEFAULT NOW())""",
+            """CREATE TABLE IF NOT EXISTS nf_entrada (
+                chave TEXT PRIMARY KEY, nf TEXT, fornecedor TEXT, cnpj TEXT,
+                emissao TEXT, valor REAL DEFAULT 0, created_at TIMESTAMP DEFAULT NOW())""",
+            """CREATE TABLE IF NOT EXISTS boletos (
+                id SERIAL PRIMARY KEY, nf_chave TEXT, fornecedor TEXT, cnpj TEXT,
+                nf TEXT, emissao TEXT, valor_nf REAL DEFAULT 0, parcela TEXT,
+                vencimento TEXT, valor REAL DEFAULT 0, status TEXT DEFAULT 'A PAGAR',
+                created_at TIMESTAMP DEFAULT NOW())""",
+            """CREATE TABLE IF NOT EXISTS pedidos (
+                id TEXT PRIMARY KEY, canal TEXT, data TEXT, status TEXT,
+                total REAL DEFAULT 0, uf TEXT, frete REAL DEFAULT 0, itens TEXT,
+                created_at TIMESTAMP DEFAULT NOW())""",
+            """CREATE TABLE IF NOT EXISTS sync_log (
+                id SERIAL PRIMARY KEY, tipo TEXT, resultado TEXT,
+                created_at TIMESTAMP DEFAULT NOW())""",
+        ]
+    else:
+        sqls = [
+            """CREATE TABLE IF NOT EXISTS produtos (
+                sku TEXT PRIMARY KEY, nome TEXT, marca TEXT, familia TEXT,
+                custo REAL DEFAULT 0, custo_br REAL DEFAULT 0, custo_pr REAL DEFAULT 0,
+                estoque INTEGER DEFAULT 0, ipi REAL DEFAULT 0, cred_icms REAL DEFAULT 0,
+                fornecedor TEXT, preco_venda REAL DEFAULT 0,
+                updated_at DATETIME DEFAULT (datetime('now')))""",
+            """CREATE TABLE IF NOT EXISTS historico_compras (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, nf TEXT, fornecedor TEXT,
+                data_emissao TEXT, sku TEXT, nome TEXT, qtd REAL DEFAULT 0,
+                vunit REAL DEFAULT 0, vtot REAL DEFAULT 0, ipi_p REAL DEFAULT 0,
+                ipi_un REAL DEFAULT 0, icms_p REAL DEFAULT 0, cred_pc REAL DEFAULT 0,
+                custo_r REAL DEFAULT 0, cmv_br REAL DEFAULT 0, cmv_pr REAL DEFAULT 0,
+                ncm TEXT, cfop TEXT, created_at DATETIME DEFAULT (datetime('now')))""",
+            """CREATE TABLE IF NOT EXISTS nf_entrada (
+                chave TEXT PRIMARY KEY, nf TEXT, fornecedor TEXT, cnpj TEXT,
+                emissao TEXT, valor REAL DEFAULT 0,
+                created_at DATETIME DEFAULT (datetime('now')))""",
+            """CREATE TABLE IF NOT EXISTS boletos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, nf_chave TEXT, fornecedor TEXT,
+                cnpj TEXT, nf TEXT, emissao TEXT, valor_nf REAL DEFAULT 0,
+                parcela TEXT, vencimento TEXT, valor REAL DEFAULT 0,
+                status TEXT DEFAULT 'A PAGAR',
+                created_at DATETIME DEFAULT (datetime('now')))""",
+            """CREATE TABLE IF NOT EXISTS pedidos (
+                id TEXT PRIMARY KEY, canal TEXT, data TEXT, status TEXT,
+                total REAL DEFAULT 0, uf TEXT, frete REAL DEFAULT 0, itens TEXT,
+                created_at DATETIME DEFAULT (datetime('now')))""",
+            """CREATE TABLE IF NOT EXISTS sync_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT, resultado TEXT,
+                created_at DATETIME DEFAULT (datetime('now')))""",
+        ]
+    with _db_lock:
+        cur = db.cursor()
+        for sql in sqls:
+            try: cur.execute(sql)
+            except Exception as e: print(f'[DB] {e}')
+        if not IS_PG: db.commit()
+    print('[DB] Tabelas prontas')
+
+def qmark(n):
+    return ','.join(['%s' if IS_PG else '?']*n)
+
+def exe(sql, params=(), fetchall=False, fetchone=False):
+    with _db_lock:
+        db = get_db()
+        try:
+            cur = db.cursor()
+            cur.execute(sql, params)
+            if fetchall:
+                cols = [d[0] for d in cur.description]
+                return [dict(zip(cols, r)) for r in cur.fetchall()]
+            if fetchone:
+                r = cur.fetchone()
+                if r is None: return None
+                cols = [d[0] for d in cur.description]
+                return dict(zip(cols, r)) if not hasattr(r,'keys') else dict(r)
+            if not IS_PG: db.commit()
+            return cur.rowcount
+        except Exception as e:
+            if not IS_PG:
+                try: db.rollback()
+                except: pass
+            raise
+
+def upsert_produto(sku, nome='', marca='', familia='', custo=0, custo_br=0, custo_pr=0,
+                   estoque=0, ipi=0, cred_icms=0, fornecedor='', preco_venda=0):
+    p = '%s' if IS_PG else '?'
+    conflict = 'DO UPDATE SET nome=EXCLUDED.nome,custo=EXCLUDED.custo,custo_br=EXCLUDED.custo_br,custo_pr=EXCLUDED.custo_pr,estoque=EXCLUDED.estoque,ipi=EXCLUDED.ipi,fornecedor=EXCLUDED.fornecedor,preco_venda=EXCLUDED.preco_venda' if IS_PG else                'DO UPDATE SET nome=excluded.nome,custo=excluded.custo,custo_br=excluded.custo_br,custo_pr=excluded.custo_pr,estoque=excluded.estoque,ipi=excluded.ipi,fornecedor=excluded.fornecedor,preco_venda=excluded.preco_venda'
+    sql = f"INSERT INTO produtos (sku,nome,marca,familia,custo,custo_br,custo_pr,estoque,ipi,cred_icms,fornecedor,preco_venda) VALUES ({qmark(12)}) ON CONFLICT(sku) {conflict}"
+    exe(sql, (sku,nome,marca,familia,custo,custo_br,custo_pr,estoque,ipi,cred_icms,fornecedor,preco_venda))
+
+# ────────────────────────────────────────────────────────────────
+# TOKENS
+# ────────────────────────────────────────────────────────────────
+def salvar_tokens_db(tipo, access, refresh=None):
+    if tipo == 'bling':
+        _bling_token['access'] = access
+        if refresh: _bling_token['refresh'] = refresh
+    elif tipo == 'ml':
+        _ml_token['access'] = access
+        if refresh: _ml_token['refresh'] = refresh
+    import base64
+    data = base64.b64encode(json.dumps({'bling':_bling_token,'ml':_ml_token}).encode()).decode()
+    p = '%s' if IS_PG else '?'
+    try:
+        exe(f"DELETE FROM sync_log WHERE tipo={p}", ('_tokens',))
+        exe(f"INSERT INTO sync_log (tipo,resultado) VALUES ({p},{p})", ('_tokens', data))
+    except: pass
+
+def carregar_tokens_salvos():
+    try:
+        p = '%s' if IS_PG else '?'
+        row = exe(f"SELECT resultado FROM sync_log WHERE tipo={p} ORDER BY created_at DESC LIMIT 1",
+                  ('_tokens',), fetchone=True)
+        if row:
+            import base64
+            d = json.loads(base64.b64decode(row['resultado']))
+            if d.get('bling',{}).get('access'): _bling_token.update(d['bling'])
+            if d.get('ml',{}).get('access'):    _ml_token.update(d['ml'])
+            print('[AUTH] Tokens restaurados')
+    except Exception as e:
+        print(f'[AUTH] Tokens não restaurados: {e}')
+
+# ────────────────────────────────────────────────────────────────
+# SYNC BLING
+# ────────────────────────────────────────────────────────────────
+def renovar_bling():
+    rt = _bling_token.get('refresh','')
+    if not rt: return False
+    import base64
+    creds = base64.b64encode(f'{BLING_CLIENT}:{BLING_SECRET}'.encode()).decode()
+    try:
+        body = f'grant_type=refresh_token&refresh_token={rt}'.encode()
+        req = urllib.request.Request(
+            'https://www.bling.com.br/Api/v3/oauth/token', data=body,
+            headers={'Content-Type':'application/x-www-form-urlencoded',
+                     'Authorization':f'Basic {creds}'}, method='POST')
+        with urllib.request.urlopen(req, timeout=15) as r:
+            d = json.loads(r.read())
+            if d.get('access_token'):
+                salvar_tokens_db('bling', d['access_token'], d.get('refresh_token', rt))
+                print('[BLING] Token renovado'); return True
+    except Exception as e: print(f'[BLING] Renovar: {e}')
+    return False
+
+def bling_get(path, pagina=1):
+    token = _bling_token.get('access','')
+    if not token: return None
+    sep = '&' if '?' in path else '?'
+    url = f'https://www.bling.com.br/Api/v3/{path}{sep}pagina={pagina}&limite=100'
+    req = urllib.request.Request(url, headers={'Authorization':f'Bearer {token}','Accept':'application/json'})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 401 and renovar_bling():
+            return bling_get(path, pagina)
+        print(f'[BLING] {path} erro {e.code}'); return None
+    except Exception as e:
+        print(f'[BLING] {path}: {e}'); return None
+
+def sync_produtos():
+    print('[SYNC] Produtos...')
+    n=0; pagina=1
+    while True:
+        d = bling_get('produtos', pagina)
+        if not d: break
+        items = d.get('data',[])
+        if not items: break
+        for p in items:
+            sku = str(p.get('codigo','') or p.get('id','')).strip()
+            if not sku: continue
+            nome  = (p.get('descricao','') or '').strip()
+            custo = float(p.get('precoCusto') or 0)
+            preco = float(p.get('preco') or 0)
+            estq  = int((p.get('estoque') or {}).get('saldoVirtualTotal') or 0)
+            forn  = ''
+            if isinstance(p.get('fornecedor'), dict):
+                forn = p['fornecedor'].get('nome','') or ''
+            ipi = float((p.get('tributacao') or {}).get('ipi') or 0)
+            try: upsert_produto(sku, nome, custo=custo, custo_br=custo, estoque=estq, ipi=ipi, fornecedor=forn, preco_venda=preco)
+            except Exception as e: print(f'[SYNC] prod {sku}: {e}')
+            n+=1
+        if len(items)<100: break
+        pagina+=1; time.sleep(0.3)
+    print(f'[SYNC] {n} produtos'); return n
+
+def sync_pedidos():
+    print('[SYNC] Pedidos...')
+    hoje = date.today()
+    de = (hoje - timedelta(days=60)).isoformat()
+    n=0; pagina=1
+    while True:
+        d = bling_get(f'pedidos/vendas?dataInicial={de}&dataFinal={hoje.isoformat()}', pagina)
+        if not d: break
+        items = d.get('data',[])
+        if not items: break
+        for p in items:
+            pid = str(p.get('id',''))
+            if not pid: continue
+            raw = p.get('itens',[]) or []
+            itens = json.dumps([{'sku':i.get('codigo',''),'nome':i.get('descricao',''),
+                'qtd':float(i.get('quantidade',1)),'preco':float(i.get('valor',0))} for i in raw])
+            canal = (p.get('canal') or {}).get('descricao','Bling') if isinstance(p.get('canal'),dict) else 'Bling'
+            status = (p.get('situacao') or {}).get('nome','') if isinstance(p.get('situacao'),dict) else ''
+            total = float(p.get('totalProdutos',0) or p.get('total',0) or 0)
+            data_p = (p.get('data','') or '')[:10]
+            p2 = '%s' if IS_PG else '?'
+            conflict = 'ON CONFLICT(id) DO UPDATE SET status=EXCLUDED.status' if IS_PG else 'ON CONFLICT(id) DO UPDATE SET status=excluded.status'
+            try:
+                exe(f"INSERT INTO pedidos (id,canal,data,status,total,uf,frete,itens) VALUES ({qmark(8)}) {conflict}",
+                    (pid,canal,data_p,status,total,'PR',0,itens))
+                n+=1
+            except Exception as e: print(f'[SYNC] ped {pid}: {e}')
+        if len(items)<100: break
+        pagina+=1; time.sleep(0.3)
+    print(f'[SYNC] {n} pedidos'); return n
+
+def sync_all():
+    n1 = sync_produtos()
+    n2 = sync_pedidos()
+    msg = f'produtos={n1} pedidos={n2}'
+    p = '%s' if IS_PG else '?'
+    try: exe(f"INSERT INTO sync_log (tipo,resultado) VALUES ({p},{p})", ('sync', msg))
+    except: pass
+    print(f'[SYNC] {msg}')
+
+def agendar_sync():
+    def loop():
+        time.sleep(15)
+        while True:
+            try:
+                if _bling_token.get('access'): sync_all()
+                else: print('[SYNC] Aguardando token Bling...')
+            except Exception as e: print(f'[SYNC] Erro: {e}')
+            time.sleep(3600)
+    threading.Thread(target=loop, daemon=True).start()
+    print('[SYNC] Agendador 1h iniciado')
+
+# ────────────────────────────────────────────────────────────────
+# HTTP SERVER
+# ────────────────────────────────────────────────────────────────
+class Handler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, fmt, *args):
         if '/api/' in self.path:
             print(f"[{args[1] if len(args)>1 else '?'}] {self.path[:80]}")
 
     def do_OPTIONS(self):
-        self.send_response(200)
-        self._cors(); self.end_headers()
+        self.send_response(200); self._cors(); self.end_headers()
 
     def do_GET(self):
-        # Rota: GET /api/cmv-cache — retorna CMV salvo
-        if self.path == '/api/cmv-cache':
-            self._cmv_get()
-        elif self.path.startswith('/api/'):
-            self._proxy('GET')
-        else:
-            super().do_GET()
+        clean = self.path.split('?')[0]
+        routes = {
+            '/api/db/produtos': self._get_produtos,
+            '/api/db/historico': self._get_historico,
+            '/api/db/pedidos': self._get_pedidos,
+            '/api/db/boletos': self._get_boletos,
+            '/api/db/nfs': self._get_nfs,
+            '/api/db/status': self._get_status,
+            '/api/cmv-cache': self._get_cmv_compat,
+            '/api/sync/now': self._sync_now,
+        }
+        if clean in routes: routes[clean]()
+        elif clean.startswith('/api/'): self._proxy('GET')
+        else: super().do_GET()
 
     def do_POST(self):
-        # Rota: POST /api/cmv-cache — salva CMV enviado pelo script Python
-        if self.path == '/api/cmv-cache':
-            self._cmv_post()
-        elif self.path.startswith('/api/'):
-            self._proxy('POST')
-        else:
-            self.send_error(405)
+        clean = self.path.split('?')[0]
+        routes = {
+            '/api/db/produto': self._post_produto,
+            '/api/db/historico': self._post_historico,
+            '/api/db/nf': self._post_nf,
+            '/api/auth/tokens': self._post_tokens,
+            '/api/cmv-cache': self._post_cmv,
+        }
+        if clean in routes: routes[clean]()
+        elif clean.startswith('/api/'): self._proxy('POST')
+        else: self.send_error(405)
 
     def do_PUT(self):
-        if self.path.startswith('/api/'):
-            self._proxy('PUT')
-        else:
-            self.send_error(405)
+        if self.path.startswith('/api/'): self._proxy('PUT')
+        else: self.send_error(405)
 
-    # ── CMV CACHE ─────────────────────────────────────────────────────────────
-    def _cmv_get(self):
-        """Retorna o CMV salvo — o painel chama isso no startup."""
+    def _body(self):
+        n = int(self.headers.get('Content-Length',0))
+        return json.loads(self.rfile.read(n)) if n else {}
+
+    # ── GET routes ────────────────────────────────────────────────
+    def _get_produtos(self):
+        try: self._ok(exe("SELECT * FROM produtos ORDER BY sku", fetchall=True))
+        except Exception as e: self._err(500, str(e))
+
+    def _get_cmv_compat(self):
         try:
-            if os.path.exists(CMV_FILE):
-                with open(CMV_FILE, 'r', encoding='utf-8') as f:
-                    data = f.read()
-                self.send_response(200)
-                self._cors()
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(data.encode())
-            else:
-                self.send_response(200)
-                self._cors()
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(b'{}')
-        except Exception as e:
-            self._json_error(500, str(e))
+            rows = exe("SELECT sku, custo_br as cmv, custo_pr, nome FROM produtos WHERE custo_br > 0", fetchall=True)
+            self._ok({r['sku']:{'cmv':r['cmv'],'cmvPr':r['custo_pr'],'nome':r['nome']} for r in rows})
+        except Exception as e: self._err(500, str(e))
 
-    def _cmv_post(self):
-        """Recebe CMV do script Python local e salva no servidor."""
+    def _get_historico(self):
+        try: self._ok(exe("SELECT * FROM historico_compras ORDER BY data_emissao DESC LIMIT 1000", fetchall=True))
+        except Exception as e: self._err(500, str(e))
+
+    def _get_pedidos(self):
         try:
-            n = int(self.headers.get('Content-Length', 0))
-            body = self.rfile.read(n) if n else b'{}'
-            dados = json.loads(body)
+            rows = exe("SELECT * FROM pedidos ORDER BY data DESC LIMIT 500", fetchall=True)
+            for r in rows:
+                if isinstance(r.get('itens'),str):
+                    try: r['itens'] = json.loads(r['itens'])
+                    except: r['itens'] = []
+            self._ok(rows)
+        except Exception as e: self._err(500, str(e))
 
-            # Mescla com o existente (não sobrescreve tudo — acumula)
-            existente = {}
-            if os.path.exists(CMV_FILE):
-                with open(CMV_FILE, 'r', encoding='utf-8') as f:
-                    existente = json.load(f)
+    def _get_boletos(self):
+        try: self._ok(exe("SELECT * FROM boletos ORDER BY vencimento ASC LIMIT 300", fetchall=True))
+        except Exception as e: self._err(500, str(e))
 
-            existente.update(dados)  # novos sobrescrevem antigos
+    def _get_nfs(self):
+        try: self._ok(exe("SELECT * FROM nf_entrada ORDER BY emissao DESC LIMIT 300", fetchall=True))
+        except Exception as e: self._err(500, str(e))
 
-            with open(CMV_FILE, 'w', encoding='utf-8') as f:
-                json.dump(existente, f, ensure_ascii=False)
+    def _get_status(self):
+        try:
+            def cnt(t): return exe(f"SELECT COUNT(*) as n FROM {t}", fetchone=True)['n']
+            p = '%s' if IS_PG else '?'
+            last = exe(f"SELECT resultado, created_at FROM sync_log WHERE tipo={p} ORDER BY created_at DESC LIMIT 1",
+                       ('sync',), fetchone=True)
+            self._ok({'produtos':cnt('produtos'),'historico':cnt('historico_compras'),
+                      'pedidos':cnt('pedidos'),'boletos':cnt('boletos'),
+                      'ultimo_sync':last,'bling_ok':bool(_bling_token.get('access')),
+                      'ml_ok':bool(_ml_token.get('access'))})
+        except Exception as e: self._err(500, str(e))
 
-            resp = json.dumps({'ok': True, 'n': len(existente)}).encode()
-            self.send_response(200)
-            self._cors()
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(resp)
-            print(f'[CMV] {len(dados)} SKUs recebidos, total: {len(existente)}')
+    def _sync_now(self):
+        threading.Thread(target=sync_all, daemon=True).start()
+        self._ok({'ok':True,'msg':'Sync iniciado'})
 
-        except Exception as e:
-            self._json_error(500, str(e))
+    # ── POST routes ───────────────────────────────────────────────
+    def _post_tokens(self):
+        try:
+            d = self._body()
+            if d.get('bling_access'): salvar_tokens_db('bling', d['bling_access'], d.get('bling_refresh'))
+            if d.get('ml_access'):    salvar_tokens_db('ml', d['ml_access'], d.get('ml_refresh'))
+            if d.get('bling_access') or d.get('ml_access'):
+                threading.Thread(target=sync_all, daemon=True).start()
+            self._ok({'ok':True})
+            print('[AUTH] Tokens atualizados — sync iniciado')
+        except Exception as e: self._err(500, str(e))
 
-    # ── PROXY ──────────────────────────────────────────────────────────────────
+    def _post_cmv(self):
+        try:
+            d = self._body()
+            n=0
+            for sku, v in d.items():
+                cmv = float(v.get('cmv', v.get('cmvBr', 0)))
+                if cmv<=0: continue
+                try: upsert_produto(sku, v.get('nome',sku), custo=cmv, custo_br=cmv, custo_pr=float(v.get('cmvPr',cmv)))
+                except: pass
+                n+=1
+            self._ok({'ok':True,'n':n})
+            print(f'[CMV] {n} SKUs recebidos')
+        except Exception as e: self._err(500, str(e))
+
+    def _post_produto(self):
+        try:
+            d = self._body()
+            sku = d.get('sku','').strip()
+            if not sku: self._err(400,'sku obrigatorio'); return
+            upsert_produto(sku, d.get('nome',''), d.get('marca',''), d.get('familia',''),
+                float(d.get('custo',0)), float(d.get('custo_br',0)),float(d.get('custo_pr',0)),
+                int(d.get('estoque',0)), float(d.get('ipi',0)), float(d.get('cred_icms',0)),
+                d.get('fornecedor',''), float(d.get('preco_venda',0)))
+            self._ok({'ok':True,'sku':sku})
+        except Exception as e: self._err(500, str(e))
+
+    def _post_historico(self):
+        try:
+            payload = self._body()
+            if isinstance(payload, dict): payload = [payload]
+            n=0
+            p = '%s' if IS_PG else '?'
+            ignore = 'ON CONFLICT DO NOTHING' if IS_PG else 'OR IGNORE'
+            for row in payload:
+                try:
+                    exe(f"""INSERT {'' if IS_PG else 'OR IGNORE'} INTO historico_compras
+                        (nf,fornecedor,data_emissao,sku,nome,qtd,vunit,vtot,ipi_p,ipi_un,icms_p,cred_pc,custo_r,cmv_br,cmv_pr,ncm,cfop)
+                        VALUES ({qmark(17)}) {ignore if IS_PG else ''}""",
+                        (row.get('nf'), row.get('fornecedor'), row.get('data_emissao'),
+                         row.get('sku',''), row.get('nome',''),
+                         float(row.get('qtd',0)), float(row.get('vunit',0)), float(row.get('vtot',0)),
+                         float(row.get('ipi_p',0)), float(row.get('ipi_un',0)),
+                         float(row.get('icms_p',0)), float(row.get('cred_pc',0)),
+                         float(row.get('custo_r',0)), float(row.get('cmv_br',0)),
+                         float(row.get('cmv_pr',0)), row.get('ncm',''), row.get('cfop','')))
+                    sku = row.get('sku','').strip()
+                    cmv_br = float(row.get('cmv_br',0))
+                    if sku and cmv_br>0:
+                        upsert_produto(sku, row.get('nome',''), custo=cmv_br, custo_br=cmv_br,
+                                       custo_pr=float(row.get('cmv_pr',cmv_br)))
+                    n+=1
+                except Exception as e: print(f'[HIST] {e}')
+            self._ok({'ok':True,'inseridos':n})
+        except Exception as e: self._err(500, str(e))
+
+    def _post_nf(self):
+        try:
+            d = self._body()
+            chave = d.get('chave','')
+            if not chave: self._err(400,'chave obrigatoria'); return
+            p = '%s' if IS_PG else '?'
+            ignore = 'ON CONFLICT DO NOTHING' if IS_PG else 'OR IGNORE'
+            exe(f"INSERT {'' if IS_PG else 'OR IGNORE'} INTO nf_entrada (chave,nf,fornecedor,cnpj,emissao,valor) VALUES ({qmark(6)}) {ignore if IS_PG else ''}",
+                (chave, str(d.get('nf','')), d.get('forn',''), d.get('cnpj',''), str(d.get('emissao','')), float(d.get('vNF',0))))
+            for p_ in (d.get('parcelas') or []):
+                exe(f"INSERT INTO boletos (nf_chave,fornecedor,cnpj,nf,emissao,valor_nf,parcela,vencimento,valor) VALUES ({qmark(9)})",
+                    (chave, d.get('forn',''), d.get('cnpj_raw',''), str(d.get('nf','')),
+                     str(d.get('emissao','')), float(d.get('vNF',0)),
+                     p_.get('num',''), str(p_.get('venc','')), float(p_.get('valor',0))))
+            self._ok({'ok':True})
+        except Exception as e: self._err(500, str(e))
+
+    # ── PROXY ──────────────────────────────────────────────────────
     def _proxy(self, method):
         url = None
         for prefix, base in PROXY.items():
             if self.path.startswith(prefix):
-                url = base + self.path[len(prefix):]
-                break
-        if not url:
-            self.send_error(404); return
-
-        headers = {}
-        for h in ['Authorization', 'Content-Type', 'Accept']:
-            v = self.headers.get(h)
-            if v: headers[h] = v
-        if 'Accept' not in headers:
-            headers['Accept'] = 'application/json'
-
+                url = base + self.path[len(prefix):]; break
+        if not url: self.send_error(404); return
+        headers = {h: self.headers.get(h) for h in ['Authorization','Content-Type','Accept'] if self.headers.get(h)}
+        if 'Accept' not in headers: headers['Accept'] = 'application/json'
         body = None
-        if method in ('POST', 'PUT'):
-            n = int(self.headers.get('Content-Length', 0))
+        if method in ('POST','PUT'):
+            n = int(self.headers.get('Content-Length',0))
             if n: body = self.rfile.read(n)
-
         try:
             req = urllib.request.Request(url, data=body, headers=headers, method=method)
             with urllib.request.urlopen(req, timeout=30) as r:
                 data = r.read()
-                self.send_response(r.status)
-                self._cors()
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
+                self.send_response(r.status); self._cors()
+                self.send_header('Content-Type','application/json'); self.end_headers()
                 self.wfile.write(data)
         except urllib.error.HTTPError as e:
-            data = e.read()
-            self.send_response(e.code)
-            self._cors()
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(data)
+            self.send_response(e.code); self._cors()
+            self.send_header('Content-Type','application/json'); self.end_headers()
+            self.wfile.write(e.read())
         except Exception as e:
-            self._json_error(500, str(e))
+            self._err(500, str(e))
 
     def _cors(self):
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Authorization,Content-Type,Accept')
+        self.send_header('Access-Control-Allow-Origin','*')
+        self.send_header('Access-Control-Allow-Methods','GET,POST,PUT,DELETE,OPTIONS')
+        self.send_header('Access-Control-Allow-Headers','Authorization,Content-Type,Accept')
 
-    def _json_error(self, code, msg):
-        self.send_response(code)
-        self._cors()
-        self.send_header('Content-Type', 'application/json')
-        self.end_headers()
-        self.wfile.write(json.dumps({'error': msg}).encode())
+    def _ok(self, data):
+        body = json.dumps(data, default=str).encode('utf-8')
+        self.send_response(200); self._cors()
+        self.send_header('Content-Type','application/json; charset=utf-8')
+        self.send_header('Content-Length', str(len(body))); self.end_headers()
+        self.wfile.write(body)
+
+    def _err(self, code, msg):
+        body = json.dumps({'error':msg}).encode()
+        self.send_response(code); self._cors()
+        self.send_header('Content-Type','application/json'); self.end_headers()
+        self.wfile.write(body)
 
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    print(f'Fava Ecom rodando na porta {PORTA}')
-    server = http.server.HTTPServer(('0.0.0.0', PORTA), Handler)
-    server.serve_forever()
+    print(f'Fava Ecom v3 — porta {PORTA} | BD: {"PostgreSQL" if DATABASE_URL else "SQLite"}')
+    criar_tabelas()
+    carregar_tokens_salvos()
+    agendar_sync()
+    http.server.HTTPServer(('0.0.0.0', PORTA), Handler).serve_forever()

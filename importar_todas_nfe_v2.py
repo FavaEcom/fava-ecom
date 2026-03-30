@@ -279,26 +279,52 @@ def gravar(ws_nf, ws_bol, ws_hist, data):
     return len(data['itens'])
 
 # ── ENVIAR CMV PARA O PAINEL WEB ─────────────────────────────────────────────
+def enviar_painel(url, dados_nf_list, historico_list, cmv_dict):
+    """
+    Envia NFs, histórico de compras e CMV para o banco do Railway.
+    """
+    resultados = []
+
+    # 1. Envia cada NF individualmente
+    for nf_data in dados_nf_list:
+        try:
+            payload = json.dumps(nf_data, default=str).encode('utf-8')
+            req = urllib.request.Request(f'{url}/api/db/nf', data=payload,
+                headers={'Content-Type': 'application/json'}, method='POST')
+            with urllib.request.urlopen(req, timeout=15) as r:
+                resultados.append('nf_ok')
+        except Exception as e:
+            resultados.append(f'nf_err: {e}')
+
+    # 2. Envia histórico de compras (todos os itens de todas as NFs)
+    if historico_list:
+        try:
+            payload = json.dumps(historico_list, default=str).encode('utf-8')
+            req = urllib.request.Request(f'{url}/api/db/historico', data=payload,
+                headers={'Content-Type': 'application/json'}, method='POST')
+            with urllib.request.urlopen(req, timeout=60) as r:
+                d = json.loads(r.read())
+                resultados.append(f'historico={d.get("inseridos",0)}')
+        except Exception as e:
+            resultados.append(f'historico_err: {e}')
+
+    # 3. Envia CMV (compatibilidade)
+    if cmv_dict:
+        try:
+            payload = json.dumps(cmv_dict).encode('utf-8')
+            req = urllib.request.Request(f'{url}/api/cmv-cache', data=payload,
+                headers={'Content-Type': 'application/json'}, method='POST')
+            with urllib.request.urlopen(req, timeout=30) as r:
+                d = json.loads(r.read())
+                resultados.append(f'cmv={d.get("n",0)}')
+        except Exception as e:
+            resultados.append(f'cmv_err: {e}')
+
+    return True, ' | '.join(resultados)
+
 def enviar_cmv_painel(cmv_dict, url):
-    """
-    Envia dicionário {sku: {cmv, cmvPr, nome}} para o Railway.
-    O painel carrega automaticamente sem precisar subir arquivo.
-    """
-    payload = json.dumps(cmv_dict).encode('utf-8')
-    req = urllib.request.Request(
-        f'{url}/api/cmv-cache',
-        data=payload,
-        headers={'Content-Type': 'application/json'},
-        method='POST'
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            resp = json.loads(r.read())
-            return resp.get('ok', False), resp.get('n', 0)
-    except urllib.error.HTTPError as e:
-        return False, f'HTTP {e.code}: {e.read().decode()}'
-    except Exception as e:
-        return False, str(e)
+    """Mantido para compatibilidade."""
+    return enviar_painel(url, [], [], cmv_dict)
 
 # ── MAIN ──────────────────────────────────────────────────────────────────────
 def main():
@@ -423,16 +449,35 @@ def main():
 
     # Envia CMV para o painel web
     if ENVIAR_PAINEL:
-        # Combina CMV existente + novos (novos sobrescrevem)
         cmv_total = {**cmv_existente, **cmv_novos}
-        print(f'\n  📡 Enviando {len(cmv_total)} CMVs para o painel web...')
-        ok, resultado = enviar_cmv_painel(cmv_total, RAILWAY_URL)
+        # Prepara lista do histórico para envio
+        hist_list = []
+        for xml_path2 in sorted(xmls):
+            data2, err2 = parse_xml(str(xml_path2))
+            if data2:
+                for it in data2['itens']:
+                    hist_list.append({
+                        'nf': str(data2['nf']), 'fornecedor': data2['forn'],
+                        'data_emissao': data2['emissao'], 'sku': it['cod'],
+                        'nome': it['nome'], 'qtd': it['qtd'],
+                        'vunit': it['vunit'], 'vtot': it['vtot'],
+                        'ipi_p': it['ipi_p'], 'ipi_un': it['ipi_un'],
+                        'icms_p': it['icms_p'], 'cred_pc': it['cred_pc'],
+                        'custo_r': it['custo_r'], 'cmv_br': it['cmv_br'],
+                        'cmv_pr': it['cmv_pr'], 'ncm': it['ncm'], 'cfop': it['cfop'],
+                    })
+        dados_nf_list = []
+        for xml_path3 in sorted(xmls):
+            data3, err3 = parse_xml(str(xml_path3))
+            if data3: dados_nf_list.append(data3)
+
+        print(f'\n  📡 Enviando dados para o banco no Railway...')
+        print(f'     {len(dados_nf_list)} NFs | {len(hist_list)} itens histórico | {len(cmv_total)} CMVs')
+        ok, resultado = enviar_painel(RAILWAY_URL, dados_nf_list, hist_list, cmv_total)
         if ok:
-            print(f'  ✅ Painel atualizado! {resultado} SKUs enviados.')
-            print(f'     Acesse {RAILWAY_URL.replace("https://","")}/painel_fava.html')
+            print(f'  ✅ Banco atualizado: {resultado}')
         else:
-            print(f'  ⚠️  Não foi possível enviar ao painel: {resultado}')
-            print(f'     O Excel foi salvo normalmente.')
+            print(f'  ⚠️  Erro: {resultado}')
     else:
         print(f'\n  (Envio ao painel desativado — ENVIAR_PAINEL = False)')
 
