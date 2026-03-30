@@ -313,6 +313,38 @@ def sync_pedidos():
         pagina+=1; time.sleep(0.3)
     print(f'[SYNC] {n} pedidos'); return n
 
+def sync_frete_por_anuncio():
+    """Calcula frete médio real por MLB a partir dos pedidos salvos e atualiza ml_listings."""
+    print('[SYNC] Calculando frete médio por anúncio...')
+    try:
+        # Busca todos os pedidos com itens
+        pedidos = exe("SELECT itens FROM pedidos WHERE canal LIKE '%ML%' OR canal LIKE '%Mercado%'", fetchall=True)
+        frete_map = {}  # mlb_id -> [valores de frete]
+        for p in pedidos:
+            if not p.get('itens'): continue
+            try:
+                itens_list = p['itens'] if isinstance(p['itens'], list) else __import__('json').loads(p['itens'])
+                for it in itens_list:
+                    mlb = it.get('mlb','')
+                    frete = float(it.get('frete',0) or it.get('frete_un',0) or 0)
+                    if mlb and frete > 0:
+                        if mlb not in frete_map: frete_map[mlb] = []
+                        frete_map[mlb].append(frete)
+            except: pass
+        # Atualiza frete_medio em ml_listings
+        n = 0
+        for mlb, fretes in frete_map.items():
+            if fretes:
+                media = sum(fretes)/len(fretes)
+                try:
+                    exe(f"UPDATE ml_listings SET frete_medio={media} WHERE id='{mlb}'")
+                    n += 1
+                except: pass
+        print(f'[SYNC] {n} anúncios com frete médio atualizado do histórico')
+        return n
+    except Exception as e:
+        print(f'[SYNC] frete erro: {e}'); return 0
+
 
 def ml_get(path):
     """GET na API do ML."""
@@ -365,8 +397,13 @@ def sync_ml_listings():
             preco      = float(it.get('price') or 0)
             sale_fee   = float(it.get('sale_fee') or 0)
             ltype      = it.get('listing_type_id','')
-            free_ship  = 1 if (it.get('shipping',{}).get('free_shipping') or ltype in ('gold_pro','gold_premium')) else 0
+            shp        = it.get('shipping',{}) or {}
+            free_ship  = 1 if (shp.get('free_shipping') or ltype in ('gold_pro','gold_premium')) else 0
             status_it  = it.get('status','')
+            # Frete: usa local_pick_up=False + shipping_mode para estimar
+            # Para anúncios com frete ML (modo=me2), frete médio vem do histórico de pedidos
+            # Busca frete médio do histórico de pedidos para este item
+            frete_medio = 0  # será populado pelo sync de pedidos
             try:
                 c = 'ON CONFLICT(id) DO UPDATE SET sku=EXCLUDED.sku,titulo=EXCLUDED.titulo,preco=EXCLUDED.preco,sale_fee=EXCLUDED.sale_fee,listing_type=EXCLUDED.listing_type,free_shipping=EXCLUDED.free_shipping,status=EXCLUDED.status' if IS_PG else                     'ON CONFLICT(id) DO UPDATE SET sku=excluded.sku,titulo=excluded.titulo,preco=excluded.preco,sale_fee=excluded.sale_fee,listing_type=excluded.listing_type,free_shipping=excluded.free_shipping,status=excluded.status'
                 exe(f"INSERT INTO ml_listings (id,sku,titulo,preco,sale_fee,listing_type,free_shipping,status) VALUES ({qmark(8)}) {c}",
@@ -382,6 +419,7 @@ def sync_all():
     n1 = sync_produtos()
     n2 = sync_pedidos()
     n3 = sync_ml_listings() if _ml_token.get('access') else 0
+    sync_frete_por_anuncio()
     msg = f'produtos={n1} pedidos={n2} listings_ml={n3}'
     p = '%s' if IS_PG else '?'
     try: exe(f"INSERT INTO sync_log (tipo,resultado) VALUES ({p},{p})", ('sync', msg))

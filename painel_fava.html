@@ -934,6 +934,7 @@ function salvarCfg(){
               <th style="padding:7px 8px;text-align:center;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Desc.%</th>
               <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Preço final</th>
               <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">CMV</th>
+              <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Frete líq.</th>
               <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Margem</th>
               <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Mg c/desc.</th>
               <th style="padding:7px 8px;text-align:center;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;background:#fef9c3;color:#92400e" title="Margem mínima salva por produto">Mg.Mín%</th>
@@ -1663,6 +1664,7 @@ function renderPromoTabela(lista){
       </td>
       <td id="pd-preco-${i}" style="padding:5px 8px;text-align:right;color:var(--azul2);font-weight:700">R$${precoComDesc.toFixed(2)}</td>
       <td style="padding:5px 8px;text-align:right;color:var(--muted)">${p.cmv?'R$'+p.cmv.toFixed(2):'<span style=color:#f59e0b>⚠️</span>'}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--muted);font-size:10px">${getFreteMedioConfig()>0?'R$'+getFreteMedioConfig().toFixed(2):'<span title="Configure o frete médio acima" style=color:#f59e0b>—</span>'}</td>
       <td style="padding:5px 8px;text-align:right;color:${mgCor};font-weight:700">${mgStr}</td>
       <td id="pd-mg-${i}" style="padding:5px 8px;text-align:right;color:${mgDescCor};font-weight:700">${mgDescStr}</td>
       <td style="padding:5px 8px;text-align:center;background:#fefce8">
@@ -5059,139 +5061,109 @@ let modalMLB = null;
 const PIS_A=.0165, COF_A=.076, ICMS_A=.12; // médias para margem dos anúncios
 
 async function carregarAnuncios(){
-  (document.getElementById('anunc-tbody')||{}).innerHTML =
-    '<tr><td colspan="10" class="empty"><span class="spin"></span> Carregando anúncios...</td></tr>';
+  const tbody = document.getElementById('anunc-tbody');
+  if(tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:#9ca3af"><div class="spin" style="margin:0 auto 10px"></div>Carregando anúncios...</td></tr>';
 
   try{
-    // Busca anúncios ativos do vendedor (ML limita a 1000 itens por query)
-    const userId = 537714337;
-    let items = [], offset=0, total=999;
-    while(offset < Math.min(total, 1000)){
-      const r = await mlGet(`users/${userId}/items/search?status=active&limit=100&offset=${offset}`);
-      if(!r || !r.results || !r.results.length) break;
-      total = r.paging?.total || r.results.length;
-      items.push(...r.results);
-      offset += 100;
+    // 1. Carrega do banco PostgreSQL (já populado pelo sync automático)
+    const r = await fetch('/api/db/listings');
+    if(!r.ok) throw new Error('Banco indisponível: '+r.status);
+    const listings = await r.json();
+
+    if(!listings.length){
+      if(tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:#9ca3af">Banco vazio — aguarde 1 min e clique 🗄️ DB → Sincronizar agora</td></tr>';
+      return;
     }
 
-    // Busca detalhes em lotes de 20
-    const detalhes = [];
-    const ilen=items.length;
-    for(let i=0; i<ilen; i+=20){
-      const lote = items.slice(i,i+20).join(',');
-      const r = await mlGet(`items?ids=${lote}&attributes=id,title,price,base_price,listing_type_id,available_quantity,seller_sku,category_id`);
-      if(r) detalhes.push(...r.filter(x=>x.body?.id).map(x=>x.body));
-    }
-
-    // Busca vendas de hoje
-    const {de,ate} = getDatas();
-    const hoje = new Date(); hoje.setHours(0,0,0,0);
-    const hojeStr = hoje.toISOString().substring(0,10);
-    const vendasHoje = {};
-    const pedidosHoje = dados.pedidosML.filter(p=>p.data===hojeStr&&p.status!=='cancelled');
-    pedidosHoje.forEach(p=>{
-      p.itens.forEach(it=>{
-        if(!vendasHoje[it.mlb]) vendasHoje[it.mlb]={qtd:0,fat:0};
-        vendasHoje[it.mlb].qtd += it.qtd;
-        vendasHoje[it.mlb].fat += it.preco*it.qtd;
-      });
-    });
-
-    // Monta dados com CMV do cache e calcula margem
-    anunciosData = detalhes.map(item=>{
-      const sku = item.seller_sku || '';
-      // Usa CMV do banco (se disponível) ou do cache de sessão
+    // 2. Monta anunciosData cruzando com CMV
+    anunciosData = listings.map(l=>{
+      const sku = l.sku||'';
       const cmvInfo = cmvLookup(sku);
-      const cmv = item._cmv || cmvInfo?.cmv || 0;
-      const preco = item.price || 0;
-      // Usa taxa real do anúncio se disponível (sale_fee da API ML)
-      const taxaReal = item.sale_fee_pct || item.sale_fee || 0;
-      const taxa = taxaReal > 0 ? taxaReal/100 : (item.listing_type_id==='gold_pro'?.17:.12);
-      const frete = freteAnuncio(preco);
-      // Margem: só calcula se tiver CMV real no Bling
-      // Lucro = Preço - CMV - PIS(1,65%) - COFINS(7,6%) - Taxa ML - Frete
-      margem = null;
-      let lucro = 0;
-      if(cmv > 0 && preco > 0){
-        const pis_r = preco * PIS_A;
-        const cof_r = preco * COF_A;
-        const tx_r  = preco * taxa;
-        lucro = preco - cmv - pis_r - cof_r - tx_r - frete;
-        margem = lucro / preco;
+      const cmv = parseFloat(l.cmv)||cmvInfo?.cmv||0;
+      const preco = parseFloat(l.preco)||0;
+      const sale_fee = parseFloat(l.sale_fee)||0;
+      const taxa = sale_fee>0 ? sale_fee/100 : (l.listing_type==='gold_pro'?.17:.12);
+      const frete = parseFloat(l.frete_medio)||0;
+      const pis = preco*0.0065, cofins = preco*0.03;
+      const freteL = frete * (1-0.0365); // frete líquido (crédito PIS/COFINS)
+      let margem_atual = null, lucro = 0;
+      if(cmv>0 && preco>0){
+        lucro = preco - cmv - preco*taxa - freteL - pis - cofins;
+        margem_atual = lucro/preco;
       }
-
-      // Preço sugerido com margem alvo
-      const margem_alvo = taxa===.17 ? .26 : .28;
-      const denom = Math.max(1 - taxa - PIS_A - COF_A - margem_alvo, .05);
-      // Iteração: calcula preço → recalcula frete com esse preço → novo preço
-      let preco_sug = 0;
-      if(cmv > 0){
-        preco_sug = cmv / denom;
-        const frete_sug = freteAnuncio(preco_sug);
-        preco_sug = (cmv + frete_sug) / denom;
-      }
-
-      const v = vendasHoje[item.id] || {qtd:0,fat:0};
       return {
-        mlb: item.id,
-        titulo: item.title||'',
-        sku,
-        tipo: item.listing_type_id,
-        preco_atual: preco,
-        cmv,
-        margem_atual: margem,
-        preco_sugerido: preco_sug,
-        delta: preco_sug>0 ? preco-preco_sug : 0,
-        vendas_hoje: v.qtd,
-        fat_hoje: v.fat,
-        estoque: item.available_quantity||0,
-        frete,
-        taxa,
+        id: l.id, sku, titulo: l.titulo, preco,
+        taxa, frete, freteL, cmv, margem_atual, lucro,
+        listing_type: l.listing_type,
+        free_shipping: l.free_shipping,
+        sale_fee, status: l.status,
+        margem_minima: parseFloat(l.margem_minima)||0,
       };
     });
 
-    renderAnuncKpis();
-    filtrarAnuncios();
+    renderAnuncios();
+    const comCmv = anunciosData.filter(a=>a.cmv>0).length;
+    const semFrete = anunciosData.filter(a=>a.frete===0).length;
+    console.log(`Anúncios: ${anunciosData.length} | com CMV: ${comCmv} | sem frete: ${semFrete}`);
+
   }catch(e){
-    (document.getElementById('anunc-tbody')||{}).innerHTML =
-      `<tr><td colspan="10" class="empty">Erro: ${e.message}</td></tr>`;
+    console.error('carregarAnuncios:', e);
+    if(tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:20px;color:#dc2626">❌ ${e.message}<br><button onclick="carregarAnuncios()" style="margin-top:8px;padding:5px 12px;background:#1F3864;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">Tentar novamente</button></td></tr>`;
   }
 }
 
-function freteAnuncio(preco){
-  // Estimativa frete médio por faixa de preço
-  if(preco<19) return 6;
-  if(preco<49) return 7.5;
-  if(preco<79) return 8.5;
-  if(preco<100) return 14;
-  if(preco<150) return 18;
-  if(preco<200) return 21;
-  return 25;
+function renderAnuncios(){
+  const tbody = document.getElementById('anunc-tbody');
+  if(!tbody) return;
+  const q = (document.getElementById('anunc-search')?.value||'').toLowerCase();
+  const filtro = anunciosFiltroStatus||'todos';
+  let lista = anunciosData.filter(a=>{
+    if(q && !a.titulo.toLowerCase().includes(q) && !a.sku.toLowerCase().includes(q) && !a.id.toLowerCase().includes(q)) return false;
+    if(filtro==='alerta' && (a.margem_atual===null || a.margem_atual>=.20)) return false;
+    if(filtro==='promo' && a.free_shipping!==1) return false;
+    return true;
+  });
+  if(!lista.length){
+    tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:#9ca3af">Nenhum anúncio encontrado</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(a=>{
+    const mgCor = a.margem_atual===null?'var(--muted)':a.margem_atual>=.20?'var(--verde)':a.margem_atual>=.10?'var(--amarelo)':'var(--vermelho)';
+    const mgStr = a.margem_atual!==null ? (a.margem_atual*100).toFixed(1)+'%' : a.cmv?'—':'⚠️';
+    const freteTxt = a.frete>0 ? 'R$'+a.freteL.toFixed(2) : '<span style="color:#f59e0b" title="Frete não disponível — sync em andamento">—</span>';
+    return `<tr>
+      <td style="padding:5px 8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px" title="${a.titulo}">${a.titulo}</td>
+      <td style="padding:5px 8px;font-weight:700;color:#1F3864;font-size:11px">${a.sku||'—'}</td>
+      <td style="padding:5px 8px;font-size:10px;color:#6b7280">${a.id}</td>
+      <td style="padding:5px 8px;text-align:right;font-weight:700">R$${a.preco.toFixed(2)}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${a.cmv?'R$'+a.cmv.toFixed(2):'<span style=color:#f59e0b>⚠️</span>'}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${(a.taxa*100).toFixed(0)}%</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${freteTxt}</td>
+      <td style="padding:5px 8px;text-align:right;color:${mgCor};font-weight:700">${mgStr}</td>
+      <td style="padding:5px 8px;text-align:center"><span class="pill ${a.free_shipping?'pill-g':'pill-b'}" style="font-size:9px">${a.free_shipping?'Grátis':'Comprador'}</span></td>
+    </tr>`;
+  }).join('');
+
+  // KPIs
+  const total=lista.length, comCmv=lista.filter(a=>a.cmv>0).length;
+  const mgMed = lista.filter(a=>a.margem_atual!==null).reduce((s,a)=>s+a.margem_atual,0)/(lista.filter(a=>a.margem_atual!==null).length||1);
+  const kpis=document.getElementById('anunc-kpis');
+  if(kpis) kpis.innerHTML=`
+    <div class="kpi"><div class="kl">Anúncios</div><div class="kv">${total}</div></div>
+    <div class="kpi"><div class="kl">Com CMV</div><div class="kv" style="color:${comCmv===total?'var(--verde)':'var(--amarelo)'}">${comCmv}</div></div>
+    <div class="kpi"><div class="kl">Margem média</div><div class="kv" style="color:${mgMed>=.20?'var(--verde)':mgMed>=.10?'var(--amarelo)':'var(--vermelho)'}">${(mgMed*100).toFixed(1)}%</div></div>
+    <div class="kpi"><div class="kl">Sem frete</div><div class="kv" style="color:${lista.filter(a=>a.frete===0).length?'var(--amarelo)':'var(--verde)'}">${lista.filter(a=>a.frete===0).length}</div></div>`;
 }
 
-function renderAnuncKpis(){
-  const total = anunciosData.length;
-  const negativa = anunciosData.filter(a=>a.margem_atual!==null&&a.margem_atual<0).length;
-  const baixo = anunciosData.filter(a=>a.margem_atual!==null&&a.margem_atual>=0&&a.margem_atual<.20).length;
-  const promo = anunciosData.filter(a=>a.margem_atual!==null&&a.margem_atual>=.20).length;
-  const vendas = anunciosData.reduce((s,a)=>s+a.vendas_hoje,0);
-  const fat = anunciosData.reduce((s,a)=>s+a.fat_hoje,0);
-
-  (document.getElementById('an-total')||{}).textContent = total;
-  (document.getElementById('an-neg')||{}).textContent = negativa;
-  (document.getElementById('an-baixo')||{}).textContent = baixo;
-  (document.getElementById('an-promo')||{}).textContent = promo;
-  (document.getElementById('an-vendas')||{}).textContent = vendas+' un';
-  (document.getElementById('an-fat')||{}).textContent = 'R$ '+fmtK(fat);
+let anunciosFiltroStatus = 'todos';
+function filtrarAnuncios(){ renderAnuncios(); }
+function filtrarAnuncioStatus(s,btn){
+  anunciosFiltroStatus=s;
+  document.querySelectorAll('[id^="fb-"]').forEach(b=>b.classList.remove('a'));
+  if(btn) btn.classList.add('a');
+  renderAnuncios();
 }
 
-function setFiltro(f){
-  anuncFiltro=f;
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('a'));
-  const map={todos:'f-todos',alerta:'f-alerta',promo:'f-promo',fora:'f-fora'};
-  if(map[f]) document.getElementById(map[f]).classList.add('a');
-  filtrarAnuncios();
-}
 
 function filtrarAnuncios(){
   const q = ((document.getElementById('anunc-search')||{value:''}).value||'').toLowerCase();
