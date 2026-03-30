@@ -653,22 +653,38 @@ function salvarCfg(){
 
 <!-- ═══════════ VIEW: FINANCEIRO ═══════════ -->
 <div id="view-financeiro" style="display:none;flex-direction:column">
-  <div class="main" id="fin-main">
+  <div class="main">
     <div class="fin-grid" id="fin-kpis"></div>
     <div class="fin-2col">
       <div class="fcard">
-        <div class="fcard-head"><h3>Boletos a pagar</h3></div>
+        <div class="fcard-head"><h3>Boletos a pagar</h3><span id="fin-boletos-lbl" style="font-size:10px;color:var(--muted)"></span></div>
         <div class="fcard-body" style="padding:0">
-          <table class="ftbl">
-            <thead><tr><th>Fornecedor</th><th>NF</th><th>Venc.</th><th class="num">Valor</th><th>Status</th></tr></thead>
-            <tbody id="fin-boletos-tbody"></tbody>
-          </table>
+          <table class="ftbl"><thead><tr><th>Fornecedor</th><th>NF</th><th>Venc.</th><th class="num">Valor</th><th>Status</th></tr></thead>
+          <tbody id="fin-boletos-tbody"></tbody></table>
         </div>
       </div>
       <div class="fcard">
-        <div class="fcard-head"><h3>Fluxo de caixa</h3></div>
-        <div class="fcard-body"><div class="chart-fin"><canvas id="chart-fluxo"></canvas></div></div>
+        <div class="fcard-head"><h3>A receber — repasse ML</h3><span id="fin-receber-lbl" style="font-size:10px;color:var(--muted)"></span></div>
+        <div class="fcard-body" style="padding:0">
+          <div style="padding:6px 12px;border-bottom:1px solid #f3f4f6;display:flex;gap:8px;align-items:center">
+            <span style="font-size:11px;color:var(--muted)">Prazo repasse (dias):</span>
+            <input type="number" id="prazo-repasse" value="15" min="1" max="60" style="width:50px;border:1px solid var(--borda);border-radius:4px;padding:3px 6px;font-size:12px;text-align:center;outline:none" oninput="renderReceber()">
+          </div>
+          <table class="ftbl"><thead><tr><th>Data venda</th><th>Repasse</th><th class="num">Faturamento</th><th>Status</th></tr></thead>
+          <tbody id="fin-receber-tbody"></tbody></table>
+        </div>
       </div>
+    </div>
+    <div class="fcard">
+      <div class="fcard-head"><h3>Por fornecedor (mês)</h3></div>
+      <div class="fcard-body" style="padding:0">
+        <table class="ftbl"><thead><tr><th>Fornecedor</th><th class="num">Total mês</th><th class="num">Em aberto</th></tr></thead>
+        <tbody id="tbody-fornecedores"></tbody></table>
+      </div>
+    </div>
+    <div class="fcard">
+      <div class="fcard-head"><h3>Fluxo de caixa</h3></div>
+      <div class="fcard-body"><div class="chart-fin"><canvas id="chart-fluxo"></canvas></div></div>
     </div>
     <div class="fcard">
       <div class="fcard-head"><h3>Lançamentos manuais</h3><button class="btn-fin" onclick="addLancamento()">+ Lançamento</button></div>
@@ -676,28 +692,23 @@ function salvarCfg(){
         <div class="fin-form">
           <input type="date" id="lanc-data">
           <input type="text" id="lanc-desc" placeholder="Descrição">
-          <input type="number" id="lanc-valor" placeholder="Valor (negativo=saída)" step="0.01">
+          <input type="number" id="lanc-valor" placeholder="Valor" step="0.01">
           <select id="lanc-tipo"><option value="entrada">Entrada</option><option value="saida">Saída</option><option value="previsto">Previsto</option></select>
         </div>
-        <div style="padding:0">
-          <table class="ftbl">
-            <thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th class="num">Valor</th><th></th></tr></thead>
-            <tbody id="lanc-tbody"></tbody>
-          </table>
-        </div>
+        <table class="ftbl"><thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th class="num">Valor</th><th></th></tr></thead>
+        <tbody id="lanc-tbody"></tbody></table>
       </div>
     </div>
     <div class="fcard">
       <div class="fcard-head"><h3>NFs de entrada</h3></div>
       <div class="fcard-body" style="padding:0">
-        <table class="ftbl">
-          <thead><tr><th>NF</th><th>Fornecedor</th><th>Emissão</th><th class="num">Valor</th><th>1º Venc.</th></tr></thead>
-          <tbody id="fin-nf-tbody"></tbody>
-        </table>
+        <table class="ftbl"><thead><tr><th>NF</th><th>Fornecedor</th><th>Emissão</th><th class="num">Valor</th><th>1º Venc.</th></tr></thead>
+        <tbody id="fin-nf-tbody"></tbody></table>
       </div>
     </div>
   </div>
 </div>
+
 
 <!-- ═══════════ VIEW: CONCILIAÇÃO ═══════════ -->
 <div id="view-conciliacao" style="display:none;flex-direction:column">
@@ -4586,18 +4597,46 @@ let lancamentos = JSON.parse(localStorage.getItem('fava_lancamentos')||'[]');
 let chartFluxo = null;
 let finIniciado = false;
 
-function initFinanceiro(){
-  if(!finIniciado){ finIniciado=true; }
-  renderCustoFixos();
+async function initFinanceiro(){
+  const hoje = new Date().toISOString().substring(0,10);
+  (document.getElementById('lanc-data')||{value:''}).value = hoje;
   renderReceber();
-  renderBoletos();
-  renderChartBoletos();
-  renderFornecedores();
   renderLancamentos();
+
+  // Carrega boletos e NFs do banco PostgreSQL
+  try{
+    const [rBol, rNf] = await Promise.all([
+      fetch('/api/db/boletos'),
+      fetch('/api/db/nfs')
+    ]);
+    if(rBol.ok){
+      const bols = await rBol.json();
+      boletosData = bols.map(b=>({
+        forn: b.fornecedor||'',
+        nf: b.nf||'',
+        venc: b.vencimento ? new Date(b.vencimento+'T12:00:00') : null,
+        valor: parseFloat(b.valor)||0,
+        status: b.status||'A PAGAR'
+      }));
+    }
+    if(rNf.ok){
+      const nfs = await rNf.json();
+      const nfTbody = document.getElementById('fin-nf-tbody');
+      if(nfTbody) nfTbody.innerHTML = nfs.map(n=>`<tr>
+        <td style="font-size:10px">${n.nf||'—'}</td>
+        <td style="font-size:10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${n.fornecedor||'—'}</td>
+        <td>${n.emissao||'—'}</td>
+        <td class="num">R$ ${fmt(parseFloat(n.valor)||0)}</td>
+        <td style="font-size:10px">${n.emissao||'—'}</td>
+      </tr>`).join('')||'<tr><td colspan="5" style="text-align:center;padding:15px;color:var(--muted)">Sem NFs no banco</td></tr>';
+    }
+  }catch(e){ console.warn('Financeiro banco:', e); }
+
+  renderBoletos();
+  renderFornecedores();
   recalcFluxo();
   renderKpisFinanceiros();
-  const hoje = new Date().toISOString().substring(0,10);
-  (document.getElementById('lanc-data')||{})['value'] = hoje;
+  try{ renderChartBoletos(); }catch(e){}
 }
 
 // ── RECEBER: cruza vendas ML com prazo de repasse ──────────────────────────
@@ -4632,8 +4671,8 @@ function renderReceber(){
     </tr>`;
   });
 
-  (document.getElementById('tbody-receber')||{})['innerHTML'] = rows.join('')||'<tr><td colspan="4" style="text-align:center;padding:15px;color:var(--muted)">Sem dados</td></tr>';
-  (document.getElementById('receber-lbl')||{}).textContent = `${Object.keys(por_data).length} dias de venda`;
+  (document.getElementById('fin-receber-tbody')||{})['innerHTML'] = rows.join('')||'<tr><td colspan="4" style="text-align:center;padding:15px;color:var(--muted)">Sem dados</td></tr>';
+  (document.getElementById('fin-receber-lbl')||{}).textContent = `${Object.keys(por_data).length} dias de venda`;
 }
 
 // ── BOLETOS: importa da planilha xlsx ──────────────────────────────────────
@@ -4699,8 +4738,8 @@ function renderBoletos(){
       <td>${tag}</td>
     </tr>`;
   });
-  (document.getElementById('tbody-pagar')||{})['innerHTML'] = rows.join('')||'<tr><td colspan="5" style="text-align:center;padding:15px;color:var(--muted)">Importe a planilha</td></tr>';
-  (document.getElementById('pagar-lbl')||{}).textContent = `${boletosData.length} boletos`;
+  (document.getElementById('fin-boletos-tbody')||{})['innerHTML'] = rows.join('')||'<tr><td colspan="5" style="text-align:center;padding:15px;color:var(--muted)">Importe a planilha</td></tr>';
+  (document.getElementById('fin-boletos-lbl')||{}).textContent = `${boletosData.length} boletos`;
 }
 
 function renderFornecedores(){
