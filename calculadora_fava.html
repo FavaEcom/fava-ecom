@@ -3676,58 +3676,100 @@ function recRenderNovos(){
   const wrap = document.getElementById('rec-novos-wrap');
   if(!wrap) return;
   if(!recNovos.length){ wrap.innerHTML=''; return; }
-  let html = `<div class="rec-section-head">🆕 Produtos NOVOS — atribuir SKU (${recNovos.length})</div>`;
+  let html = `<div class="rec-section-head" style="margin-bottom:8px">
+    🆕 PRODUTOS NOVOS — definir SKU Fava Ecom (${recNovos.length})
+  </div>`;
+
   recNovos.forEach((it,i)=>{
-    const confirmCls = it.confirmado ? 'sp-confirmado' : 'sp-novo';
-    const confirmTxt = it.confirmado ? '✅ Confirmado' : '🆕 Novo';
+    const confirmado = it.confirmado;
+    const borderCor = confirmado ? '#16a34a' : '#2E75B6';
+    const bgHead    = confirmado ? '#f0fdf4' : '#eff6ff';
+
     html += `
-    <div class="prod-card-rec novo">
-      <div class="rec-card-head" onclick="recToggleCard('rec-body-${i}')">
-        <span class="status-pill ${confirmCls}">${confirmTxt}</span>
-        <div style="flex:1">
-          <div style="font-size:12px;font-weight:700;color:#1e3a8a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:400px">${it.xProd}</div>
-          <div style="font-size:10px;color:#6b7280">NF: ${it.cProd} | Qtd: ${it.qCom} | Custo: R$ ${fmt(it.custoBruto)}</div>
+    <div style="border:2px solid ${borderCor};border-radius:9px;margin-bottom:12px;overflow:hidden;background:#fff">
+
+      <!-- CABEÇALHO sempre visível -->
+      <div style="background:${bgHead};padding:10px 14px;border-bottom:1px solid #e5e7eb">
+        <div style="font-size:13px;font-weight:700;color:#1e3a8a;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          ${it.xProd}
         </div>
-        <span style="font-size:10px;color:#9ca3af">▼</span>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:#6b7280">
+          <span>📋 Cód. fornecedor: <strong style="color:#374151;font-family:monospace">${it.cProd}</strong></span>
+          <span>Qtd: <strong>${it.qCom}</strong></span>
+          <span>Custo NF: <strong>R$ ${fmt(it.custoBruto)}</strong></span>
+          <span>CMV: <strong style="color:#166534">R$ ${fmt(it.cmvReal)}</strong></span>
+          ${it.temST?'<span style="color:#991b1b">⚠️ Com ST</span>':''}
+        </div>
       </div>
-      <div id="rec-body-${i}" class="rec-card-body">
 
-        <div class="sku-field-wrap">
-          <span class="sku-label">SKU atual</span>
-          <input class="sku-input ${it.skuSeq?'gerado':''}" id="rec-sku-seq-${i}" value="${it.skuSeq}"
-            placeholder="Ex: 2843" oninput="recNovos[${i}].skuSeq=this.value">
-          <button class="btn-sm" onclick="recNovos[${i}].skuSeq=String(parseInt(document.getElementById('rec-proximo-sku').value||0)+${i});document.getElementById('rec-sku-seq-${i}').value=recNovos[${i}].skuSeq" style="font-size:10px">Auto</button>
+      <!-- CORPO -->
+      <div style="padding:12px 14px">
+
+        <!-- SKU FAVA ECOM — campo principal -->
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;font-weight:700;color:#1F3864;display:block;margin-bottom:4px">
+            SKU Fava Ecom <span style="color:#dc2626">*</span>
+            <span style="font-size:10px;font-weight:400;color:#6b7280"> — número sequencial do produto na sua base</span>
+          </label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="number" id="rec-sku-seq-${i}" value="${it.skuSeq}"
+              placeholder="Ex: 2843"
+              style="flex:1;border:2px solid ${it.skuSeq?'#16a34a':'#d1d5db'};border-radius:6px;padding:8px 11px;font-size:15px;font-weight:700;font-family:monospace;outline:none"
+              oninput="recNovos[${i}].skuSeq=this.value;this.style.borderColor=this.value?'#16a34a':'#d1d5db'">
+            <button onclick="recNovos[${i}].skuSeq=String(parseInt(document.getElementById('rec-proximo-sku').value||0)+${i});var el=document.getElementById('rec-sku-seq-${i}');el.value=recNovos[${i}].skuSeq;el.style.borderColor='#16a34a'"
+              style="padding:8px 12px;font-size:12px;font-weight:700;background:#eff6ff;color:#1d4ed8;border:1.5px solid #93c5fd;border-radius:6px;cursor:pointer;white-space:nowrap">
+              Auto
+            </button>
+          </div>
         </div>
 
-        <div class="sku-field-wrap">
-          <span class="sku-label">SKU técnico</span>
-          <input class="sku-input gerado" id="rec-sku-tec-${i}" value="${it.skuTec}"
-            placeholder="${it.gerandoSku?'gerando...':'bro-mtx-sds-10-400'}"
-            oninput="recNovos[${i}].skuTec=this.value" ${it.gerandoSku?'disabled':''}>
-          <button class="btn-ia" onclick="recGerarSkuTecnico(${i})" ${it.gerandoSku?'disabled':''}>
-            ${it.gerandoSku?'⏳':'✨ IA'}
+        <!-- SKU Técnico (novo padrão) — secundário -->
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">
+            SKU técnico (novo padrão) — ex: bro-mtx-sds-10-400
+          </label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="text" id="rec-sku-tec-${i}" value="${it.skuTec}"
+              placeholder="${it.gerandoSku?'gerando...':'bro-mtx-sds-10-400'}"
+              style="flex:1;border:1px solid #d1d5db;border-radius:6px;padding:7px 10px;font-size:12px;font-family:monospace;outline:none;color:#6d28d9"
+              oninput="recNovos[${i}].skuTec=this.value" ${it.gerandoSku?'disabled':''}>
+            <button onclick="recGerarSkuTecnico(${i})" ${it.gerandoSku?'disabled':''}
+              style="padding:7px 10px;font-size:11px;font-weight:700;background:${it.gerandoSku?'#f3f4f6':'#faf5ff'};color:${it.gerandoSku?'#9ca3af':'#7c3aed'};border:1.5px solid ${it.gerandoSku?'#e5e7eb':'#c4b5fd'};border-radius:6px;cursor:pointer;white-space:nowrap">
+              ${it.gerandoSku?'⏳ gerando...':'✨ Sugerir com IA'}
+            </button>
+          </div>
+        </div>
+
+        <!-- EAN -->
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">EAN (código de barras)</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="text" id="rec-ean-${i}" value="${it.ean}"
+              placeholder="7792191683003"
+              style="flex:1;border:1px solid #d1d5db;border-radius:6px;padding:7px 10px;font-size:12px;font-family:monospace;outline:none"
+              oninput="recNovos[${i}].ean=this.value">
+            <button onclick="recNovos[${i}].ean=document.getElementById('rec-proximo-ean').value;document.getElementById('rec-ean-${i}').value=recNovos[${i}].ean"
+              style="padding:7px 10px;font-size:11px;font-weight:700;background:#fff;color:#374151;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;white-space:nowrap">
+              Da lista
+            </button>
+          </div>
+        </div>
+
+        <!-- BOTÕES DE AÇÃO — grandes e claros -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+          <button onclick="recConfirmarNovo(${i})"
+            style="padding:9px 6px;font-size:12px;font-weight:700;border:none;border-radius:7px;cursor:pointer;
+                   background:${confirmado?'#16a34a':'#1F3864'};color:#fff;text-align:center">
+            ${confirmado?'✅ Confirmado':'💾 Salvar SKU'}
           </button>
-        </div>
-
-        <div class="sku-field-wrap">
-          <span class="sku-label">EAN</span>
-          <input class="sku-input" id="rec-ean-${i}" value="${it.ean}"
-            placeholder="7792191683003" oninput="recNovos[${i}].ean=this.value" style="font-family:monospace">
-          <button class="btn-sm" onclick="recNovos[${i}].ean=document.getElementById('rec-proximo-ean').value;document.getElementById('rec-ean-${i}').value=recNovos[${i}].ean" style="font-size:10px">Lista</button>
-        </div>
-
-        <div style="display:flex;gap:5px;margin-top:8px;flex-wrap:wrap">
-          <button class="btn-sm" onclick="recConfirmarNovo(${i})" style="background:#1F3864;color:#fff;border-color:#1F3864;font-size:11px">
-            ${it.confirmado?'✅ Confirmado':'Confirmar SKU'}
+          <button onclick="recCalcularItem(${i})"
+            style="padding:9px 6px;font-size:12px;font-weight:700;background:#fff;color:#1F3864;border:2px solid #1F3864;border-radius:7px;cursor:pointer;text-align:center">
+            📊 Calcular preço
           </button>
-          <button class="btn-sm" onclick="recCalcularItem(${i})" style="font-size:11px">📊 Ver preços</button>
-          <button class="btn-sm btn-green" onclick="recGerarAnuncioItem(${i})" style="font-size:11px">✍️ Gerar anúncio</button>
-        </div>
-
-        <div style="background:#f8fafc;border-radius:5px;padding:5px 8px;margin-top:6px;font-size:10px;color:#6b7280">
-          CMV BR: <strong>R$ ${fmt(it.cmvReal)}</strong> &nbsp;|&nbsp;
-          IPI: <strong>R$ ${fmt(it.ipiUn)}</strong> &nbsp;|&nbsp;
-          ${it.temST?`ST: <strong>R$ ${fmt(it.stUn)}</strong>`:'Sem ST'}
+          <button onclick="recGerarAnuncioItem(${i})"
+            style="padding:9px 6px;font-size:12px;font-weight:700;background:#fff;color:#16a34a;border:2px solid #16a34a;border-radius:7px;cursor:pointer;text-align:center">
+            ✍️ Criar anúncio
+          </button>
         </div>
       </div>
     </div>`;
@@ -3738,7 +3780,7 @@ function recRenderNovos(){
 function recRenderExist(){
   const wrap = document.getElementById('rec-exist-wrap');
   if(!wrap || !recExist.length){ if(wrap) wrap.innerHTML=''; return; }
-  let html = `<div class="rec-section-head">✅ Produtos EXISTENTES — já no banco (${recExist.length})</div>
+  let html = `<div class="rec-section-head" style="margin-bottom:8px">✅ PRODUTOS EXISTENTES — já cadastrados (${recExist.length})</div>
   <div style="background:#fff;border-radius:9px;border:1px solid #e5e7eb;overflow:hidden">
   <table style="width:100%;border-collapse:collapse;font-size:11px">
     <thead><tr style="background:#f8fafc">
