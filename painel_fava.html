@@ -459,6 +459,40 @@ function fecharCfg(){
       </div>
     </details>
     <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Os tokens ficam salvos localmente no seu navegador.</div>
+
+    <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:7px;overflow:hidden">
+      <summary style="font-size:12px;font-weight:700;color:#166534;cursor:pointer;padding:9px 12px;background:#f0fdf4;display:flex;align-items:center;gap:6px">
+        📊 Importar base de CMV (planilha Excel)
+      </summary>
+      <div style="padding:10px 12px;background:#fff">
+        <div style="font-size:11px;color:#6b7280;margin-bottom:8px;line-height:1.5">
+          Importa o CMV de <strong>todos os produtos</strong> de uma vez — sem depender do Bling produto a produto.<br>
+          Resolve o erro 429 (Too Many Requests).
+        </div>
+        <div style="margin-bottom:8px">
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:3px">
+            FAVA_ESTOQUE_V5.xlsx <span style="color:#6b7280;font-weight:400">(aba HISTORICO_COMPRAS — col D=SKU, col U=CMV_BRASIL)</span>
+          </label>
+          <label style="display:block;border:2px dashed #86efac;border-radius:6px;padding:10px;text-align:center;font-size:12px;color:#166534;cursor:pointer;transition:.15s"
+            onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background=''">
+            📎 Clique para selecionar o arquivo
+            <input type="file" accept=".xlsx,.xlsm" onchange="carregarCMVPlanilha(this)" style="display:none">
+          </label>
+        </div>
+        <div style="margin-bottom:8px">
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:3px">
+            PROJETO_FAVA_ECOM.xlsm <span style="color:#6b7280;font-weight:400">(aba BASE_DADOS_V2 — complementa nomes e famílias)</span>
+          </label>
+          <label style="display:block;border:2px dashed #93c5fd;border-radius:6px;padding:10px;text-align:center;font-size:12px;color:#1d4ed8;cursor:pointer;transition:.15s"
+            onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">
+            📎 Clique para selecionar o arquivo
+            <input type="file" accept=".xlsx,.xlsm" onchange="carregarBaseDados(this)" style="display:none">
+          </label>
+        </div>
+        <div id="cmv-import-status" style="font-size:11px;min-height:18px"></div>
+      </div>
+    </details>
+
     <button class="btn-prim" onclick="salvarCfg()">Salvar e carregar painel</button>
     <button class="btn-sec" onclick="fecharCfg()" style="margin-top:6px">Cancelar</button>
   </div>
@@ -896,8 +930,8 @@ async function fetchPedidosBling(de,ate){
 // ══════════════════════════════════════════════════════════════════════
 async function fetchCMVs(skus){
   // Lotes de 5 com pequena pausa — mais rápido sem sobrecarregar Bling
-  for(let i=0;i<skus.length;i+=5){
-    const lote=skus.slice(i,i+5);
+  for(let i=0;i<skus.length;i+=2){
+    const lote=skus.slice(i,i+2);
     await Promise.all(lote.map(async sku=>{
       try{
         const r=await blingGet(`produtos?criterio=1&tipo=T&codigo=${encodeURIComponent(sku)}&limite=1`);
@@ -913,9 +947,46 @@ async function fetchCMVs(skus){
         }
       }catch(e){}
     }));
-    if(i+5<skus.length) await new Promise(r=>setTimeout(r,150));
+    if(i+2<skus.length) await new Promise(r=>setTimeout(r,500));
   }
 }
+
+
+// ══════════════════════════════════════════════════════════════════════
+// TABELA ICMS POR UF — origem PR (Lucro Real)
+// inter=alíquota interestadual, difal=DIFAL médio, icms_saida=alíq.interna destino
+// ══════════════════════════════════════════════════════════════════════
+const ICMS_TB = {
+  PR:{inter:0.195,difal:0,    icms_saida:0.195},
+  SP:{inter:0.12, difal:0.06, icms_saida:0.18},
+  RJ:{inter:0.12, difal:0.08, icms_saida:0.20},
+  MG:{inter:0.12, difal:0.06, icms_saida:0.18},
+  SC:{inter:0.12, difal:0.05, icms_saida:0.17},
+  RS:{inter:0.12, difal:0.05, icms_saida:0.17},
+  ES:{inter:0.07, difal:0.10, icms_saida:0.17},
+  GO:{inter:0.07, difal:0.12, icms_saida:0.19},
+  DF:{inter:0.07, difal:0.11, icms_saida:0.18},
+  MT:{inter:0.07, difal:0.12, icms_saida:0.19},
+  MS:{inter:0.07, difal:0.10, icms_saida:0.17},
+  BA:{inter:0.07, difal:0.135,icms_saida:0.205},
+  PE:{inter:0.07, difal:0.135,icms_saida:0.205},
+  CE:{inter:0.07, difal:0.13, icms_saida:0.20},
+  RN:{inter:0.07, difal:0.11, icms_saida:0.18},
+  PB:{inter:0.07, difal:0.11, icms_saida:0.18},
+  AL:{inter:0.07, difal:0.12, icms_saida:0.19},
+  SE:{inter:0.07, difal:0.12, icms_saida:0.19},
+  MA:{inter:0.07, difal:0.11, icms_saida:0.18},
+  PI:{inter:0.07, difal:0.11, icms_saida:0.18},
+  PA:{inter:0.07, difal:0.12, icms_saida:0.19},
+  AM:{inter:0.07, difal:0.13, icms_saida:0.20},
+  TO:{inter:0.07, difal:0.11, icms_saida:0.18},
+  AC:{inter:0.07, difal:0.10, icms_saida:0.17},
+  RO:{inter:0.07, difal:0.105,icms_saida:0.175},
+  RR:{inter:0.07, difal:0.10, icms_saida:0.17},
+  AP:{inter:0.07, difal:0.11, icms_saida:0.18},
+  XX:{inter:0.12, difal:0.085,icms_saida:0.18}, // fallback
+};
+const PIS=0.0165, COFINS=0.076;
 
 // ══════════════════════════════════════════════════════════════════════
 // CÁLCULO DE MARGEM REAL
@@ -2596,7 +2667,7 @@ async function buscarCMVSemCMV(){
           atualizados++;
         }
       }
-      await new Promise(r=>setTimeout(r,150)); // rate limit
+      await new Promise(r=>setTimeout(r,500)); // rate limit Bling
     }catch(e){ erros++; }
   }
   
@@ -2698,31 +2769,82 @@ function calcMargemGP(preco, cmv, taxa){
 function carregarCMVPlanilha(input){
   const file = input.files[0];
   if(!file) return;
+  const st = document.getElementById('cmv-import-status');
+  if(st) st.innerHTML='<span style="color:#1d4ed8">⟳ Lendo HISTORICO_COMPRAS...</span>';
   const reader = new FileReader();
   reader.onload = e => {
     try{
       const wb = XLSX.read(e.target.result,{type:'array'});
       const ws = wb.Sheets['HISTORICO_COMPRAS'];
-      if(!ws){alert('Aba HISTORICO_COMPRAS não encontrada');return;}
+      if(!ws){
+        if(st) st.innerHTML='<span style="color:#dc2626">❌ Aba HISTORICO_COMPRAS não encontrada</span>';
+        return;
+      }
       const rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-      // Col D(3)=SKU, Col E(4)=PRODUTO, Col U(20)=CMV_BRASIL
+      // Col D(3)=SKU, E(4)=PRODUTO, U(20)=CMV_BRASIL, V(21)=CMV_PR
       const skuMap={};
       rows.slice(2).forEach(r=>{
         const sku=String(r[3]||'').trim();
-        const cmv=parseFloat(r[20]||0);
+        const cmvBr=parseFloat(r[20]||0);
+        const cmvPr=parseFloat(r[21]||0);
         const nome=String(r[4]||'');
-        // Guarda o CMV mais recente por SKU (última linha ganha)
-        if(sku && cmv>0) skuMap[sku]={cmv,nome};
+        // Última linha por SKU ganha (compra mais recente)
+        if(sku && cmvBr>0) skuMap[sku]={cmv:cmvBr, cmvPr:cmvPr||cmvBr, nome};
       });
-      let n=Object.keys(skuMap).length;
+      const n=Object.keys(skuMap).length;
       Object.entries(skuMap).forEach(([sku,d])=>{
         dados.cmvCache[sku]=d;
-        cmvCacheSet(sku, d.cmv, d.nome); // sincroniza banco calculadora
+        cmvCacheSet(sku, d.cmv, d.nome);
       });
-      alert(`✅ CMV carregado para ${n} SKUs do HISTORICO_COMPRAS!
-Agora o cálculo usa o custo real da nota fiscal.`);
+      if(st) st.innerHTML=`<span style="color:#16a34a">✅ ${n} SKUs com CMV importados do HISTORICO_COMPRAS</span>`;
       if(gpData.length) recalcGP();
-    }catch(ex){alert('Erro: '+ex.message);}
+      if(dados.pedidosML.length||dados.pedidosBling.length) renderTudo();
+    }catch(ex){
+      if(st) st.innerHTML=`<span style="color:#dc2626">❌ Erro: ${ex.message}</span>`;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// Carrega BASE_DADOS_V2 — nomes, famílias e SKU técnico
+function carregarBaseDados(input){
+  const file = input.files[0];
+  if(!file) return;
+  const st = document.getElementById('cmv-import-status');
+  if(st) st.innerHTML='<span style="color:#1d4ed8">⟳ Lendo BASE_DADOS_V2...</span>';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const wb = XLSX.read(e.target.result,{type:'array'});
+      // Tenta as abas conhecidas
+      const wsName = ['BASE_DADOS_V2','BASE_DADOS','CADASTRO'].find(n=>wb.Sheets[n]);
+      if(!wsName){
+        if(st) st.innerHTML='<span style="color:#dc2626">❌ Aba BASE_DADOS_V2 não encontrada</span>';
+        return;
+      }
+      const ws = wb.Sheets[wsName];
+      const rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      // Col: TIPO(0) STATUS(1) SKU(2) CÓDIGO(3) PRODUTO(4) MARCA(5) FAMÍLIA(6) SKU_TEC(15)
+      let n=0;
+      rows.slice(3).forEach(r=>{
+        const sku=String(r[2]||'').trim();
+        const nome=String(r[4]||'').trim();
+        const marca=String(r[5]||'').trim();
+        const familia=String(r[6]||'').trim();
+        const skuTec=String(r[15]||'').trim();
+        if(!sku||!nome) return;
+        // Enriquece o cmvCache com nome/marca/família mesmo sem CMV
+        if(!dados.cmvCache[sku]) dados.cmvCache[sku]={cmv:0};
+        dados.cmvCache[sku].nome  = dados.cmvCache[sku].nome||nome;
+        dados.cmvCache[sku].marca  = marca;
+        dados.cmvCache[sku].familia= familia;
+        dados.cmvCache[sku].skuTec = skuTec;
+        n++;
+      });
+      if(st) st.innerHTML=`<span style="color:#16a34a">✅ ${n} produtos da BASE_DADOS importados (nomes, marcas, famílias)</span>`;
+    }catch(ex){
+      if(st) st.innerHTML=`<span style="color:#dc2626">❌ Erro: ${ex.message}</span>`;
+    }
   };
   reader.readAsArrayBuffer(file);
 }
