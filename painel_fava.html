@@ -1698,6 +1698,7 @@ function renderPromoTabela(lista){
   tbody.innerHTML = lista.map((p,i)=>{
     const mgCor = p.margem!==null ? (p.margem>=.20?'var(--verde)':p.margem>=.10?'var(--amarelo)':'var(--vermelho)') : 'var(--muted)';
     const mgDescCor = p.margemComDesc!==null ? (p.margemComDesc>=.20?'var(--verde)':p.margemComDesc>=.10?'var(--amarelo)':'var(--vermelho)') : 'var(--muted)';
+    const mgComDescReal = calcMargemProm(p.preco*(1-(p.descEditado||0)/100), p.cmv, taxa_item, frete_item);
     const mgStr = !p.cmv ? '<span style="color:#f59e0b;font-size:10px">⚠️sem CMV</span>' : p.margem!==null ? (p.margem*100).toFixed(1)+'%' : '—';
     const mgDescStr = mgComDescReal!==null ? (mgComDescReal*100).toFixed(1)+'%' : '—';
     const mgDescCor2 = mgComDescReal!==null ? (mgComDescReal>=.20?'var(--verde)':mgComDescReal>=.10?'var(--amarelo)':'var(--vermelho)') : 'var(--muted)';
@@ -1710,9 +1711,7 @@ function renderPromoTabela(lista){
     const taxa_item = p.taxa || 0.16;
     const frete_item = p.frete || 0;
     const descMaxCalc = calcDescMaximo(p.preco, p.cmv, p.mgMin||0, taxa_item, frete_item);
-    // Pré-preencher desconto com o máximo se campo ainda não foi editado
     if(p.cmv > 0 && descMaxCalc > 0 && !p.descEditado) p.descEditado = descMaxCalc;
-    const mgComDescReal = calcMargemProm(p.preco*(1-(p.descEditado||0)/100), p.cmv, taxa_item, frete_item);
     return `<tr style="${p.selecionado?'background:#eff6ff':''}" id="prom-tr-${i}">
       <td style="padding:5px 8px;text-align:center"><input type="checkbox" ${p.selecionado?'checked':''} onchange="togglePromo(${i},this.checked)"></td>
       <td style="padding:5px 8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.titulo}">${p.titulo}</td>
