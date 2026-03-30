@@ -858,6 +858,15 @@ function salvarCfg(){
         <button class="filt-btn" id="pfb-part" onclick="filtrarPromStatus('participando',this)">Participando</button>
         <button class="filt-btn" id="pfb-mg" onclick="filtrarPromStatus('margembaixa',this)">Margem baixa</button>
         <button class="filt-btn" id="pfb-semcmv" onclick="filtrarPromStatus('semcmv',this)">Sem CMV ⚠️</button>
+        <button class="filt-btn" id="pfb-comcmv" onclick="filtrarPromStatus('comcmv',this)">✅ Só com CMV</button>
+        <button class="filt-btn" id="pfb-negativo" onclick="filtrarPromStatus('negativo',this)">🔴 Margem negativa</button>
+        <select id="prom-sort" onchange="ordenarPromos(this.value)" style="border:1px solid var(--borda);border-radius:5px;padding:4px 8px;font-size:11px;outline:none;color:var(--texto)">
+          <option value="">Ordenar por...</option>
+          <option value="mg-asc">Margem ↑ (pior primeiro)</option>
+          <option value="mg-desc">Margem ↓ (melhor primeiro)</option>
+          <option value="preco-desc">Preço ↓</option>
+          <option value="titulo">Nome A-Z</option>
+        </select>
       </div>
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:11px" id="prom-tbl">
@@ -1435,7 +1444,7 @@ async function importarPlanilhaML(input){
         }
       }catch(e){ console.warn('CMV do banco falhou:', e); }
 
-      // Fallback: usa cmvCache do painel (já carregado no início)
+      // Fallback 1: usa cmvCache do painel (carregado do PostgreSQL no início)
       itens.forEach(it=>{
         if(!it.cmv){
           const cached = cmvLookup(it.sku);
@@ -1447,7 +1456,69 @@ async function importarPlanilhaML(input){
         }
       });
 
+      // Fallback 2: localStorage fava_cmv_banco (banco da calculadora — 179 SKUs)
+      try{
+        const bancoCal = JSON.parse(localStorage.getItem('fava_cmv_banco')||'{}');
+        itens.forEach(it=>{
+          if(!it.cmv && it.sku){
+            const d = bancoCal[it.sku] || bancoCal[String(parseInt(it.sku))||''];
+            if(d && d.cmvBr>0){
+              it.cmv = d.cmvBr;
+              it.margem = calcMargemProm(it.preco, it.cmv, 0.16);
+              it.margemComDesc = calcMargemProm(it.preco*(1-it.descPct/100), it.cmv, 0.16);
+            }
+          }
+        });
+      }catch(e){}
+
+      // Fallback 3: busca direto na API Bling para os SKUs sem CMV (em lote, silencioso)
+      const semCmv = itens.filter(it=>!it.cmv && it.sku).slice(0,50);
+      if(semCmv.length && tokens.bling){
+        if(st) st.textContent = `⟳ Buscando CMV no Bling para ${semCmv.length} produtos sem custo...`;
+        for(const it of semCmv){
+          try{
+            const rb = await fetch(`/api/bling/produtos?criterio=1&tipo=T&codigo=${encodeURIComponent(it.sku)}&limite=1`,
+              {headers:{'Authorization':`Bearer ${tokens.bling}`}});
+            if(rb.ok){
+              const db = await rb.json();
+              const pb = (db.data||[])[0];
+              if(pb){
+                const rb2 = await fetch(`/api/bling/produtos/${pb.id}`,
+                  {headers:{'Authorization':`Bearer ${tokens.bling}`}});
+                if(rb2.ok){
+                  const db2 = await rb2.json();
+                  const prod = db2.data||pb;
+                  const custo = parseFloat(prod.precoCusto||0);
+                  if(custo>0){
+                    it.cmv = custo;
+                    it.margem = calcMargemProm(it.preco, custo, 0.16);
+                    it.margemComDesc = calcMargemProm(it.preco*(1-it.descPct/100), custo, 0.16);
+                    // Salva no banco local para próximas vezes
+                    try{
+                      const bc = JSON.parse(localStorage.getItem('fava_cmv_banco')||'{}');
+                      bc[it.sku] = {cmvBr:custo, cmvPr:custo, nome:prod.descricao||it.titulo};
+                      localStorage.setItem('fava_cmv_banco', JSON.stringify(bc));
+                    }catch(e){}
+                    // Salva no servidor
+                    fetch('/api/db/produto',{method:'POST',headers:{'Content-Type':'application/json'},
+                      body:JSON.stringify({sku:it.sku,nome:it.titulo,custo,custo_br:custo})}).catch(()=>{});
+                  }
+                }
+              }
+            }
+            await new Promise(r=>setTimeout(r,150));
+          }catch(e){}
+        }
+      }
+
       const comCmv = itens.filter(i=>i.cmv>0).length;
+      // Ordena: produtos com CMV primeiro, depois sem CMV
+      itens.sort((a,b)=>{
+        if(a.cmv>0 && b.cmv<=0) return -1;
+        if(a.cmv<=0 && b.cmv>0) return 1;
+        if(a.cmv>0 && b.cmv>0) return (a.margemComDesc||0)-(b.margemComDesc||0); // pior margem primeiro
+        return 0;
+      });
       promoData = itens;
       promoDataFiltrada = [...itens];
       renderPromoKpis();
@@ -1482,6 +1553,8 @@ function filtrarPromos(){
   else if(promoStatusFiltro === 'participando') lista = lista.filter(p=>p.acao==='Participar'||p.status==='Ativo');
   else if(promoStatusFiltro === 'margembaixa') lista = lista.filter(p=>p.margemComDesc!==null && p.margemComDesc<0.10);
   else if(promoStatusFiltro === 'semcmv') lista = lista.filter(p=>!p.cmv);
+  else if(promoStatusFiltro === 'comcmv') lista = lista.filter(p=>p.cmv>0);
+  else if(promoStatusFiltro === 'negativo') lista = lista.filter(p=>p.margemComDesc!==null && p.margemComDesc<0);
 
   promoDataFiltrada = lista;
   renderPromoTabela(lista);
@@ -1666,6 +1739,17 @@ async function aplicarDescontoPromoAPI(){
 }
 
 
+
+function ordenarPromos(criterio){
+  if(!criterio) return;
+  const copia = [...promoDataFiltrada];
+  if(criterio === 'mg-asc')   copia.sort((a,b)=>(a.margemComDesc??-99)-(b.margemComDesc??-99));
+  else if(criterio === 'mg-desc')  copia.sort((a,b)=>(b.margemComDesc??-99)-(a.margemComDesc??-99));
+  else if(criterio === 'preco-desc') copia.sort((a,b)=>b.preco-a.preco);
+  else if(criterio === 'titulo') copia.sort((a,b)=>a.titulo.localeCompare(b.titulo));
+  promoDataFiltrada = copia;
+  renderPromoTabela(promoDataFiltrada);
+}
 
 function initPromocoes(){ if(promoData.length) renderPromoTabela(promoDataFiltrada); }
 
