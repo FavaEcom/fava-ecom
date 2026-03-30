@@ -926,6 +926,27 @@ const ICMS_DEST = {
   RR:{icms_saida:0.17, inter:0.07,difal:0.10},
   AP:{icms_saida:0.18, inter:0.07,difal:0.11},
 };
+
+// ─ Tabela de frete Shopee Xpress (vendedor paga — vigente 2024) ─────────
+// [peso_max_kg, custo_frete]
+const FRETE_SHP_TB = [
+  [0.30,  9.90],
+  [0.50, 11.90],
+  [1.00, 13.90],
+  [2.00, 17.90],
+  [3.00, 21.90],
+  [5.00, 27.90],
+  [10.0, 39.90],
+  [15.0, 59.90],
+  [20.0, 79.90],
+  [30.0, 99.90],
+];
+function freteShopee(peso){
+  const p = peso || 0.3;
+  for(const [max, val] of FRETE_SHP_TB){ if(p <= max) return val; }
+  return 99.90 + Math.ceil((p-30)/5)*20; // acima de 30kg: +R$20 por faixa
+}
+
 const FRETE_GRATIS_LIMITE = 79;
 
 // Tabela real ML (peso_max, ate18, 19-48, 49-78, 79-99, 100-119, 120-149, 150-199, 200+, frete_rapido)
@@ -983,7 +1004,8 @@ const CD = {
   mlcl_fx : {n:'ML Clássico — Taxa Fixa',s:'Taxa 12% + taxa fixa R$7,25',c:'c-mlcl',e:'🛒',tx:.12,cmv:'br',grupo:'ml'},
   mlcl_fg : {n:'ML Clássico — Frete Grátis',s:'Taxa 12% ≥ R$79 (frete grátis)',c:'c-mlcl',e:'🛒',tx:.12,cmv:'br',grupo:'ml'},
   mlpr    : {n:'ML Premium',s:'Taxa 17% — frete grátis embutido',c:'c-mlpr',e:'⭐',tx:.17,cmv:'br',grupo:'ml'},
-  shp     : {n:'Shopee',s:'Taxa 14%',c:'c-shp',e:'🛍️',tx:.14,cmv:'br',grupo:'mkt'},
+  shp     : {n:'Shopee — 14%',s:'Taxa 14% + frete (com crédito)',c:'c-shp',e:'🛍️',tx:.14,cmv:'br',grupo:'mkt'},
+  shp20   : {n:'Shopee — 20%',s:'Cat. especial 20% + frete',c:'c-shp',e:'🛍️',tx:.20,cmv:'br',grupo:'mkt'},
   ymp     : {n:'Site Próprio',s:'Gateway 2,5%',c:'c-ymp',e:'🌐',tx:.025,cmv:'pr',grupo:'site'},
   bal     : {n:'Balcão',s:'Sem taxa — CMV PR',c:'c-bal',e:'🏪',tx:0,cmv:'pr',grupo:'site'},
   atac_ml : {n:'Atacado ML',s:'Taxa 12% — CNPJ validado',c:'c-atc',e:'📦',tx:.12,cmv:'br',grupo:'atacado'},
@@ -992,8 +1014,8 @@ const CD = {
 };
 
 const CANAIS_DEFAULT = ['mlcl_fr','mlcl_fx','mlcl_fg','mlpr','shp','ymp','bal'];
-let ativos = new Set(['mlcl_fr','mlcl_fx','mlcl_fg','mlpr','shp','ymp']);
-let margens = {mlcl_fr:.28,mlcl_fx:.28,mlcl_fg:.28,mlpr:.26,shp:.28,ymp:.35,bal:.40};
+let ativos = new Set(['mlcl_fr','mlcl_fx','mlcl_fg','mlpr','shp','shp20','ymp']);
+let margens = {mlcl_fr:.28,mlcl_fx:.28,mlcl_fg:.28,mlpr:.26,shp:.28,shp20:.28,ymp:.35,bal:.40,atac_ml:.20,atac_sp:.20,atac_dir:.25};
 let tokens = {bling:'',ml:''};
 let cmvBr=0, cmvPr=0, prodAtual=null;
 let pesoCobrado=0, freteEstimado=0;
@@ -1019,12 +1041,13 @@ window.onload=()=>{
 // ══════════════════════════════════════════════════════════════════════
 function switchTab(t){
   document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('ativo',
-    (t==='unitario'&&i===0)||(t==='massa'&&i===1)||(t==='orcamento'&&i===2)));
+    (t==='unitario'&&i===0)||(t==='massa'&&i===1)||(t==='orcamento'&&i===2)||
+    (t==='anuncio'&&i===3)||(t==='kits'&&i===4)||(t==='recebimento'&&i===5)));
   document.getElementById('painel-unitario').style.display=t==='unitario'?'':'none';
   document.getElementById('painel-massa').style.display=t==='massa'?'':'none';
   // Orçamento usa layout próprio (fora do .layout principal)
   const lo=document.querySelector('.layout');
-  if(lo) lo.style.display=(t==='orcamento'||t==='anuncio'||t==='kits')?'none':'grid';
+  if(lo) lo.style.display=(t==='orcamento'||t==='anuncio'||t==='kits'||t==='recebimento')?'none':'grid';
   document.getElementById('painel-orcamento').style.display=t==='orcamento'?'grid':'none';
   document.getElementById('painel-anuncio').style.display=t==='anuncio'?'grid':'none';
   document.getElementById('painel-kits').style.display=t==='kits'?'grid':'none';
@@ -1389,7 +1412,7 @@ function calcCenario(k, cmvBr, cmvPr, pesoKg){
   const pPfC   = (parseFloat(document.getElementById('pct-pf').value)||80)/100;
   const difalM = (parseFloat(document.getElementById('difal-m').value)||8.5)/100;
   // Para Shopee e ML: DIFAL impacta; para Balcão e Site próprio: sem DIFAL
-  const comDifal = k.startsWith('ml') || k==='shp';
+  const comDifal = k.startsWith('ml') || k==='shp' || k==='shp20';
   const difalEfetivo = comDifal ? difalM * pIntC * pPfC : 0;
 
   const denom = Math.max(1-taxa-PIS-COFINS-difalEfetivo-m, .05);
@@ -1424,6 +1447,48 @@ function calcCenario(k, cmvBr, cmvPr, pesoKg){
     preco = (custo + frete_custo) / denom;
     frete_custo = freteML(pesoCobrado||pesoKg, preco);
     preco = (custo + frete_custo) / denom;
+  } else if(k==='shp' || k==='shp20'){
+    // ─ Shopee: frete Xpress + crédito PIS/COFINS sobre taxa e frete ─────
+    // No Lucro Real: PIS+COFINS incidem sobre faturamento MAS geram crédito
+    // sobre serviços pagos (comissão Shopee + frete pago pelo vendedor)
+    // denom ajustado: taxa líquida = taxa*(1 - PIS - COFINS)
+    const CRED = PIS + COFINS; // 9.25%
+    const taxaLiq = taxa * (1 - CRED); // taxa efetiva após crédito
+    const denomShp = Math.max(1 - taxaLiq - PIS - COFINS - difalEfetivo - m, .05);
+    const denomShpMin = Math.max(1 - taxaLiq - PIS - COFINS - difalEfetivo, .05);
+
+    // Estima preço sem frete, depois calcula frete e itera
+    let preco_est_shp = custo / denomShp;
+    const frete_bruto = freteShopee(pesoCobrado || pesoKg);
+    const frete_liq   = frete_bruto * (1 - CRED); // frete líquido (com crédito)
+    preco = (custo + frete_liq) / denomShp;
+    // Uma iteração de refinamento
+    preco = (custo + frete_liq) / denomShp;
+    frete_custo = frete_liq; // custo líquido registrado
+
+    // Calcula preço mínimo com denomShpMin
+    const precoMinShp = (custo + frete_liq) / denomShpMin;
+
+    const pis_r_shp   = preco * PIS;
+    const cof_r_shp   = preco * COFINS;
+    const tx_r_shp    = preco * taxa;       // valor bruto da taxa
+    const cred_taxa   = tx_r_shp * CRED;    // crédito PIS/COFINS sobre a taxa paga
+    const cred_frete  = frete_bruto * CRED; // crédito PIS/COFINS sobre o frete pago
+    const difal_r_shp = preco * difalEfetivo;
+    const lucro_shp   = preco - custo - pis_r_shp - cof_r_shp - tx_r_shp + cred_taxa - frete_bruto + cred_frete - difal_r_shp;
+    const mgliq_shp   = preco > 0 ? lucro_shp / preco : 0;
+
+    return {
+      preco, precoMin: precoMinShp,
+      pis_r: pis_r_shp, cof_r: cof_r_shp,
+      tx_r: tx_r_shp,
+      frete_custo: frete_bruto, // exibe o frete bruto no detalhe
+      frete_liq,
+      cred_taxa, cred_frete,
+      lucro: lucro_shp, mgliq: mgliq_shp,
+      custo, taxa, aplicavel: true, obs: '',
+      difal_r: difal_r_shp, difalEfetivo,
+    };
   } else {
     preco = custo / denom;
   }
@@ -1503,6 +1568,8 @@ function calcAll(){
           <div class="dr"><span>Taxa canal (${(r.taxa*100).toFixed(1)}%)</span><strong>R$ ${fmt(r.tx_r)}</strong></div>
           <div class="dr"><span>PIS+COFINS</span><strong>R$ ${fmt(r.pis_r+r.cof_r)}</strong></div>
           <div class="dr"><span>Frete</span><strong>R$ ${fmt(r.frete_custo)}</strong></div>
+          ${r.cred_taxa>0?`<div class="dr"><span style="color:#16a34a">Créd. s/ taxa (9,25%)</span><strong style="color:#16a34a">− R$ ${fmt(r.cred_taxa)}</strong></div>`:''}
+          ${r.cred_frete>0?`<div class="dr"><span style="color:#16a34a">Créd. s/ frete (9,25%)</span><strong style="color:#16a34a">− R$ ${fmt(r.cred_frete)}</strong></div>`:''}
           ${r.difal_r>0?`<div class="dr"><span>DIFAL (${(r.difalEfetivo*100).toFixed(1)}%)</span><strong>R$ ${fmt(r.difal_r)}</strong></div>`:''}
         </div>
         <div class="acoes">
@@ -1639,7 +1706,7 @@ async function calcMassa(){
 
       // Calcula preços para cada canal principal
       const precos={};
-      ['mlcl_fr','mlcl_fx','mlcl_fg','mlpr','shp','ymp','bal'].forEach(k=>{
+      ['mlcl_fr','mlcl_fx','mlcl_fg','mlpr','shp','shp20','ymp','bal'].forEach(k=>{
         const c=CD[k];
         const custo=c.cmv==='pr'?cmvPrItem:cmvBrItem;
         const m=margens[k];
@@ -3375,6 +3442,50 @@ const _origRenderNfItens = typeof renderNfItens !== 'undefined' ? renderNfItens 
 function kitsReceberNF(itens){ kitsNfItens = itens||[]; }
 
 
+
+// ─ Importar HISTORICO_COMPRAS do FAVA_ESTOQUE para banco CMV ─────────────
+function recImportarHistorico(input){
+  const file = input.files[0]; if(!file) return;
+  const st = document.getElementById('rec-hist-status');
+  const area = document.getElementById('rec-hist-area');
+  if(st) st.textContent = '⟳ Lendo planilha...';
+  if(area) area.textContent = '⟳ Processando...';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets['HISTORICO_COMPRAS'];
+      if(!ws){
+        if(st) st.innerHTML='<span style="color:#dc2626">❌ Aba HISTORICO_COMPRAS não encontrada</span>';
+        if(area) area.textContent='📎 Selecionar planilha';
+        return;
+      }
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      // Col D(3)=SKU, E(4)=Nome, U(20)=CMV_BRASIL, V(21)=CMV_PR
+      let n = 0;
+      rows.slice(2).forEach(r => {
+        const sku = String(r[3]||'').trim();
+        const nome = String(r[4]||'');
+        const cmvBr = parseFloat(r[20]||0);
+        const cmvPr = parseFloat(r[21]||0);
+        if(sku && cmvBr > 0){
+          cmvSet(sku, {nome, cmvBr, cmvPr: cmvPr||cmvBr, custo: cmvBr});
+          n++;
+        }
+      });
+      if(st) st.innerHTML=`<span style="color:#16a34a">✅ ${n} SKUs importados</span>`;
+      if(area) area.textContent='✅ Importado — clique para atualizar';
+      // Atualiza contador do banco
+      const cnt = Object.keys(JSON.parse(localStorage.getItem('fava_cmv_banco')||'{}')).length;
+      document.querySelectorAll('.cmv-banco-cnt').forEach(el=>el.textContent=cnt+' SKUs no banco');
+    }catch(ex){
+      if(st) st.innerHTML=`<span style="color:#dc2626">❌ ${ex.message}</span>`;
+      if(area) area.textContent='📎 Selecionar planilha';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
 // ══════════════════════════════════════════════════════════════════════
 // RECEBIMENTO NF — Fluxo completo: XML → SKU → EAN → Fila
 // ══════════════════════════════════════════════════════════════════════
@@ -3773,10 +3884,16 @@ function recExportarCSV(){
   <div class="rec-left">
 
     <div class="sec">Importar NF-e XML</div>
-    <label style="display:block;border:2px dashed #d1d5db;border-radius:7px;padding:12px;text-align:center;font-size:12px;color:#6b7280;cursor:pointer;margin-bottom:8px;transition:.15s" onmouseover="this.style.borderColor='#2E75B6'" onmouseout="this.style.borderColor='#d1d5db'">
-      📎 Clique ou arraste a NF-e XML aqui
-      <input type="file" accept=".xml" onchange="recImportarXML(this)" style="display:none">
-    </label>
+    <div id="rec-upload-area" style="display:block;border:2px dashed #d1d5db;border-radius:7px;padding:12px;text-align:center;font-size:12px;color:#6b7280;cursor:pointer;margin-bottom:8px;transition:.15s"
+      onclick="document.getElementById('rec-file-input').click()"
+      ondragover="event.preventDefault();this.style.borderColor='#2E75B6';this.style.background='#eff6ff'"
+      ondragleave="this.style.borderColor='#d1d5db';this.style.background=''"
+      ondrop="event.preventDefault();this.style.borderColor='#d1d5db';this.style.background='';recImportarXML({files:event.dataTransfer.files})"
+      onmouseover="this.style.borderColor='#2E75B6'" onmouseout="this.style.borderColor='#d1d5db'">
+      📎 Clique aqui ou arraste a NF-e XML
+      <div style="font-size:10px;color:#9ca3af;margin-top:3px">arquivo .xml da nota fiscal</div>
+    </div>
+    <input type="file" id="rec-file-input" accept=".xml" style="display:none" onchange="recImportarXML(this)">
     <div id="rec-xml-status" style="font-size:11px;color:#6b7280;margin-bottom:8px"></div>
 
     <div class="sec">SKU Sequencial</div>
@@ -3810,6 +3927,18 @@ function recExportarCSV(){
 
     <div class="sec" style="margin-top:10px">Resumo</div>
     <div id="rec-resumo" style="font-size:12px;color:#6b7280">Nenhuma NF importada</div>
+
+    <div class="sec" style="margin-top:10px">Banco de CMV</div>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 10px;margin-bottom:6px">
+      <div style="font-size:10px;color:#166534;font-weight:700;margin-bottom:5px">📊 Importar FAVA_ESTOQUE_V5.xlsx</div>
+      <div style="font-size:10px;color:#6b7280;margin-bottom:6px">Carrega CMV de todos os SKUs do HISTORICO_COMPRAS de uma vez</div>
+      <div id="rec-hist-area" style="border:2px dashed #86efac;border-radius:5px;padding:8px;text-align:center;font-size:11px;color:#166534;cursor:pointer"
+        onclick="document.getElementById('rec-hist-input').click()">
+        📎 Selecionar planilha
+      </div>
+      <input type="file" id="rec-hist-input" accept=".xlsx,.xlsm" style="display:none" onchange="recImportarHistorico(this)">
+      <div id="rec-hist-status" style="font-size:10px;color:#6b7280;margin-top:4px"></div>
+    </div>
   </div>
 
   <!-- ═ COLUNA DIREITA ═ -->
