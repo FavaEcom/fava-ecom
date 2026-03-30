@@ -1654,15 +1654,7 @@ async function aplicarDescontoPromoAPI(){
   if(st) st.textContent = `✅ ${ok} atualizados${erros?' | ❌ '+erros+' erros':''}`;
 }
 
-async function selecionarTodosAplicar(){
-  const pct = parseFloat(prompt('Desconto % para TODOS os produtos da planilha:\n(entre 5 e 80)', '10')||'0');
-  if(!pct || pct<5 || pct>80) return;
-  promoData.forEach(p=>{ p.descEditado=pct; p.selecionado=true; p.margemComDesc=calcMargemProm(p.preco*(1-pct/100),p.cmv,0.16); });
-  promoDataFiltrada = [...promoData];
-  renderPromoKpis();
-  renderPromoTabela(promoDataFiltrada);
-  document.getElementById('prom-desc-pct').value=pct;
-}
+
 
 function initPromocoes(){ if(promoData.length) renderPromoTabela(promoDataFiltrada); }
 
@@ -2106,6 +2098,68 @@ async function mlGet(path){
 // ══════════════════════════════════════════════════════════════════════
 // UI HELPERS
 // ══════════════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════════════
+// CARREGAR TUDO — Função principal de carregamento de dados
+// ══════════════════════════════════════════════════════════════════════
+async function carregarTudo(){
+  showLoading('Conectando às APIs...');
+  setDot('bling','wait','Bling...');
+  setDot('ml','wait','ML...');
+  const {de,ate}=getDatas();
+
+  // Carrega CMV do banco PostgreSQL
+  try{
+    const rProd = await fetch('/api/db/produtos');
+    if(rProd.ok){
+      const produtos = await rProd.json();
+      let n=0;
+      produtos.forEach(p=>{
+        if(p.sku && (p.custo_br||p.custo)>0){
+          dados.cmvCache[String(p.sku).trim()] = {
+            cmv: p.custo_br||p.custo||0,
+            cmvPr: p.custo_pr||p.custo_br||0,
+            nome: p.nome||p.sku,
+            estoque: p.estoque||0,
+            fonte:'db'
+          };
+          n++;
+        }
+      });
+      if(n>0) console.log(`✅ CMV DB: ${n} produtos`);
+    }
+  }catch(e){ console.warn('CMV DB erro:',e); }
+
+  try{
+    const [pedidosML, pedidosBling] = await Promise.all([
+      tokens.ml   ? fetchPedidosML(de,ate)   : Promise.resolve([]),
+      tokens.bling? fetchPedidosBling(de,ate) : Promise.resolve([]),
+    ]);
+    dados.pedidosML    = pedidosML;
+    dados.pedidosBling = pedidosBling;
+    renderTudo();
+    const lu = document.getElementById('last-update');
+    if(lu) lu.textContent = 'Atualizado: '+new Date().toLocaleTimeString('pt-BR');
+  }catch(e){
+    console.error('carregarTudo erro:',e);
+    hideLoading();
+    const kpi = document.getElementById('kpi-row');
+    if(kpi) kpi.innerHTML = `<div style="grid-column:1/-1;padding:20px;text-align:center;color:#dc2626">
+      ❌ Erro: ${e.message}<br>
+      <button onclick="carregarTudo()" style="margin-top:8px;padding:6px 14px;font-size:12px;font-weight:700;background:#1F3864;color:#fff;border:none;border-radius:6px;cursor:pointer">Tentar novamente</button>
+    </div>`;
+    return;
+  }
+  hideLoading();
+}
+
+// Promoções — delegada para a nova implementação via planilha
+function carregarPromocoes(){
+  // A aba agora funciona por importação de planilha
+  // initPromocoes recarrega a tabela se já tem dados
+  if(typeof initPromocoes === 'function') initPromocoes();
+}
+
 function showLoading(msg){const _l=document.getElementById('loading');if(_l)_l.style.display='flex';const _lm=document.getElementById('loading-msg');if(_lm)_lm.textContent=msg||'Carregando...';}
 function hideLoading(){(document.getElementById('loading')||{style:{}}).style.display ='none';}
 function setDot(a,s,l){const d=document.getElementById(`dot-${a}`);const lb=document.getElementById(`lbl-${a}`);if(d)d.className=`dot ${s}`;if(lb)lb.textContent=l;}
@@ -4266,7 +4320,7 @@ function initFinanceiro(){
 
 // ── RECEBER: cruza vendas ML com prazo de repasse ──────────────────────────
 function renderReceber(){
-  const prazo = parseInt(document.getElementById('prazo-repasse').value)||15;
+  const prazo = parseInt((document.getElementById('prazo-repasse')||{value:'15'}).value)||15;
   const pedidos = dados.pedidosML.filter(p=>p.status!=='cancelled');
   const hoje = new Date(); hoje.setHours(0,0,0,0);
 
@@ -4432,7 +4486,7 @@ function renderLancamentos(){
 
 // ── GRÁFICO FLUXO ─────────────────────────────────────────────────────────
 function recalcFluxo(){
-  const prazo=parseInt(document.getElementById('prazo-repasse').value)||15;
+  const prazo=parseInt((document.getElementById('prazo-repasse')||{value:'15'}).value)||15;
   const hoje=new Date();hoje.setHours(0,0,0,0);
 
   // Gera próximos 30 dias
@@ -4630,7 +4684,7 @@ function renderCustoFixos(){
 
 // ── KPIs FINANCEIROS ──────────────────────────────────────────────────────
 function renderKpisFinanceiros(){
-  const prazo=parseInt(document.getElementById('prazo-repasse').value)||15;
+  const prazo=parseInt((document.getElementById('prazo-repasse')||{value:'15'}).value)||15;
   const hoje=new Date();hoje.setHours(0,0,0,0);
   const d30=new Date(hoje);d30.setDate(d30.getDate()+30);
   const d7=new Date(hoje);d7.setDate(d7.getDate()+7);
