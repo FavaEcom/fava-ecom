@@ -50,9 +50,9 @@ header h1{font-size:15px;font-weight:700;flex:1}
 .card-body{padding:12px 14px}
 
 /* TABLE */
-.tbl{width:100%;border-collapse:collapse;font-size:11px}
-.tbl th{padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--borda);white-space:nowrap;background:#f8fafc}
-.tbl td{padding:6px 8px;border-bottom:1px solid #f9fafb;vertical-align:middle}
+.tbl{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
+.tbl th{padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--borda);white-space:nowrap;background:#f8fafc;overflow:hidden;text-overflow:ellipsis}
+.tbl td{padding:6px 8px;border-bottom:1px solid #f9fafb;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tbl tr:last-child td{border-bottom:none}
 .tbl tr:hover td{background:#fafbfc}
 .tbl .num{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
@@ -153,7 +153,7 @@ header h1{font-size:15px;font-weight:700;flex:1}
 .prom-kpi{background:#fff;border-radius:8px;border:1px solid var(--borda);padding:9px 12px}
 .prom-kpi .pkl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
 .prom-kpi .pkv{font-size:18px;font-weight:700}
-.prom-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.prom-tbl{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
 .prom-tbl th{padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--borda);background:#f8fafc;white-space:nowrap}
 .prom-tbl td{padding:6px 9px;border-bottom:1px solid #f9fafb;vertical-align:middle}
 .prom-tbl tr:hover td{background:#fafbfc}
@@ -188,7 +188,7 @@ header h1{font-size:15px;font-weight:700;flex:1}
 .prom-kpi{background:#fff;border-radius:8px;border:1px solid var(--borda);padding:9px 12px}
 .prom-kpi .pl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
 .prom-kpi .pv{font-size:18px;font-weight:700}
-.prom-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.prom-tbl{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
 .prom-tbl th{padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--borda);background:#f8fafc;white-space:nowrap}
 .prom-tbl td{padding:6px 9px;border-bottom:1px solid #f9fafb;vertical-align:middle}
 .prom-tbl .num{text-align:right;font-variant-numeric:tabular-nums}
@@ -229,7 +229,7 @@ header h1{font-size:15px;font-weight:700;flex:1}
 .gp-kpi .gkl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
 .gp-kpi .gkv{font-size:18px;font-weight:700}
 .gp-table-wrap{background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden}
-.gp-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.gp-tbl{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
 .gp-tbl th{padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--borda);background:#f8fafc;white-space:nowrap;cursor:pointer;user-select:none}
 .gp-tbl th:hover{background:#f0f2f5}
 .gp-tbl td{padding:6px 9px;border-bottom:1px solid #f9fafb;vertical-align:middle}
@@ -278,7 +278,7 @@ header h1{font-size:15px;font-weight:700;flex:1}
 .fcard-head{padding:9px 13px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between}
 .fcard-head h3{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
 .fcard-body{padding:11px 13px}
-.ftbl{width:100%;border-collapse:collapse;font-size:11px}
+.ftbl{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
 .ftbl th{padding:5px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--borda);background:#f8fafc;white-space:nowrap}
 .ftbl td{padding:5px 8px;border-bottom:1px solid #f9fafb;vertical-align:middle}
 .ftbl tr:last-child td{border-bottom:none}
@@ -310,7 +310,7 @@ header h1{font-size:15px;font-weight:700;flex:1}
 .filter-btn{padding:5px 12px;border:1px solid var(--borda);border-radius:6px;background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--muted);transition:.15s}
 .filter-btn.a{background:var(--azul);color:#fff;border-color:var(--azul)}
 .anunc-table-wrap{background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden}
-.anunc-table{width:100%;border-collapse:collapse;font-size:11px}
+.anunc-table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
 .anunc-table th{padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--borda);background:#f8fafc;white-space:nowrap;cursor:pointer}
 .anunc-table th:hover{background:#f0f2f5}
 .anunc-table td{padding:7px 10px;border-bottom:1px solid #f9fafb;vertical-align:middle}
@@ -577,7 +577,7 @@ function salvarCfg(){
         <div class="card-head"><h3>Top produtos — faturamento</h3></div>
         <div class="card-body" style="padding:0">
           <table class="tbl">
-            <thead><tr><th>Produto</th><th class="num">Faturamento</th><th class="num">Qtd</th><th class="num">Margem</th></tr></thead>
+            <thead><tr><th style="width:50%">Produto</th><th class="num" style="width:20%">Faturamento</th><th class="num" style="width:15%">Qtd</th><th class="num" style="width:15%">Margem</th></tr></thead>
             <tbody id="body-rank-fat"></tbody>
           </table>
         </div>
@@ -586,7 +586,7 @@ function salvarCfg(){
         <div class="card-head"><h3>Top produtos — margem</h3></div>
         <div class="card-body" style="padding:0">
           <table class="tbl">
-            <thead><tr><th>Produto</th><th class="num">Margem</th><th class="num">Lucro</th><th class="num">Qtd</th></tr></thead>
+            <thead><tr><th style="width:50%">Produto</th><th class="num" style="width:20%">Margem</th><th class="num" style="width:15%">Lucro</th><th class="num" style="width:15%">Qtd</th></tr></thead>
             <tbody id="body-rank-mg"></tbody>
           </table>
         </div>
@@ -603,7 +603,7 @@ function salvarCfg(){
         <div class="card-head"><h3>Pedidos recentes</h3></div>
         <div class="card-body" style="padding:0">
           <table class="tbl">
-            <thead><tr><th>Nº</th><th>Produto</th><th class="num">Total</th><th class="num">Margem</th><th>Estado</th></tr></thead>
+            <thead><tr><th style="width:12%">Nº</th><th style="width:40%">Produto</th><th class="num" style="width:16%">Total</th><th class="num" style="width:16%">Margem</th><th style="width:16%">Estado</th></tr></thead>
             <tbody id="body-pedidos"></tbody>
           </table>
         </div>
@@ -659,7 +659,7 @@ function salvarCfg(){
       <div class="fcard">
         <div class="fcard-head"><h3>Boletos a pagar</h3><span id="fin-boletos-lbl" style="font-size:10px;color:var(--muted)"></span></div>
         <div class="fcard-body" style="padding:0">
-          <table class="ftbl"><thead><tr><th>Fornecedor</th><th>NF</th><th>Venc.</th><th class="num">Valor</th><th>Status</th></tr></thead>
+          <table class="ftbl"><thead><tr><th style="width:38%">Fornecedor</th><th style="width:14%">NF</th><th style="width:16%">Venc.</th><th class="num" style="width:16%">Valor</th><th style="width:16%">Status</th></tr></thead>
           <tbody id="fin-boletos-tbody"></tbody></table>
         </div>
       </div>
@@ -670,7 +670,7 @@ function salvarCfg(){
             <span style="font-size:11px;color:var(--muted)">Prazo repasse (dias):</span>
             <input type="number" id="prazo-repasse" value="15" min="1" max="60" style="width:50px;border:1px solid var(--borda);border-radius:4px;padding:3px 6px;font-size:12px;text-align:center;outline:none" oninput="renderReceber()">
           </div>
-          <table class="ftbl"><thead><tr><th>Data venda</th><th>Repasse</th><th class="num">Faturamento</th><th>Status</th></tr></thead>
+          <table class="ftbl"><thead><tr><th style="width:30%">Data venda</th><th style="width:20%">Repasse</th><th class="num" style="width:25%">Faturamento</th><th style="width:25%">Status</th></tr></thead>
           <tbody id="fin-receber-tbody"></tbody></table>
         </div>
       </div>
@@ -695,14 +695,14 @@ function salvarCfg(){
           <input type="number" id="lanc-valor" placeholder="Valor" step="0.01">
           <select id="lanc-tipo"><option value="entrada">Entrada</option><option value="saida">Saída</option><option value="previsto">Previsto</option></select>
         </div>
-        <table class="ftbl"><thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th class="num">Valor</th><th></th></tr></thead>
+        <table class="ftbl"><thead><tr><th style="width:15%">Data</th><th style="width:45%">Descrição</th><th style="width:15%">Tipo</th><th class="num" style="width:15%">Valor</th><th style="width:10%"></th></tr></thead>
         <tbody id="lanc-tbody"></tbody></table>
       </div>
     </div>
     <div class="fcard">
       <div class="fcard-head"><h3>NFs de entrada</h3></div>
       <div class="fcard-body" style="padding:0">
-        <table class="ftbl"><thead><tr><th>NF</th><th>Fornecedor</th><th>Emissão</th><th class="num">Valor</th><th>1º Venc.</th></tr></thead>
+        <table class="ftbl"><thead><tr><th style="width:14%">NF</th><th style="width:40%">Fornecedor</th><th style="width:16%">Emissão</th><th class="num" style="width:16%">Valor</th><th style="width:14%">1º Venc.</th></tr></thead>
         <tbody id="fin-nf-tbody"></tbody></table>
       </div>
     </div>
@@ -793,8 +793,8 @@ function salvarCfg(){
       <div class="card-body" style="padding:0">
         <table class="tbl">
           <thead><tr>
-            <th>Nº</th><th>Data</th><th>Canal</th><th>Produto</th>
-            <th class="num">Total</th><th class="num">Margem</th><th>UF</th><th>Status</th>
+            <th style="width:10%">Nº</th><th style="width:12%">Data</th><th style="width:8%">Canal</th><th style="width:32%">Produto</th>
+            <th class="num" style="width:12%">Total</th><th class="num" style="width:12%">Margem</th><th style="width:7%">UF</th><th style="width:7%">Status</th>
           </tr></thead>
           <tbody id="ped-tbody"></tbody>
         </table>
@@ -974,7 +974,7 @@ function salvarCfg(){
       <div class="card-head"><h3>Tabela DIFAL</h3></div>
       <div class="card-body" style="padding:0">
         <table class="tbl" id="difal-tbl">
-          <thead><tr><th>UF</th><th>Pedidos</th><th class="num">Fat.</th><th class="num">DIFAL calc.</th><th class="num">% Fat.</th></tr></thead>
+          <thead><tr><th style="width:15%">UF</th><th style="width:20%">Pedidos</th><th class="num" style="width:25%">Fat.</th><th class="num" style="width:25%">DIFAL calc.</th><th class="num" style="width:15%">% Fat.</th></tr></thead>
           <tbody id="difal-tbody"></tbody>
         </table>
       </div>
@@ -1642,7 +1642,7 @@ function renderPromoTabela(lista){
   tbody.innerHTML = lista.map((p,i)=>{
     const mgCor = p.margem!==null ? (p.margem>=.20?'var(--verde)':p.margem>=.10?'var(--amarelo)':'var(--vermelho)') : 'var(--muted)';
     const mgDescCor = p.margemComDesc!==null ? (p.margemComDesc>=.20?'var(--verde)':p.margemComDesc>=.10?'var(--amarelo)':'var(--vermelho)') : 'var(--muted)';
-    const mgStr = p.margem!==null ? (p.margem*100).toFixed(1)+'%' : p.cmv ? '—' : '<span style="color:#f59e0b">⚠️sem CMV</span>';
+    const mgStr = !p.cmv ? '<span style="color:#f59e0b;font-size:10px">⚠️sem CMV</span>' : p.margem!==null ? (p.margem*100).toFixed(1)+'%' : '—';
     const mgDescStr = p.margemComDesc!==null ? (p.margemComDesc*100).toFixed(1)+'%' : '—';
     const statusTag = p.status==='Elegível' ? '<span class="pill pill-g" style="font-size:9px">Elegível</span>' :
                       p.status==='Ativo' ? '<span class="pill pill-b" style="font-size:9px">Ativo</span>' :
@@ -1660,7 +1660,7 @@ function renderPromoTabela(lista){
         <input type="number" value="${p.descEditado||''}" min="5" max="80" step="1" placeholder="%" 
           style="width:50px;border:1px solid #d1d5db;border-radius:4px;padding:2px 4px;text-align:center;font-size:11px;font-weight:700"
           oninput="atualizarDescItem(${i},this.value)">
-        ${descMaxCalc>0?'<div style="font-size:9px;color:#16a34a">máx '+descMaxCalc+'%</div>':''}
+        ${p.cmv>0 && descMaxCalc>0 ? '<div style="font-size:9px;color:#16a34a">máx '+descMaxCalc+'%</div>' : p.cmv<=0 ? '<div style="font-size:9px;color:#f59e0b">sem CMV</div>' : ''}
       </td>
       <td id="pd-preco-${i}" style="padding:5px 8px;text-align:right;color:var(--azul2);font-weight:700">R$${precoComDesc.toFixed(2)}</td>
       <td style="padding:5px 8px;text-align:right;color:var(--muted)">${p.cmv?'R$'+p.cmv.toFixed(2):'<span style=color:#f59e0b>⚠️</span>'}</td>
@@ -1851,7 +1851,7 @@ function atualizarMgMin(idx, val){
 
 // Calcula desconto máximo dado margem mínima
 function calcDescMaximo(preco, cmv, mgMin){
-  if(!cmv || !preco || mgMin<=0) return 0;
+  if(!cmv || cmv<=0 || !preco || mgMin<=0) return 0; // sem CMV não sugere
   // precoMin = CMV / (1 - mgMin - taxas_fixas)
   // taxas: ML 16% + PIS/COFINS 3.65% + frete estimado % 
   const fretePct = preco<=50?0.18 : preco<=100?0.13 : preco<=200?0.10 : 0.08;
@@ -2353,7 +2353,7 @@ function renderPedidosRecentes(pedidos, itensComMargem){
       <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">${titulo}${qtd>1?` +${qtd-1}`:''}</td>
       <td><span class="pill pill-b" style="font-size:9px">${p.uf||'—'}</span></td>
       <td class="num">R$ ${fmt(p.total)}</td>
-      <td class="num">${mgMedia!==null?`<span class="pill ${mc}">${(mgMedia*100).toFixed(0)}%</span>`:'—'}</td>
+      <td class="num">${mgMedia!==null?`<span class="pill ${mc}">${(mgMedia*100).toFixed(0)}%</span>`:'<span style="color:#f59e0b;font-size:9px">sem CMV</span>'}</td>
       <td><span class="pill ${stCor}" style="font-size:9px">${st}</span></td>
     </tr>`;
   });
@@ -3359,6 +3359,19 @@ let pedFiltroMg = 'todos';
 let pedSort = {col:'data', dir:-1};
 
 function initPedidos(){
+  // Avisa se não há CMV carregado
+  const comCmv = Object.keys(dados.cmvCache).filter(k=>dados.cmvCache[k]?.cmv>0).length;
+  if(comCmv===0){
+    const info = document.getElementById('ped-main');
+    if(info && !info.querySelector('.cmv-aviso')){
+      const div = document.createElement('div');
+      div.className = 'cmv-aviso';
+      div.style.cssText = 'background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:8px 14px;margin-bottom:10px;font-size:11px;color:#92400e';
+      div.innerHTML = '⚠️ <strong>CMV não carregado</strong> — o sistema não encontrou custos para os seus SKUs. ' +
+        'Verifique se o Bling tem <strong>Preço de Custo</strong> preenchido nos produtos, ou rode o script de importação NF para popular o banco.';
+      info.insertBefore(div, info.firstChild);
+    }
+  }
   buildPedidosDetalhados();
   populaFiltroUF();
   filtrarPedidos();
@@ -5071,7 +5084,9 @@ async function carregarAnuncios(){
     const listings = await r.json();
 
     if(!listings.length){
-      if(tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:#9ca3af">Banco vazio — aguarde 1 min e clique 🗄️ DB → Sincronizar agora</td></tr>';
+      // Banco vazio — busca diretamente da API ML
+      if(tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:#9ca3af"><div class="spin" style="margin:0 auto 10px"></div>Buscando do Mercado Livre...</td></tr>';
+      await carregarAnunciosML();
       return;
     }
 
@@ -5109,6 +5124,59 @@ async function carregarAnuncios(){
   }catch(e){
     console.error('carregarAnuncios:', e);
     if(tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:20px;color:#dc2626">❌ ${e.message}<br><button onclick="carregarAnuncios()" style="margin-top:8px;padding:5px 12px;background:#1F3864;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">Tentar novamente</button></td></tr>`;
+  }
+}
+
+
+async function carregarAnunciosML(){
+  // Busca todos os anúncios ativos direto da API ML
+  const tbody = document.getElementById('anunc-tbody');
+  if(!tokens.ml){
+    if(tbody) tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:#dc2626">❌ Token ML não configurado — abra ⚙️ e configure</td></tr>';
+    return;
+  }
+  try{
+    let ids=[], scroll=null;
+    if(tbody) tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:15px;color:#9ca3af"><div class="spin" style="margin:0 auto 8px"></div>Buscando anúncios do ML...</td></tr>';
+    for(let pg=0; pg<50; pg++){
+      let path=`users/537714337/items/search?status=active&limit=50`;
+      if(scroll) path+=`&scroll_id=${scroll}`;
+      const r=await mlGet(path);
+      if(!r||!r.results?.length) break;
+      ids.push(...r.results);
+      scroll=r.scroll_id;
+      if(r.results.length<50||!scroll) break;
+      if(tbody) tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:15px;color:#9ca3af">${ids.length} anúncios encontrados...</td></tr>`;
+    }
+    if(!ids.length){ if(tbody) tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px">Nenhum anúncio ativo</td></tr>'; return; }
+
+    // Busca detalhes em lotes de 20
+    const det=[];
+    for(let i=0;i<ids.length;i+=20){
+      const lote=ids.slice(i,i+20).join(',');
+      const r=await mlGet(`items?ids=${lote}&attributes=id,title,price,listing_type_id,seller_sku,sale_fee,shipping,status`);
+      if(r) det.push(...r.filter(x=>x.code===200&&x.body?.id).map(x=>({
+        id:x.body.id, sku:x.body.seller_sku||'', titulo:x.body.title||'',
+        preco:parseFloat(x.body.price)||0,
+        sale_fee:parseFloat(x.body.sale_fee)||0,
+        listing_type:x.body.listing_type_id||'',
+        free_shipping:x.body.shipping?.free_shipping?1:0,
+        status:x.body.status||'', cmv:0, margem_minima:0, frete_medio:0
+      })));
+    }
+
+    // Cruza com CMV do cache
+    det.forEach(l=>{
+      const ci=cmvLookup(l.sku);
+      if(ci?.cmv) l.cmv=ci.cmv;
+    });
+
+    anunciosData=det;
+    renderAnuncios();
+    const comCmv=det.filter(d=>d.cmv>0).length;
+    console.log(`Anúncios ML: ${det.length} | com CMV: ${comCmv}`);
+  }catch(e){
+    if(tbody) tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:20px;color:#dc2626">❌ ${e.message}</td></tr>`;
   }
 }
 

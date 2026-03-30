@@ -280,6 +280,20 @@ def sync_produtos():
             n+=1
         if len(items)<100: break
         pagina+=1; time.sleep(0.3)
+    # Complementa CMV com dados do historico_compras onde precoCusto=0
+    try:
+        sem_cmv = exe("SELECT sku FROM produtos WHERE custo_br = 0 OR custo_br IS NULL", fetchall=True)
+        if sem_cmv:
+            for row in sem_cmv:
+                s = row['sku']
+                # Tenta pegar CMV médio do historico por nome do produto
+                hist = exe("SELECT AVG(cmv_br) as media, nome FROM historico_compras WHERE sku=%s AND cmv_br>0 GROUP BY nome LIMIT 1" % ("'"+s+"'" if IS_PG else "?"),
+                           (s,) if not IS_PG else (), fetchone=True)
+                if hist and hist.get('media',0)>0:
+                    exe(f"UPDATE produtos SET custo_br={hist['media']}, custo={hist['media']} WHERE sku='{s}'")
+        print(f'[SYNC] CMV complementado do historico para produtos sem custo')
+    except Exception as e:
+        print(f'[SYNC] CMV complemento erro: {e}')
     print(f'[SYNC] {n} produtos'); return n
 
 def sync_pedidos():
