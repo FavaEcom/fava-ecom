@@ -131,6 +131,34 @@ header h1{font-size:14px;font-weight:700;flex:1}
 .c-bal{background:#f0fdf4;color:#15803d}.c-atc{background:#fffbeb;color:#b45309}
 
 @media(max-width:760px){.layout{grid-template-columns:1fr;height:auto}.left{border-right:none;border-bottom:1px solid #e0e4ea}}
+
+/* ORÇAMENTO */
+.orc-layout{display:grid;grid-template-columns:300px 1fr;height:calc(100vh - 82px)}
+.orc-left{background:#fff;border-right:1px solid #e0e4ea;overflow-y:auto;padding:13px}
+.orc-right{overflow-y:auto;padding:13px}
+.orc-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px}
+.orc-table th{background:#1F3864;color:#fff;padding:6px 8px;text-align:left;font-size:10px;font-weight:700;white-space:nowrap}
+.orc-table td{padding:5px 7px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
+.orc-table tr:hover td{background:#fafbfc}
+.orc-table .num{text-align:right;font-weight:700}
+.orc-table input[type=number]{width:100%;border:1px solid #d1d5db;border-radius:4px;padding:3px 5px;font-size:12px}
+.orc-table input[type=text]{width:100%;border:1px solid #d1d5db;border-radius:4px;padding:3px 5px;font-size:11px}
+.orc-resumo{background:#fff;border:1px solid #e5e7eb;border-radius:9px;padding:12px 15px;margin-top:10px}
+.orc-resumo h3{font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.orc-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #f9fafb}
+.orc-row.total{font-weight:700;font-size:14px;border-top:2px solid #e5e7eb;margin-top:5px;padding-top:6px;color:#1F3864}
+.orc-icms-badge{display:inline-block;background:#eff6ff;color:#1d4ed8;border-radius:5px;padding:2px 6px;font-size:10px;font-weight:700}
+.orc-difal-badge{display:inline-block;background:#fef3c7;color:#92400e;border-radius:5px;padding:2px 6px;font-size:10px;font-weight:700}
+.orc-input-sku{display:flex;gap:4px;align-items:center}
+.orc-input-sku input{flex:1;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px}
+.orc-input-sku button{padding:3px 7px;font-size:10px;border:1px solid #2E75B6;border-radius:4px;background:#eff6ff;color:#1d4ed8;cursor:pointer;white-space:nowrap}
+.cliente-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:9px 11px;margin-bottom:10px}
+.cliente-box .ct{font-size:10px;font-weight:700;text-transform:uppercase;color:#166534;margin-bottom:6px}
+@media print{
+  header,.tabs,.orc-left,#btn-print,#btn-export-orc{display:none!important}
+  .orc-layout{grid-template-columns:1fr;height:auto}
+  .orc-right{padding:5px}
+}
 </style>
 </head>
 <body>
@@ -145,6 +173,7 @@ header h1{font-size:14px;font-weight:700;flex:1}
 <div class="tabs">
   <div class="tab ativo" onclick="switchTab('unitario')">Produto único</div>
   <div class="tab" onclick="switchTab('massa')">Precificação em massa (NF)</div>
+  <div class="tab" onclick="switchTab('orcamento')">📄 Orçamento</div>
 </div>
 
 <div class="layout">
@@ -180,21 +209,54 @@ header h1{font-size:14px;font-weight:700;flex:1}
     <div id="prod-card" class="prod-card"></div>
 
     <div class="sec">Custo</div>
-    <div class="field" style="margin-bottom:5px">
-      <label>Modo de entrada do custo</label>
-      <select id="modo-custo" onchange="atualizarModoCusto();recalcCMV()" style="font-size:12px">
-        <option value="bling">📥 Bling — custo já inclui IPI embutido</option>
-        <option value="manual">✏️ Novo produto — custo líquido NF (IPI separado)</option>
-      </select>
+
+    <!-- Seletor de modo -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:9px">
+      <label id="btn-modo-bling" onclick="setModo('bling')"
+        style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:700;padding:7px 10px;border:2px solid #1F3864;border-radius:6px;background:#eff6ff;color:#1F3864">
+        📥 Bling API
+      </label>
+      <label id="btn-modo-manual" onclick="setModo('manual')"
+        style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:700;padding:7px 10px;border:2px solid #d1d5db;border-radius:6px;background:#fff;color:#6b7280">
+        ✏️ Manual
+      </label>
     </div>
-    <div class="field">
-      <label id="lbl-custo-b">Custo Bling bruto (R$) — com IPI e ST embutidos</label>
-      <input type="number" id="custo-b" step="0.01" min="0" placeholder="0,00" oninput="recalcCMV()">
+
+    <!-- MODO BLING -->
+    <div id="painel-modo-bling">
+      <div class="field">
+        <label>Custo Bling (R$) — com IPI e ST embutidos</label>
+        <input type="number" id="custo-b" step="0.01" min="0" placeholder="0,00" oninput="recalcCMV()">
+      </div>
+      <div class="row3">
+        <div class="field"><label>IPI (%)</label><input type="number" id="ipi-p" step="0.1" min="0" value="0" oninput="recalcCMV()"></div>
+        <div class="field"><label>ST (R$)</label><input type="number" id="st-v" step="0.01" min="0" value="0" oninput="recalcCMV()"></div>
+        <div class="field"><label>Tem ST?</label><select id="tem-st" onchange="recalcCMV()"><option value="nao">Não</option><option value="sim">Sim</option></select></div>
+      </div>
     </div>
-    <div class="row3">
-      <div class="field"><label>IPI (%)</label><input type="number" id="ipi-p" step="0.1" min="0" value="0" oninput="recalcCMV()"></div>
-      <div class="field"><label>ST (R$)</label><input type="number" id="st-v" step="0.01" min="0" value="0" oninput="recalcCMV()"></div>
-      <div class="field"><label>Tem ST?</label><select id="tem-st" onchange="recalcCMV()"><option value="nao">Não</option><option value="sim">Sim</option></select></div>
+
+    <!-- MODO MANUAL -->
+    <div id="painel-modo-manual" style="display:none">
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:7px 9px;font-size:11px;color:#92400e;margin-bottom:8px">
+        ✏️ Informe o custo líquido da NF (sem IPI). IPI, ST e frete de compra são custos adicionais.
+      </div>
+      <div class="row2">
+        <div class="field"><label>Custo NF líquido (R$)</label><input type="number" id="custo-manual" step="0.01" min="0" placeholder="0,00" oninput="recalcCMV()"></div>
+        <div class="field"><label>IPI (%)</label><input type="number" id="ipi-manual" step="0.1" min="0" value="0" oninput="recalcCMV()"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>ST (R$)</label><input type="number" id="st-manual" step="0.01" min="0" value="0" oninput="recalcCMV()"></div>
+        <div class="field"><label>Frete de compra (R$)</label><input type="number" id="frete-compra" step="0.01" min="0" value="0" oninput="recalcCMV()"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>ICMS entrada (%)</label><input type="number" id="icms-entrada" step="0.1" min="0" value="12" oninput="recalcCMV()"></div>
+        <div class="field"><label>Tem ST?</label><select id="tem-st-manual" onchange="recalcCMV()"><option value="nao">Não</option><option value="sim">Sim</option></select></div>
+      </div>
+      <!-- campos espelho para compatibilidade -->
+      <input type="hidden" id="custo-b" value="0">
+      <input type="hidden" id="ipi-p" value="0">
+      <input type="hidden" id="st-v" value="0">
+      <input type="hidden" id="tem-st" value="nao">
     </div>
 
     <div id="cmv-box" class="cmv-box" style="display:none">
@@ -335,6 +397,123 @@ header h1{font-size:14px;font-weight:700;flex:1}
 </div>
 </div>
 
+<!-- ═══════════════════ ORÇAMENTO ═══════════════════ -->
+<div id="painel-orcamento" class="orc-layout" style="display:none">
+  <!-- Coluna esquerda -->
+  <div class="orc-left">
+    <div class="sec">Empresa (Fava Ecom)</div>
+    <div style="font-size:11px;color:#6b7280;margin-bottom:8px;line-height:1.6">
+      <strong>FV COMERCIO E SERVICOS LTDA</strong><br>
+      CNPJ: 48.328.969/0001-12 | PR<br>
+      Lucro Real
+    </div>
+
+    <div class="sec">Dados do cliente</div>
+    <div class="field"><label>Razão Social / Nome</label>
+      <input type="text" id="orc-nome" placeholder="Nome do cliente">
+    </div>
+    <div class="row2">
+      <div class="field"><label>CNPJ/CPF</label>
+        <input type="text" id="orc-doc" placeholder="000.000.000-00">
+      </div>
+      <div class="field"><label>UF Destino</label>
+        <select id="orc-uf" onchange="calcOrc()">
+          <option value="PR">PR — Paraná</option>
+          <option value="SP">SP — São Paulo</option>
+          <option value="RJ">RJ — Rio de Janeiro</option>
+          <option value="MG">MG — Minas Gerais</option>
+          <option value="SC">SC — Santa Catarina</option>
+          <option value="RS">RS — Rio Grande do Sul</option>
+          <option value="ES">ES — Espírito Santo</option>
+          <option value="GO">GO — Goiás</option>
+          <option value="DF">DF — Distrito Federal</option>
+          <option value="MT">MT — Mato Grosso</option>
+          <option value="MS">MS — Mato Grosso do Sul</option>
+          <option value="BA">BA — Bahia</option>
+          <option value="PE">PE — Pernambuco</option>
+          <option value="CE">CE — Ceará</option>
+          <option value="RN">RN — Rio Grande do Norte</option>
+          <option value="PB">PB — Paraíba</option>
+          <option value="AL">AL — Alagoas</option>
+          <option value="SE">SE — Sergipe</option>
+          <option value="MA">MA — Maranhão</option>
+          <option value="PI">PI — Piauí</option>
+          <option value="PA">PA — Pará</option>
+          <option value="AM">AM — Amazonas</option>
+          <option value="TO">TO — Tocantins</option>
+          <option value="AC">AC — Acre</option>
+          <option value="RO">RO — Rondônia</option>
+          <option value="RR">RR — Roraima</option>
+          <option value="AP">AP — Amapá</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Tipo</label>
+        <select id="orc-tipo" onchange="calcOrc()">
+          <option value="PF">PF — Pessoa Física</option>
+          <option value="PJ">PJ — Pessoa Jurídica</option>
+        </select>
+      </div>
+      <div class="field"><label>Inscrição Estadual</label>
+        <select id="orc-ie" onchange="calcOrc()">
+          <option value="nao">Não possui</option>
+          <option value="sim">Possui IE</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Info fiscal calculada -->
+    <div id="orc-fiscal-box" class="cliente-box">
+      <div class="ct">Parâmetros fiscais calculados</div>
+      <div id="orc-fiscal-info" style="font-size:11px;line-height:1.8"></div>
+    </div>
+
+    <div class="sec">Parâmetros de preço</div>
+    <div class="field"><label>Margem padrão (%)</label>
+      <input type="number" id="orc-mc" value="30" min="1" max="80" step="1" oninput="calcOrc()">
+    </div>
+
+    <div class="sec">Frete e taxas</div>
+    <div class="row2">
+      <div class="field"><label>Frete (R$)</label>
+        <input type="number" id="orc-frete" value="0" step="0.01" min="0" oninput="calcOrc()">
+      </div>
+      <div class="field"><label>Outras Taxas (R$)</label>
+        <input type="number" id="orc-taxas" value="0" step="0.01" min="0" oninput="calcOrc()">
+      </div>
+    </div>
+
+    <div class="sec">Dados do orçamento</div>
+    <div class="field"><label>Nº Orçamento</label>
+      <input type="text" id="orc-num" placeholder="Ex: 001/2025">
+    </div>
+    <div class="row2">
+      <div class="field"><label>Condição de Pgto</label>
+        <input type="text" id="orc-pgto" value="À vista">
+      </div>
+      <div class="field"><label>Validade</label>
+        <input type="text" id="orc-validade" value="5 dias">
+      </div>
+    </div>
+    <div class="field"><label>Observações</label>
+      <textarea id="orc-obs" rows="3" style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:6px 9px;font-size:12px;resize:vertical" placeholder="Condições, prazo de entrega..."></textarea>
+    </div>
+
+    <button class="btn btn-blue" onclick="calcOrc()" style="margin-top:4px">Calcular</button>
+    <button id="btn-print" class="btn btn-out" onclick="window.print()" style="margin-top:4px">🖨️ Imprimir</button>
+    <button id="btn-export-orc" class="btn btn-out" onclick="exportarOrc()" style="margin-top:4px">📥 Exportar CSV</button>
+    <button class="btn btn-out" onclick="limparOrc()" style="margin-top:4px">Limpar</button>
+  </div>
+
+  <!-- Coluna direita — tabela + resumo -->
+  <div id="orc-right" style="overflow-y:auto;padding:13px">
+    <div id="orc-content">
+      <div class="loading">📄<br><br>Preencha os dados do cliente e adicione os itens</div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ══════════════════════════════════════════════════════════════════════
@@ -467,9 +646,14 @@ window.onload=()=>{
 // TABS
 // ══════════════════════════════════════════════════════════════════════
 function switchTab(t){
-  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('ativo',i===(t==='unitario'?0:1)));
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('ativo',
+    (t==='unitario'&&i===0)||(t==='massa'&&i===1)||(t==='orcamento'&&i===2)));
   document.getElementById('painel-unitario').style.display=t==='unitario'?'':'none';
   document.getElementById('painel-massa').style.display=t==='massa'?'':'none';
+  // Orçamento usa layout próprio (fora do .layout principal)
+  const lo=document.querySelector('.layout');
+  if(lo) lo.style.display=t==='orcamento'?'none':'grid';
+  document.getElementById('painel-orcamento').style.display=t==='orcamento'?'grid':'none';
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -576,9 +760,21 @@ async function processarBling(p){
   }catch(e){}
   // precoCusto = custo de compra (NF); fallback para custoMedio; prod.preco é preço de VENDA (errado para CMV)
   const custoBling = parseFloat(prod.precoCusto||prod.custoMedio||prod.preco||0);
-  prodAtual={id:prod.id,nome:prod.nome||'',codigo:prod.codigo||'',custo:custoBling,peso:parseFloat(prod.pesoBruto||prod.peso||.5),l:parseFloat(prod.largura||0),a:parseFloat(prod.altura||0),p:parseFloat(prod.profundidade||0),estoque:est,ipi:parseFloat(prod.ipi||0)};
-  document.getElementById('modo-custo').value='bling';
-  atualizarModoCusto();
+  // Debug: log campos do produto para identificar nomes reais das medidas
+  console.log('BLING PRODUTO:', JSON.stringify({
+    id:prod.id, codigo:prod.codigo, nome:prod.nome,
+    precoCusto:prod.precoCusto, custoMedio:prod.custoMedio,
+    pesoBruto:prod.pesoBruto, peso:prod.peso,
+    largura:prod.largura, altura:prod.altura, profundidade:prod.profundidade,
+    // campos alternativos que o Bling v3 pode usar
+    pesoLiq:prod.pesoLiquido, dimL:prod.dimensoes?.largura, dimA:prod.dimensoes?.altura, dimP:prod.dimensoes?.profundidade,
+    medidas:prod.medidas
+  }));
+  const dimL = parseFloat(prod.largura || prod.dimensoes?.largura || prod.medidas?.largura || 0);
+  const dimA = parseFloat(prod.altura  || prod.dimensoes?.altura  || prod.medidas?.altura  || 0);
+  const dimP = parseFloat(prod.profundidade || prod.dimensoes?.profundidade || prod.medidas?.profundidade || 0);
+  prodAtual={id:prod.id,nome:prod.nome||'',codigo:prod.codigo||'',custo:custoBling,peso:parseFloat(prod.pesoBruto||prod.peso||.5),l:dimL,a:dimA,p:dimP,estoque:est,ipi:parseFloat(prod.ipi||0)};
+  setModo('bling');
   document.getElementById('custo-b').value=prodAtual.custo.toFixed(2);
   document.getElementById('ipi-p').value=prodAtual.ipi||0;
   document.getElementById('peso-r').value=prodAtual.peso||.5;
@@ -699,50 +895,89 @@ function atualizarTaxas(){
 
 
 // ══════════════════════════════════════════════════════════════════════
-function atualizarModoCusto(){
-  const modo=document.getElementById('modo-custo').value;
-  const lbl=document.getElementById('lbl-custo-b');
-  if(lbl){
-    lbl.textContent=modo==='bling'
-      ?'Custo Bling bruto (R$) — com IPI e ST embutidos'
-      :'Custo líquido NF (R$) — informe o valor sem IPI';
-  }
+// MODO BLING / MANUAL
+// ══════════════════════════════════════════════════════════════════════
+let modoCusto = 'bling'; // 'bling' ou 'manual'
+
+function setModo(m){
+  modoCusto = m;
+  document.getElementById('painel-modo-bling').style.display  = m==='bling'  ? '' : 'none';
+  document.getElementById('painel-modo-manual').style.display = m==='manual' ? '' : 'none';
+  // Highlight dos botões
+  const estiloAtivo   = 'display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:700;padding:7px 10px;border:2px solid #1F3864;border-radius:6px;background:#eff6ff;color:#1F3864';
+  const estiloInativo = 'display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:700;padding:7px 10px;border:2px solid #d1d5db;border-radius:6px;background:#fff;color:#6b7280';
+  document.getElementById('btn-modo-bling').style.cssText  = m==='bling'  ? estiloAtivo : estiloInativo;
+  document.getElementById('btn-modo-manual').style.cssText = m==='manual' ? estiloAtivo : estiloInativo;
+  recalcCMV();
 }
 
+function atualizarModoCusto(){ /* mantida por compatibilidade */ }
+
 function recalcCMV(){
-  const cb=parseFloat(document.getElementById('custo-b').value)||0;
-  const ipi=(parseFloat(document.getElementById('ipi-p').value)||0)/100;
-  const stV=parseFloat(document.getElementById('st-v').value)||0;
-  const temST=document.getElementById('tem-st').value==='sim';
-  const pInt=(parseFloat(document.getElementById('pct-int').value)||70)/100;
-  const icmsM=(parseFloat(document.getElementById('icms-m').value)||12)/100;
-  const modo=document.getElementById('modo-custo')?.value||'bling';
+  const pInt  = (parseFloat(document.getElementById('pct-int').value)||70)/100;
+  const icmsM = (parseFloat(document.getElementById('icms-m').value)||12)/100;
 
-  if(cb<=0){document.getElementById('cmv-box').style.display='none';cmvBr=0;cmvPr=0;return;}
+  let custoNF=0, ipiR=0, stR=0, freteCompra=0, temST=false;
 
-  let custoNF;
-  if(modo==='manual'){
-    // Novo produto: custo informado é o valor LÍQUIDO da NF (base para créditos)
-    // O IPI é custo adicional mas a base de crédito PIS/COFINS/ICMS é o valor sem IPI
-    custoNF = cb;
+  if(modoCusto === 'manual'){
+    // ── MODO MANUAL ─────────────────────────────────────────────────
+    // Usuário informa: custo NF líquido + IPI% + ST R$ + frete de compra
+    custoNF      = parseFloat(document.getElementById('custo-manual').value)||0;
+    const ipiPct = (parseFloat(document.getElementById('ipi-manual').value)||0)/100;
+    stR          = parseFloat(document.getElementById('st-manual').value)||0;
+    freteCompra  = parseFloat(document.getElementById('frete-compra').value)||0;
+    temST        = document.getElementById('tem-st-manual').value==='sim';
+    ipiR         = custoNF * ipiPct;
+    const icmsEnt= (parseFloat(document.getElementById('icms-entrada').value)||12)/100;
+
+    if(custoNF<=0){document.getElementById('cmv-box').style.display='none';cmvBr=0;cmvPr=0;return;}
+
+    // Custo total de aquisição
+    const custoTotal = custoNF + ipiR + stR + freteCompra;
+
+    // Créditos fiscais (Lucro Real — base é o custo NF líquido + frete)
+    const baseCredito    = custoNF + freteCompra;
+    const credPis        = baseCredito * PIS;
+    const credCofins     = baseCredito * COFINS;
+    const credIcmsBrMan  = temST ? 0 : custoNF * pInt * icmsEnt;
+    const credIcmsPrMan  = temST ? 0 : custoNF * ICMS_PR;
+
+    cmvBr = Math.max(custoTotal - credIcmsBrMan - credPis - credCofins, custoTotal * 0.35);
+    cmvPr = Math.max(custoTotal - credIcmsPrMan - credPis - credCofins, custoTotal * 0.35);
+
+    document.getElementById('cmv-box').style.display='block';
+    document.getElementById('cmv-br-s').textContent='R$ '+fmt(cmvBr);
+    document.getElementById('cmv-pr-s').textContent='R$ '+fmt(cmvPr);
+    document.getElementById('cmv-det').innerHTML=
+      `Custo NF: R$ ${fmt(custoNF)} | IPI: R$ ${fmt(ipiR)} | ST: R$ ${fmt(stR)} | Frete compra: R$ ${fmt(freteCompra)}`+
+      `<br>Custo total: R$ ${fmt(custoTotal)} | Créd.ICMS BR: R$ ${fmt(credIcmsBrMan)} | Créd.ICMS PR: R$ ${fmt(credIcmsPrMan)} | Créd.PIS+COF: R$ ${fmt(credPis+credCofins)}`+
+      (temST?' | ⚠️ ST: sem créd. ICMS':'');
+
   } else {
-    // Modo Bling: custo bruto já TEM IPI embutido no valor → extrai base NF
-    custoNF=(cb-stV)/(1+ipi);
+    // ── MODO BLING ──────────────────────────────────────────────────
+    // Custo bruto do Bling já tem IPI embutido → extrai base NF
+    const cb  = parseFloat(document.getElementById('custo-b').value)||0;
+    const ipi = (parseFloat(document.getElementById('ipi-p').value)||0)/100;
+    stR        = parseFloat(document.getElementById('st-v').value)||0;
+    temST      = document.getElementById('tem-st').value==='sim';
+
+    if(cb<=0){document.getElementById('cmv-box').style.display='none';cmvBr=0;cmvPr=0;return;}
+
+    custoNF = (cb - stR) / (1 + ipi);
+    const credPC      = custoNF * (PIS + COFINS);
+    const credIcmsBr  = temST ? 0 : custoNF * pInt * icmsM;
+    const credIcmsPR  = temST ? 0 : custoNF * ICMS_PR;
+    cmvBr = Math.max(custoNF - credIcmsBr - credPC, custoNF * 0.35);
+    cmvPr = Math.max(custoNF - credIcmsPR - credPC, custoNF * 0.35);
+
+    document.getElementById('cmv-box').style.display='block';
+    document.getElementById('cmv-br-s').textContent='R$ '+fmt(cmvBr);
+    document.getElementById('cmv-pr-s').textContent='R$ '+fmt(cmvPr);
+    document.getElementById('cmv-det').innerHTML=
+      `Custo NF (bruto÷(1+IPI)): R$ ${fmt(custoNF)} | Créd.ICMS BR: R$ ${fmt(credIcmsBr)} | Créd.ICMS PR: R$ ${fmt(credIcmsPR)} | Créd.PIS+COF: R$ ${fmt(credPC)}`+
+      (temST?' | ⚠️ ST: sem créd. ICMS':'');
   }
 
-  const credPC=custoNF*(PIS+COFINS);
-  const credIcmsBr=temST?0:custoNF*pInt*icmsM;
-  cmvBr=Math.max(custoNF-credIcmsBr-credPC, custoNF*.35);
-  const credIcmsPR=temST?0:custoNF*ICMS_PR;
-  cmvPr=Math.max(custoNF-credIcmsPR-credPC, custoNF*.35);
-
-  document.getElementById('cmv-box').style.display='block';
-  document.getElementById('cmv-br-s').textContent='R$ '+fmt(cmvBr);
-  document.getElementById('cmv-pr-s').textContent='R$ '+fmt(cmvPr);
-  const modoLabel=modo==='manual'?'(custo líq. NF)':'(bruto÷(1+IPI))';
-  document.getElementById('cmv-det').innerHTML=
-    `Base NF ${modoLabel}: R$ ${fmt(custoNF)} | Créd.ICMS BR: R$ ${fmt(credIcmsBr)} | Créd.ICMS PR: R$ ${fmt(credIcmsPR)} | Créd.PIS+COF: R$ ${fmt(credPC)}`+
-    (temST?' | ⚠️ ST: sem créd. ICMS':'');
   calcAll();
 }
 
@@ -767,8 +1002,16 @@ function calcCenario(k, cmvBr, cmvPr, pesoKg){
   // Frete rápido e taxa fixa: APENAS para preço < R$79
   // Frete grátis e Premium: APENAS para preço >= R$79
   // Cálculo iterativo: estima preço, calcula frete real, recalcula
-  const denom = Math.max(1-taxa-PIS-COFINS-m, .05);
-  const denomMin = Math.max(1-taxa-PIS-COFINS, .05);
+  // DIFAL efetivo: média ponderada pelas % vendas fora PR e para PF
+  const pIntC  = (parseFloat(document.getElementById('pct-int').value)||70)/100;
+  const pPfC   = (parseFloat(document.getElementById('pct-pf').value)||80)/100;
+  const difalM = (parseFloat(document.getElementById('difal-m').value)||8.5)/100;
+  // Para Shopee e ML: DIFAL impacta; para Balcão e Site próprio: sem DIFAL
+  const comDifal = k.startsWith('ml') || k==='shp';
+  const difalEfetivo = comDifal ? difalM * pIntC * pPfC : 0;
+
+  const denom = Math.max(1-taxa-PIS-COFINS-difalEfetivo-m, .05);
+  const denomMin = Math.max(1-taxa-PIS-COFINS-difalEfetivo, .05);
 
   // Estimativa inicial sem frete
   let preco_est = custo / denom;
@@ -805,7 +1048,8 @@ function calcCenario(k, cmvBr, cmvPr, pesoKg){
 
   const precoMin = (custo + frete_custo) / denomMin;
   const pis_r=preco*PIS, cof_r=preco*COFINS, tx_r=preco*taxa;
-  const lucro=preco-custo-pis_r-cof_r-tx_r-frete_custo;
+  const difal_tmp=preco*difalEfetivo;
+  const lucro=preco-custo-pis_r-cof_r-tx_r-frete_custo-difal_tmp;
   const mgliq=preco>0?lucro/preco:0;
   const mc=preco>0?lucro/preco:0; // MC% = Lucro/Preço
 
@@ -818,7 +1062,8 @@ function calcCenario(k, cmvBr, cmvPr, pesoKg){
   if(k==='mlcl_fg'&&preco<FRETE_GRATIS_LIMITE){aplicavel=false;obs='Frete grátis exige preço ≥ R$79';}
   if(k==='mlpr'&&preco<FRETE_GRATIS_LIMITE){aplicavel=false;obs='ML Premium exige preço ≥ R$79';}
 
-  return{preco,precoMin,pis_r,cof_r,tx_r,frete_custo,lucro,mgliq,custo,taxa,aplicavel,obs};
+  const difal_r=preco*difalEfetivo;
+  return{preco,precoMin,pis_r,cof_r,tx_r,frete_custo,lucro,mgliq,custo,taxa,aplicavel,obs,difal_r,difalEfetivo};
 }
 
 function calcAll(){
@@ -876,6 +1121,7 @@ function calcAll(){
           <div class="dr"><span>Taxa canal (${(r.taxa*100).toFixed(1)}%)</span><strong>R$ ${fmt(r.tx_r)}</strong></div>
           <div class="dr"><span>PIS+COFINS</span><strong>R$ ${fmt(r.pis_r+r.cof_r)}</strong></div>
           <div class="dr"><span>Frete</span><strong>R$ ${fmt(r.frete_custo)}</strong></div>
+          ${r.difal_r>0?`<div class="dr"><span>DIFAL (${(r.difalEfetivo*100).toFixed(1)}%)</span><strong>R$ ${fmt(r.difal_r)}</strong></div>`:''}
         </div>
         <div class="acoes">
           <button class="btn-sm" onclick="copiar(${r.preco.toFixed(2)})">Copiar</button>
@@ -1167,7 +1413,7 @@ function alerta(id,msg,tipo){const el=document.getElementById(id);if(!msg){el.in
 function fmt(v){return(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function copiar(v){navigator.clipboard.writeText(v.toFixed(2)).then(()=>alert('Copiado: R$ '+fmt(v)));}
 function limpar(){
-  ['sku','custo-b','ipi-p','st-v','dim-l','dim-a','dim-p','mlb-id'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['sku','custo-b','ipi-p','st-v','dim-l','dim-a','dim-p','mlb-id','custo-manual','ipi-manual','st-manual','frete-compra'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('ipi-p').value='0';document.getElementById('st-v').value='0';
   document.getElementById('tem-st').value='nao';document.getElementById('peso-r').value='0.5';
   document.getElementById('estoque').value='';
@@ -1179,6 +1425,346 @@ function limpar(){
   cmvBr=0;cmvPr=0;pesoCobrado=0;freteEstimado=0;prodAtual=null;taxaMLCustom=null;
   document.getElementById('right').innerHTML='<div class="loading">🏷️<br><br>Busque um produto ou informe o custo</div>';
 }
+// ══════════════════════════════════════════════════════════════════════
+// ORÇAMENTO
+// ══════════════════════════════════════════════════════════════════════
+const ORC_ROWS = 15;
+let orcItems = Array.from({length:ORC_ROWS}, (_,i)=>({idx:i+1,sku:'',nome:'',cmvUnit:0,qtd:1,mc:0.30,manual:false}));
+
+// Tabela ICMS por UF (origem PR)
+const ICMS_PR_DEST = {
+  PR:{icms_int:0.195,inter:0.195,difal:0},
+  SP:{icms_int:0.18,inter:0.12,difal:0.06},
+  RJ:{icms_int:0.20,inter:0.12,difal:0.08},
+  MG:{icms_int:0.18,inter:0.12,difal:0.06},
+  SC:{icms_int:0.17,inter:0.12,difal:0.05},
+  RS:{icms_int:0.17,inter:0.12,difal:0.05},
+  ES:{icms_int:0.17,inter:0.07,difal:0.10},
+  GO:{icms_int:0.19,inter:0.07,difal:0.12},
+  DF:{icms_int:0.18,inter:0.07,difal:0.11},
+  MT:{icms_int:0.19,inter:0.07,difal:0.12},
+  MS:{icms_int:0.17,inter:0.07,difal:0.10},
+  BA:{icms_int:0.205,inter:0.07,difal:0.135},
+  PE:{icms_int:0.205,inter:0.07,difal:0.135},
+  CE:{icms_int:0.20,inter:0.07,difal:0.13},
+  RN:{icms_int:0.18,inter:0.07,difal:0.11},
+  PB:{icms_int:0.18,inter:0.07,difal:0.11},
+  AL:{icms_int:0.19,inter:0.07,difal:0.12},
+  SE:{icms_int:0.19,inter:0.07,difal:0.12},
+  MA:{icms_int:0.18,inter:0.07,difal:0.11},
+  PI:{icms_int:0.18,inter:0.07,difal:0.11},
+  PA:{icms_int:0.19,inter:0.07,difal:0.12},
+  AM:{icms_int:0.20,inter:0.07,difal:0.13},
+  TO:{icms_int:0.18,inter:0.07,difal:0.11},
+  AC:{icms_int:0.17,inter:0.07,difal:0.10},
+  RO:{icms_int:0.175,inter:0.07,difal:0.105},
+  RR:{icms_int:0.17,inter:0.07,difal:0.10},
+  AP:{icms_int:0.18,inter:0.07,difal:0.11},
+};
+
+function getParamsFiscaisOrc(){
+  const uf   = document.getElementById('orc-uf').value   || 'PR';
+  const tipo = document.getElementById('orc-tipo').value  || 'PF';
+  const ie   = document.getElementById('orc-ie').value   === 'sim';
+  const dest = ICMS_PR_DEST[uf] || {icms_int:0.18,inter:0.12,difal:0.06};
+  const icmsSaida = uf==='PR' ? 0.195 : dest.inter;
+  // DIFAL: PF sempre paga; PJ só paga se não tem IE
+  const geraDir = tipo==='PF' || (tipo==='PJ' && !ie);
+  const difal   = (uf==='PR') ? 0 : (geraDir ? dest.difal : 0);
+  return {uf, tipo, ie, icmsSaida, difal, geraDifal:geraDir&&uf!=='PR'};
+}
+
+function calcItemOrc(cmvUnit, mc, icmsSaida, difal){
+  if(cmvUnit<=0) return null;
+  const denom = Math.max(1 - PIS - COFINS - icmsSaida - difal - mc, 0.05);
+  const preco  = cmvUnit / denom;
+  const pisR   = preco * PIS;
+  const cofR   = preco * COFINS;
+  const icmsR  = preco * icmsSaida;
+  const difalR = preco * difal;
+  const lucro  = preco - cmvUnit - pisR - cofR - icmsR - difalR;
+  const mgliq  = preco>0 ? lucro/preco : 0;
+  return {preco, pisR, cofR, icmsR, difalR, lucro, mgliq};
+}
+
+async function buscarSkuOrc(idx){
+  const sku = document.getElementById(`orc-sku-${idx}`).value.trim();
+  if(!sku) return;
+  const btn = document.getElementById(`orc-btn-${idx}`);
+  btn.textContent='...'; btn.disabled=true;
+  try{
+    const r=await fetch(`/api/bling/produtos?pagina=1&limite=5&criterio=1&tipo=T&codigo=${encodeURIComponent(sku)}`,
+      {headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});
+    if(!r.ok){alert(`Bling erro ${r.status}`);return;}
+    const d=await r.json();
+    let lista=d.data||[];
+    if(!lista.length){alert('Produto não encontrado');return;}
+    const p=lista[0];
+    // Busca detalhe para pegar precoCusto
+    let prod=p;
+    try{
+      const r2=await fetch(`/api/bling/produtos/${p.id}`,{headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});
+      if(r2.ok){const d2=await r2.json();prod=d2.data||p;}
+    }catch(e){}
+    const custo=parseFloat(prod.precoCusto||prod.custoMedio||0);
+    // Calcula CMV PR a partir do precoCusto
+    const ipi=(parseFloat(prod.ipi)||0)/100;
+    const custoNF=custo/(1+ipi);
+    const credPis=custoNF*PIS, credCofins=custoNF*COFINS, credIcms=custoNF*ICMS_PR;
+    const cmvPrCalc=Math.max(custoNF-credIcms-credPis-credCofins, custoNF*0.35);
+    orcItems[idx-1]={...orcItems[idx-1], sku:prod.codigo||sku, nome:prod.nome||'', cmvUnit:cmvPrCalc, manual:false};
+    document.getElementById(`orc-nome-${idx}`).textContent=prod.nome||'';
+    document.getElementById(`orc-cmv-${idx}`).value=cmvPrCalc.toFixed(4);
+    calcOrc();
+  }catch(e){alert(`Erro: ${e.message}`);}
+  finally{btn.textContent='Buscar';btn.disabled=false;}
+}
+
+function calcOrc(){
+  const {icmsSaida, difal, geraDifal, uf, tipo, ie} = getParamsFiscaisOrc();
+  const mcPad = (parseFloat(document.getElementById('orc-mc').value)||30)/100;
+  const frete = parseFloat(document.getElementById('orc-frete').value)||0;
+  const taxas = parseFloat(document.getElementById('orc-taxas').value)||0;
+
+  // Atualiza info fiscal
+  const dest = ICMS_PR_DEST[uf]||{icms_int:0.18,inter:0.12,difal:0.06};
+  document.getElementById('orc-fiscal-info').innerHTML=
+    `<span class="orc-icms-badge">ICMS saída: ${(icmsSaida*100).toFixed(1)}%</span> `+
+    `<span class="orc-difal-badge">DIFAL: ${(difal*100).toFixed(1)}%</span><br>`+
+    `Tipo: <strong>${tipo}</strong> | IE: <strong>${ie?'Sim':'Não'}</strong> | `+
+    `DIFAL? <strong>${geraDifal?'✅ Sim':'❌ Não'}</strong><br>`+
+    (uf!=='PR'?`ICMS inter: ${(dest.inter*100).toFixed(0)}% | ICMS destino: ${(dest.icms_int*100).toFixed(1)}%`:'Operação interna PR — ICMS 19,5%');
+
+  // Atualiza CMV de cada item a partir do input
+  orcItems.forEach((it,i)=>{
+    const inputCmv=document.getElementById(`orc-cmv-${i+1}`);
+    if(inputCmv) orcItems[i].cmvUnit=parseFloat(inputCmv.value)||0;
+    const inputQtd=document.getElementById(`orc-qtd-${i+1}`);
+    if(inputQtd) orcItems[i].qtd=parseFloat(inputQtd.value)||1;
+    const inputMc=document.getElementById(`orc-mc-${i+1}`);
+    if(inputMc) orcItems[i].mc=(parseFloat(inputMc.value)||30)/100;
+    else orcItems[i].mc=mcPad;
+  });
+
+  // Calcula todos os itens
+  let subTotal=0, totPis=0, totCofins=0, totIcms=0, totDifal=0;
+  const resultados=orcItems.map(it=>{
+    if(it.cmvUnit<=0||it.qtd<=0) return null;
+    const r=calcItemOrc(it.cmvUnit, it.mc, icmsSaida, difal);
+    if(!r) return null;
+    const totalItem=r.preco*it.qtd;
+    subTotal+=totalItem;
+    totPis+=r.pisR*it.qtd;
+    totCofins+=r.cofR*it.qtd;
+    totIcms+=r.icmsR*it.qtd;
+    totDifal+=r.difalR*it.qtd;
+    return {...r, totalItem};
+  });
+
+  const totalOrc=subTotal+frete+taxas;
+  const totImpostos=totPis+totCofins+totIcms+totDifal;
+  const cmvTotal=orcItems.reduce((s,it)=>s+(it.cmvUnit>0?it.cmvUnit*it.qtd:0),0);
+  const lucroTotal=totalOrc-cmvTotal-totImpostos-frete;
+  const mgLiqTotal=totalOrc>0?lucroTotal/totalOrc:0;
+
+  // Atualiza células da tabela
+  orcItems.forEach((it,i)=>{
+    const r=resultados[i];
+    const setEl=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+    if(r){
+      setEl(`orc-precounit-${i+1}`, 'R$ '+fmt(r.preco));
+      setEl(`orc-cmvtot-${i+1}`,   'R$ '+fmt(it.cmvUnit*it.qtd));
+      setEl(`orc-pis-${i+1}`,      'R$ '+fmt(r.pisR*it.qtd));
+      setEl(`orc-cofins-${i+1}`,   'R$ '+fmt(r.cofR*it.qtd));
+      setEl(`orc-icms-${i+1}`,     'R$ '+fmt(r.icmsR*it.qtd));
+      setEl(`orc-difal-${i+1}`,    difal>0?'R$ '+fmt(r.difalR*it.qtd):'—');
+      setEl(`orc-total-${i+1}`,    'R$ '+fmt(r.totalItem));
+      setEl(`orc-mg-${i+1}`,       (r.mgliq*100).toFixed(1)+'%');
+      const el=document.getElementById(`orc-mg-${i+1}`);
+      if(el) el.style.color=r.mgliq>=0.20?'#16a34a':r.mgliq>=0.10?'#d97706':'#dc2626';
+    } else {
+      ['precounit','cmvtot','pis','cofins','icms','difal','total','mg'].forEach(f=>{
+        const el=document.getElementById(`orc-${f}-${i+1}`);if(el)el.textContent='—';
+      });
+    }
+  });
+
+  // Resumo
+  const setR=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  setR('orc-r-subtotal',  'R$ '+fmt(subTotal));
+  setR('orc-r-frete',     'R$ '+fmt(frete));
+  setR('orc-r-taxas',     'R$ '+fmt(taxas));
+  setR('orc-r-total',     'R$ '+fmt(totalOrc));
+  setR('orc-r-pis',       'R$ '+fmt(totPis));
+  setR('orc-r-cofins',    'R$ '+fmt(totCofins));
+  setR('orc-r-icms',      'R$ '+fmt(totIcms));
+  setR('orc-r-difal',     difal>0?'R$ '+fmt(totDifal):'—');
+  setR('orc-r-impostos',  'R$ '+fmt(totImpostos));
+  setR('orc-r-cmv',       'R$ '+fmt(cmvTotal));
+  setR('orc-r-lucro',     'R$ '+fmt(lucroTotal));
+  const mgEl=document.getElementById('orc-r-mgliq');
+  if(mgEl){mgEl.textContent=(mgLiqTotal*100).toFixed(1)+'%';mgEl.style.color=mgLiqTotal>=.20?'#16a34a':mgLiqTotal>=.10?'#d97706':'#dc2626';}
+}
+
+function renderOrcTabela(){
+  const wrap=document.getElementById('orc-content');
+  const {icmsSaida,difal}=getParamsFiscaisOrc();
+  const uf=document.getElementById('orc-uf').value;
+  wrap.innerHTML=`
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <div style="font-size:13px;font-weight:700;color:#1F3864">
+      📄 Orçamento ${document.getElementById('orc-num').value||''}
+      ${document.getElementById('orc-nome').value?'— '+document.getElementById('orc-nome').value:''}
+    </div>
+    <div style="font-size:11px;color:#6b7280">${new Date().toLocaleDateString('pt-BR')}</div>
+  </div>
+
+  <div style="overflow-x:auto">
+  <table class="orc-table">
+    <thead><tr>
+      <th>#</th>
+      <th style="min-width:130px">SKU</th>
+      <th style="min-width:180px">Produto</th>
+      <th>QTD</th>
+      <th>CMV Unit (R$)</th>
+      <th>MC%</th>
+      <th class="num">CMV Total</th>
+      <th class="num">PIS 1,65%</th>
+      <th class="num">COFINS 7,6%</th>
+      <th class="num">ICMS ${(icmsSaida*100).toFixed(1)}%</th>
+      <th class="num">DIFAL ${difal>0?(difal*100).toFixed(1)+'%':'—'}</th>
+      <th class="num" style="background:#1a5276">Preço Unit.</th>
+      <th class="num" style="background:#1a5276">Total</th>
+      <th class="num">MC%</th>
+    </tr></thead>
+    <tbody>
+      ${orcItems.map((it,i)=>`
+        <tr>
+          <td style="color:#9ca3af;font-size:10px">${i+1}</td>
+          <td>
+            <div class="orc-input-sku">
+              <input type="text" id="orc-sku-${i+1}" value="${it.sku}"
+                placeholder="SKU" onkeydown="if(event.key==='Enter')buscarSkuOrc(${i+1})">
+              <button id="orc-btn-${i+1}" onclick="buscarSkuOrc(${i+1})">Buscar</button>
+            </div>
+          </td>
+          <td><span id="orc-nome-${i+1}" style="font-size:11px;color:#374151">${it.nome||'—'}</span></td>
+          <td><input type="number" id="orc-qtd-${i+1}" value="${it.qtd}" min="0.01" step="1" style="width:55px" oninput="calcOrc()"></td>
+          <td><input type="number" id="orc-cmv-${i+1}" value="${it.cmvUnit>0?it.cmvUnit.toFixed(4):''}" min="0" step="0.0001" placeholder="0,0000" style="width:90px" oninput="calcOrc()"></td>
+          <td><input type="number" id="orc-mc-${i+1}" value="${Math.round(it.mc*100)}" min="1" max="80" step="1" style="width:50px" oninput="calcOrc()"></td>
+          <td class="num" id="orc-cmvtot-${i+1}" style="color:#6b7280">—</td>
+          <td class="num" id="orc-pis-${i+1}" style="color:#6b7280">—</td>
+          <td class="num" id="orc-cofins-${i+1}" style="color:#6b7280">—</td>
+          <td class="num" id="orc-icms-${i+1}" style="color:#6b7280">—</td>
+          <td class="num" id="orc-difal-${i+1}" style="color:${difal>0?'#d97706':'#9ca3af'}">—</td>
+          <td class="num" id="orc-precounit-${i+1}" style="font-weight:700;color:#1F3864">—</td>
+          <td class="num" id="orc-total-${i+1}" style="font-weight:700;color:#1F3864">—</td>
+          <td class="num" id="orc-mg-${i+1}" style="font-weight:700">—</td>
+        </tr>`).join('')}
+    </tbody>
+    <tfoot>
+      <tr style="background:#f8fafc;font-weight:700;border-top:2px solid #e5e7eb">
+        <td colspan="6" style="padding:6px 8px;font-size:11px;color:#374151">SUBTOTAL</td>
+        <td class="num" id="orc-sub-cmv" colspan="5" style="padding:6px 8px;color:#6b7280"></td>
+        <td class="num" colspan="2" id="orc-r-subtotal" style="padding:6px 8px;color:#1F3864"></td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+  </div>
+
+  <!-- Resumo + Impostos -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+    <div class="orc-resumo">
+      <h3>💰 Resumo do orçamento</h3>
+      <div class="orc-row"><span>Subtotal Itens</span><strong id="orc-r-subtotal">—</strong></div>
+      <div class="orc-row"><span>(+) Frete</span><strong id="orc-r-frete">—</strong></div>
+      <div class="orc-row"><span>(+) Outras Taxas</span><strong id="orc-r-taxas">—</strong></div>
+      <div class="orc-row total"><span>TOTAL ORÇAMENTO</span><strong id="orc-r-total">—</strong></div>
+      <div style="margin-top:8px;padding-top:6px;border-top:1px dashed #e5e7eb">
+        <div class="orc-row"><span style="color:#6b7280">CMV Total</span><span id="orc-r-cmv" style="color:#6b7280">—</span></div>
+        <div class="orc-row"><span style="color:#6b7280">Lucro R$</span><span id="orc-r-lucro" style="color:#16a34a">—</span></div>
+        <div class="orc-row"><span style="color:#6b7280">Margem Líquida</span><span id="orc-r-mgliq" style="font-weight:700">—</span></div>
+      </div>
+    </div>
+    <div class="orc-resumo">
+      <h3>📊 Detalhamento impostos</h3>
+      <div class="orc-row"><span>PIS (1,65%)</span><strong id="orc-r-pis">—</strong></div>
+      <div class="orc-row"><span>COFINS (7,60%)</span><strong id="orc-r-cofins">—</strong></div>
+      <div class="orc-row"><span>ICMS (${(icmsSaida*100).toFixed(1)}%)</span><strong id="orc-r-icms">—</strong></div>
+      <div class="orc-row"><span>DIFAL ${difal>0?'('+( difal*100).toFixed(1)+'%)':''}</span><strong id="orc-r-difal" style="color:${difal>0?'#d97706':'#9ca3af'}">—</strong></div>
+      <div class="orc-row total"><span>Total Impostos</span><strong id="orc-r-impostos">—</strong></div>
+    </div>
+  </div>
+
+  ${document.getElementById('orc-obs').value?`<div style="margin-top:10px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:9px 11px;font-size:12px"><strong>Observações:</strong> ${document.getElementById('orc-obs').value}</div>`:''}
+  `;
+
+  // Re-attach event listener for obs
+  const obs=document.getElementById('orc-obs');
+  if(obs) obs.oninput=()=>calcOrc();
+
+  calcOrc();
+}
+
+// Render on tab switch
+const _origSwitchTab=switchTab;
+window._orcRendered=false;
+
+// Override calcOrc to render first if needed
+const _origCalcOrc=calcOrc;
+function calcOrc(){
+  if(!document.getElementById('orc-precounit-1')){renderOrcTabela();}
+  else _origCalcOrc();
+}
+
+// Watch for tab switch to orcamento
+(function(){
+  const origST=switchTab;
+  switchTab=function(t){
+    origST(t);
+    if(t==='orcamento' && !document.getElementById('orc-precounit-1')){
+      renderOrcTabela();
+    }
+  };
+})();
+
+function limparOrc(){
+  orcItems=Array.from({length:ORC_ROWS},(_,i)=>({idx:i+1,sku:'',nome:'',cmvUnit:0,qtd:1,mc:0.30,manual:false}));
+  ['orc-nome','orc-doc','orc-num','orc-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('orc-frete').value='0';
+  document.getElementById('orc-taxas').value='0';
+  document.getElementById('orc-mc').value='30';
+  renderOrcTabela();
+}
+
+function exportarOrc(){
+  const {icmsSaida,difal}=getParamsFiscaisOrc();
+  const mcPad=(parseFloat(document.getElementById('orc-mc').value)||30)/100;
+  const frete=parseFloat(document.getElementById('orc-frete').value)||0;
+  const taxas=parseFloat(document.getElementById('orc-taxas').value)||0;
+  let csv='Item;SKU;Produto;QTD;CMV Unit;MC%;Preco Unit;Total;PIS;COFINS;ICMS;DIFAL;Margem%
+';
+  orcItems.forEach((it,i)=>{
+    if(it.cmvUnit<=0) return;
+    const r=calcItemOrc(it.cmvUnit,it.mc,icmsSaida,difal);
+    if(!r) return;
+    csv+=`${i+1};"${it.sku}";"${it.nome}";${it.qtd};${it.cmvUnit.toFixed(4)};${Math.round(it.mc*100)}%;${r.preco.toFixed(2)};${(r.preco*it.qtd).toFixed(2)};${(r.pisR*it.qtd).toFixed(2)};${(r.cofR*it.qtd).toFixed(2)};${(r.icmsR*it.qtd).toFixed(2)};${(r.difalR*it.qtd).toFixed(2)};${(r.mgliq*100).toFixed(1)}%
+`;
+  });
+  const subtotal=orcItems.filter(it=>it.cmvUnit>0).reduce((s,it)=>{
+    const r=calcItemOrc(it.cmvUnit,it.mc,icmsSaida,difal);
+    return s+(r?r.preco*it.qtd:0);
+  },0);
+  csv+=`
+Frete;;;;;;${frete.toFixed(2)};
+Outras Taxas;;;;;;${taxas.toFixed(2)};
+TOTAL;;;;;;${(subtotal+frete+taxas).toFixed(2)};`;
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`orcamento_${document.getElementById('orc-num').value||Date.now()}.csv`;a.click();
+}
+
 </script>
 </body>
 </html>
