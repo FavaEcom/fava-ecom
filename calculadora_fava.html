@@ -625,7 +625,16 @@ header h1{font-size:14px;font-weight:700;flex:1}
       <div class="field"><label>Família / Categoria</label><input type="text" id="an-familia" placeholder="Ex: Peças para Betoneiras"></div>
     </div>
     <div class="field"><label>Fornecedor</label><input type="text" id="an-fornecedor"></div>
-    <div class="field"><label>Código fabricante</label><input type="text" id="an-codfab"></div>
+    <div class="field"><label>Código fabricante (ex: 29113357)</label><input type="text" id="an-codfab" placeholder="Ex: 29113357"></div>
+    <div class="row2">
+      <div class="field"><label>SKU Fava Ecom</label><input type="text" id="an-sku-fava" placeholder="Ex: 2843"></div>
+      <div class="field"><label>Posição no catálogo (N.X)</label><input type="text" id="an-pos-catalogo" placeholder="Ex: 15"></div>
+    </div>
+    <div class="field"><label>Quando a peça está desgastada causa...</label>
+      <textarea id="an-desgaste" rows="3" placeholder="Ex: Perda de força no levantamento&#10;Desalinhamento do carretel&#10;Desgaste acelerado do cabo de aço&#10;Ruídos e vibração"></textarea>
+    </div>
+    <div class="field"><label>Material / especificação técnica</label>
+      <input type="text" id="an-material" placeholder="Ex: Aço de alta resistência | Ø18x148,5mm com chaveta"></div>
     <div class="field"><label>Compatibilidade / Aplicações</label>
       <textarea id="an-compat" rows="3" placeholder="Compatível com betoneiras Menegotti 400L Prime..."></textarea>
     </div>
@@ -2278,16 +2287,17 @@ function importarTodosNF(itens){
 // GERADOR DE ANÚNCIOS (integrado)
 // ══════════════════════════════════════════════════════════════════════
 const AN_BLOCOS=[
-  {id:'titulo',    lb:'Títulos 60c/120c', on:true},
-  {id:'apresenta', lb:'Apresentação',     on:true},
-  {id:'curiosidade',lb:'Curiosidade téc.',on:true},
-  {id:'marca',     lb:'Sobre a marca',    on:true},
-  {id:'beneficios',lb:'Benefícios',       on:true},
-  {id:'ficha',     lb:'Ficha técnica',    on:true},
-  {id:'compat',    lb:'Compatibilidade',  on:true},
-  {id:'cuidados',  lb:'Cuidados / uso',   on:true},
-  {id:'inst',      lb:'Bloco Fava Ecom',  on:true},
-  {id:'hashtags',  lb:'Hashtags SEO',     on:true},
+  {id:'descricao',  lb:'Descrição completa',   on:true},
+  {id:'titulos_ml', lb:'3 Títulos ML (58-60c)', on:true},
+  {id:'titulos_shp',lb:'3 Títulos Shopee',      on:true},
+  {id:'titulos_ymp',lb:'Título Yampi SEO',      on:true},
+  {id:'titulos_fb', lb:'3 Títulos Facebook',    on:true},
+  {id:'alertas',    lb:'Alertas anti-devolução',on:true},
+  {id:'msg_posvenda',lb:'Msg pós-venda cliente',on:true},
+  {id:'facebook',   lb:'Post Facebook',         on:true},
+  {id:'hashtags',   lb:'Hashtags SEO',          on:true},
+  {id:'planilha',   lb:'Campos planilha',       on:true},
+  {id:'alertas_int',lb:'Alertas internos equipe',on:true},
 ];
 let anAtivos=new Set(AN_BLOCOS.filter(b=>b.on).map(b=>b.id));
 let anNfItens=[]; // itens da NF para geração em massa
@@ -2325,6 +2335,8 @@ function irParaAnuncio(){
     const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
     set('an-nome',  prodAtual.nome);
     set('an-sku',   prodAtual.codigo);
+    set('an-sku-fava', prodAtual.codigo); // SKU Bling = SKU Fava Ecom
+    set('an-codfab',  ''); // usuário preenche com código do fabricante
     set('an-peso',  prodAtual.peso);
     // Tenta extrair marca do nome
     const marcasEl=document.getElementById('an-marcas');
@@ -2355,54 +2367,163 @@ async function chamarClaudeAn(prompt){
 }
 
 function anMontarPrompt(p){
-  const inst=document.getElementById('an-bloco-inst').value;
-  const marcasTxt=document.getElementById('an-marcas').value;
-  const tom=document.getElementById('an-tom').value||'tecnico';
-  const infoMarca=marcasTxt.split('\n').find(l=>l.toLowerCase().startsWith((p.marca||'').toLowerCase()+':'))?.split(':').slice(1).join(':').trim()||'';
-  const bl=[...anAtivos];
-  return `Você é um especialista em e-commerce brasileiro criando anúncios profissionais para a Fava Ecom, loja especializada em peças de reposição, ferramentas e equipamentos.
+  const inst      = document.getElementById('an-bloco-inst').value;
+  const marcasTxt = document.getElementById('an-marcas').value;
+  const infoMarca = marcasTxt.split('\n').find(l=>l.toLowerCase().startsWith((p.marca||'').toLowerCase()+':'))?.split(':').slice(1).join(':').trim()||'';
+  const bl        = [...anAtivos];
 
-PRODUTO:
-- SKU: ${p.sku||'—'}
-- Nome: ${p.nome}
-- Marca: ${p.marca||'—'}
-- Família/Categoria: ${p.familia||'—'}
-- Tipo: ${p.tipo||'Produto'}
-- Fornecedor: ${p.fornecedor||'—'}
-- Código fabricante: ${p.codfab||'—'}
-- Peso: ${p.peso||'—'} kg
-${p.ficha?`- Ficha técnica: ${p.ficha}`:''}
-${p.compat?`- Compatibilidade: ${p.compat}`:''}
-${p.extra?`- Informações extras: ${p.extra}`:''}
-${infoMarca?`
-SOBRE A MARCA ${(p.marca||'').toUpperCase()}:
-${infoMarca}`:''}
+  // Campos específicos da peça
+  const skuFava    = document.getElementById('an-sku-fava')?.value  || p.sku  || '';
+  const posCatalog = document.getElementById('an-pos-catalogo')?.value || '';
+  const desgaste   = document.getElementById('an-desgaste')?.value  || '';
+  const material   = document.getElementById('an-material')?.value  || '';
 
-TOM: ${tom==='tecnico'?'técnico e profissional':tom==='acessivel'?'acessível e direto':'persuasivo e vendedor'}
+  // Catálogo do equipamento
+  const equipSel = document.getElementById('an-catalog-sel')?.value || '';
+  const eq       = CATALOGO_EQUIP[equipSel] || null;
+  const modelos_compat = eq
+    ? `Compatível: ${eq.nome} — ${eq.cod127||''}(127V) / ${eq.cod220||''}(220V)${eq.codTrole127?' | c/Trole '+eq.codTrole127+'(127V) / '+eq.codTrole220+'(220V)':''}`
+    : p.compat || '';
+  const modelos_incomp = eq
+    ? Object.entries(CATALOGO_EQUIP).filter(([k])=>k!==equipSel).map(([,v])=>v.nome).join(', ')
+    : '';
 
-BLOCO INSTITUCIONAL (use este texto exatamente no bloco Fava Ecom):
+  return `Você é o sistema de geração de anúncios da Fava Ecom, loja especializada em peças de reposição técnica para construção civil e movimentação de carga.
+
+DADOS DA PEÇA:
+Nome: ${p.nome}
+Marca: ${p.marca||'—'}
+Código do fabricante: ${p.codfab||'—'}
+SKU Fava Ecom: ${skuFava||'—'}
+Posição no catálogo: ${posCatalog ? 'N.'+posCatalog : '—'}
+Equipamento / Família: ${p.familia||'—'}
+Peso: ${p.peso||'—'} kg
+Material: ${material||'—'}
+Ficha técnica: ${p.ficha||'—'}
+Sintomas de desgaste: ${desgaste||'(deduza da função da peça)'}
+Compatibilidade: ${modelos_compat||'—'}
+Não compatível com: ${modelos_incomp||'outros modelos e marcas'}
+Info extra: ${p.extra||'—'}
+${infoMarca?'\nSobre a marca: '+infoMarca:''}
+
+BLOCO INSTITUCIONAL FAVA ECOM (use este texto exato quando solicitado):
 ${inst}
 
-GERE o anúncio com os blocos marcados com ✓ abaixo:
-${bl.includes('titulo')?`✓ TÍTULOS:
-- TÍTULO CURTO (máx 60 caracteres exatos): palavra-chave principal + marca + complemento
-- TÍTULO LONGO (máx 120 caracteres exatos): mais descritivo com marca, compatibilidade e diferencial`:''}
-${bl.includes('apresenta')?'✓ APRESENTAÇÃO DO PRODUTO: 2-3 frases diretas sobre o que é e para que serve':''}
-${bl.includes('curiosidade')?'✓ CURIOSIDADE TÉCNICA: 1 parágrafo com informação técnica interessante':''}
-${bl.includes('marca')?`✓ SOBRE A MARCA ${p.marca||''}: 1 parágrafo destacando tradição e credibilidade`:''}
-${bl.includes('beneficios')?'✓ BENEFÍCIOS: lista com 6-8 bullet points com emoji ou •':''}
-${bl.includes('ficha')?'✓ FICHA TÉCNICA: dados técnicos formatados em linhas "Campo: Valor"':''}
-${bl.includes('compat')?'✓ COMPATIBILIDADE: lista clara de modelos/equipamentos compatíveis':''}
-${bl.includes('cuidados')?'✓ CUIDADOS E MODO DE USO: instrução de instalação e cuidados':''}
-${bl.includes('inst')?'✓ BLOCO FAVA ECOM: use o texto institucional exato fornecido acima':''}
-${bl.includes('hashtags')?'✓ HASHTAGS SEO: 15-20 palavras-chave relevantes separadas por espaço (sem #)':''}
+REGRAS DE FORMATAÇÃO — SEGUIR OBRIGATORIAMENTE:
+• NUNCA usar emojis em nenhuma parte do anúncio
+• NUNCA usar markdown (negrito, itálico, traços divisores)
+• NUNCA incluir informações fiscais (NCM, CFOP, CST, impostos, tributação)
+• NUNCA mencionar preço
+• Português brasileiro correto
+• Seções técnicas: título em MAIÚSCULAS, linha em branco antes e depois
+• Texto corrido: nunca nomear seções descritivas (não escrever "APRESENTAÇÃO DO PRODUTO" — só escrever o texto diretamente)
+• 1 linha em branco entre parágrafos
+• Títulos ML: Primeira Letra Maiúscula Em Cada Palavra (nunca caixa alta total)
+• O produto deve ser tratado como PECA DE REPOSICAO TECNICA, nunca como item generico
+  ERRADO: "Parafuso sextavado" | CORRETO: "Parafuso estrutural do guincho Menegotti 500/1000kg"
 
-REGRAS:
-- NUNCA inclua informações fiscais (NCM, CFOP, CEST, impostos)
-- NUNCA mencione preço
-- Português brasileiro
-- Cada bloco começa com === NOME DO BLOCO === em linha separada
-- Seja específico, evite frases genéricas`;
+GERE APENAS OS BLOCOS MARCADOS ABAIXO:
+
+${bl.includes('descricao')?`--- DESCRICAO COMPLETA DO ANUNCIO ---
+Gere a descrição seguindo esta estrutura (sem escrever os nomes das seções descritivas):
+
+[2-3 parágrafos de contextualização técnica: o que é, função, importância, por que substituir]
+
+MARCA ${(p.marca||'').toUpperCase()}
+[1 parágrafo sobre a marca, tradição, referência no mercado]
+
+FUNCAO E IMPORTANCIA
+[Explica tecnicamente a função da peça no equipamento]
+[Quando desgastada ou danificada pode causar:]
+[lista de consequências sem bullets — uma por linha com traço simples]
+
+COMPATIBILIDADE
+${modelos_compat}
+Nao compativel com: ${modelos_incomp||'outros modelos e marcas'}
+${posCatalog?'Posicao N.'+posCatalog+' conforme catalogo tecnico '+(p.marca||'Fabricante'):''}
+
+ESPECIFICACOES TECNICAS
+Codigo do fabricante: ${p.codfab||'—'}
+SKU Fava Ecom: ${skuFava||'—'}
+Aplicacao: [descreva]
+${material?'Material: '+material:''}
+Tipo: Peca original
+
+O QUE O CLIENTE RECEBE
+1 ${p.nome} original ${p.marca||''}
+
+APLICACOES
+[4-5 aplicações reais uma por linha]
+
+${inst}`:''}
+
+${bl.includes('alertas')?`--- ALERTAS ANTI-DEVOLUCAO ---
+Gere os alertas aplicáveis (formato: "ATENCAO" em maiúsculas, depois o texto):
+
+ATENCAO
+Verifique a compatibilidade do produto com seu equipamento antes da compra.
+
+ATENCAO
+Produto vendido unitariamente.
+
+ATENCAO
+Imagens podem conter equipamentos apenas para demonstracao da aplicacao.
+
+ATENCAO
+A instalacao deve ser realizada por profissional qualificado.
+
+[adicione alertas específicos para este produto se necessário]`:''}
+
+${bl.includes('titulos_ml')?`--- 3 TITULOS MERCADO LIVRE (58-60 caracteres cada) ---
+Regra: Primeira Letra Maiúscula Em Cada Palavra. Contar exatamente os caracteres.
+Formato: produto + marca + modelo/equipamento + tipo
+TITULO ML 1: [título]  ([X]/60)
+TITULO ML 2: [título]  ([X]/60)
+TITULO ML 3: [título]  ([X]/60)`:''}
+
+${bl.includes('titulos_shp')?`--- 3 TITULOS SHOPEE (até 120 caracteres cada) ---
+Mais descritivos, pode incluir aplicação e benefício
+TITULO SHOPEE 1: [título]  ([X]/120)
+TITULO SHOPEE 2: [título]  ([X]/120)
+TITULO SHOPEE 3: [título]  ([X]/120)`:''}
+
+${bl.includes('titulos_ymp')?`--- TITULO YAMPI SEO (até 120 caracteres) ---
+Otimizado para busca orgânica, inclua palavras-chave principais
+TITULO YAMPI: [título]  ([X]/120)`:''}
+
+${bl.includes('titulos_fb')?`--- 3 TITULOS FACEBOOK (comerciais, impactantes) ---
+Podem ser perguntas, imperativos ou chamadas para ação
+TITULO FB 1: [título]
+TITULO FB 2: [título]
+TITULO FB 3: [título]`:''}
+
+${bl.includes('msg_posvenda')?`--- MENSAGEM POS-VENDA PARA CLIENTE ---
+Mensagem curta para envio após a compra (WhatsApp ou marketplace):
+[gere a mensagem]`:''}
+
+${bl.includes('facebook')?`--- POST FACEBOOK ---
+Texto curto com: descrição resumida + compatibilidade + hashtags
+(pode incluir telefone/site/contato — diferente dos marketplaces)
+[gere o post]`:''}
+
+${bl.includes('hashtags')?`--- HASHTAGS SEO ---
+Gerar 15-20 hashtags. Sempre incluir #FavaEcom #${(p.marca||'').replace(/\s/g,'')}
+[liste as hashtags]`:''}
+
+${bl.includes('planilha')?`--- CAMPOS PARA PLANILHA ---
+Gere uma linha por campo, formato "Campo: valor":
+Familia:
+Categoria:
+Subcategoria:
+Tipo de produto:
+Descricao curta (até 80 chars):
+SEO palavras-chave:
+Compatibilidade resumida:
+Ficha tecnica resumida:`:''}
+
+${bl.includes('alertas_int')?`--- ALERTAS INTERNOS PARA EQUIPE (nao aparecem no anuncio) ---
+Gere alertas sobre: ST, IPI, risco de devolucao, compatibilidade, instalacao tecnica
+Formato: ALERTA: [descrição]`:''}`;
 }
 
 async function anGerar(){
