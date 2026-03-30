@@ -1223,6 +1223,7 @@ function renderEstados(itens){
   const ufData=ICMS_TB;
 
   const body=document.getElementById('estados-body');
+  if(!body) return;
   body.innerHTML=rank.map(([uf,d])=>{
     const ic=ufData[uf];
     const mg=d.fat?d.lucro/d.fat:0;
@@ -1973,6 +1974,7 @@ function renderDifal(){
   // Mapa de cards
   const sorted=Object.entries(por_uf).sort((a,b)=>b[1].fat-a[1].fat);
   const mapEl=document.getElementById('difal-map');
+  if(!mapEl) return;
   mapEl.innerHTML=sorted.slice(0,12).map(([uf,d])=>{
     const ufData=ICMS_TB[uf]||{difal:.085,inter:.12};
     const mg=d.fat?d.lucro/d.fat:0;
@@ -2185,8 +2187,8 @@ async function initADS(){
 
 async function carregarADS(){
   if(!tokens.ml){alert('Configure o token ML');return;}
-  const de = document.getElementById('ads-de').value;
-  const ate = document.getElementById('ads-ate').value;
+  const de = (document.getElementById('ads-de')||{value:''}).value;
+  const ate = (document.getElementById('ads-ate')||{value:''}).value;
   if(!de||!ate){alert('Informe o período');return;}
 
   (document.getElementById('ads-status')||{}).textContent = '⟳ Buscando métricas ADS...';
@@ -2478,6 +2480,7 @@ function buildPedidosDetalhados(){
 function populaFiltroUF(){
   const ufs = [...new Set(pedidosDetalhados.map(p=>p.uf))].sort();
   const sel = document.getElementById('ped-uf');
+  if(!sel) return;
   sel.innerHTML = '<option value="">Todos os estados</option>' +
     ufs.map(uf=>`<option value="${uf}">${uf}</option>`).join('');
 }
@@ -2533,9 +2536,11 @@ function renderKpisPedidos(lista){
   (document.getElementById('pk-total')||{}).textContent =total;
   (document.getElementById('pk-fat')||{}).textContent ='R$ '+fmtK(fat);
   const lel=document.getElementById('pk-lucro');
+  if(!lel) return;
   lel.textContent='R$ '+fmtK(lucro);
   lel.style.color=lucro>=0?'#16a34a':'#dc2626';
   const mel=document.getElementById('pk-mg');
+  if(!mel) return;
   mel.textContent=(mg*100).toFixed(1)+'%';
   mel.style.color=mg>=.15?'#16a34a':mg>=.10?'#d97706':'#dc2626';
   (document.getElementById('pk-difal')||{}).textContent ='R$ '+fmtK(difal);
@@ -3537,8 +3542,8 @@ async function carregarSaldoMP(){
 
 async function carregarConciliacao(){
   if(!tkMP){ alert('Configure o token do Mercado Pago'); return; }
-  const de = document.getElementById('conc-de').value;
-  const ate = document.getElementById('conc-ate').value;
+  const de = (document.getElementById('conc-de')||{value:''}).value;
+  const ate = (document.getElementById('conc-ate')||{value:''}).value;
   if(!de||!ate){ alert('Informe o período'); return; }
 
   (document.getElementById('conc-status')||{}).textContent = '⟳ Carregando...';
@@ -3694,6 +3699,7 @@ function calcKpisMP(){
   (document.getElementById('mp-hoje')||{}).textContent = 'R$ '+fmt(entrou_hoje);
   (document.getElementById('mp-estorno')||{}).textContent = 'R$ '+fmt(estornos);
   const difEl = document.getElementById('mp-diff');
+  if(!difEl) return;
   difEl.textContent = 'R$ '+fmt(Math.abs(dif));
   difEl.style.color = Math.abs(dif)<10?'#16a34a':dif<0?'#dc2626':'#d97706';
 }
@@ -4050,6 +4056,7 @@ let chartCustos = null;
 
 function toggleCustoForm(){
   const f=document.getElementById('custo-form');
+  if(!f) return;
   f.style.display=f.style.display==='none'?'block':'none';
 }
 
@@ -4108,6 +4115,7 @@ function renderCustoFixos(){
     return s+v;
   },0);
   const lista=document.getElementById('custos-lista');
+  if(!lista) return;
   lista.innerHTML=custosFixos.length?`
     <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:5px">
       Total mensal: <span style="color:#dc2626;font-size:12px">R$ ${fmt(total)}</span>
@@ -4163,6 +4171,7 @@ function renderKpisFinanceiros(){
   (document.getElementById('fk-semana')||{}).textContent ='R$ '+fmtK(semana_val);
   const saldo=receber-pagar;
   const fks=document.getElementById('fk-saldo');
+  if(!fks) return;
   fks.textContent='R$ '+fmtK(Math.abs(saldo));
   fks.style.color=saldo>=0?'#16a34a':'#dc2626';
   (document.getElementById('fk-repasse')||{}).textContent ='R$ '+fmtK(fat30);
@@ -4312,7 +4321,7 @@ function setFiltro(f){
 }
 
 function filtrarAnuncios(){
-  const q = (document.getElementById('anunc-search').value||'').toLowerCase();
+  const q = ((document.getElementById('anunc-search')||{value:''}).value||'').toLowerCase();
   let listlista =sData.filter(a=>{
     if(q && !a.titulo.toLowerCase().includes(q) && !a.mlb.includes(q) && !a.sku.includes(q)) return false;
     if(anuncFiltro==='alerta') return a.margem_atual!==null && a.margem_atual<.20;
@@ -4406,7 +4415,7 @@ function fecharModal(){
 }
 
 async function confirmarPreco(){
-  const preco = parseFloat(document.getElementById('modal-preco-input').value);
+  const preco = parseFloat((document.getElementById('modal-preco-input')||{value:0}).value);
   if(!preco||!modalMLB){alert('Informe um preço válido');return;}
   if(!confirm(`Aplicar R$ ${fmt(preco)} no anúncio ${modalMLB}?`))return;
   try{
