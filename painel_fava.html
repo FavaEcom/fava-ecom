@@ -350,10 +350,27 @@ function fecharCfg(){
 function salvarCfg(){
   const tkB = document.getElementById('tk-bling')?.value.trim()||'';
   const tkM = document.getElementById('tk-ml')?.value.trim()||'';
+  const tkRML   = document.getElementById('tk-refresh-ml')?.value.trim()||'';
+  const tkRBling = document.getElementById('tk-refresh-bling')?.value.trim()||'';
+  
+  // Salva access tokens
+  tokenStore.ml.access    = tkM;
+  tokenStore.bling.access = tkB;
+  tokens.ml    = tkM;
+  tokens.bling = tkB;
+  
+  // Salva refresh tokens se fornecidos
+  if(tkRML)    { tokenStore.ml.refresh    = tkRML;    tokenStore.ml.expires    = Date.now() + 21600000; }
+  if(tkRBling) { tokenStore.bling.refresh = tkRBling; tokenStore.bling.expires = Date.now() + 21600000; }
+  
+  // Se não tem refresh, define expiração em 6h
+  if(!tokenStore.ml.expires)    tokenStore.ml.expires    = Date.now() + 21600000;
+  if(!tokenStore.bling.expires) tokenStore.bling.expires = Date.now() + 21600000;
+  
   localStorage.setItem('fava_tk4', JSON.stringify({bling:tkB, ml:tkM}));
+  salvarTokenStore();
   document.getElementById('modal-cfg').style.display='none';
-  // tokens será inicializado pelo script principal via window.onload
-  window.location.reload();
+  carregarTudo();
 }
 function fecharCfg(){
   document.getElementById('modal-cfg').style.display='none';
@@ -421,6 +438,26 @@ function fecharCfg(){
       <label>Access Token ML (APP_USR-...)</label>
       <input type="password" id="tk-ml" placeholder="APP_USR-...">
     </div>
+    <details style="margin-bottom:10px">
+      <summary style="font-size:11px;color:var(--muted);cursor:pointer;font-weight:600">
+        🔄 Refresh Tokens (renovação automática)
+      </summary>
+      <div style="margin-top:8px">
+        <div style="margin-bottom:6px">
+          <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Refresh Token ML (TG-...)</label>
+          <input type="password" id="tk-refresh-ml" placeholder="TG-... (do ml_tokens.json)"
+            style="width:100%;border:1px solid #e5e7eb;border-radius:5px;padding:5px 8px;font-size:11px;outline:none">
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Refresh Token Bling</label>
+          <input type="password" id="tk-refresh-bling" placeholder="(do bling_tokens.json)"
+            style="width:100%;border:1px solid #e5e7eb;border-radius:5px;padding:5px 8px;font-size:11px;outline:none">
+        </div>
+        <div style="font-size:10px;color:#16a34a;margin-top:5px">
+          ✅ Com refresh tokens, os access tokens se renovam sozinhos a cada 6h
+        </div>
+      </div>
+    </details>
     <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Os tokens ficam salvos localmente no seu navegador.</div>
     <button class="btn-prim" onclick="salvarCfg()">Salvar e carregar painel</button>
     <button class="btn-sec" onclick="fecharCfg()" style="margin-top:6px">Cancelar</button>
@@ -524,8 +561,11 @@ function aplicarPermissoesPerfil(){
   setView(abas[0]);
 }
 
-window.onload=()=>{
-  // Verifica sessão ativa (dura até fechar o browser)
+window.onload=async ()=>{
+  // Carrega token store completo (com refresh tokens)
+  carregarTokenStore();
+  
+  // Verifica sessão ativa
   const perfilSalvo = sessionStorage.getItem('fava_perfil_sess');
   if(perfilSalvo && SENHAS[perfilSalvo]){
     perfilAtivo = perfilSalvo;
@@ -533,27 +573,162 @@ window.onload=()=>{
     aplicarPermissoesPerfil();
   }
 
-  // Carrega tokens salvos
-  const sv = localStorage.getItem('fava_tk4') || localStorage.getItem('fava_dash_tk');
-  if(sv){
-    try{
-      const tk = JSON.parse(sv);
-      tokens.bling = tk.bling||'';
-      tokens.ml    = tk.ml||'';
-      if(document.getElementById('tk-bling')) document.getElementById('tk-bling').value = tokens.bling;
-      if(document.getElementById('tk-ml'))    document.getElementById('tk-ml').value    = tokens.ml;
-      if((tokens.bling||tokens.ml) && perfilAtivo){
-        document.getElementById('modal-cfg').style.display='none';
-        carregarTudo();
-      } else if(tokens.bling||tokens.ml){
-        // Tem tokens mas não logou ainda — aguarda login
-      }
-    }catch(e){ console.error('Erro ao carregar tokens:',e); }
+  // Tenta renovar tokens expirados automaticamente
+  if(tokenStore.ml.refresh || tokenStore.bling.refresh){
+    const renovou = await verificarRenovarTokens();
+    if(renovou) console.log('Tokens renovados no startup');
+  }
+
+  // Inicia agendamento de renovação automática
+  agendarRenovacao();
+
+  // Carrega painel se tem tokens e perfil
+  if((tokens.bling||tokens.ml) && perfilAtivo){
+    document.getElementById('modal-cfg').style.display='none';
+    carregarTudo();
   }
   
   // Carrega CMV manuais salvos
   if(typeof aplicarCMVManuais === 'function') aplicarCMVManuais();
 };
+
+// ══════════════════════════════════════════════════════════════════════
+// AUTO-RENOVAÇÃO DE TOKENS
+// ══════════════════════════════════════════════════════════════════════
+
+// Estrutura completa de tokens com refresh
+let tokenStore = {
+  ml:    { access:'', refresh:'', expires:0 },
+  bling: { access:'', refresh:'', expires:0 },
+  mp:    { access:'', expires:0 },
+};
+
+function salvarTokenStore(){
+  localStorage.setItem('fava_tokens_v2', JSON.stringify(tokenStore));
+}
+
+function carregarTokenStore(){
+  const s = localStorage.getItem('fava_tokens_v2');
+  if(s){
+    try{ tokenStore = JSON.parse(s); }catch(e){}
+  }
+  // Compatibilidade com formato antigo
+  const old = localStorage.getItem('fava_tk4') || localStorage.getItem('fava_dash_tk');
+  if(old && !tokenStore.ml.access){
+    try{
+      const o = JSON.parse(old);
+      if(o.ml)    tokenStore.ml.access    = o.ml;
+      if(o.bling) tokenStore.bling.access = o.bling;
+    }catch(e){}
+  }
+  // Sincroniza com objeto tokens legado
+  tokens.ml    = tokenStore.ml.access    || '';
+  tokens.bling = tokenStore.bling.access || '';
+  if(document.getElementById('tk-bling')) document.getElementById('tk-bling').value = tokens.bling;
+  if(document.getElementById('tk-ml'))    document.getElementById('tk-ml').value    = tokens.ml;
+}
+
+// ML — renova via refresh_token
+async function renovarTokenML(){
+  const rt = tokenStore.ml.refresh;
+  if(!rt){ console.log('ML: sem refresh_token'); return false; }
+  try{
+    const r = await fetch('/api/ml/oauth/token',{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: `grant_type=refresh_token&client_id=1338010912135949&client_secret=u7CBcOyvpdjjsI2FMjEYcBLGJqNAPJ89&refresh_token=${rt}`
+    });
+    if(!r.ok) throw new Error(`ML refresh ${r.status}`);
+    const d = await r.json();
+    if(d.access_token){
+      tokenStore.ml.access  = d.access_token;
+      tokenStore.ml.refresh = d.refresh_token || rt;
+      tokenStore.ml.expires = Date.now() + (d.expires_in||21600)*1000 - 300000; // 5min antes
+      tokens.ml = d.access_token;
+      if(document.getElementById('tk-ml')) document.getElementById('tk-ml').value = d.access_token;
+      salvarTokenStore();
+      setDot('ml','ok','ML ✓ (renovado)');
+      console.log('✅ ML token renovado');
+      return true;
+    }
+  }catch(e){ console.error('ML renovar erro:', e); }
+  return false;
+}
+
+// Bling — renova via refresh_token
+async function renovarTokenBling(){
+  const rt = tokenStore.bling.refresh;
+  if(!rt){ console.log('Bling: sem refresh_token'); return false; }
+  try{
+    // Bling usa Basic Auth com client_id:client_secret em base64
+    const creds = btoa('19df6720532752f6888d5f0aad392bc8829974d3:590eed8f0b2fb1998e3f60335cef2a17bf5b2135fc69ec4a5ae925f520a8');
+    const r = await fetch('/api/bling/oauth/token',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/x-www-form-urlencoded',
+        'Authorization':`Basic ${creds}`
+      },
+      body: `grant_type=refresh_token&refresh_token=${rt}`
+    });
+    if(!r.ok) throw new Error(`Bling refresh ${r.status}`);
+    const d = await r.json();
+    if(d.access_token){
+      tokenStore.bling.access  = d.access_token;
+      tokenStore.bling.refresh = d.refresh_token || rt;
+      tokenStore.bling.expires = Date.now() + (d.expires_in||21600)*1000 - 300000;
+      tokens.bling = d.access_token;
+      if(document.getElementById('tk-bling')) document.getElementById('tk-bling').value = d.access_token;
+      salvarTokenStore();
+      setDot('bling','ok','Bling ✓ (renovado)');
+      console.log('✅ Bling token renovado');
+      return true;
+    }
+  }catch(e){ console.error('Bling renovar erro:', e); }
+  return false;
+}
+
+// Verifica e renova tokens expirados
+async function verificarRenovarTokens(){
+  const agora = Date.now();
+  let renovou = false;
+  
+  // ML
+  if(tokenStore.ml.refresh && tokenStore.ml.expires && agora > tokenStore.ml.expires){
+    console.log('ML token expirado — renovando...');
+    setDot('ml','wait','ML renovando...');
+    await renovarTokenML();
+    renovou = true;
+  }
+  
+  // Bling
+  if(tokenStore.bling.refresh && tokenStore.bling.expires && agora > tokenStore.bling.expires){
+    console.log('Bling token expirado — renovando...');
+    setDot('bling','wait','Bling renovando...');
+    await renovarTokenBling();
+    renovou = true;
+  }
+  
+  return renovou;
+}
+
+// Salva refresh tokens quando configurados manualmente
+function salvarRefreshTokens(mlRefresh, blingRefresh){
+  if(mlRefresh)    tokenStore.ml.refresh    = mlRefresh;
+  if(blingRefresh) tokenStore.bling.refresh = blingRefresh;
+  // Define expiração para agora (força renovação)
+  if(mlRefresh)    tokenStore.ml.expires    = Date.now() - 1;
+  if(blingRefresh) tokenStore.bling.expires = Date.now() - 1;
+  salvarTokenStore();
+}
+
+// Agenda renovação automática a cada 5h
+function agendarRenovacao(){
+  setInterval(async ()=>{
+    console.log('⏰ Verificando validade dos tokens...');
+    const renovou = await verificarRenovarTokens();
+    if(renovou) console.log('✅ Tokens renovados automaticamente');
+  }, 5 * 60 * 60 * 1000); // 5 horas
+}
 
 // ══════════════════════════════════════════════════════════════════════
 // CONFIG
@@ -2610,7 +2785,7 @@ function setFiltroGP(f){
 function filtrarGP(){
   const mgMin = (parseFloat(document.getElementById('gp-mg-min')?.value)||15)/100;
   const q = (document.getElementById('gp-search')?.value||'').toLowerCase();
-  let lista = gpData.filter(d=>{
+  let listaGP = gpData.filter(d=>{
     if(q && !d.titulo.toLowerCase().includes(q) && !d.mlb.includes(q) && !d.sku.includes(q)) return false;
     if(gpFiltro==='err') return d.temCMV && d.margem < .10;
     if(gpFiltro==='warn') return d.temCMV && d.margem >= .10 && d.margem < mgMin;
@@ -2618,7 +2793,7 @@ function filtrarGP(){
     if(gpFiltro==='nocmv') return !d.temCMV;
     return true;
   });
-  lista.sort((a,b)=>{
+  listaGP.sort((a,b)=>{
     const va=a[gpSort.col]??-999, vb=b[gpSort.col]??-999;
     return (va>vb?1:-1)*gpSort.dir;
   });
