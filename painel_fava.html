@@ -1104,7 +1104,7 @@ function renderChartFat(todos){
   const lbls=dias.map(d=>{const [y,m,di]=d.split('-');return`${di}/${m}`;});
 
   if(charts.fat){charts.fat.destroy();}
-  const ctx=document.getElementById('chart-fat').getContext('2d');
+  const _el_chart_fat=document.getElementById('chart-fat'); if(!_el_chart_fat) return; const ctx=_el_chart_fat.getContext('2d');
   charts.fat=new Chart(ctx,{
     type:'bar',
     data:{
@@ -1129,7 +1129,7 @@ function renderChartCanal(todos){
   const cores=['#3b82f6','#f43f5e','#8b5cf6','#10b981','#f59e0b','#6366f1'];
 
   if(charts.canal){charts.canal.destroy();}
-  const ctx=document.getElementById('chart-canal').getContext('2d');
+  const _el_chart_canal=document.getElementById('chart-canal'); if(!_el_chart_canal) return; const ctx=_el_chart_canal.getContext('2d');
   charts.canal=new Chart(ctx,{
     type:'doughnut',
     data:{labels,datasets:[{data:vals,backgroundColor:cores.slice(0,labels.length),borderWidth:2,borderColor:'#fff'}]},
@@ -1392,7 +1392,7 @@ function buildDIFAL(){
   // Gráfico
   const top8 = sorted.slice(0,8);
   if(chartDifalUF) chartDifalUF.destroy();
-  const ctx = document.getElementById('chart-difal-uf').getContext('2d');
+  const _el_chart_difal_uf=document.getElementById('chart-difal-uf'); if(!_el_chart_difal_uf) return; const ctx=_el_chart_difal_uf.getContext('2d');
   chartDifalUF = new Chart(ctx,{
     type:'doughnut',
     data:{
@@ -1661,7 +1661,7 @@ function buildDifalPainel(){
   // Gráfico
   const top8=sorted.slice(0,8);
   if(chartDifal)chartDifal.destroy();
-  const ctx=document.getElementById('chart-difal-estados').getContext('2d');
+  const _el_chart_difal_estados=document.getElementById('chart-difal-estados'); if(!_el_chart_difal_estados) return; const ctx=_el_chart_difal_estados.getContext('2d');
   chartDifal=new Chart(ctx,{
     type:'bar',
     data:{
@@ -2029,7 +2029,7 @@ function renderDifal(){
   // Gráfico donut por estado
   if(chartDifal)chartDifal.destroy();
   const top8=sorted.slice(0,8);
-  const ctx=document.getElementById('chart-difal').getContext('2d');
+  const _el_chart_difal=document.getElementById('chart-difal'); if(!_el_chart_difal) return; const ctx=_el_chart_difal.getContext('2d');
   const cores=['#3b82f6','#ef4444','#f59e0b','#10b981','#8b5cf6','#ec4899','#6366f1','#14b8a6'];
   chartDifal=new Chart(ctx,{
     type:'doughnut',
@@ -2392,7 +2392,7 @@ function renderChartADS(sorted){
   // ROAS por anúncio top 10
   const top = sorted.slice(0,10);
   if(adsChartRoas) adsChartRoas.destroy();
-  const ctx = document.getElementById('chart-roas').getContext('2d');
+  const _el_chart_roas=document.getElementById('chart-roas'); if(!_el_chart_roas) return; const ctx=_el_chart_roas.getContext('2d');
   adsChartRoas = new Chart(ctx,{
     type:'bar',
     data:{
@@ -3367,7 +3367,7 @@ function renderChartMensal(){
   });
 
   if(chartMensal) chartMensal.destroy();
-  const ctx = document.getElementById('chart-mensal').getContext('2d');
+  const _el_chart_mensal=document.getElementById('chart-mensal'); if(!_el_chart_mensal) return; const ctx=_el_chart_mensal.getContext('2d');
   chartMensal = new Chart(ctx,{
     type:'bar',
     data:{
@@ -3984,7 +3984,7 @@ function recalcFluxo(){
   const saldo=entr.map((e,i)=>e-said[i]);
 
   if(chartFluxo)chartFluxo.destroy();
-  const ctx=document.getElementById('chart-fluxo').getContext('2d');
+  const _el_chart_fluxo=document.getElementById('chart-fluxo'); if(!_el_chart_fluxo) return; const ctx=_el_chart_fluxo.getContext('2d');
   chartFluxo=new Chart(ctx,{
     type:'bar',
     data:{
@@ -4022,7 +4022,7 @@ function renderChartBoletos(){
     else buckets['30d+']+=b.valor;
   });
   if(chartBoletos)chartBoletos.destroy();
-  const ctx=document.getElementById('chart-boletos').getContext('2d');
+  const _el_chart_boletos=document.getElementById('chart-boletos'); if(!_el_chart_boletos) return; const ctx=_el_chart_boletos.getContext('2d');
   chartBoletos=new Chart(ctx,{
     type:'bar',
     data:{
@@ -4087,7 +4087,7 @@ function renderCustoFixos(){
 
   if(chartCustos)chartCustos.destroy();
   if(Object.keys(por_cat).length>0){
-    const ctx=document.getElementById('chart-custos').getContext('2d');
+    const _el_chart_custos=document.getElementById('chart-custos'); if(!_el_chart_custos) return; const ctx=_el_chart_custos.getContext('2d');
     const cores=['#3b82f6','#8b5cf6','#ec4899','#f59e0b','#10b981','#6b7280'];
     chartCustos=new Chart(ctx,{
       type:'doughnut',
