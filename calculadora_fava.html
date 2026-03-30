@@ -180,8 +180,15 @@ header h1{font-size:14px;font-weight:700;flex:1}
     <div id="prod-card" class="prod-card"></div>
 
     <div class="sec">Custo</div>
+    <div class="field" style="margin-bottom:5px">
+      <label>Modo de entrada do custo</label>
+      <select id="modo-custo" onchange="atualizarModoCusto();recalcCMV()" style="font-size:12px">
+        <option value="bling">📥 Bling — custo já inclui IPI embutido</option>
+        <option value="manual">✏️ Novo produto — custo líquido NF (IPI separado)</option>
+      </select>
+    </div>
     <div class="field">
-      <label>Custo Bling bruto (R$) — com IPI e ST embutidos</label>
+      <label id="lbl-custo-b">Custo Bling bruto (R$) — com IPI e ST embutidos</label>
       <input type="number" id="custo-b" step="0.01" min="0" placeholder="0,00" oninput="recalcCMV()">
     </div>
     <div class="row3">
@@ -553,8 +560,25 @@ async function processarBling(p){
   let prod=p;
   try{const r=await fetch(`/api/bling/produtos/${p.id}`,{headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});if(r.ok){const d=await r.json();prod=d.data||p;}}catch(e){}
   let est=0;
-  try{const re=await fetch(`/api/bling/estoques/${prod.id}`,{headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});if(re.ok){const de=await re.json();est=de.data?.saldoFisicoTotal||de.data?.saldoVirtual||0;}}catch(e){}
-  prodAtual={id:prod.id,nome:prod.nome||'',codigo:prod.codigo||'',custo:parseFloat(prod.preco||0),peso:parseFloat(prod.pesoBruto||prod.peso||.5),l:parseFloat(prod.largura||0),a:parseFloat(prod.altura||0),p:parseFloat(prod.profundidade||0),estoque:est,ipi:parseFloat(prod.ipi||0)};
+  try{
+    // Bling v3: endpoint correto para saldo de estoque é /estoques/saldos?idsProdutos[]={id}
+    const re=await fetch(`/api/bling/estoques/saldos?idsProdutos[]=${prod.id}`,{headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});
+    if(re.ok){
+      const de=await re.json();
+      // Response: { data: [{ produto:{id}, depositos:[{saldoFisico, saldoVirtual}] }] }
+      const item=de.data?.[0];
+      if(item?.depositos){
+        est=item.depositos.reduce((acc,d)=>acc+(parseFloat(d.saldoFisico)||0),0);
+      } else {
+        est=de.data?.saldoFisicoTotal||de.data?.saldoVirtual||0;
+      }
+    }
+  }catch(e){}
+  // precoCusto = custo de compra (NF); fallback para custoMedio; prod.preco é preço de VENDA (errado para CMV)
+  const custoBling = parseFloat(prod.precoCusto||prod.custoMedio||prod.preco||0);
+  prodAtual={id:prod.id,nome:prod.nome||'',codigo:prod.codigo||'',custo:custoBling,peso:parseFloat(prod.pesoBruto||prod.peso||.5),l:parseFloat(prod.largura||0),a:parseFloat(prod.altura||0),p:parseFloat(prod.profundidade||0),estoque:est,ipi:parseFloat(prod.ipi||0)};
+  document.getElementById('modo-custo').value='bling';
+  atualizarModoCusto();
   document.getElementById('custo-b').value=prodAtual.custo.toFixed(2);
   document.getElementById('ipi-p').value=prodAtual.ipi||0;
   document.getElementById('peso-r').value=prodAtual.peso||.5;
@@ -675,6 +699,16 @@ function atualizarTaxas(){
 
 
 // ══════════════════════════════════════════════════════════════════════
+function atualizarModoCusto(){
+  const modo=document.getElementById('modo-custo').value;
+  const lbl=document.getElementById('lbl-custo-b');
+  if(lbl){
+    lbl.textContent=modo==='bling'
+      ?'Custo Bling bruto (R$) — com IPI e ST embutidos'
+      :'Custo líquido NF (R$) — informe o valor sem IPI';
+  }
+}
+
 function recalcCMV(){
   const cb=parseFloat(document.getElementById('custo-b').value)||0;
   const ipi=(parseFloat(document.getElementById('ipi-p').value)||0)/100;
@@ -682,10 +716,20 @@ function recalcCMV(){
   const temST=document.getElementById('tem-st').value==='sim';
   const pInt=(parseFloat(document.getElementById('pct-int').value)||70)/100;
   const icmsM=(parseFloat(document.getElementById('icms-m').value)||12)/100;
+  const modo=document.getElementById('modo-custo')?.value||'bling';
 
   if(cb<=0){document.getElementById('cmv-box').style.display='none';cmvBr=0;cmvPr=0;return;}
 
-  const custoNF=(cb-stV)/(1+ipi);
+  let custoNF;
+  if(modo==='manual'){
+    // Novo produto: custo informado é o valor LÍQUIDO da NF (base para créditos)
+    // O IPI é custo adicional mas a base de crédito PIS/COFINS/ICMS é o valor sem IPI
+    custoNF = cb;
+  } else {
+    // Modo Bling: custo bruto já TEM IPI embutido no valor → extrai base NF
+    custoNF=(cb-stV)/(1+ipi);
+  }
+
   const credPC=custoNF*(PIS+COFINS);
   const credIcmsBr=temST?0:custoNF*pInt*icmsM;
   cmvBr=Math.max(custoNF-credIcmsBr-credPC, custoNF*.35);
@@ -695,8 +739,9 @@ function recalcCMV(){
   document.getElementById('cmv-box').style.display='block';
   document.getElementById('cmv-br-s').textContent='R$ '+fmt(cmvBr);
   document.getElementById('cmv-pr-s').textContent='R$ '+fmt(cmvPr);
+  const modoLabel=modo==='manual'?'(custo líq. NF)':'(bruto÷(1+IPI))';
   document.getElementById('cmv-det').innerHTML=
-    `Custo NF: R$ ${fmt(custoNF)} | Créd.ICMS BR: R$ ${fmt(credIcmsBr)} | Créd.ICMS PR: R$ ${fmt(credIcmsPR)} | Créd.PIS+COF: R$ ${fmt(credPC)}`+
+    `Base NF ${modoLabel}: R$ ${fmt(custoNF)} | Créd.ICMS BR: R$ ${fmt(credIcmsBr)} | Créd.ICMS PR: R$ ${fmt(credIcmsPR)} | Créd.PIS+COF: R$ ${fmt(credPC)}`+
     (temST?' | ⚠️ ST: sem créd. ICMS':'');
   calcAll();
 }
@@ -705,6 +750,7 @@ function recalcCMV(){
 // CÁLCULO PRINCIPAL
 // ══════════════════════════════════════════════════════════════════════
 function calcCenario(k, cmvBr, cmvPr, pesoKg){
+  let preco=0; // declarada explicitamente para evitar global implícita
   const c=CD[k], m=margens[k];
   const custo=c.cmv==='pr'?cmvPr:cmvBr;
   if(custo<=0)return null;
