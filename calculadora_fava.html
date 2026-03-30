@@ -606,6 +606,18 @@ header h1{font-size:14px;font-weight:700;flex:1}
       <div id="an-catalog-info"></div>
     </div>
 
+    <!-- ─ BANCO CMV STATUS ─ -->
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:6px 10px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+      <span class="cmv-banco-cnt" style="font-size:10px;font-weight:700;color:#166534">0 SKUs no banco</span>
+      <div style="display:flex;gap:4px">
+        <button class="btn-sm" onclick="cmvBancoMostrar()" title="Ver todos os SKUs">👁 Ver</button>
+        <button class="btn-sm" onclick="cmvBancoExportar()" title="Exportar TSV">⬇</button>
+        <button class="btn-sm" onclick="cmvBancoClear()" style="color:#dc2626;border-color:#fca5a5" title="Limpar banco">✕</button>
+      </div>
+    </div>
+    <!-- ─ BARRA SEQUENCIAL ─ -->
+    <div id="an-seq-bar" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:8px 10px;margin-bottom:8px;display:none"></div>
+
     <div class="sec">Produto</div>
     <div id="an-prod-info" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:7px 10px;font-size:11px;color:#1e40af;margin-bottom:8px">
       Carregue um produto na aba <strong>Produto único</strong> para auto-preencher
@@ -615,7 +627,11 @@ header h1{font-size:14px;font-weight:700;flex:1}
         oninput="anVerificarPecaDesgaste(this.value.toLowerCase())">
     </div>
     <div class="row2">
-      <div class="field"><label>SKU</label><input type="text" id="an-sku" placeholder="Ex: 2806"></div>
+      <div class="field">
+        <label>SKU</label>
+        <input type="text" id="an-sku" placeholder="Ex: 2806" oninput="anLookupBanco(this.value)">
+        <div id="an-banco-info" style="display:none;font-size:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:4px 8px;margin-top:3px;color:#166534;line-height:1.6"></div>
+      </div>
       <div class="field"><label>Tipo</label>
         <select id="an-tipo"><option>Peça</option><option>Kit</option><option>Acessório</option><option>Ferramenta</option><option>Equipamento</option></select>
       </div>
@@ -656,11 +672,14 @@ header h1{font-size:14px;font-weight:700;flex:1}
 
     <button class="btn btn-blue" id="an-btn-gerar" onclick="anGerar()">✨ Gerar com IA</button>
 
-    <div class="sec" style="margin-top:10px">Em massa (via NF XML)</div>
+    <div class="sec" style="margin-top:10px">NF → Anúncios</div>
     <div id="an-massa-lista" style="font-size:11px;color:#6b7280;margin-bottom:6px">
       Importe uma NF-e XML na aba <strong>Produto único</strong> para gerar em massa.
     </div>
-    <button id="an-btn-massa" class="btn btn-out" onclick="anGerarMassa()" style="display:none">✨ Gerar em massa (NF)</button>
+    <div style="display:flex;gap:5px;flex-wrap:wrap">
+      <button id="an-btn-massa" class="btn btn-out" onclick="anGerarMassa()" style="display:none;flex:1;font-size:11px">⚡ Gerar todos automático</button>
+      <button id="an-btn-seq" class="btn btn-blue" onclick="anIniciarSequencial()" style="display:none;flex:1;font-size:11px">📋 Sequencial (1 a 1)</button>
+    </div>
     <div class="field" style="margin-top:5px"><label>Pausa entre gerações (s)</label>
       <input type="number" id="an-pausa" value="2" min="1" max="10">
     </div>
@@ -805,6 +824,48 @@ Vonder: fabricante nacional de ferramentas elétricas e manuais com foco em qual
 // CONSTANTES
 // ══════════════════════════════════════════════════════════════════════
 const PIS=.0165, COFINS=.076, ICMS_PR=.195;
+// ══════════════════════════════════════════════════════════════════════
+// BANCO DE CMV — persiste em localStorage, compartilhado entre abas
+// ══════════════════════════════════════════════════════════════════════
+let cmvBanco = {};
+(function(){ try{ cmvBanco = JSON.parse(localStorage.getItem('fava_cmv_banco')||'{}'); }catch(e){} })();
+
+function cmvSet(sku, data){
+  if(!sku) return;
+  const k = String(sku).trim();
+  if(!k) return;
+  cmvBanco[k] = {...(cmvBanco[k]||{}), ...data, dt: new Date().toISOString().slice(0,10)};
+  try{ localStorage.setItem('fava_cmv_banco', JSON.stringify(cmvBanco)); }catch(e){}
+  const n = Object.keys(cmvBanco).length;
+  document.querySelectorAll('.cmv-banco-cnt').forEach(el=>el.textContent=n+' SKUs no banco');
+}
+function cmvGet(sku){ return cmvBanco[String(sku||'').trim()]||null; }
+
+function cmvBancoClear(){
+  if(!confirm('Apagar banco de CMV local? (' + Object.keys(cmvBanco).length + ' registros)'))return;
+  cmvBanco={}; localStorage.removeItem('fava_cmv_banco');
+  document.querySelectorAll('.cmv-banco-cnt').forEach(el=>el.textContent='0 SKUs no banco');
+}
+
+function cmvBancoExportar(){
+  const keys=Object.keys(cmvBanco); if(!keys.length){alert('Banco vazio');return;}
+  let txt='SKU\tNome\tCMV_BR\tCMV_PR\tCusto\tData\n';
+  keys.forEach(sku=>{const d=cmvBanco[sku];txt+=`${sku}\t${d.nome||''}\t${(d.cmvBr||0).toFixed(4)}\t${(d.cmvPr||0).toFixed(4)}\t${(d.custo||0).toFixed(4)}\t${d.dt||''}\n`;});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/tab-separated-values'}));
+  a.download='cmv_banco.tsv'; a.click();
+}
+
+function cmvBancoMostrar(){
+  const keys=Object.keys(cmvBanco); if(!keys.length){alert('Banco vazio. Importe uma NF XML ou busque um produto no Bling.');return;}
+  let html='<div style="max-height:60vh;overflow-y:auto"><table style="width:100%;font-size:11px;border-collapse:collapse">';
+  html+='<thead><tr style="background:#1F3864;color:#fff"><th style="padding:5px 8px;text-align:left">SKU</th><th style="padding:5px 8px;text-align:left">Nome</th><th style="padding:5px 8px;text-align:right">CMV BR</th><th style="padding:5px 8px;text-align:right">CMV PR</th><th style="padding:5px 8px">Data</th></tr></thead><tbody>';
+  keys.forEach((sku,i)=>{const d=cmvBanco[sku];html+=`<tr style="background:${i%2?'#f8fafc':'#fff'};border-top:1px solid #f3f4f6"><td style="padding:4px 8px;font-weight:700">${sku}</td><td style="padding:4px 8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nome||''}</td><td style="padding:4px 8px;text-align:right;color:#166534">R$ ${(d.cmvBr||0).toFixed(2)}</td><td style="padding:4px 8px;text-align:right;color:#1e40af">R$ ${(d.cmvPr||0).toFixed(2)}</td><td style="padding:4px 8px;color:#9ca3af">${d.dt||''}</td></tr>`;});
+  html+='</tbody></table></div>';
+  const w=window.open('','_blank','width=750,height=500');
+  w.document.write(`<html><head><title>Banco CMV — Fava Ecom</title><style>body{font-family:Arial,sans-serif;margin:0;padding:10px;}</style></head><body><div style="font-size:13px;font-weight:700;color:#1F3864;margin-bottom:8px">Banco de CMV — ${keys.length} SKUs</div>${html}</body></html>`);
+}
+
+
 const ICMS_SP_INTERNO = 0.18; // SP intraestadual
 
 // ICMS interestadual por UF destino (origem SP)
@@ -925,6 +986,8 @@ window.onload=()=>{
   if(sv){tokens=JSON.parse(sv);document.getElementById('tk-bling').value=tokens.bling||'';document.getElementById('tk-ml').value=tokens.ml||'';}
   else{tokens.bling='590eed8f0b2fb1998e3f60335cef2a17bf5b2135fc69ec4a5ae925f520a8';document.getElementById('tk-bling').value=tokens.bling;localStorage.setItem('fava_tk4',JSON.stringify(tokens));}
   testar();renderTags();renderMg();renderTiers();renderMgMassa();
+  // init banco CMV count
+  { const n=Object.keys(cmvBanco).length; document.querySelectorAll('.cmv-banco-cnt').forEach(el=>el.textContent=n+' SKUs no banco'); }
 };
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1063,6 +1126,8 @@ async function processarBling(p){
   const dimA = parseFloat(prod.altura  || prod.dimensoes?.altura  || prod.medidas?.altura  || 0);
   const dimP = parseFloat(prod.profundidade || prod.dimensoes?.profundidade || prod.medidas?.profundidade || 0);
   prodAtual={id:prod.id,nome:prod.nome||'',codigo:prod.codigo||'',custo:custoBling,peso:parseFloat(prod.pesoBruto||prod.peso||.5),l:dimL,a:dimA,p:dimP,estoque:est,ipi:parseFloat(prod.ipi||0)};
+  // ─ salva no Banco CMV ─
+  cmvSet(prodAtual.codigo, {nome:prodAtual.nome, custo:custoBling});
   setModo('bling');
   document.getElementById('custo-b').value=prodAtual.custo.toFixed(2);
   document.getElementById('ipi-p').value=prodAtual.ipi||0;
@@ -1074,6 +1139,8 @@ async function processarBling(p){
   alerta('balert','','');
   mostrarCardProd();
   recalcCMV();calcFrete();
+  // atualiza CMV no banco após cálculo
+  if(prodAtual&&prodAtual.codigo) cmvSet(prodAtual.codigo,{cmvBr,cmvPr});
 }
 
 async function buscarMLItem(mlb){
@@ -1562,6 +1629,8 @@ async function calcMassa(){
       return{sku,nome,qtd,vlUnit,ipiPct,stUn,temST,cmvBr:cmvBrItem,cmvPr:cmvPrItem,precos};
     });
 
+    // ─ salva no Banco CMV ─
+    massaData.forEach(it=>cmvSet(it.sku,{nome:it.nome,cmvBr:it.cmvBr,cmvPr:it.cmvPr}));
     alerta('massa-alert','','');
     renderMassa(nfNum);
   }catch(e){alerta('massa-alert',`Erro ao ler planilha: ${e.message}`,'err');}
@@ -2237,6 +2306,11 @@ function renderNfItens(itens, nf){
   </button>`;
 
   wrap.innerHTML=html;
+  // ─ salva todos os itens da NF no Banco CMV ─
+  itens.forEach(it=>{
+    const cmvPrEst = Math.max(it.custoTotal - (it.temST?0:it.custoTotal*ICMS_PR) - it.credPIS - it.credCOFINS, it.custoTotal*0.35);
+    cmvSet(it.cProd, {nome:it.xProd, custo:it.custoBruto, cmvBr:it.cmvReal, cmvPr:cmvPrEst});
+  });
   // Registra itens para geração em massa de anúncios
   if(typeof anRegistrarItensNF === 'function') anRegistrarItensNF(itens);
   // Registra itens para o sugestor de kits
@@ -2618,12 +2692,107 @@ function anCp(btn,txt){
   });
 }
 
+
+// ══════════════════════════════════════════════════════════════════════
+// ANÚNCIO — Lookup banco CMV por SKU
+// ══════════════════════════════════════════════════════════════════════
+function anLookupBanco(sku){
+  const d = cmvGet(sku);
+  const el = document.getElementById('an-banco-info');
+  if(!el) return;
+  if(d && String(sku).trim()){
+    el.style.display='';
+    el.innerHTML=`✅ <strong>${d.nome||sku}</strong> | CMV BR: <strong>R$ ${(d.cmvBr||0).toFixed(2)}</strong> | CMV PR: <strong>R$ ${(d.cmvPr||0).toFixed(2)}</strong> | atualizado: ${d.dt||'—'}
+    <button onclick="anPuxarBanco('${String(sku).replace(/'/g,"\\'")}',this)"
+      style="margin-left:6px;padding:2px 7px;font-size:10px;border:1px solid #16a34a;border-radius:4px;background:#f0fdf4;color:#166534;cursor:pointer">
+      ↩ Puxar dados
+    </button>`;
+    // Se nome do produto ainda vazio, auto-fill
+    const nomeEl=document.getElementById('an-nome');
+    if(nomeEl&&!nomeEl.value&&d.nome) nomeEl.value=d.nome;
+  } else {
+    el.style.display='none';
+  }
+}
+
+function anPuxarBanco(sku, btn){
+  const d = cmvGet(sku); if(!d) return;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
+  if(d.nome) set('an-nome', d.nome);
+  if(d.peso) set('an-peso', d.peso);
+  if(btn){ btn.textContent='✅ Puxado!'; btn.disabled=true; setTimeout(()=>{btn.textContent='↩ Puxar dados';btn.disabled=false;},2000); }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ANÚNCIO SEQUENCIAL — gera um produto da NF por vez
+// ══════════════════════════════════════════════════════════════════════
+let anSeqIdx = 0;
+let anSeqItens = [];
+
+function anIniciarSequencial(){
+  if(!anNfItens.length){ alert('Importe uma NF-e XML primeiro (aba Produto único → seção NF-e XML)'); return; }
+  anSeqItens = [...anNfItens];
+  anSeqIdx = 0;
+  switchTab('anuncio');
+  setTimeout(()=>anSeqCarregar(0), 150);
+}
+
+function anSeqCarregar(idx){
+  if(idx >= anSeqItens.length){ 
+    document.getElementById('an-seq-bar').style.display='none';
+    alert('✅ Todos os itens da NF foram processados!'); 
+    return; 
+  }
+  const it = anSeqItens[idx];
+  anSeqIdx = idx;
+  // Limpa campos dinâmicos
+  ['an-codfab','an-marca','an-familia','an-fornecedor','an-compat','an-ficha','an-desgaste','an-material','an-extra','an-pos-catalogo'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  // Pre-fill com dados da NF
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
+  set('an-sku', it.cProd);
+  set('an-sku-fava', it.cProd);
+  set('an-nome', it.xProd);
+  set('an-peso', '');
+  document.getElementById('an-catalog-sel').value='';
+  // Lookup banco CMV para info adicional
+  anLookupBanco(it.cProd);
+  // Atualiza barra de progresso
+  const bar = document.getElementById('an-seq-bar');
+  if(bar){
+    bar.style.display='';
+    const pct = Math.round(idx/anSeqItens.length*100);
+    bar.innerHTML=`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+        <span style="font-size:10px;font-weight:700;color:#1F3864">Item ${idx+1} de ${anSeqItens.length}</span>
+        <div style="display:flex;gap:4px">
+          <button onclick="anSeqAnterior()" ${idx===0?'disabled':''} class="btn-sm">◀ Anterior</button>
+          <button onclick="anSeqProximo()" ${idx>=anSeqItens.length-1?'disabled':''} class="btn-sm">Próximo ▶</button>
+        </div>
+      </div>
+      <div style="background:#e5e7eb;border-radius:3px;height:4px">
+        <div style="width:${pct}%;height:100%;background:#1F3864;border-radius:3px;transition:.3s"></div>
+      </div>
+      <div style="font-size:10px;color:#6b7280;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+        <strong>${it.cProd}</strong> — ${it.xProd}
+      </div>`;
+  }
+  // Scroll top
+  const leftEl=document.querySelector('.an-left'); if(leftEl) leftEl.scrollTo({top:0,behavior:'smooth'});
+}
+
+function anSeqProximo(){ if(anSeqIdx < anSeqItens.length-1) anSeqCarregar(anSeqIdx+1); }
+function anSeqAnterior(){ if(anSeqIdx > 0) anSeqCarregar(anSeqIdx-1); }
+
 // ── GERAÇÃO EM MASSA via NF XML ─────────────────────────────────────────────
 function anRegistrarItensNF(itens){
   // Chamado quando NF XML é importado
   anNfItens=itens;
   const btn=document.getElementById('an-btn-massa');
+  const btnSeq=document.getElementById('an-btn-seq');
   const info=document.getElementById('an-massa-lista');
+  if(btnSeq) btnSeq.style.display='';
   if(btn&&info&&itens.length){
     btn.style.display='';
     info.innerHTML=`✅ <strong>${itens.length} itens</strong> da NF prontos para geração em massa.<br>
