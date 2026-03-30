@@ -796,84 +796,90 @@ function salvarCfg(){
 <div id="view-promocoes" style="display:none;flex-direction:column">
   <div class="main">
 
-    <!-- Controles topo -->
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-      <button class="btn-reload" onclick="carregarPromocoes()" style="background:var(--azul);color:#fff;padding:7px 14px;font-size:12px;border:none;border-radius:6px;cursor:pointer;font-weight:700">
-        ↻ Carregar anúncios ativos
-      </button>
-      <button onclick="selecionarTodosAplicar()" style="background:#16a34a;color:#fff;padding:7px 14px;font-size:12px;border:none;border-radius:6px;cursor:pointer;font-weight:700">⚡ Aplicar em TODOS</button>
-      <label style="padding:7px 14px;font-size:12px;font-weight:700;background:#fff;color:#1F3864;border:1px solid #1F3864;border-radius:6px;cursor:pointer;white-space:nowrap">
-        📋 Importar planilha
-        <input type="file" accept=".xlsx,.csv" onchange="importarPlanilhaDesconto(this)" style="display:none">
-      </label>
-      <input type="text" id="prom-busca" placeholder="Buscar produto ou SKU..."
-        oninput="filtrarPromos()" style="border:1px solid var(--borda);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:220px">
-      <span id="prom-status" style="font-size:12px;color:var(--muted)">Clique em Carregar para listar seus anúncios</span>
+    <!-- instrução -->
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#1e40af;line-height:1.6">
+      <strong>Como usar:</strong>
+      1. No ML → <em>Promoções → Criar promoção → Desconto → Baixar planilha</em> &nbsp;|&nbsp;
+      2. Importe aqui → sistema cruza CMV e calcula margem &nbsp;|&nbsp;
+      3. Ajuste os descontos → Exportar planilha → faça upload no ML
     </div>
 
-    <!-- Ação em massa -->
-    <div id="prom-acao" style="display:none;background:#fff;border:1px solid var(--borda);border-radius:9px;padding:12px 16px;margin-bottom:10px">
+    <!-- controles -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <label style="padding:7px 16px;font-size:12px;font-weight:700;background:#1F3864;color:#fff;border-radius:6px;cursor:pointer;white-space:nowrap">
+        📥 Importar planilha ML
+        <input type="file" accept=".xlsx" onchange="importarPlanilhaML(this)" style="display:none">
+      </label>
+      <button onclick="exportarPlanilhaML()" style="padding:7px 14px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer;display:none" id="btn-exportar-prom">
+        📤 Exportar planilha ML
+      </button>
+      <button onclick="aplicarDescontoPromoAPI()" style="padding:7px 14px;font-size:12px;font-weight:700;background:#d97706;color:#fff;border:none;border-radius:6px;cursor:pointer;display:none" id="btn-aplicar-api-prom">
+        ⚡ Aplicar preços via API ML
+      </button>
+      <input type="text" id="prom-busca" placeholder="Buscar produto, SKU, MLB..."
+        oninput="filtrarPromos()" style="border:1px solid var(--borda);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:240px">
+      <span id="prom-status" style="font-size:12px;color:var(--muted)">Importe a planilha para começar</span>
+    </div>
+
+    <!-- ação em massa -->
+    <div id="prom-acao" style="display:none;background:#fff;border:1px solid var(--borda);border-radius:9px;padding:10px 14px;margin-bottom:10px">
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <strong style="font-size:12px" id="prom-sel-count">0 selecionados</strong>
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:12px;color:var(--muted)">Desconto %:</span>
-          <input type="number" id="prom-desc-pct" value="10" min="1" max="80" step="1"
-            style="width:60px;border:1px solid var(--borda);border-radius:5px;padding:4px 7px;font-size:13px;font-weight:700;text-align:center;outline:none">
-        </div>
-        <button onclick="verImpactoPromo()" style="padding:6px 12px;font-size:12px;font-weight:700;background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:6px;cursor:pointer">
-          Simular impacto
+        <span style="font-size:12px;color:var(--muted)">Aplicar desconto %:</span>
+        <input type="number" id="prom-desc-pct" value="10" min="5" max="80" step="1"
+          style="width:60px;border:1px solid var(--borda);border-radius:5px;padding:4px 7px;font-size:13px;font-weight:700;text-align:center;outline:none">
+        <button onclick="aplicarDescSelecionados()" style="padding:5px 14px;font-size:12px;font-weight:700;background:#1F3864;color:#fff;border:none;border-radius:6px;cursor:pointer">
+          Aplicar nos selecionados
         </button>
-        <button onclick="aplicarDescontoPromo()" style="padding:6px 14px;font-size:12px;font-weight:700;background:#1F3864;color:#fff;border:none;border-radius:6px;cursor:pointer">
-          Aplicar desconto no ML
-        </button>
-        <button onclick="removerDescontoPromo()" style="padding:6px 12px;font-size:12px;font-weight:700;background:#fff;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;cursor:pointer">
-          Remover desconto
+        <button onclick="zerarDescSelecionados()" style="padding:5px 12px;font-size:12px;font-weight:700;background:#fff;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;cursor:pointer">
+          Zerar desconto
         </button>
       </div>
-      <div id="prom-simulacao" style="margin-top:8px;font-size:11px;color:var(--muted)"></div>
+      <div id="prom-simulacao" style="margin-top:6px;font-size:11px;color:var(--muted)"></div>
     </div>
 
     <!-- KPIs -->
-    <div id="prom-kpis" style="display:none;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:10px">
-      <div class="kpi"><div class="kl">Anúncios</div><div class="kv" id="pk-total">—</div></div>
-      <div class="kpi"><div class="kl">Com desconto</div><div class="kv" id="pk-desc">—</div></div>
-      <div class="kpi"><div class="kl">Preço médio</div><div class="kv" id="pk-preco">—</div></div>
+    <div id="prom-kpis" style="display:none;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:10px">
+      <div class="kpi"><div class="kl">Produtos</div><div class="kv" id="pk-total">—</div></div>
+      <div class="kpi"><div class="kl">Elegíveis</div><div class="kv" id="pk-eleg">—</div></div>
+      <div class="kpi"><div class="kl">Com CMV</div><div class="kv" id="pk-cmv">—</div></div>
       <div class="kpi"><div class="kl">Margem média</div><div class="kv" id="pk-mg">—</div></div>
+      <div class="kpi"><div class="kl">Fat. total</div><div class="kv" id="pk-fat">—</div></div>
     </div>
 
-    <!-- Tabela -->
+    <!-- tabela -->
     <div id="prom-table-wrap" style="display:none;background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden">
-      <div style="padding:8px 12px;background:#f8fafc;border-bottom:1px solid var(--borda);display:flex;gap:8px;align-items:center">
-        <input type="checkbox" id="prom-check-all" onchange="toggleTodosPromos(this.checked)" title="Selecionar todos">
-        <span style="font-size:11px;color:var(--muted)">Selecionar todos</span>
+      <div style="padding:7px 12px;background:#f8fafc;border-bottom:1px solid var(--borda);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="checkbox" id="prom-check-all" onchange="toggleTodosPromos(this.checked)">
+        <span style="font-size:11px;color:var(--muted)">Todos</span>
+        <span style="font-size:11px;color:var(--muted);margin-left:8px">Filtrar:</span>
+        <button class="filt-btn a" id="pfb-todos" onclick="filtrarPromStatus('todos',this)">Todos</button>
+        <button class="filt-btn" id="pfb-eleg" onclick="filtrarPromStatus('elegivel',this)">Elegíveis</button>
+        <button class="filt-btn" id="pfb-part" onclick="filtrarPromStatus('participando',this)">Participando</button>
+        <button class="filt-btn" id="pfb-mg" onclick="filtrarPromStatus('margembaixa',this)">Margem baixa</button>
+        <button class="filt-btn" id="pfb-semcmv" onclick="filtrarPromStatus('semcmv',this)">Sem CMV ⚠️</button>
       </div>
-      <table class="prom-tbl" id="prom-tbl" style="table-layout:fixed;width:100%">
-        <colgroup>
-          <col style="width:36px">
-          <col style="width:30%">
-          <col style="width:90px">
-          <col style="width:90px">
-          <col style="width:90px">
-          <col style="width:80px">
-          <col style="width:90px">
-          <col style="width:100px">
-          <col style="width:90px">
-        </colgroup>
-        <thead>
-          <tr>
-            <th style="width:36px"></th>
-            <th>Produto</th>
-            <th>SKU Fava</th>
-            <th class="num">Preço ML</th>
-            <th class="num">C/ desc.</th>
-            <th class="num">Custo</th>
-            <th class="num">Margem</th>
-            <th class="num">Marg. c/desc.</th>
-            <th class="num">Status</th>
-          </tr>
-        </thead>
-        <tbody id="prom-tbody"></tbody>
-      </table>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:11px" id="prom-tbl">
+          <thead>
+            <tr style="background:#f8fafc">
+              <th style="padding:7px 8px;width:32px;border-bottom:1px solid var(--borda)"></th>
+              <th style="padding:7px 8px;text-align:left;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;white-space:nowrap">Produto</th>
+              <th style="padding:7px 8px;text-align:left;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">SKU</th>
+              <th style="padding:7px 8px;text-align:left;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">MLB</th>
+              <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Preço</th>
+              <th style="padding:7px 8px;text-align:center;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Desc.%</th>
+              <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Preço final</th>
+              <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">CMV</th>
+              <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Frete est.</th>
+              <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Margem</th>
+              <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Mg c/desc.</th>
+              <th style="padding:7px 8px;text-align:center;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Status</th>
+            </tr>
+          </thead>
+          <tbody id="prom-tbody"></tbody>
+        </table>
+      </div>
     </div>
 
   </div>
@@ -1333,182 +1339,201 @@ async function selecionarTodosAplicar(){
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// PROMOÇÕES — GESTÃO DE DESCONTOS ML
+// PROMOÇÕES — BASE NA PLANILHA ML
 // ══════════════════════════════════════════════════════════════════════
 let promoData = [];
 let promoDataFiltrada = [];
+let promoStatusFiltro = 'todos';
+let promoPlanilhaRows = []; // linhas originais da planilha para exportar
 
+function calcFreteProm(preco){
+  // Estimativa de frete ML baseada no preço
+  if(preco <= 49) return preco * 0.18;
+  if(preco <= 99) return preco * 0.13;
+  if(preco <= 199) return preco * 0.10;
+  return preco * 0.08;
+}
 
-// Importa planilha de descontos: colunas SKU | % Desconto
-function importarPlanilhaDesconto(input){
+function calcMargemProm(preco, cmv, taxa_ml){
+  if(!preco || !cmv) return null;
+  const taxa = taxa_ml || 0.16; // gold_pro padrão
+  const frete = calcFreteProm(preco);
+  const pis = preco * 0.0065;
+  const cofins = preco * 0.03;
+  const lucro = preco - cmv - preco*taxa - frete - pis - cofins;
+  return lucro / preco;
+}
+
+// ── Importar planilha ML (formato oficial) ──────────────────────────
+function importarPlanilhaML(input){
   const file = input.files[0];
   if(!file) return;
+  const st = document.getElementById('prom-status');
+  if(st) st.textContent = '⟳ Lendo planilha...';
+
   const reader = new FileReader();
   reader.onload = function(e){
     try{
       const wb = XLSX.read(e.target.result, {type:'binary'});
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, {header:1});
-      let aplicados = 0;
-      rows.forEach(row=>{
-        if(!row[0]) return;
-        const sku = String(row[0]).trim();
-        const pct = parseFloat(row[1]||0);
-        if(!sku || !pct) return;
-        // Acha o produto na promoData pelo SKU
-        const idx = promoData.findIndex(p=>
-          String(p.sku).trim()===sku ||
-          String(p.id).trim()===sku
-        );
-        if(idx>=0){
-          promoData[idx].descPlanilha = pct;
-          promoData[idx].selecionado = true;
-          aplicados++;
+      // Procura aba "Promoções" ou usa a primeira
+      const wsName = wb.SheetNames.find(n=>n.toLowerCase().includes('promo')||n.toLowerCase().includes('promo')) || wb.SheetNames[0];
+      const ws = wb.Sheets[wsName];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+
+      // Detectar linha de cabeçalho (tem ITEM_ID ou MLB)
+      let headerRow = -1;
+      for(let i=0; i<Math.min(rows.length,10); i++){
+        const r = rows[i];
+        if(r && r.some(v=>v&&String(v).includes('ITEM_ID'))){
+          headerRow = i; break;
         }
-      });
-      if(!aplicados){ alert('Nenhum SKU encontrado. Certifique que a planilha tem:\nColuna A: SKU\nColuna B: % desconto\n\nCarregue os anúncios antes de importar.'); return; }
-      promoDataFiltrada = [...promoData];
+      }
+      // Se não achou cabeçalho padrão, assume linha 0
+      const dataStart = headerRow >= 0 ? headerRow + 5 : 1; // pula as 4 linhas de instruções
+
+      promoPlanilhaRows = rows; // salva original para exportar
+
+      const itens = [];
+      for(let i=dataStart; i<rows.length; i++){
+        const r = rows[i];
+        if(!r) continue;
+        const mlbId = r[1] ? String(r[1]).trim() : '';
+        if(!mlbId || !mlbId.startsWith('MLB')) continue;
+
+        const sku = r[2] ? String(r[2]).trim() : '';
+        const titulo = r[0] ? String(r[0]).trim() : '';
+        const precoOriginal = parseFloat(r[3]) || 0;
+        const descPct = parseFloat(r[4]) || 0;
+        const precoFinal = parseFloat(r[5]) || (precoOriginal*(1-descPct/100));
+        const status = r[11] ? String(r[11]).trim() : '';
+        const acao = r[12] ? String(r[12]).trim() : '';
+
+        // Busca CMV no cache
+        const cmvInfo = cmvLookup(sku);
+        const cmv = cmvInfo?.cmv || 0;
+        const margem = calcMargemProm(precoOriginal, cmv, 0.16);
+        const margemComDesc = calcMargemProm(precoFinal, cmv, 0.16);
+
+        itens.push({
+          rowIdx: i,         // índice na planilha original (para exportar)
+          id: mlbId,
+          sku: sku,
+          titulo: titulo,
+          preco: precoOriginal,
+          descPct: descPct,
+          descEditado: descPct, // valor editável pelo usuário
+          precoFinal: precoFinal,
+          status: status,
+          acao: acao,
+          cmv: cmv,
+          margem: margem,
+          margemComDesc: margemComDesc,
+          frete: calcFreteProm(precoOriginal),
+          selecionado: false,
+        });
+      }
+
+      promoData = itens;
+      promoDataFiltrada = [...itens];
+      renderPromoKpis();
       renderPromoTabela(promoDataFiltrada);
-      const st = document.getElementById('prom-status');
-      if(st) st.textContent = `✅ ${aplicados} produtos com desconto da planilha`;
-      alert(`${aplicados} produtos encontrados e selecionados.\n\nClique "Aplicar desconto no ML" para confirmar.`);
-    }catch(e){ alert('Erro ao ler planilha: '+e.message); }
+
+      const tw = document.getElementById('prom-table-wrap');
+      const pk = document.getElementById('prom-kpis');
+      const btnExp = document.getElementById('btn-exportar-prom');
+      const btnApi = document.getElementById('btn-aplicar-api-prom');
+      if(tw) tw.style.display = '';
+      if(pk) pk.style.display = 'grid';
+      if(btnExp) btnExp.style.display = '';
+      if(btnApi) btnApi.style.display = '';
+      if(st) st.textContent = `✅ ${itens.length} produtos carregados`;
+    }catch(err){
+      if(st) st.textContent = `❌ Erro: ${err.message}`;
+      console.error(err);
+    }
   };
   reader.readAsBinaryString(file);
-  input.value='';
+  input.value = '';
 }
 
-async function carregarPromocoes(){
-  if(!tokens.ml){ alert('Configure o token ML em ⚙️'); return; }
-  const st = document.getElementById('prom-status');
-  if(st) st.textContent = '⟳ Buscando anúncios ativos...';
-
-  try{
-    // Busca IDs dos anúncios ativos
-    let allIds = [];
-    let scroll = null;
-    for(let i=0; i<5; i++){
-      const url = scroll
-        ? `/api/ml/users/537714337/items/search?status=active&limit=50&scroll_id=${scroll}`
-        : `/api/ml/users/537714337/items/search?status=active&limit=50`;
-      const r = await fetch(url, {headers:{'Authorization':`Bearer ${tokens.ml}`}});
-      if(!r.ok) break;
-      const d = await r.json();
-      const ids = d.results||[];
-      allIds = allIds.concat(ids);
-      scroll = d.scroll_id||null;
-      if(!ids.length || ids.length < 50 || !scroll) break;
-    }
-    if(st) st.textContent = `⟳ Carregando detalhes de ${allIds.length} anúncios...`;
-
-    // Busca detalhes em lotes de 20
-    const itens = [];
-    for(let i=0; i<allIds.length; i+=20){
-      const lote = allIds.slice(i,i+20).join(',');
-      const r = await fetch(`/api/ml/items?ids=${lote}&attributes=id,title,price,original_price,seller_sku,listing_type_id,status`,{
-        headers:{'Authorization':`Bearer ${tokens.ml}`}
-      });
-      if(!r.ok) continue;
-      const d = await r.json();
-      d.forEach(x=>{
-        if(x.code===200 && x.body?.id){
-          const it = x.body;
-          const cmvInfo = cmvLookup(it.seller_sku);
-          const cmv = cmvInfo?.cmv||0;
-          const margem = (it.price && cmv) ? (it.price - cmv - it.price*0.21 - it.price*0.0925) / it.price : null;
-          itens.push({
-            id: it.id,
-            titulo: it.title,
-            sku: it.seller_sku||'',
-            preco: it.price,
-            precoOriginal: it.original_price||null,
-            listingType: it.listing_type_id,
-            status: it.status,
-            cmv,
-            margem,
-            selecionado: false,
-          });
-        }
-      });
-      if(allIds.length > 20) await new Promise(r=>setTimeout(r,100));
-    }
-
-    promoData = itens;
-    promoDataFiltrada = [...itens];
-    renderPromoKpis();
-    renderPromoTabela(promoDataFiltrada);
-
-    const tw = document.getElementById('prom-table-wrap');
-    const pk = document.getElementById('prom-kpis');
-    if(tw) tw.style.display = '';
-    if(pk) pk.style.display = 'grid';
-    if(st) st.textContent = `✅ ${itens.length} anúncios carregados`;
-
-  }catch(e){
-    if(st) st.textContent = `❌ ${e.message}`;
-    console.error('Promoções erro:', e);
-  }
-}
-
+// ── Filtros ──────────────────────────────────────────────────────────
 function filtrarPromos(){
   const q = (document.getElementById('prom-busca')?.value||'').toLowerCase();
-  promoDataFiltrada = q
-    ? promoData.filter(p => p.titulo.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q))
-    : [...promoData];
-  renderPromoTabela(promoDataFiltrada);
+  let lista = q ? promoData.filter(p=>
+    p.titulo.toLowerCase().includes(q) ||
+    p.sku.toLowerCase().includes(q) ||
+    p.id.toLowerCase().includes(q)
+  ) : [...promoData];
+
+  if(promoStatusFiltro === 'elegivel') lista = lista.filter(p=>p.status==='Elegível');
+  else if(promoStatusFiltro === 'participando') lista = lista.filter(p=>p.acao==='Participar'||p.status==='Ativo');
+  else if(promoStatusFiltro === 'margembaixa') lista = lista.filter(p=>p.margemComDesc!==null && p.margemComDesc<0.10);
+  else if(promoStatusFiltro === 'semcmv') lista = lista.filter(p=>!p.cmv);
+
+  promoDataFiltrada = lista;
+  renderPromoTabela(lista);
 }
 
+function filtrarPromStatus(tipo, btn){
+  promoStatusFiltro = tipo;
+  document.querySelectorAll('[id^="pfb-"]').forEach(b=>b.classList.remove('a'));
+  if(btn) btn.classList.add('a');
+  filtrarPromos();
+}
+
+// ── KPIs ─────────────────────────────────────────────────────────────
 function renderPromoKpis(){
   const total = promoData.length;
-  const comDesc = promoData.filter(p=>p.precoOriginal && p.preco < p.precoOriginal).length;
-  const precoMed = total ? promoData.reduce((s,p)=>s+p.preco,0)/total : 0;
-  const comMargem = promoData.filter(p=>p.margem!==null);
-  const mgMed = comMargem.length ? comMargem.reduce((s,p)=>s+p.margem,0)/comMargem.length : 0;
+  const elegiveis = promoData.filter(p=>p.status==='Elegível').length;
+  const comCmv = promoData.filter(p=>p.cmv>0).length;
+  const comMg = promoData.filter(p=>p.margemComDesc!==null);
+  const mgMed = comMg.length ? comMg.reduce((s,p)=>s+p.margemComDesc,0)/comMg.length : 0;
+  const fat = promoData.reduce((s,p)=>s+p.preco,0);
   const s=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   s('pk-total', total);
-  s('pk-desc', comDesc);
-  s('pk-preco', 'R$ '+precoMed.toFixed(2));
-  const mgEl = document.getElementById('pk-mg');
-  if(mgEl){ mgEl.textContent=(mgMed*100).toFixed(1)+'%'; mgEl.style.color=mgMed>=.20?'var(--verde)':mgMed>=.10?'var(--amarelo)':'var(--vermelho)'; }
+  s('pk-eleg', elegiveis);
+  s('pk-cmv', comCmv);
+  s('pk-fat', 'R$'+fat.toFixed(0));
+  const mgEl=document.getElementById('pk-mg');
+  if(mgEl){mgEl.textContent=(mgMed*100).toFixed(1)+'%';mgEl.style.color=mgMed>=.20?'var(--verde)':mgMed>=.10?'var(--amarelo)':'var(--vermelho)';}
 }
 
+// ── Tabela ────────────────────────────────────────────────────────────
 function renderPromoTabela(lista){
   const tbody = document.getElementById('prom-tbody');
   if(!tbody) return;
-  const desc = parseFloat(document.getElementById('prom-desc-pct')?.value||10)/100;
 
   tbody.innerHTML = lista.map((p,i)=>{
-    const temDesc = p.precoOriginal && p.preco < p.precoOriginal;
-    const precoComDesc = (p.preco*(1-desc)).toFixed(2);
-    const mgAtual = p.margem !== null ? (p.margem*100).toFixed(1)+'%' : '—';
-    const mgComDesc = p.cmv ? (((p.preco*(1-desc) - p.cmv - p.preco*(1-desc)*0.21 - p.preco*(1-desc)*0.0925) / (p.preco*(1-desc)))*100).toFixed(1)+'%' : '—';
     const mgCor = p.margem!==null ? (p.margem>=.20?'var(--verde)':p.margem>=.10?'var(--amarelo)':'var(--vermelho)') : 'var(--muted)';
-    const tagDesc = temDesc ? '<span class="pill pill-g">Com desconto</span>' : '';
+    const mgDescCor = p.margemComDesc!==null ? (p.margemComDesc>=.20?'var(--verde)':p.margemComDesc>=.10?'var(--amarelo)':'var(--vermelho)') : 'var(--muted)';
+    const mgStr = p.margem!==null ? (p.margem*100).toFixed(1)+'%' : p.cmv ? '—' : '<span style="color:#f59e0b">⚠️sem CMV</span>';
+    const mgDescStr = p.margemComDesc!==null ? (p.margemComDesc*100).toFixed(1)+'%' : '—';
+    const statusTag = p.status==='Elegível' ? '<span class="pill pill-g" style="font-size:9px">Elegível</span>' :
+                      p.status==='Ativo' ? '<span class="pill pill-b" style="font-size:9px">Ativo</span>' :
+                      `<span class="pill" style="font-size:9px;background:#f3f4f6;color:#6b7280">${p.status||'—'}</span>`;
+    const precoComDesc = p.preco*(1-p.descEditado/100);
 
-    // Recalcula margem com CMV atualizado (pode ter chegado depois do carregamento)
-    const cmvAtual = p.cmv || cmvLookup(p.sku)?.cmv || 0;
-    const mgReal = (p.preco && cmvAtual) ? ((p.preco - cmvAtual - p.preco*0.21 - p.preco*0.0925) / p.preco) : null;
-    const mgRealStr = mgReal !== null ? (mgReal*100).toFixed(1)+'%' : '—';
-    const mgRealCor = mgReal!==null ? (mgReal>=.20?'var(--verde)':mgReal>=.10?'var(--amarelo)':'var(--vermelho)') : 'var(--muted)';
-    const mgDescCalc = cmvAtual ? (((p.preco*(1-desc) - cmvAtual - p.preco*(1-desc)*0.21 - p.preco*(1-desc)*0.0925) / (p.preco*(1-desc)))*100).toFixed(1)+'%' : '—';
-    const skuExib = p.sku ? `<strong>${p.sku}</strong>` : `<span style="color:#9ca3af;font-size:9px">${p.id}</span>`;
-    const statusTag = temDesc ? '<span class="pill pill-g" style="font-size:9px">Desconto</span>' : '';
-    const semCusto = !cmvAtual ? '<span title="Sem CMV no banco" style="color:#f59e0b">⚠️</span>' : '';
-
-    return `<tr id="prom-row-${i}" style="${p.selecionado?'background:#eff6ff':''}">
-      <td style="text-align:center"><input type="checkbox" ${p.selecionado?'checked':''} onchange="togglePromo(${i},this.checked)"></td>
-      <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.titulo}">${p.titulo}</td>
-      <td>${skuExib}</td>
-      <td class="num" style="font-weight:700">R$ ${p.preco.toFixed(2)}</td>
-      <td class="num" style="color:var(--azul2)">R$ ${(p.preco*(1-desc)).toFixed(2)}</td>
-      <td class="num" style="color:var(--muted)">${cmvAtual?'R$'+cmvAtual.toFixed(2):semCusto+'—'}</td>
-      <td class="num" style="color:${mgRealCor};font-weight:700">${mgRealStr}</td>
-      <td class="num" style="color:${mgRealCor==='var(--verde)'?'var(--amarelo)':mgRealCor}">${mgDescCalc}</td>
-      <td class="num">${statusTag}</td>
+    return `<tr style="${p.selecionado?'background:#eff6ff':''}" id="prom-tr-${i}">
+      <td style="padding:5px 8px;text-align:center"><input type="checkbox" ${p.selecionado?'checked':''} onchange="togglePromo(${i},this.checked)"></td>
+      <td style="padding:5px 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.titulo}">${p.titulo}</td>
+      <td style="padding:5px 8px;font-weight:700;color:#1F3864">${p.sku||'—'}</td>
+      <td style="padding:5px 8px;font-size:10px;color:#6b7280">${p.id}</td>
+      <td style="padding:5px 8px;text-align:right;font-weight:700">R$${p.preco.toFixed(2)}</td>
+      <td style="padding:5px 8px;text-align:center">
+        <input type="number" value="${p.descEditado||''}" min="5" max="80" step="1" placeholder="%" 
+          style="width:50px;border:1px solid #d1d5db;border-radius:4px;padding:2px 4px;text-align:center;font-size:11px;font-weight:700"
+          onchange="atualizarDescItem(${i},this.value)" oninput="atualizarDescItem(${i},this.value)">
+      </td>
+      <td style="padding:5px 8px;text-align:right;color:var(--azul2);font-weight:700">R$${precoComDesc.toFixed(2)}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${p.cmv?'R$'+p.cmv.toFixed(2):'—'}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--muted)">R$${p.frete.toFixed(2)}</td>
+      <td style="padding:5px 8px;text-align:right;color:${mgCor};font-weight:700">${mgStr}</td>
+      <td style="padding:5px 8px;text-align:right;color:${mgDescCor};font-weight:700">${mgDescStr}</td>
+      <td style="padding:5px 8px;text-align:center">${statusTag}</td>
     </tr>`;
   }).join('');
 
-  // Atualiza contador e painel de ação
+  // Atualiza seleção
   const sel = promoData.filter(p=>p.selecionado).length;
   const selEl = document.getElementById('prom-sel-count');
   const acaoEl = document.getElementById('prom-acao');
@@ -1516,14 +1541,30 @@ function renderPromoTabela(lista){
   if(acaoEl) acaoEl.style.display = sel > 0 ? '' : 'none';
 }
 
-function togglePromo(idx, checked){
-  // Encontrar o item correto na promoData original
+function atualizarDescItem(idx, val){
   const item = promoDataFiltrada[idx];
   if(!item) return;
+  const pct = parseFloat(val) || 0;
+  item.descEditado = pct;
+  item.margemComDesc = calcMargemProm(item.preco*(1-pct/100), item.cmv, 0.16);
+  // Atualiza na promoData original
   const origIdx = promoData.indexOf(item);
-  if(origIdx > -1) promoData[origIdx].selecionado = checked;
+  if(origIdx>=0){ promoData[origIdx].descEditado=pct; promoData[origIdx].margemComDesc=item.margemComDesc; }
+}
+
+function togglePromo(idx, checked){
+  const item = promoDataFiltrada[idx];
+  if(!item) return;
   item.selecionado = checked;
-  renderPromoTabela(promoDataFiltrada);
+  const origIdx = promoData.indexOf(item);
+  if(origIdx>=0) promoData[origIdx].selecionado = checked;
+  const sel = promoData.filter(p=>p.selecionado).length;
+  const selEl = document.getElementById('prom-sel-count');
+  const acaoEl = document.getElementById('prom-acao');
+  if(selEl) selEl.textContent = `${sel} selecionados`;
+  if(acaoEl) acaoEl.style.display = sel > 0 ? '' : 'none';
+  const row = document.getElementById(`prom-tr-${idx}`);
+  if(row) row.style.background = checked ? '#eff6ff' : '';
 }
 
 function toggleTodosPromos(checked){
@@ -1532,136 +1573,86 @@ function toggleTodosPromos(checked){
   renderPromoTabela(promoDataFiltrada);
 }
 
-function verImpactoPromo(){
+function aplicarDescSelecionados(){
+  const pct = parseFloat(document.getElementById('prom-desc-pct')?.value||10);
   const sel = promoData.filter(p=>p.selecionado);
-  if(!sel.length){ alert('Selecione ao menos um anúncio'); return; }
-  const desc = parseFloat(document.getElementById('prom-desc-pct')?.value||10)/100;
-  const fatAtual = sel.reduce((s,p)=>s+p.preco,0);
-  const fatComDesc = sel.reduce((s,p)=>s+p.preco*(1-desc),0);
-  const comCmv = sel.filter(p=>p.cmv>0);
-  const mgMedAtual = comCmv.length ? comCmv.reduce((s,p)=>s+p.margem,0)/comCmv.length : 0;
-  const mgMedDesc = comCmv.length ? comCmv.reduce((s,p)=>{
-    const pd=p.preco*(1-desc);
-    return s+((pd-p.cmv-pd*0.21-pd*0.0925)/pd);
-  },0)/comCmv.length : 0;
-  const sim = document.getElementById('prom-simulacao');
-  if(sim) sim.innerHTML = `Desconto ${(desc*100).toFixed(0)}% em ${sel.length} anúncios | 
-    Preço total: <strong>R$ ${fatAtual.toFixed(2)}</strong> → <strong style="color:var(--azul2)">R$ ${fatComDesc.toFixed(2)}</strong> |
-    Margem média: <strong style="color:${mgMedAtual>=.10?'var(--verde)':'var(--vermelho)'}">${(mgMedAtual*100).toFixed(1)}%</strong> → 
-    <strong style="color:${mgMedDesc>=.10?'var(--verde)':'var(--vermelho)'}">${(mgMedDesc*100).toFixed(1)}%</strong>`;
+  if(!sel.length){ alert('Selecione ao menos um produto'); return; }
+  sel.forEach(p=>{
+    p.descEditado = pct;
+    p.margemComDesc = calcMargemProm(p.preco*(1-pct/100), p.cmv, 0.16);
+  });
+  promoDataFiltrada = promoDataFiltrada.map(p=>{
+    if(p.selecionado){ p.descEditado=pct; p.margemComDesc=calcMargemProm(p.preco*(1-pct/100),p.cmv,0.16); }
+    return p;
+  });
+  renderPromoKpis();
+  renderPromoTabela(promoDataFiltrada);
 }
 
-async function aplicarDescontoPromo(){
-  const sel = promoData.filter(p=>p.selecionado);
-  if(!sel.length){ alert('Selecione ao menos um anúncio'); return; }
-  const desc = parseFloat(document.getElementById('prom-desc-pct')?.value||10)/100;
-  if(!confirm(`Aplicar desconto de ${(desc*100).toFixed(0)}% em ${sel.length} anúncios no Mercado Livre?`)) return;
+function zerarDescSelecionados(){
+  promoData.filter(p=>p.selecionado).forEach(p=>{ p.descEditado=0; p.margemComDesc=p.margem; });
+  promoDataFiltrada.filter(p=>p.selecionado).forEach(p=>{ p.descEditado=0; p.margemComDesc=p.margem; });
+  renderPromoTabela(promoDataFiltrada);
+}
 
+// ── Exportar planilha ML (mantém formato original, só muda col E = desconto) ──
+function exportarPlanilhaML(){
+  if(!promoPlanilhaRows.length){ alert('Importe a planilha primeiro'); return; }
+  try{
+    // Cria cópia dos dados originais e atualiza o desconto (col E = índice 4)
+    const exportRows = promoPlanilhaRows.map(r => r ? [...r] : []);
+    promoData.forEach(p=>{
+      if(p.rowIdx >= 0 && exportRows[p.rowIdx]){
+        exportRows[p.rowIdx][4] = p.descEditado || null;  // DISCOUNT_PERCENTAGE
+        exportRows[p.rowIdx][5] = p.descEditado ? parseFloat((p.preco*(1-p.descEditado/100)).toFixed(2)) : null; // FINAL_PRICE
+      }
+    });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(exportRows);
+    XLSX.utils.book_append_sheet(wb, ws, 'Promoções');
+    const data = new Date().toISOString().slice(0,10);
+    XLSX.writeFile(wb, `Ajuste-${data}.xlsx`);
+    const st = document.getElementById('prom-status');
+    if(st) st.textContent = `✅ Planilha exportada — faça upload no ML`;
+  }catch(e){ alert('Erro ao exportar: '+e.message); }
+}
+
+// ── Aplicar via API ML (alternativa ao upload da planilha) ────────────
+async function aplicarDescontoPromoAPI(){
+  const sel = promoData.filter(p=>p.selecionado && p.descEditado>0);
+  if(!sel.length){ alert('Selecione produtos com desconto definido'); return; }
+  if(!tokens.ml){ alert('Configure o token ML em ⚙️'); return; }
+  if(!confirm(`Aplicar desconto via API ML em ${sel.length} produtos?\n(Altera preços direto no ML)`)) return;
   const st = document.getElementById('prom-status');
   let ok=0, erros=0;
-
   for(const p of sel){
     try{
-      const novoPreco = parseFloat((p.preco*(1-desc)).toFixed(2));
+      const novoPreco = parseFloat((p.preco*(1-p.descEditado/100)).toFixed(2));
       const r = await fetch(`/api/ml/items/${p.id}`,{
         method:'PUT',
         headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},
         body:JSON.stringify({price: novoPreco})
       });
-      if(r.ok){ p.precoOriginal = p.precoOriginal||p.preco; p.preco = novoPreco; ok++; }
-      else { erros++; const e=await r.json(); console.error(`${p.id}:`,e); }
-      if(st) st.textContent = `⟳ Atualizando... ${ok+erros}/${sel.length}`;
-      await new Promise(r=>setTimeout(r,200));
+      if(r.ok){ ok++; } else { erros++; const e=await r.json(); console.error(p.id,e); }
+      if(st) st.textContent = `⟳ ${ok+erros}/${sel.length}...`;
+      await new Promise(r=>setTimeout(r,300));
     }catch(e){ erros++; }
   }
-
-  renderPromoKpis();
-  renderPromoTabela(promoDataFiltrada);
   if(st) st.textContent = `✅ ${ok} atualizados${erros?' | ❌ '+erros+' erros':''}`;
-  if(erros) alert(`${ok} anúncios atualizados. ${erros} erros — verifique o console.`);
 }
 
-async function removerDescontoPromo(){
-  const sel = promoData.filter(p=>p.selecionado && p.precoOriginal);
-  if(!sel.length){ alert('Selecione anúncios com desconto aplicado (em azul)'); return; }
-  if(!confirm(`Restaurar preço original de ${sel.length} anúncios?`)) return;
-
-  const st = document.getElementById('prom-status');
-  let ok=0, erros=0;
-
-  for(const p of sel){
-    try{
-      const r = await fetch(`/api/ml/items/${p.id}`,{
-        method:'PUT',
-        headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},
-        body:JSON.stringify({price: p.precoOriginal})
-      });
-      if(r.ok){ p.preco = p.precoOriginal; p.precoOriginal = null; ok++; }
-      else erros++;
-      await new Promise(r=>setTimeout(r,200));
-    }catch(e){ erros++; }
-  }
-
+async function selecionarTodosAplicar(){
+  const pct = parseFloat(prompt('Desconto % para TODOS os produtos da planilha:\n(entre 5 e 80)', '10')||'0');
+  if(!pct || pct<5 || pct>80) return;
+  promoData.forEach(p=>{ p.descEditado=pct; p.selecionado=true; p.margemComDesc=calcMargemProm(p.preco*(1-pct/100),p.cmv,0.16); });
+  promoDataFiltrada = [...promoData];
   renderPromoKpis();
   renderPromoTabela(promoDataFiltrada);
-  if(st) st.textContent = `✅ ${ok} restaurados${erros?' | ❌ '+erros+' erros':''}`;
+  document.getElementById('prom-desc-pct').value=pct;
 }
 
 function initPromocoes(){ if(promoData.length) renderPromoTabela(promoDataFiltrada); }
 
-// ══════════════════════════════════════════════════════════════════════
-// CARREGAR TUDO
-// ══════════════════════════════════════════════════════════════════════
-async function carregarTudo(){
-  showLoading('Conectando às APIs...');
-  setDot('bling','wait','Bling...');
-  setDot('ml','wait','ML...');
-  const {de,ate}=getDatas();
-
-  try{
-    const [pedidosML, pedidosBling]=await Promise.all([
-      tokens.ml?fetchPedidosML(de,ate):[],
-      tokens.bling?fetchPedidosBling(de,ate):[],
-    ]);
-
-    dados.pedidosML=pedidosML;
-    dados.pedidosBling=pedidosBling;
-
-    // Busca CMV dos SKUs que ainda não temos em cache
-    if(tokens.bling){
-      const skusML=new Set(pedidosML.flatMap(p=>p.itens.map(i=>i.sku)).filter(Boolean));
-      const skusSemCmv=[...skusML].filter(s=>!dados.cmvCache[s]);
-      if(skusSemCmv.length){
-        // Busca em paralelo em lotes de 5, max 50 SKUs por carregamento
-        const lote = skusSemCmv.slice(0,50);
-        showLoading(`Buscando CMV de ${lote.length} produtos...`);
-        await fetchCMVs(lote);
-        if(skusSemCmv.length>50){
-          // Busca o resto em background sem bloquear
-          setTimeout(()=>fetchCMVs(skusSemCmv.slice(50)),2000);
-        }
-      }
-    }
-
-    renderTudo();
-    (document.getElementById('last-update')||{}).textContent ='Atualizado: '+new Date().toLocaleTimeString('pt-BR');
-  }catch(e){
-    console.error('carregarTudo erro:', e);
-    hideLoading();
-    // Mostra estado de erro no dashboard ao invés de tela cinza
-    try{
-      const el = document.getElementById('k-fat');
-      if(el) el.closest('.kpi-grid') && (el.closest('.kpi-grid').innerHTML = 
-        `<div style="grid-column:1/-1;padding:20px;text-align:center;color:#dc2626;font-size:13px">
-          ❌ Erro ao carregar dados: ${e.message}<br>
-          <small style="color:#6b7280;margin-top:4px;display:block">Verifique os tokens nas configurações (⚙️)</small>
-          <button onclick="carregarTudo()" style="margin-top:8px;padding:6px 14px;font-size:12px;font-weight:700;background:#1F3864;color:#fff;border:none;border-radius:6px;cursor:pointer">Tentar novamente</button>
-        </div>`);
-    }catch(err){}
-    return;
-  }
-  hideLoading();
-}
 
 // ══════════════════════════════════════════════════════════════════════
 // API ML — PEDIDOS
@@ -2581,7 +2572,6 @@ async function enviarResposta(perguntaId, idx){
 // ══════════════════════════════════════════════════════════════════════
 // PROMOÇÕES ML
 // ══════════════════════════════════════════════════════════════════════
-promoData = [];
 chartDifal = null;
 
 
