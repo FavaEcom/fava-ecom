@@ -164,7 +164,28 @@ header h1{font-size:14px;font-weight:700;flex:1}
 .nf-badge-pis{background:#dcfce7;color:#166534}
 .nf-cmv-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:5px;padding:5px 8px;margin-top:5px;font-size:11px}
 
-/* ANÚNCIO */
+/* KITS */
+.kit-layout{display:grid;grid-template-columns:340px 1fr;height:calc(100vh - 82px)}
+.kit-left{background:#fff;border-right:1px solid #e0e4ea;overflow-y:auto;padding:13px}
+.kit-right{overflow-y:auto;padding:13px;display:flex;flex-direction:column;gap:10px}
+.kit-item-row{display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;padding:5px 8px;background:#f8fafc;border-radius:5px;border:1px solid #e5e7eb;margin-bottom:4px}
+.kit-item-row .sku{font-size:10px;color:#6b7280;font-weight:700}
+.kit-item-row .nome{font-size:12px;color:#374151}
+.kit-item-row .qtd{width:50px;border:1px solid #d1d5db;border-radius:4px;padding:3px 5px;font-size:12px;text-align:center}
+.kit-item-row .del{background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;padding:2px 4px}
+.kit-card{background:#fff;border-radius:9px;border:1.5px solid #e5e7eb;overflow:hidden;margin-bottom:10px}
+.kit-card.tipo-prev{border-color:#16a34a}
+.kit-card.tipo-loc{border-color:#2563eb}
+.kit-card.tipo-emer{border-color:#dc2626}
+.kit-card.tipo-ticket{border-color:#7c3aed}
+.kit-card-head{padding:10px 13px;border-bottom:1px solid #f3f4f6;display:flex;align-items:flex-start;gap:8px}
+.kit-tipo-badge{padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.kit-card-body{padding:11px 13px}
+.kit-items-list{background:#f8fafc;border-radius:6px;padding:8px 10px;margin:8px 0;font-size:11px}
+.kit-items-list li{padding:2px 0;color:#374151}
+.kit-ad-preview{background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 12px;font-size:11px;line-height:1.7;white-space:pre-wrap;max-height:300px;overflow-y:auto;color:#374151;margin-top:8px}
+
+/* ANÚNCIO *//* ANÚNCIO */
 .titulo-box-an{background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:10px 13px;margin-bottom:8px}
 .titulo-box-an .lbl{font-size:10px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
 .titulo-box-an .val{font-size:13px;font-weight:700;color:#1e3a8a;line-height:1.4}
@@ -200,6 +221,7 @@ header h1{font-size:14px;font-weight:700;flex:1}
   <div class="tab" onclick="switchTab('massa')">Precificação em massa (NF)</div>
   <div class="tab" onclick="switchTab('orcamento')">📄 Orçamento</div>
   <div class="tab" onclick="switchTab('anuncio')">✍️ Anúncio</div>
+  <div class="tab" onclick="switchTab('kits')">🧩 Kits</div>
 </div>
 
 <div class="layout">
@@ -561,12 +583,36 @@ header h1{font-size:14px;font-weight:700;flex:1}
 <div id="painel-anuncio" class="an-layout" style="display:none">
 
   <div class="an-left">
+    <!-- CATÁLOGO RÁPIDO -->
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:9px 11px;margin-bottom:10px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#1e40af;margin-bottom:6px">
+        📋 Catálogo Menegotti — Guincho Prime
+      </div>
+      <div class="field" style="margin-bottom:5px">
+        <label>Selecionar modelo do equipamento</label>
+        <select id="an-catalog-sel" onchange="anAplicarCatalogo()" style="font-size:12px">
+          <option value="">— Selecione o modelo —</option>
+          <optgroup label="Guincho Prime V2 (sem trole)">
+            <option value="g150">Guincho Prime V2 150|300Kg</option>
+            <option value="g300">Guincho Prime V2 300|600Kg</option>
+            <option value="g500">Guincho Prime V2 500|1000Kg</option>
+          </optgroup>
+          <optgroup label="Guincho Prime com Trole Elétrico">
+            <option value="g300_600_trole">Guincho c/ Trole 300|600Kg</option>
+            <option value="g500_1000_trole">Guincho c/ Trole 500|1000Kg</option>
+          </optgroup>
+        </select>
+      </div>
+      <div id="an-catalog-info"></div>
+    </div>
+
     <div class="sec">Produto</div>
     <div id="an-prod-info" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:7px 10px;font-size:11px;color:#1e40af;margin-bottom:8px">
       Carregue um produto na aba <strong>Produto único</strong> para auto-preencher
     </div>
     <div class="field"><label>Nome do produto *</label>
-      <input type="text" id="an-nome" placeholder="Ex: Pinhão do Volante 1 Traço Super">
+      <input type="text" id="an-nome" placeholder="Ex: Cabo de Aço Ø4mm 12,5m Guincho Prime"
+        oninput="anVerificarPecaDesgaste(this.value.toLowerCase())">
     </div>
     <div class="row2">
       <div class="field"><label>SKU</label><input type="text" id="an-sku" placeholder="Ex: 2806"></div>
@@ -630,6 +676,116 @@ Vonder: fabricante nacional de ferramentas elétricas e manuais com foco em qual
 
   <div id="an-painel" class="an-right">
     <div class="loading" style="text-align:center;padding:50px;color:#9ca3af">✍️<br><br>Preencha os dados e clique em <strong>Gerar com IA</strong></div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════ KITS ═══════════════════ -->
+<div id="painel-kits" class="kit-layout" style="display:none">
+
+  <!-- LEFT -->
+  <div class="kit-left">
+    <div class="sec">Equipamento</div>
+    <div class="field">
+      <label>Modelo do equipamento</label>
+      <select id="kit-equip" style="font-size:12px">
+        <option value="">— Selecione —</option>
+        <optgroup label="Guincho Prime V2">
+          <option value="g150">Guincho Prime V2 150|300Kg</option>
+          <option value="g300">Guincho Prime V2 300|600Kg</option>
+          <option value="g500">Guincho Prime V2 500|1000Kg</option>
+          <option value="g300_600_trole">Guincho c/ Trole 300|600Kg</option>
+          <option value="g500_1000_trole">Guincho c/ Trole 500|1000Kg</option>
+        </optgroup>
+        <optgroup label="Outros (descreva no extra)">
+          <option value="outro">Outro equipamento</option>
+        </optgroup>
+      </select>
+    </div>
+    <div class="field" id="kit-equip-outro-wrap" style="display:none">
+      <label>Descreva o equipamento</label>
+      <input type="text" id="kit-equip-outro" placeholder="Ex: Betoneira 400L Menegotti 1 Traço">
+    </div>
+
+    <div class="sec">Objetivos do kit</div>
+    <div style="margin-bottom:8px">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:4px;cursor:pointer">
+        <input type="checkbox" id="kit-obj-prev" checked> 🔧 Manutenção preventiva (desgaste conjunto)
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:4px;cursor:pointer">
+        <input type="checkbox" id="kit-obj-loc"> 🏗️ Kit locadora (frota / uso intensivo)
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:4px;cursor:pointer">
+        <input type="checkbox" id="kit-obj-emer"> 🚨 Emergência (peças que mais quebram)
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+        <input type="checkbox" id="kit-obj-ticket"> 💰 Aumentar ticket médio (isca + complemento)
+      </label>
+    </div>
+
+    <div class="sec">Qtd. de sugestões de kits</div>
+    <div class="field">
+      <input type="number" id="kit-qtd-sugestoes" value="5" min="2" max="10" step="1" style="font-size:13px">
+    </div>
+
+    <div class="sec">Itens disponíveis</div>
+
+    <!-- FONTE 1: manual -->
+    <div style="margin-bottom:6px">
+      <div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:4px">✏️ Adicionar item manualmente</div>
+      <div style="display:grid;grid-template-columns:1fr 80px auto;gap:5px;align-items:end">
+        <div class="field" style="margin:0">
+          <input type="text" id="kit-add-nome" placeholder="Nome da peça / SKU" style="font-size:12px"
+            onkeydown="if(event.key==='Enter')kitsAdicionarItem()">
+        </div>
+        <div class="field" style="margin:0">
+          <input type="number" id="kit-add-qtd" value="1" min="1" style="font-size:12px;text-align:center">
+        </div>
+        <button onclick="kitsAdicionarItem()" style="padding:6px 10px;font-size:11px;font-weight:700;background:#1F3864;color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap">+ Add</button>
+      </div>
+    </div>
+
+    <!-- FONTE 2: Bling -->
+    <div style="margin-bottom:6px">
+      <div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:4px">📥 Buscar no Bling por texto</div>
+      <div style="display:flex;gap:5px">
+        <input type="text" id="kit-bling-q" placeholder="Ex: cabo aço guincho" style="flex:1;border:1px solid #d1d5db;border-radius:6px;padding:6px 9px;font-size:12px"
+          onkeydown="if(event.key==='Enter')kitsBuscarBling()">
+        <button onclick="kitsBuscarBling()" style="padding:6px 10px;font-size:11px;font-weight:700;background:#2E75B6;color:#fff;border:none;border-radius:6px;cursor:pointer">Buscar</button>
+      </div>
+      <div id="kit-bling-res" style="margin-top:5px;max-height:120px;overflow-y:auto"></div>
+    </div>
+
+    <!-- FONTE 3: NF XML -->
+    <div style="margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:4px">📎 Importar da última NF-e XML</div>
+      <button onclick="kitsImportarNF()" style="width:100%;padding:6px;font-size:11px;font-weight:700;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:6px;cursor:pointer">
+        Usar itens da NF importada
+      </button>
+      <div id="kit-nf-status" style="font-size:10px;color:#6b7280;margin-top:3px"></div>
+    </div>
+
+    <!-- LISTA DE ITENS -->
+    <div class="sec">Lista atual (<span id="kit-count">0</span> itens)</div>
+    <div id="kit-items-wrap" style="margin-bottom:8px;min-height:40px">
+      <div style="font-size:11px;color:#9ca3af;text-align:center;padding:10px">Nenhum item adicionado</div>
+    </div>
+    <button onclick="kitsLimparItens()" class="btn btn-out" style="margin-bottom:4px;font-size:11px">Limpar lista</button>
+
+    <div class="sec">Info extra para a IA</div>
+    <div class="field">
+      <textarea id="kit-extra-ia" rows="2" style="font-size:12px" placeholder="Ex: cliente é locadora com frota de 10 betoneiras, peças nível A principalmente..."></textarea>
+    </div>
+
+    <button class="btn btn-blue" id="kit-btn-sugerir" onclick="kitsSugerir()">✨ Sugerir Kits com IA</button>
+  </div>
+
+  <!-- RIGHT -->
+  <div id="kit-right" class="kit-right">
+    <div class="loading" style="text-align:center;padding:50px;color:#9ca3af">
+      🧩<br><br>Adicione itens e clique em <strong>Sugerir Kits com IA</strong>
+    </div>
   </div>
 
 </div>
@@ -772,10 +928,12 @@ function switchTab(t){
   document.getElementById('painel-massa').style.display=t==='massa'?'':'none';
   // Orçamento usa layout próprio (fora do .layout principal)
   const lo=document.querySelector('.layout');
-  if(lo) lo.style.display=(t==='orcamento'||t==='anuncio')?'none':'grid';
+  if(lo) lo.style.display=(t==='orcamento'||t==='anuncio'||t==='kits')?'none':'grid';
   document.getElementById('painel-orcamento').style.display=t==='orcamento'?'grid':'none';
   document.getElementById('painel-anuncio').style.display=t==='anuncio'?'grid':'none';
+  document.getElementById('painel-kits').style.display=t==='kits'?'grid':'none';
   if(t==='anuncio') anInit();
+  if(t==='kits') kitsInit();
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -2072,6 +2230,8 @@ function renderNfItens(itens, nf){
   wrap.innerHTML=html;
   // Registra itens para geração em massa de anúncios
   if(typeof anRegistrarItensNF === 'function') anRegistrarItensNF(itens);
+  // Registra itens para o sugestor de kits
+  if(typeof kitsReceberNF === 'function') kitsReceberNF(itens);
 }
 
 function aplicarItemNF(it){
@@ -2420,6 +2580,484 @@ function anExportar(){
   a.href=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}));
   a.download='anuncios_fava.csv';a.click();
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// CATÁLOGO DE EQUIPAMENTOS — MENEGOTTI GUINCHOS PRIME
+// Baseado nos manuais técnicos e catálogos de peças oficiais
+// ══════════════════════════════════════════════════════════════════════
+const CATALOGO_EQUIP = {
+
+  'g150': {
+    nome: 'Guincho Prime V2 150|300Kg',
+    marca: 'Menegotti',
+    familia: 'Guincho Elétrico Prime V2 — Peças de Reposição',
+    cod127: '40230311', cod220: '40230321',
+    codTrole127: '40230312', codTrole220: '40230313',
+    motor: 'Monofásico 650W', tensoes: '127V ou 220V / 60Hz',
+    capacidade: '150kg (gancho) / 300kg (moitão)',
+    alturaElevacao: '12m (gancho) / 6m (moitão)',
+    velocidade: '10m/min (gancho) / 5m/min (moitão)',
+    caboAco: 'Ø3mm | 18×7 AF | 12,5m | Galvanizado',
+    peso: '11,6 kg',
+    dimensoes: '330 × 134 × 146 mm (C×L×A)',
+    fixacao: '212 × 88 mm | Parafuso M8×22mm',
+    classeIsolacao: 'B',
+    trole: 'Opcional — Trole 500kg (40200505) / Suporte (34149043)',
+    compat: 'Compatível com Guincho Elétrico Prime V2 150|300Kg Menegotti — Modelos 40230311 (127V) e 40230321 (220V). Versão com trole elétrico: 40230312 (127V) e 40230313 (220V). ⚠️ NÃO compatível com modelos 300|600Kg, 500|1000Kg ou versões Prime anteriores ao V2.',
+    fichaBase: 'Marca: Menegotti | Modelo: Guincho Prime V2 | Capacidade: 150kg (sem moitão) / 300kg (com moitão) | Motor: 650W Monofásico | Cabo de aço: Ø3mm 12,5m | Altura de elevação: 12m / 6m | Velocidade: 10m/min',
+    manutencao: 'Cabo de aço: substituir ao apresentar arames rompidos, esmagamento, dobra ou corrosão. Graxa do redutor: trocar anualmente (100ml). Manter buchas, mancais e rolamentos lubrificados.',
+  },
+
+  'g300': {
+    nome: 'Guincho Prime V2 300|600Kg',
+    marca: 'Menegotti',
+    familia: 'Guincho Elétrico Prime V2 — Peças de Reposição',
+    cod127: '40230611', cod220: '40230612',
+    codTrole127: '40230603', codTrole220: '40230604',
+    motor: 'Monofásico 1500W', tensoes: '127V ou 220V / 60Hz',
+    capacidade: '300kg (gancho) / 600kg (moitão)',
+    alturaElevacao: '12m (gancho) / 6m (moitão)',
+    velocidade: '10m/min (gancho) / 5m/min (moitão)',
+    caboAco: 'Ø4mm | 17×7 AF | 12,5m | Galvanizado',
+    peso: '15 kg',
+    dimensoes: '385 × 147 × 178 mm (C×L×A)',
+    fixacao: '220 × 100 mm | Parafuso M10×24mm',
+    classeIsolacao: 'B',
+    trole: 'Opcional — Trole 500kg (40200505) / Suporte (34149043)',
+    compat: 'Compatível com Guincho Elétrico Prime V2 300|600Kg Menegotti — Modelos 40230611 (127V) e 40230612 (220V). Versão com trole elétrico: 40230603 (127V) e 40230604 (220V). ⚠️ NÃO compatível com modelos 150|300Kg, 500|1000Kg ou versões Prime anteriores ao V2.',
+    fichaBase: 'Marca: Menegotti | Modelo: Guincho Prime V2 | Capacidade: 300kg (sem moitão) / 600kg (com moitão) | Motor: 1500W Monofásico | Cabo de aço: Ø4mm 12,5m | Altura de elevação: 12m / 6m | Velocidade: 10m/min',
+    manutencao: 'Cabo de aço: substituir ao apresentar arames rompidos, esmagamento, dobra ou corrosão. Graxa do redutor: trocar anualmente (100ml). Manter buchas, mancais e rolamentos lubrificados.',
+  },
+
+  'g500': {
+    nome: 'Guincho Prime V2 500|1000Kg',
+    marca: 'Menegotti',
+    familia: 'Guincho Elétrico Prime V2 — Peças de Reposição',
+    cod127: '40231011', cod220: '40231021',
+    codTrole127: '40231012', codTrole220: '40231013',
+    motor: 'Monofásico 2000W', tensoes: '127V ou 220V / 60Hz',
+    capacidade: '500kg (gancho) / 1000kg (moitão)',
+    alturaElevacao: '12m (gancho) / 6m (moitão)',
+    velocidade: '10m/min (gancho) / 5m/min (moitão)',
+    caboAco: 'Ø6mm | 17×7 AF | 12,5m | Galvanizado',
+    peso: '31 kg',
+    dimensoes: '470 × 170 × 265 mm (C×L×A)',
+    fixacao: '270 × 112 mm | Parafuso M12×30mm',
+    classeIsolacao: 'B',
+    trole: 'Opcional — Trole 1000kg (40200509) / Suporte (34149042)',
+    compat: 'Compatível com Guincho Elétrico Prime V2 500|1000Kg Menegotti — Modelos 40231011 (127V) e 40231021 (220V). Versão com trole MTG: 40231012 (127V) e 40231013 (220V). ⚠️ NÃO compatível com modelos 150|300Kg, 300|600Kg ou versões Prime anteriores ao V2.',
+    fichaBase: 'Marca: Menegotti | Modelo: Guincho Prime V2 | Capacidade: 500kg (sem moitão) / 1000kg (com moitão) | Motor: 2000W Monofásico | Cabo de aço: Ø6mm 12,5m | Altura de elevação: 12m / 6m | Velocidade: 10m/min',
+    manutencao: 'Cabo de aço: substituir ao apresentar arames rompidos, esmagamento, dobra ou corrosão. Graxa do redutor: trocar anualmente (100ml). Manter buchas, mancais e rolamentos lubrificados.',
+  },
+
+  'g300_600_trole': {
+    nome: 'Guincho Prime c/ Trole Elétrico 300|600Kg',
+    marca: 'Menegotti',
+    familia: 'Guincho Prime com Trole — Peças de Reposição',
+    cod127: '40230603', cod220: '40230604',
+    motor: 'Guincho: 1500W | Trole: 300W Monofásico', tensoes: '127V ou 220V / 60Hz',
+    capacidade: '300kg (gancho) / 600kg (moitão)',
+    velocidade: 'Elevação: 10m/min | Deslocamento trole: 13m/min',
+    caboAco: 'Ø4,5mm | Viga I: 68-94mm de largura',
+    peso: '32,9 kg (conjunto)',
+    trole: 'Raio mínimo para curva: 1m',
+    compat: 'Compatível com Guincho Prime com Trole Elétrico 300|600Kg Menegotti — Modelos 40230603 (127V) e 40230604 (220V). ⚠️ Peças do trole NÃO são intercambiáveis com o trole 500|1000Kg. Verificar código antes de pedir.',
+    fichaBase: 'Marca: Menegotti | Modelo: Guincho Prime com Trole 300|600Kg | Capacidade: 300kg/600kg | Motor guincho: 1500W | Motor trole: 300W | Velocidade trole: 13m/min | Viga I: 68-94mm',
+    manutencao: 'Roldanas do trole: manter limpas e lubrificadas. Eixos e buchas do trole: lubrificar regularmente. Inspecionar roda do trole e engrenagens periodicamente.',
+  },
+
+  'g500_1000_trole': {
+    nome: 'Guincho Prime c/ Trole Elétrico 500|1000Kg',
+    marca: 'Menegotti',
+    familia: 'Guincho Prime com Trole — Peças de Reposição',
+    cod127: '40231012', cod220: '40231013',
+    motor: 'Guincho: 2000W | Trole: 300W Monofásico', tensoes: '127V ou 220V / 60Hz',
+    capacidade: '500kg (gancho) / 1000kg (moitão)',
+    velocidade: 'Elevação: 10m/min | Deslocamento trole: 13m/min',
+    caboAco: 'Ø5,6mm | Viga I: 80-110mm de largura',
+    peso: '45,5 kg (conjunto)',
+    trole: 'Raio mínimo para curva: 1,5m',
+    compat: 'Compatível com Guincho Prime com Trole Elétrico 500|1000Kg Menegotti — Modelos 40231012 (127V) e 40231013 (220V). ⚠️ Peças do trole NÃO são intercambiáveis com o trole 300|600Kg. Verificar código antes de pedir.',
+    fichaBase: 'Marca: Menegotti | Modelo: Guincho Prime com Trole 500|1000Kg | Capacidade: 500kg/1000kg | Motor guincho: 2000W | Motor trole: 300W | Velocidade trole: 13m/min | Viga I: 80-110mm',
+    manutencao: 'Roldanas do trole: manter limpas e lubrificadas. Eixos e buchas do trole: lubrificar regularmente. Inspecionar roda do trole e engrenagens periodicamente.',
+  },
+
+};
+
+// Peças comuns com observações de substituição do manual
+const PECAS_DESGASTE = {
+  'cabo de aco':      {aviso:'Substituir ao apresentar arames rompidos, esmagamento, dobra ou corrosão. Não usar emendas.', nivel:'A'},
+  'gancho':           {aviso:'Substituir imediatamente ao apresentar fissura, quebra, corrosão ou desgaste.', nivel:'A'},
+  'rolamento':        {aviso:'Componente de desgaste — não coberto pela garantia. Manter lubrificado. Substituir ao apresentar folga ou ruído.', nivel:'A'},
+  'bucha':            {aviso:'Componente de desgaste. Manter lubrificada. Substituir ao apresentar folga no eixo.', nivel:'A'},
+  'capacitor':        {aviso:'Sintomas de falha: guincho não parte ou parte devagar. Verificar tensão (127V ou 220V) antes de pedir.', nivel:'B'},
+  'rele termico':     {aviso:'Protege o motor contra sobrecarga. Substituir se o guincho travar sem carga ou desligar frequentemente.', nivel:'B'},
+  'botoeira':         {aviso:'Disponível como conjunto completo (CJ-1). Verificar voltagem e modelo antes de pedir.', nivel:'B'},
+  'carretel':         {aviso:'Substituir se apresentar deformação ou danos nas ranhuras do cabo.', nivel:'B'},
+  'moitao':           {aviso:'Lubrificar internamente. Não remover a trava metálica de segurança. Substituir se apresentar danos.', nivel:'B'},
+  'cabo de aco':      {aviso:'Substituir ao apresentar arames rompidos, esmagamento, dobra ou corrosão. Não usar emendas.', nivel:'A'},
+  'ventoinha':        {aviso:'Inspecionar periodicamente. Motor pode superaquecer se a ventoinha estiver bloqueada.', nivel:'C'},
+  'freio':            {aviso:'Componente crítico de segurança. Substituir apenas por técnico qualificado.', nivel:'B'},
+  'engrenagem':       {aviso:'Componente de desgaste — não coberto pela garantia. Verificar nível de desgaste antes de pedir o conjunto.', nivel:'A'},
+};
+
+function anAplicarCatalogo(){
+  const sel = document.getElementById('an-catalog-sel').value;
+  if(!sel) return;
+  const eq = CATALOGO_EQUIP[sel];
+  if(!eq) return;
+
+  // Preenche campos do anúncio
+  const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
+  set('an-marca',   eq.marca);
+  set('an-familia', eq.familia);
+
+  // Monta compatibilidade
+  set('an-compat', eq.compat);
+
+  // Monta ficha técnica base
+  set('an-ficha', eq.fichaBase);
+
+  // Info extra com manutenção
+  set('an-extra', `Orientação de manutenção: ${eq.manutencao}`);
+
+  // Feedback visual
+  const info = document.getElementById('an-catalog-info');
+  if(info){
+    info.innerHTML=`
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 11px;font-size:11px;margin-top:6px">
+        <strong style="color:#166534">✅ ${eq.nome}</strong><br>
+        <span style="color:#374151">Códigos: ${eq.cod127||''} (127V) / ${eq.cod220||''} (220V)</span><br>
+        <span style="color:#6b7280">Motor: ${eq.motor} | Capacidade: ${eq.capacidade} | Cabo: ${eq.caboAco||'—'}</span>
+      </div>`;
+  }
+
+  // Verifica se o nome da peça tem observação de desgaste
+  const nomePeca = (document.getElementById('an-nome').value||'').toLowerCase();
+  anVerificarPecaDesgaste(nomePeca);
+}
+
+function anVerificarPecaDesgaste(nomePeca){
+  const info = document.getElementById('an-catalog-info');
+  if(!info||!nomePeca) return;
+  for(const [key, dados] of Object.entries(PECAS_DESGASTE)){
+    if(nomePeca.includes(key)){
+      const cor = dados.nivel==='A'?'#fee2e2':'#fef3c7';
+      const corTxt = dados.nivel==='A'?'#991b1b':'#92400e';
+      const extra = info.innerHTML;
+      info.innerHTML = extra + `<div style="background:${cor};border-radius:6px;padding:7px 10px;font-size:11px;margin-top:5px;color:${corTxt}">
+        ⚠️ <strong>Peça de desgaste nível ${dados.nivel}:</strong> ${dados.aviso}
+      </div>`;
+      break;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// SUGESTOR DE KITS
+// ══════════════════════════════════════════════════════════════════════
+let kitsItens = []; // [{sku, nome, qtd, fonte}]
+let kitsNfItens = []; // itens da última NF importada
+
+function kitsInit(){
+  document.getElementById('kit-equip').onchange = function(){
+    document.getElementById('kit-equip-outro-wrap').style.display = this.value==='outro'?'':'none';
+  };
+  kitsRenderItens();
+}
+
+function kitsAdicionarItem(){
+  const nome = document.getElementById('kit-add-nome').value.trim();
+  const qtd  = parseInt(document.getElementById('kit-add-qtd').value)||1;
+  if(!nome) return;
+  kitsItens.push({sku:'', nome, qtd, fonte:'manual'});
+  document.getElementById('kit-add-nome').value='';
+  document.getElementById('kit-add-qtd').value='1';
+  kitsRenderItens();
+}
+
+async function kitsBuscarBling(){
+  const q = document.getElementById('kit-bling-q').value.trim();
+  if(!q) return;
+  const res = document.getElementById('kit-bling-res');
+  res.innerHTML='<span class="spin"></span> Buscando...';
+  try{
+    const r = await fetch(`/api/bling/produtos?pagina=1&limite=8&criterio=1&tipo=T&descricao=${encodeURIComponent(q)}`,
+      {headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});
+    if(!r.ok){res.innerHTML='<span style="color:#dc2626;font-size:11px">Erro Bling</span>';return;}
+    const d = await r.json();
+    const lista = d.data||[];
+    if(!lista.length){res.innerHTML='<span style="font-size:11px;color:#9ca3af">Nenhum resultado</span>';return;}
+    res.innerHTML = lista.map(p=>`
+      <div style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:4px;background:#f8fafc;margin-bottom:2px;font-size:11px">
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.nome}">${p.codigo} — ${p.nome}</span>
+        <button onclick="kitsAddBling('${p.codigo.replace(/'/g,"\'")}','${p.nome.replace(/'/g,"\'")}')"
+          style="padding:2px 7px;font-size:10px;font-weight:700;background:#1F3864;color:#fff;border:none;border-radius:4px;cursor:pointer;flex-shrink:0">+</button>
+      </div>`).join('');
+  }catch(e){res.innerHTML=`<span style="color:#dc2626;font-size:11px">${e.message}</span>`;}
+}
+
+function kitsAddBling(sku, nome){
+  kitsItens.push({sku, nome, qtd:1, fonte:'bling'});
+  kitsRenderItens();
+}
+
+function kitsImportarNF(){
+  const status = document.getElementById('kit-nf-status');
+  if(!kitsNfItens.length){
+    status.textContent='⚠️ Nenhuma NF importada ainda. Vá em Produto único → Importar NF-e XML.';
+    return;
+  }
+  kitsNfItens.forEach(it=>{
+    if(!kitsItens.find(k=>k.sku===it.cProd))
+      kitsItens.push({sku:it.cProd, nome:it.xProd, qtd:it.qCom||1, fonte:'nf'});
+  });
+  status.textContent=`✅ ${kitsNfItens.length} itens importados da NF.`;
+  kitsRenderItens();
+}
+
+function kitsRemoverItem(idx){
+  kitsItens.splice(idx,1);
+  kitsRenderItens();
+}
+
+function kitsAtualizarQtd(idx, v){
+  kitsItens[idx].qtd = parseInt(v)||1;
+}
+
+function kitsLimparItens(){
+  kitsItens=[];
+  kitsRenderItens();
+}
+
+function kitsRenderItens(){
+  const wrap = document.getElementById('kit-items-wrap');
+  document.getElementById('kit-count').textContent = kitsItens.length;
+  if(!kitsItens.length){
+    wrap.innerHTML='<div style="font-size:11px;color:#9ca3af;text-align:center;padding:10px">Nenhum item adicionado</div>';
+    return;
+  }
+  const fonteIcon = {manual:'✏️', bling:'📥', nf:'📎'};
+  wrap.innerHTML = kitsItens.map((it,i)=>`
+    <div class="kit-item-row">
+      <div>
+        <div class="nome">${fonteIcon[it.fonte]||''} ${it.nome}</div>
+        ${it.sku?`<div class="sku">${it.sku}</div>`:''}
+      </div>
+      <input type="number" class="qtd" value="${it.qtd}" min="1"
+        onchange="kitsAtualizarQtd(${i},this.value)">
+      <button class="del" onclick="kitsRemoverItem(${i})">✕</button>
+    </div>`).join('');
+}
+
+async function kitsSugerir(){
+  if(!kitsItens.length){alert('Adicione pelo menos 1 item antes de sugerir');return;}
+  const btn = document.getElementById('kit-btn-sugerir');
+  btn.disabled=true; btn.textContent='⏳ Analisando...';
+
+  const equipKey = document.getElementById('kit-equip').value;
+  const eq = CATALOGO_EQUIP[equipKey];
+  const equipNome = eq ? eq.nome : document.getElementById('kit-equip-outro').value || 'Equipamento';
+  const nSugestoes = parseInt(document.getElementById('kit-qtd-sugestoes').value)||5;
+
+  const objs = [];
+  if(document.getElementById('kit-obj-prev').checked) objs.push('Manutenção Preventiva (peças que desgastam juntas)');
+  if(document.getElementById('kit-obj-loc').checked)  objs.push('Kit Locadora (uso intensivo / frota)');
+  if(document.getElementById('kit-obj-emer').checked) objs.push('Kit Emergência (peças mais críticas)');
+  if(document.getElementById('kit-obj-ticket').checked) objs.push('Aumentar ticket médio marketplace (isca + complemento)');
+
+  const itensTexto = kitsItens.map(it=>`- ${it.sku?'['+it.sku+'] ':''}${it.nome} (Qtd disponível: ${it.qtd})`).join('\n');
+
+  const desgasteInfo = eq ? `
+Níveis de desgaste do equipamento (do catálogo oficial Menegotti):
+- Nível A (maior desgaste): cabo de aço, rolamento, bucha, roda do trole, eixo, engrenagem
+- Nível B (intermediário): chaveta, batente fim de curso, bloco de fixação
+- Nível C (menor): motor, carenagem, caixa de engrenagem
+Cabo de aço do modelo: ${eq.caboAco||'—'}` : '';
+
+  const extraIA = document.getElementById('kit-extra-ia').value;
+
+  const prompt = `Você é especialista em e-commerce de peças industriais e manutenção de equipamentos. Trabalha para a Fava Ecom, loja especializada em peças de reposição, ferramentas e equipamentos para construção civil.
+
+EQUIPAMENTO: ${equipNome}
+${desgasteInfo}
+
+ITENS DISPONÍVEIS EM ESTOQUE/NF:
+${itensTexto}
+
+OBJETIVOS DOS KITS: ${objs.join(' | ')}
+
+${extraIA ? 'CONTEXTO ADICIONAL: ' + extraIA : ''}
+
+Sua tarefa: Sugerir ${nSugestoes} kits diferentes e criativos, pensando comercialmente.
+
+Para CADA kit, retorne um objeto JSON com EXATAMENTE esta estrutura:
+{
+  "tipo": "preventivo|locadora|emergencia|ticket",
+  "nome_kit": "Nome comercial vendável e específico",
+  "slogan": "Frase curta impactante (máx 15 palavras)",
+  "itens": [{"nome": "...", "qtd": N, "obs": "motivo técnico"}],
+  "justificativa": "Por que esses itens juntos fazem sentido técnico/comercial (2-3 frases)",
+  "publico_alvo": "Para quem é esse kit",
+  "anuncio_titulo_60": "Título ≤60 caracteres para ML",
+  "anuncio_titulo_120": "Título ≤120 caracteres para ML",
+  "anuncio_descricao": "Descrição completa para marketplace com:\n=== O QUE ESTÁ INCLUSO ===\n(liste cada item)\n=== PARA QUAL EQUIPAMENTO ===\n(modelos compatíveis e INCOMPATÍVEIS)\n=== POR QUE A FAVA ECOM MONTOU ESTE KIT ===\n(benefício do frete único, economia, conveniência)\n=== ATENÇÃO ===\n(itens em fotos para contexto não acompanham, como instalar, garantia)\n=== FAVA ECOM ===\n(bloco institucional)",
+  "itens_foto_contexto": ["item que pode aparecer em foto mas não acompanha"]
+}
+
+Retorne SOMENTE um array JSON válido com os ${nSugestoes} kits. Sem texto antes ou depois. Sem markdown.`;
+
+  const panel = document.getElementById('kit-right');
+  panel.innerHTML='<div class="loading" style="text-align:center;padding:50px;color:#9ca3af"><span class="spin"></span><br><br>Analisando peças e montando sugestões de kits...</div>';
+
+  try{
+    const r = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,
+        messages:[{role:'user',content:prompt}]})
+    });
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(`API ${r.status}: ${e.error?.message||'erro'}`);}
+    const d = await r.json();
+    const txt = d.content?.[0]?.text||'';
+
+    let kits;
+    try{
+      const clean = txt.replace(/```json|```/g,'').trim();
+      kits = JSON.parse(clean);
+    }catch(e){
+      panel.innerHTML=`<div class="alert alert-err" style="margin:20px">❌ Erro ao parsear resposta da IA.<br><pre style="font-size:10px;margin-top:8px;overflow:auto">${txt.substring(0,500)}</pre></div>`;
+      return;
+    }
+
+    kitsRenderSugestoes(kits, equipNome, eq);
+  }catch(e){
+    panel.innerHTML=`<div class="alert alert-err" style="margin:20px">❌ ${e.message}</div>`;
+  }finally{
+    btn.disabled=false; btn.textContent='✨ Sugerir Kits com IA';
+  }
+}
+
+function kitsRenderSugestoes(kits, equipNome, eq){
+  const panel = document.getElementById('kit-right');
+  panel.innerHTML='';
+
+  const tipoInfo = {
+    preventivo: {label:'Manutenção Preventiva', cor:'#16a34a', bg:'#dcfce7', cls:'tipo-prev', emoji:'🔧'},
+    locadora:   {label:'Kit Locadora',          cor:'#2563eb', bg:'#dbeafe', cls:'tipo-loc',  emoji:'🏗️'},
+    emergencia: {label:'Kit Emergência',        cor:'#dc2626', bg:'#fee2e2', cls:'tipo-emer', emoji:'🚨'},
+    ticket:     {label:'Ticket Médio',          cor:'#7c3aed', bg:'#ede9fe', cls:'tipo-ticket',emoji:'💰'},
+  };
+
+  const summary = document.createElement('div');
+  summary.style.cssText='background:#fff;border-radius:9px;border:1px solid #e5e7eb;padding:10px 13px;margin-bottom:10px;font-size:12px;color:#374151';
+  summary.innerHTML=`✅ <strong>${kits.length} kits sugeridos</strong> para ${equipNome} | ${kitsItens.length} peças analisadas`;
+  panel.appendChild(summary);
+
+  kits.forEach((kit, idx)=>{
+    const info = tipoInfo[kit.tipo]||tipoInfo['ticket'];
+    const card = document.createElement('div');
+    card.className=`kit-card ${info.cls}`;
+
+    const itensHtml = (kit.itens||[]).map(it=>
+      `<li>📦 <strong>${it.qtd}x</strong> ${it.nome}${it.obs?` <span style="color:#6b7280">— ${it.obs}</span>`:''}</li>`
+    ).join('');
+
+    const fotoCtxHtml = kit.itens_foto_contexto?.length
+      ? `<div style="font-size:10px;color:#92400e;background:#fef3c7;border-radius:4px;padding:4px 7px;margin-top:6px">⚠️ Itens para contexto visual (não acompanham): ${kit.itens_foto_contexto.join(', ')}</div>`
+      : '';
+
+    card.innerHTML=`
+      <div class="kit-card-head">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
+            <span style="font-size:18px">${info.emoji}</span>
+            <strong style="font-size:14px;color:#1F3864">${kit.nome_kit}</strong>
+            <span class="kit-tipo-badge" style="background:${info.bg};color:${info.cor}">${info.label}</span>
+          </div>
+          <div style="font-size:12px;color:#6b7280;font-style:italic">${kit.slogan||''}</div>
+        </div>
+      </div>
+      <div class="kit-card-body">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#9ca3af;margin-bottom:4px">Itens do kit</div>
+            <ul class="kit-items-list" style="list-style:none;padding:0">
+              ${itensHtml}
+            </ul>
+            ${fotoCtxHtml}
+            <div style="font-size:11px;color:#374151;margin-top:6px">
+              <strong style="color:#6b7280">Público:</strong> ${kit.publico_alvo||'—'}
+            </div>
+            <div style="font-size:11px;color:#374151;margin-top:4px">
+              <strong style="color:#6b7280">Justificativa:</strong> ${kit.justificativa||'—'}
+            </div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#9ca3af;margin-bottom:4px">Títulos ML</div>
+            <div style="background:#eff6ff;border-radius:5px;padding:6px 8px;font-size:11px;margin-bottom:5px">
+              <div style="font-size:9px;color:#6b7280;font-weight:700">60c — ${(kit.anuncio_titulo_60||'').length}/60 ${(kit.anuncio_titulo_60||'').length>60?'⚠️':'✅'}</div>
+              <div style="font-weight:700;color:#1e3a8a">${kit.anuncio_titulo_60||'—'}</div>
+            </div>
+            <div style="background:#f0fdf4;border-radius:5px;padding:6px 8px;font-size:11px;margin-bottom:8px">
+              <div style="font-size:9px;color:#6b7280;font-weight:700">120c — ${(kit.anuncio_titulo_120||'').length}/120 ${(kit.anuncio_titulo_120||'').length>120?'⚠️':'✅'}</div>
+              <div style="font-weight:700;color:#14532d">${kit.anuncio_titulo_120||'—'}</div>
+            </div>
+            <button onclick="kitsToggleAd(${idx})"
+              style="width:100%;padding:5px;font-size:11px;font-weight:700;background:#f8fafc;border:1px solid #e5e7eb;border-radius:5px;cursor:pointer;margin-bottom:4px">
+              👁️ Ver anúncio completo
+            </button>
+            <button onclick="kitsCopiaTitulo(${idx})"
+              style="width:100%;padding:5px;font-size:11px;font-weight:700;background:#fff;border:1px solid #2E75B6;color:#2E75B6;border-radius:5px;cursor:pointer">
+              📋 Copiar título 120c
+            </button>
+          </div>
+        </div>
+
+        <div id="kit-ad-${idx}" style="display:none;margin-top:8px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">
+            Anúncio completo
+            <button onclick="kitsCopiaAd(${idx})"
+              style="padding:2px 8px;font-size:10px;font-weight:700;background:#1F3864;color:#fff;border:none;border-radius:4px;cursor:pointer">Copiar</button>
+          </div>
+          <div class="kit-ad-preview" id="kit-ad-txt-${idx}">${(kit.anuncio_descricao||'').replace(/\n/g,'\n')}</div>
+        </div>
+      </div>`;
+
+    // Store data for copy
+    card._kit = kit;
+    panel.appendChild(card);
+  });
+
+  // Store kits globally for copy functions
+  window._kitsResultado = kits;
+}
+
+function kitsToggleAd(idx){
+  const el = document.getElementById(`kit-ad-${idx}`);
+  if(!el) return;
+  el.style.display = el.style.display==='none'?'':'none';
+}
+
+function kitsCopiaAd(idx){
+  const kits = window._kitsResultado||[];
+  const kit = kits[idx];
+  if(!kit) return;
+  navigator.clipboard.writeText(kit.anuncio_descricao||'').then(()=>alert('✅ Anúncio copiado!'));
+}
+
+function kitsCopiaTitulo(idx){
+  const kits = window._kitsResultado||[];
+  const kit = kits[idx];
+  if(!kit) return;
+  navigator.clipboard.writeText(kit.anuncio_titulo_120||'').then(()=>alert('✅ Título copiado!'));
+}
+
+// Recebe itens da NF quando importada
+const _origRenderNfItens = typeof renderNfItens !== 'undefined' ? renderNfItens : null;
+// Hook NF import → kits
+function kitsReceberNF(itens){ kitsNfItens = itens||[]; }
 
 </script>
 </body>
