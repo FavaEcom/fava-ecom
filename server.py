@@ -107,6 +107,9 @@ def criar_tabelas():
             """CREATE TABLE IF NOT EXISTS sync_log (
                 id SERIAL PRIMARY KEY, tipo TEXT, resultado TEXT,
                 created_at TIMESTAMP DEFAULT NOW())""",
+            """CREATE TABLE IF NOT EXISTS cprod_map (
+                cprod TEXT PRIMARY KEY, sku TEXT, nome TEXT,
+                cmv_br REAL DEFAULT 0, cmv_pr REAL DEFAULT 0)""",
         ]
     else:
         sqls = [
@@ -145,6 +148,9 @@ def criar_tabelas():
             """CREATE TABLE IF NOT EXISTS sync_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT, resultado TEXT,
                 created_at DATETIME DEFAULT (datetime('now')))""",
+            """CREATE TABLE IF NOT EXISTS cprod_map (
+                cprod TEXT PRIMARY KEY, sku TEXT, nome TEXT,
+                cmv_br REAL DEFAULT 0, cmv_pr REAL DEFAULT 0)""",
         ]
     with _db_lock:
         cur = db.cursor()
@@ -529,6 +535,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/historico': self._post_historico,
             '/api/db/nf': self._post_nf,
             '/api/db/listing': self._post_listing,
+            '/api/db/cprod-map': self._post_cprod_map,
             '/api/db/listings-batch': self._post_listings_batch,
             '/api/auth/tokens': self._post_tokens,
             '/api/cmv-cache': self._post_cmv,
@@ -585,10 +592,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 SELECT l.id, l.sku, l.titulo, l.preco,
                        l.sale_fee, l.listing_type, l.free_shipping, l.status,
                        l.margem_minima, l.frete_medio,
-                       COALESCE(p.custo_br, 0) as cmv,
-                       COALESCE(p.custo_pr, 0) as cmv_pr
+                       COALESCE(p.custo_br, cm.cmv_br, 0) as cmv,
+                       COALESCE(p.custo_pr, cm.cmv_pr, 0) as cmv_pr
                 FROM ml_listings l
                 LEFT JOIN produtos p ON p.sku = l.sku
+                LEFT JOIN cprod_map cm ON cm.sku = l.sku
                 WHERE l.id IS NOT NULL
                 ORDER BY l.titulo
             """, fetchall=True)
@@ -618,6 +626,26 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if cmv > 0 and sku:
                 upsert_produto(sku, titulo, custo=cmv, custo_br=cmv)
             self._ok({'ok':True,'id':mlb})
+        except Exception as e: self._err(500, str(e))
+
+    def _post_cprod_map(self):
+        """POST /api/db/cprod-map — salva mapa cProd->SKU Fava da BASE_DADOS."""
+        try:
+            d = self._body()
+            n = 0
+            for cprod, info in d.items():
+                sku  = str(info.get('sku','') or '')
+                nome = str(info.get('nome','') or '')
+                cmv_br = float(info.get('cmv_br',0) or 0)
+                cmv_pr = float(info.get('cmv_pr',0) or 0)
+                c = 'ON CONFLICT(cprod) DO UPDATE SET sku=EXCLUDED.sku,nome=EXCLUDED.nome,cmv_br=EXCLUDED.cmv_br,cmv_pr=EXCLUDED.cmv_pr' if IS_PG else                     'ON CONFLICT(cprod) DO UPDATE SET sku=excluded.sku,nome=excluded.nome,cmv_br=excluded.cmv_br,cmv_pr=excluded.cmv_pr'
+                exe(f"INSERT INTO cprod_map (cprod,sku,nome,cmv_br,cmv_pr) VALUES ({qmark(5)}) {c}",
+                    (cprod,sku,nome,cmv_br,cmv_pr))
+                # Também atualiza produtos por SKU
+                if sku and (cmv_br>0 or cmv_pr>0):
+                    upsert_produto(sku, nome, custo=cmv_br or cmv_pr, custo_br=cmv_br or cmv_pr, custo_pr=cmv_pr or cmv_br)
+                n += 1
+            self._ok({'ok':n})
         except Exception as e: self._err(500, str(e))
 
     def _post_listings_batch(self):
