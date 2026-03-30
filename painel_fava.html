@@ -624,7 +624,7 @@ window.onload=async ()=>{
   
   // Carrega CMV manuais salvos
   if(typeof aplicarCMVManuais === 'function') aplicarCMVManuais();
-  // ─ Importa banco CMV da Calculadora Fava (localStorage compartilhado) ─
+  // ─ 1. Importa banco CMV da Calculadora (localStorage) ─
   try{
     const bancoCal = JSON.parse(localStorage.getItem('fava_cmv_banco')||'{}');
     let importados = 0;
@@ -636,6 +636,23 @@ window.onload=async ()=>{
     });
     if(importados > 0) console.log(`✅ Banco CMV: ${importados} SKUs importados da Calculadora`);
   }catch(e){ console.warn('Banco CMV import error:', e); }
+
+  // ─ 2. Carrega CMV do servidor Railway (enviado pelo script Python) ─
+  try{
+    const rCmv = await fetch('/api/cmv-cache');
+    if(rCmv.ok){
+      const cmvServidor = await rCmv.json();
+      let nServ = 0;
+      Object.entries(cmvServidor).forEach(([sku, d])=>{
+        // Servidor tem prioridade sobre localStorage (dado mais recente das NFs)
+        if(d.cmv > 0){
+          dados.cmvCache[sku] = {cmv: d.cmv, cmvPr: d.cmvPr||d.cmv, nome: d.nome||sku, fonte:'nfe'};
+          nServ++;
+        }
+      });
+      if(nServ > 0) console.log(`✅ CMV servidor: ${nServ} SKUs carregados das NFs`);
+    }
+  }catch(e){ console.warn('CMV servidor error:', e); }
 };
 
 // ══════════════════════════════════════════════════════════════════════
