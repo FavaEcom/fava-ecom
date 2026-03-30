@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Atualizar Impostos — Curva ABC Fava Ecom</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f0f2f5;color:#1a1a1a;font-size:13px}
+header{background:#1F3864;color:#fff;padding:10px 18px;display:flex;align-items:center;gap:10px}
+header h1{font-size:14px;font-weight:700}
+.container{max-width:1100px;margin:18px auto;padding:0 16px}
+.card{background:#fff;border-radius:9px;border:1px solid #e5e7eb;padding:16px;margin-bottom:14px}
+.sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#9ca3af;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #f3f4f6}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:3px}
+.field input,.field select{width:100%;border:1px solid #d1d5db;border-radius:6px;padding:7px 10px;font-size:13px;outline:none}
+.field input:focus,.field select:focus{border-color:#2E75B6}
+.btn{border:none;border-radius:7px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;transition:.15s}
+.btn-blue{background:#1F3864;color:#fff}.btn-blue:hover{background:#2E75B6}
+.btn-out{background:#fff;border:1px solid #d1d5db;color:#374151}.btn-out:hover{background:#f9fafb}
+.btn-green{background:#16a34a;color:#fff}.btn-green:hover{background:#15803d}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.alert{border-radius:6px;padding:8px 11px;font-size:12px;margin-bottom:8px}
+.alert-info{background:#dbeafe;color:#1e40af}
+.alert-ok{background:#dcfce7;color:#166534}
+.alert-warn{background:#fef3c7;color:#92400e}
+.alert-err{background:#fee2e2;color:#991b1b}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #e5e7eb;border-top-color:#2E75B6;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:4px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.prog-bar{background:#e5e7eb;border-radius:4px;height:8px;margin:6px 0;overflow:hidden}
+.prog-fill{height:100%;background:#2E75B6;border-radius:4px;transition:.3s}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{background:#f8fafc;padding:6px 9px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;border-bottom:1px solid #e5e7eb}
+td{padding:6px 9px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
+tr:hover td{background:#fafbfc}
+.pill{display:inline-block;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700}
+.pg{background:#dcfce7;color:#166534}
+.py{background:#fef3c7;color:#92400e}
+.pr{background:#fee2e2;color:#991b1b}
+.input-sm{width:60px;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;font-size:12px;text-align:center}
+.forn-row{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:12px}
+.forn-nome{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏷️ Atualizar Impostos — Curva ABC Fava Ecom</h1>
+  <span id="dot-status" style="font-size:11px;margin-left:auto;opacity:.8">Configure o token e carregue a planilha</span>
+</header>
+
+<div class="container">
+
+  <!-- STEP 1 -->
+  <div class="card">
+    <div class="sec">Passo 1 — Token Bling e arquivo</div>
+    <div class="grid2">
+      <div class="field">
+        <label>Token Bling (Access Token)</label>
+        <input type="password" id="tk-bling" placeholder="Cole seu access_token aqui">
+      </div>
+      <div class="field">
+        <label>URL do servidor (Railway ou local)</label>
+        <input type="text" id="server-url" value="https://web-production-5aa0f.up.railway.app">
+      </div>
+    </div>
+    <div class="field">
+      <label>Planilha Curva ABC (.xlsx)</label>
+      <input type="file" id="file-abc" accept=".xlsx,.xlsm" onchange="lerArquivo(this)">
+    </div>
+    <div id="step1-status"></div>
+  </div>
+
+  <!-- STEP 2 — Configurar ICMS por fornecedor -->
+  <div class="card" id="card-forn" style="display:none">
+    <div class="sec">Passo 2 — Crédito ICMS por fornecedor</div>
+    <div class="alert alert-info" style="margin-bottom:10px">
+      O crédito de ICMS depende de onde o fornecedor está localizado. 
+      <strong>Fornecedores de PR → 12% | Fornecedores de fora do PR → 4% a 12%</strong> dependendo do regime.
+      Ajuste abaixo conforme necessário.
+    </div>
+    <div id="forn-wrap"></div>
+  </div>
+
+  <!-- STEP 3 — Buscar IPI -->
+  <div class="card" id="card-busca" style="display:none">
+    <div class="sec">Passo 3 — Buscar IPI no Bling</div>
+    <div class="alert alert-warn" style="margin-bottom:10px">
+      Serão consultados apenas os SKUs <strong>sem IPI</strong>. SKUs já preenchidos não são alterados.
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn btn-blue" onclick="iniciarBusca()">🔍 Buscar IPI no Bling</button>
+      <button class="btn btn-out" onclick="pularBusca()">Pular (usar IPI 0)</button>
+    </div>
+    <div id="busca-prog" style="display:none">
+      <div id="busca-txt" style="font-size:12px;color:#6b7280;margin-bottom:4px"></div>
+      <div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+      <div id="busca-stats" style="font-size:11px;color:#9ca3af;margin-top:3px"></div>
+    </div>
+    <div id="busca-result"></div>
+  </div>
+
+  <!-- STEP 4 — Resultado e export -->
+  <div class="card" id="card-result" style="display:none">
+    <div class="sec">Passo 4 — Resultado e exportação</div>
+    <div id="result-resumo" style="margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="btn btn-green" onclick="exportarXLSX()">⬇️ Baixar planilha corrigida</button>
+      <button class="btn btn-out" onclick="verTabela()">👁 Ver prévia</button>
+    </div>
+    <div id="tabela-wrap" style="overflow-x:auto;display:none"></div>
+  </div>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+let wbDados = null;       // dados da planilha original
+let linhas  = [];         // [{sku, nome, custo, ipi, icms, receita, curva, fornecedor, ...}]
+let fornIcms = {};        // {fornecedor: percentual_icms}
+
+// Lê token salvo na calculadora se disponível
+window.onload = () => {
+  try{
+    const tk = JSON.parse(localStorage.getItem('fava_tk4')||'{}');
+    if(tk.bling) document.getElementById('tk-bling').value = tk.bling;
+  }catch(e){}
+};
+
+function num(v){
+  if(v===null||v===undefined||v==='') return 0;
+  try{ return parseFloat(String(v).replace(',','.'))||0; }catch(e){ return 0; }
+}
+
+// ─── Ler arquivo ──────────────────────────────────────────────
+function lerArquivo(input){
+  const file = input.files[0]; if(!file) return;
+  const st = document.getElementById('step1-status');
+  st.innerHTML='<div class="alert alert-info"><span class="spin"></span>Lendo planilha...</div>';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      wbDados = XLSX.read(e.target.result, {type:'array'});
+      const ws = wbDados.Sheets[wbDados.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      // Col: 0=SKU 1=Produto 2=Custo 3=NovoCusto 4=Fornecedor 5=Estoque 6=IPI 7=CrédICMS 8=Receita 9=Curva 10=NovoIPI 11=NovoICMS
+      linhas = rows.slice(1).filter(r => String(r[0]||'').trim() && String(r[0]).trim()!=='None').map(r => ({
+        sku:  String(r[0]||'').trim(),
+        nome: String(r[1]||''),
+        custo: num(r[2]),
+        novoCusto: num(r[3]),
+        fornecedor: String(r[4]||'Sem fornecedor').trim(),
+        estoque: num(r[5]),
+        ipi: num(r[6]),
+        icms: num(r[7]),
+        receita: num(r[8]),
+        curva: String(r[9]||''),
+        novoIpi: num(r[10]),
+        novoIcms: num(r[11]),
+        // controle
+        ipiOriginal: num(r[6]),
+        icmsOriginal: num(r[7]),
+        ipiAtualizado: false,
+        icmsAtualizado: false,
+      }));
+
+      const semIpi  = linhas.filter(l => l.ipi <= 0 && l.custo > 0).length;
+      const semIcms = linhas.filter(l => l.icms <= 0 && l.custo > 0).length;
+      st.innerHTML=`<div class="alert alert-ok">✅ ${linhas.length} produtos carregados | <strong>${semIpi}</strong> sem IPI | <strong>${semIcms}</strong> sem Crédito ICMS</div>`;
+
+      montarFornecedores();
+      document.getElementById('card-forn').style.display = '';
+      document.getElementById('card-busca').style.display = '';
+    }catch(err){
+      st.innerHTML=`<div class="alert alert-err">❌ Erro: ${err.message}</div>`;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ─── Montrar tabela de fornecedores ───────────────────────────
+function montarFornecedores(){
+  // Agrupa por fornecedor → conta produtos sem ICMS
+  const fMap = {};
+  linhas.forEach(l => {
+    const f = l.fornecedor;
+    if(!fMap[f]) fMap[f] = {total:0, semIcms:0, icmsExistente: 0};
+    fMap[f].total++;
+    if(l.icms <= 0 && l.custo > 0) fMap[f].semIcms++;
+    if(l.icms > 0) fMap[f].icmsExistente = l.icms;
+  });
+
+  // Tenta adivinhar ICMS por nome do fornecedor
+  const adivinha = nome => {
+    const n = nome.toLowerCase();
+    if(n.includes('menegotti')||n.includes('metalurg')) return 12; // PR
+    if(n.includes('mor s.a')) return 12;     // RS → 12%
+    if(n.includes('csm')) return 12;         // SP → 12%
+    if(n.includes('kala')) return 12;        // SP → 12%
+    if(n.includes('tools world')||n.includes('mundo das ferram')) return 12;
+    if(n.includes('chiaperini')) return 12;  // SC → 12%
+    if(n.includes('tst')) return 12;
+    if(n.includes('importadora')||n.includes('importacao')) return 4;  // importados → 4%
+    return 12; // padrão seguro
+  };
+
+  // Inicializa fornIcms
+  fornIcms = {};
+  Object.entries(fMap).forEach(([f, dados]) => {
+    fornIcms[f] = dados.icmsExistente > 0 ? dados.icmsExistente : adivinha(f);
+  });
+
+  // Renderizar só fornecedores que têm produtos sem ICMS
+  const wrap = document.getElementById('forn-wrap');
+  const comSemIcms = Object.entries(fMap).filter(([f,d]) => d.semIcms > 0).sort((a,b) => b[1].semIcms - a[1].semIcms);
+
+  if(!comSemIcms.length){
+    wrap.innerHTML = '<div class="alert alert-ok">✅ Todos os produtos já têm Crédito ICMS cadastrado!</div>';
+    return;
+  }
+
+  let html = `<div style="display:grid;grid-template-columns:1fr 80px 70px 80px;gap:6px;font-size:10px;font-weight:700;color:#9ca3af;padding-bottom:4px;border-bottom:1px solid #e5e7eb;margin-bottom:4px">
+    <span>Fornecedor</span><span style="text-align:center">Sem ICMS</span><span style="text-align:center">ICMS %</span><span style="text-align:center">Ação</span></div>`;
+
+  comSemIcms.forEach(([f, dados]) => {
+    const cur = fornIcms[f];
+    const fId = 'forn-' + f.replace(/[^a-z0-9]/gi,'_').slice(0,20);
+    html += `<div style="display:grid;grid-template-columns:1fr 80px 70px 80px;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid #f3f4f6">
+      <span style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f}">${f}</span>
+      <span style="text-align:center;font-size:11px;color:#374151">${dados.semIcms} prod.</span>
+      <input class="input-sm" id="${fId}" type="number" min="0" max="25" step="0.5" value="${cur}" 
+        oninput="fornIcms['${f.replace(/'/g,"\\'")}'] = parseFloat(this.value)||0">
+      <span>
+        <button class="btn btn-out" style="padding:2px 7px;font-size:10px" onclick="fornIcms['${f.replace(/'/g,"\\'")}']=${cur};document.getElementById('${fId}').value=${cur}">Reset</button>
+      </span>
+    </div>`;
+  });
+  wrap.innerHTML = html;
+}
+
+// ─── Buscar IPI no Bling ───────────────────────────────────────
+async function iniciarBusca(){
+  const tk = document.getElementById('tk-bling').value.trim();
+  const server = document.getElementById('server-url').value.trim().replace(/\/$/,'');
+  if(!tk){ alert('Cole o token Bling antes de buscar'); return; }
+
+  const semIpi = linhas.filter(l => l.ipi <= 0 && l.custo > 0 && /^[\d\-\.]+$/.test(l.sku));
+  if(!semIpi.length){ 
+    aplicarIcms();
+    mostrarResultado();
+    return;
+  }
+
+  const progWrap = document.getElementById('busca-prog');
+  const progFill = document.getElementById('prog-fill');
+  const progTxt  = document.getElementById('busca-prog');
+  const busca    = document.getElementById('busca-txt');
+  const stats    = document.getElementById('busca-stats');
+  progWrap.style.display = '';
+  document.querySelector('[onclick="iniciarBusca()"]').disabled = true;
+  document.querySelector('[onclick="pularBusca()"]').disabled = true;
+
+  let ok=0, nao=0, erro=0;
+  const skuMap = {};
+  linhas.forEach(l => skuMap[l.sku] = l);
+
+  for(let i=0; i<semIpi.length; i++){
+    const l = semIpi[i];
+    const pct = Math.round((i+1)/semIpi.length*100);
+    document.getElementById('prog-fill').style.width = pct+'%';
+    busca.textContent = `${i+1}/${semIpi.length}: ${l.sku} — ${l.nome.slice(0,40)}`;
+    stats.textContent = `✅ ${ok} encontrados | ⚪ ${nao} sem IPI no Bling | ❌ ${erro} erros`;
+
+    try{
+      // Tenta pelo código exato
+      const skuPuro = l.sku.split('-')[0]; // base do SKU para kits/variações
+      const r = await fetch(`${server}/api/bling/produtos?criterio=1&tipo=T&codigo=${encodeURIComponent(l.sku)}&limite=1`,{
+        headers:{'Authorization':`Bearer ${tk}`,'Accept':'application/json'}
+      });
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = await r.json();
+      let prod = d.data?.[0];
+      // Se não achou com SKU completo, tenta com base
+      if(!prod && skuPuro !== l.sku){
+        const r2 = await fetch(`${server}/api/bling/produtos?criterio=1&tipo=T&codigo=${encodeURIComponent(skuPuro)}&limite=1`,{
+          headers:{'Authorization':`Bearer ${tk}`,'Accept':'application/json'}
+        });
+        if(r2.ok){const d2=await r2.json();prod=d2.data?.[0];}
+      }
+      if(prod){
+        const ipi = parseFloat(prod.ipi||0);
+        if(ipi > 0){
+          l.ipi = ipi;
+          l.ipiAtualizado = true;
+          ok++;
+        } else { nao++; }
+      } else { nao++; }
+    }catch(e){ erro++; }
+
+    await new Promise(r=>setTimeout(r,120)); // rate limit gentil
+  }
+
+  busca.textContent = `✅ Busca concluída — ${semIpi.length} SKUs processados`;
+  stats.textContent = `${ok} IPI atualizados | ${nao} sem IPI no Bling | ${erro} erros`;
+  document.getElementById('busca-result').innerHTML =
+    `<div class="alert ${ok>0?'alert-ok':'alert-warn'}" style="margin-top:8px">
+      ✅ ${ok} IPI preenchidos via Bling ${nao>0?`| ⚪ ${nao} produtos sem IPI cadastrado no Bling`:''}
+    </div>`;
+
+  aplicarIcms();
+  mostrarResultado();
+}
+
+function pularBusca(){
+  aplicarIcms();
+  mostrarResultado();
+}
+
+// ─── Aplicar ICMS por fornecedor ──────────────────────────────
+function aplicarIcms(){
+  linhas.forEach(l => {
+    if(l.icms <= 0 && l.custo > 0){
+      const icmsForn = fornIcms[l.fornecedor];
+      if(icmsForn > 0){
+        l.icms = icmsForn;
+        l.icmsAtualizado = true;
+      }
+    }
+  });
+}
+
+// ─── Mostrar resultado ────────────────────────────────────────
+function mostrarResultado(){
+  const ipiAt  = linhas.filter(l=>l.ipiAtualizado).length;
+  const icmsAt = linhas.filter(l=>l.icmsAtualizado).length;
+  const aindaSemIpi  = linhas.filter(l=>l.ipi<=0&&l.custo>0).length;
+  const aindaSemIcms = linhas.filter(l=>l.icms<=0&&l.custo>0).length;
+
+  document.getElementById('result-resumo').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px">
+      <div style="background:#f0fdf4;border-radius:7px;padding:10px;text-align:center">
+        <div style="font-size:11px;color:#166534;font-weight:700">IPI atualizados</div>
+        <div style="font-size:22px;font-weight:700;color:#16a34a">${ipiAt}</div>
+      </div>
+      <div style="background:#f0fdf4;border-radius:7px;padding:10px;text-align:center">
+        <div style="font-size:11px;color:#166534;font-weight:700">ICMS atualizados</div>
+        <div style="font-size:22px;font-weight:700;color:#16a34a">${icmsAt}</div>
+      </div>
+      <div style="background:${aindaSemIpi>0?'#fef3c7':'#f0fdf4'};border-radius:7px;padding:10px;text-align:center">
+        <div style="font-size:11px;color:${aindaSemIpi>0?'#92400e':'#166534'};font-weight:700">Ainda sem IPI</div>
+        <div style="font-size:22px;font-weight:700;color:${aindaSemIpi>0?'#d97706':'#16a34a'}">${aindaSemIpi}</div>
+      </div>
+      <div style="background:${aindaSemIcms>0?'#fee2e2':'#f0fdf4'};border-radius:7px;padding:10px;text-align:center">
+        <div style="font-size:11px;color:${aindaSemIcms>0?'#991b1b':'#166534'};font-weight:700">Ainda sem ICMS</div>
+        <div style="font-size:22px;font-weight:700;color:${aindaSemIcms>0?'#dc2626':'#16a34a'}">${aindaSemIcms}</div>
+      </div>
+    </div>`;
+
+  document.getElementById('card-result').style.display = '';
+}
+
+// ─── Ver tabela prévia ────────────────────────────────────────
+function verTabela(){
+  const wrap = document.getElementById('tabela-wrap');
+  if(wrap.style.display !== 'none'){ wrap.style.display='none'; return; }
+  // Mostra só os que foram atualizados
+  const filtrados = linhas.filter(l=>l.ipiAtualizado||l.icmsAtualizado).slice(0,100);
+  if(!filtrados.length){ wrap.innerHTML='<div class="alert alert-info">Nenhuma alteração para mostrar</div>'; wrap.style.display=''; return; }
+
+  let html = `<table>
+    <thead><tr>
+      <th>SKU</th><th>Produto</th><th>Curva</th>
+      <th>IPI antes</th><th>IPI depois</th>
+      <th>ICMS antes</th><th>ICMS depois</th>
+    </tr></thead><tbody>`;
+  filtrados.forEach(l=>{
+    html += `<tr>
+      <td style="font-weight:700;font-family:monospace">${l.sku}</td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.nome}</td>
+      <td><span class="pill ${l.curva==='A'?'pg':l.curva==='B'?'py':'pr'}">${l.curva||'?'}</span></td>
+      <td style="color:${l.ipiOriginal>0?'#374151':'#9ca3af'}">${l.ipiOriginal>0?l.ipiOriginal.toFixed(1)+'%':'—'}</td>
+      <td style="color:${l.ipiAtualizado?'#16a34a':'#374151'};font-weight:${l.ipiAtualizado?'700':'400'}">${l.ipi>0?l.ipi.toFixed(1)+'%':'—'} ${l.ipiAtualizado?'✓':''}</td>
+      <td style="color:${l.icmsOriginal>0?'#374151':'#9ca3af'}">${l.icmsOriginal>0?l.icmsOriginal.toFixed(1)+'%':'—'}</td>
+      <td style="color:${l.icmsAtualizado?'#16a34a':'#374151'};font-weight:${l.icmsAtualizado?'700':'400'}">${l.icms>0?l.icms.toFixed(1)+'%':'—'} ${l.icmsAtualizado?'✓':''}</td>
+    </tr>`;
+  });
+  if(linhas.filter(l=>l.ipiAtualizado||l.icmsAtualizado).length > 100)
+    html += `<tr><td colspan="7" style="text-align:center;color:#9ca3af;padding:8px">... mostrando 100 de ${linhas.filter(l=>l.ipiAtualizado||l.icmsAtualizado).length} alterações</td></tr>`;
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  wrap.style.display = '';
+}
+
+// ─── Exportar XLSX ────────────────────────────────────────────
+function exportarXLSX(){
+  if(!wbDados){ alert('Carregue a planilha primeiro'); return; }
+
+  // Recria a planilha com os valores atualizados
+  const ws = wbDados.Sheets[wbDados.SheetNames[0]];
+  const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+
+  // Mapeia SKU → linha no array
+  const skuIdx = {};
+  aoa.forEach((row, i) => {
+    if(i === 0) return;
+    const sku = String(row[0]||'').trim();
+    if(sku) skuIdx[sku] = i;
+  });
+
+  // Aplica os valores atualizados
+  linhas.forEach(l => {
+    const i = skuIdx[l.sku];
+    if(i === undefined) return;
+    if(l.ipiAtualizado || l.ipi !== l.ipiOriginal) {
+      aoa[i][6] = l.ipi > 0 ? l.ipi : '';
+    }
+    if(l.icmsAtualizado || l.icms !== l.icmsOriginal) {
+      aoa[i][7] = l.icms > 0 ? l.icms : '';
+    }
+  });
+
+  // Gera novo workbook
+  const novoWb = XLSX.utils.book_new();
+  const novoWs = XLSX.utils.aoa_to_sheet(aoa);
+
+  // Estilo básico de cabeçalho
+  const range = XLSX.utils.decode_range(novoWs['!ref']||'A1');
+  for(let c=range.s.c; c<=range.e.c; c++){
+    const cell = XLSX.utils.encode_cell({r:0,c});
+    if(!novoWs[cell]) continue;
+    novoWs[cell].s = {font:{bold:true}, fill:{fgColor:{rgb:'1F3864'}}, alignment:{horizontal:'center'}};
+  }
+
+  XLSX.utils.book_append_sheet(novoWb, novoWs, 'FV COMERCIO E SERVIÇOS LTDA');
+  const date = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  XLSX.writeFile(novoWb, `Curva_ABC_Fava_Impostos_${date}.xlsx`);
+}
+</script>
+</body>
+</html>
