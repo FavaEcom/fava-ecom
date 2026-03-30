@@ -802,6 +802,10 @@ function salvarCfg(){
         ↻ Carregar anúncios ativos
       </button>
       <button onclick="selecionarTodosAplicar()" style="background:#16a34a;color:#fff;padding:7px 14px;font-size:12px;border:none;border-radius:6px;cursor:pointer;font-weight:700">⚡ Aplicar em TODOS</button>
+      <label style="padding:7px 14px;font-size:12px;font-weight:700;background:#fff;color:#1F3864;border:1px solid #1F3864;border-radius:6px;cursor:pointer;white-space:nowrap">
+        📋 Importar planilha
+        <input type="file" accept=".xlsx,.csv" onchange="importarPlanilhaDesconto(this)" style="display:none">
+      </label>
       <input type="text" id="prom-busca" placeholder="Buscar produto ou SKU..."
         oninput="filtrarPromos()" style="border:1px solid var(--borda);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:220px">
       <span id="prom-status" style="font-size:12px;color:var(--muted)">Clique em Carregar para listar seus anúncios</span>
@@ -843,18 +847,29 @@ function salvarCfg(){
         <input type="checkbox" id="prom-check-all" onchange="toggleTodosPromos(this.checked)" title="Selecionar todos">
         <span style="font-size:11px;color:var(--muted)">Selecionar todos</span>
       </div>
-      <table class="tbl" id="prom-tbl">
+      <table class="prom-tbl" id="prom-tbl" style="table-layout:fixed;width:100%">
+        <colgroup>
+          <col style="width:36px">
+          <col style="width:30%">
+          <col style="width:90px">
+          <col style="width:90px">
+          <col style="width:90px">
+          <col style="width:80px">
+          <col style="width:90px">
+          <col style="width:100px">
+          <col style="width:90px">
+        </colgroup>
         <thead>
           <tr>
-            <th style="width:32px"></th>
+            <th style="width:36px"></th>
             <th>Produto</th>
-            <th>SKU</th>
-            <th class="num">Preço atual</th>
-            <th class="num">Com desc.</th>
+            <th>SKU Fava</th>
+            <th class="num">Preço ML</th>
+            <th class="num">C/ desc.</th>
             <th class="num">Custo</th>
-            <th class="num">Margem atual</th>
-            <th class="num">Margem c/desc.</th>
-            <th>Status</th>
+            <th class="num">Margem</th>
+            <th class="num">Marg. c/desc.</th>
+            <th class="num">Status</th>
           </tr>
         </thead>
         <tbody id="prom-tbody"></tbody>
@@ -1323,6 +1338,46 @@ async function selecionarTodosAplicar(){
 let promoData = [];
 let promoDataFiltrada = [];
 
+
+// Importa planilha de descontos: colunas SKU | % Desconto
+function importarPlanilhaDesconto(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const wb = XLSX.read(e.target.result, {type:'binary'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+      let aplicados = 0;
+      rows.forEach(row=>{
+        if(!row[0]) return;
+        const sku = String(row[0]).trim();
+        const pct = parseFloat(row[1]||0);
+        if(!sku || !pct) return;
+        // Acha o produto na promoData pelo SKU
+        const idx = promoData.findIndex(p=>
+          String(p.sku).trim()===sku ||
+          String(p.id).trim()===sku
+        );
+        if(idx>=0){
+          promoData[idx].descPlanilha = pct;
+          promoData[idx].selecionado = true;
+          aplicados++;
+        }
+      });
+      if(!aplicados){ alert('Nenhum SKU encontrado. Certifique que a planilha tem:\nColuna A: SKU\nColuna B: % desconto\n\nCarregue os anúncios antes de importar.'); return; }
+      promoDataFiltrada = [...promoData];
+      renderPromoTabela(promoDataFiltrada);
+      const st = document.getElementById('prom-status');
+      if(st) st.textContent = `✅ ${aplicados} produtos com desconto da planilha`;
+      alert(`${aplicados} produtos encontrados e selecionados.\n\nClique "Aplicar desconto no ML" para confirmar.`);
+    }catch(e){ alert('Erro ao ler planilha: '+e.message); }
+  };
+  reader.readAsBinaryString(file);
+  input.value='';
+}
+
 async function carregarPromocoes(){
   if(!tokens.ml){ alert('Configure o token ML em ⚙️'); return; }
   const st = document.getElementById('prom-status');
@@ -1430,16 +1485,26 @@ function renderPromoTabela(lista){
     const mgCor = p.margem!==null ? (p.margem>=.20?'var(--verde)':p.margem>=.10?'var(--amarelo)':'var(--vermelho)') : 'var(--muted)';
     const tagDesc = temDesc ? '<span class="pill pill-g">Com desconto</span>' : '';
 
+    // Recalcula margem com CMV atualizado (pode ter chegado depois do carregamento)
+    const cmvAtual = p.cmv || cmvLookup(p.sku)?.cmv || 0;
+    const mgReal = (p.preco && cmvAtual) ? ((p.preco - cmvAtual - p.preco*0.21 - p.preco*0.0925) / p.preco) : null;
+    const mgRealStr = mgReal !== null ? (mgReal*100).toFixed(1)+'%' : '—';
+    const mgRealCor = mgReal!==null ? (mgReal>=.20?'var(--verde)':mgReal>=.10?'var(--amarelo)':'var(--vermelho)') : 'var(--muted)';
+    const mgDescCalc = cmvAtual ? (((p.preco*(1-desc) - cmvAtual - p.preco*(1-desc)*0.21 - p.preco*(1-desc)*0.0925) / (p.preco*(1-desc)))*100).toFixed(1)+'%' : '—';
+    const skuExib = p.sku ? `<strong>${p.sku}</strong>` : `<span style="color:#9ca3af;font-size:9px">${p.id}</span>`;
+    const statusTag = temDesc ? '<span class="pill pill-g" style="font-size:9px">Desconto</span>' : '';
+    const semCusto = !cmvAtual ? '<span title="Sem CMV no banco" style="color:#f59e0b">⚠️</span>' : '';
+
     return `<tr id="prom-row-${i}" style="${p.selecionado?'background:#eff6ff':''}">
-      <td><input type="checkbox" ${p.selecionado?'checked':''} onchange="togglePromo(${i},this.checked)"></td>
-      <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.titulo}">${p.titulo}</td>
-      <td><code style="font-size:10px">${p.sku||p.id}</code></td>
+      <td style="text-align:center"><input type="checkbox" ${p.selecionado?'checked':''} onchange="togglePromo(${i},this.checked)"></td>
+      <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.titulo}">${p.titulo}</td>
+      <td>${skuExib}</td>
       <td class="num" style="font-weight:700">R$ ${p.preco.toFixed(2)}</td>
-      <td class="num" style="color:var(--azul2)">R$ ${precoComDesc}</td>
-      <td class="num" style="color:var(--muted)">${p.cmv?'R$ '+p.cmv.toFixed(2):'—'}</td>
-      <td class="num" style="color:${mgCor};font-weight:700">${mgAtual}</td>
-      <td class="num" style="color:var(--amarelo)">${mgComDesc}</td>
-      <td>${tagDesc}</td>
+      <td class="num" style="color:var(--azul2)">R$ ${(p.preco*(1-desc)).toFixed(2)}</td>
+      <td class="num" style="color:var(--muted)">${cmvAtual?'R$'+cmvAtual.toFixed(2):semCusto+'—'}</td>
+      <td class="num" style="color:${mgRealCor};font-weight:700">${mgRealStr}</td>
+      <td class="num" style="color:${mgRealCor==='var(--verde)'?'var(--amarelo)':mgRealCor}">${mgDescCalc}</td>
+      <td class="num">${statusTag}</td>
     </tr>`;
   }).join('');
 
