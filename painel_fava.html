@@ -590,6 +590,18 @@ window.onload=async ()=>{
   
   // Carrega CMV manuais salvos
   if(typeof aplicarCMVManuais === 'function') aplicarCMVManuais();
+  // ─ Importa banco CMV da Calculadora Fava (localStorage compartilhado) ─
+  try{
+    const bancoCal = JSON.parse(localStorage.getItem('fava_cmv_banco')||'{}');
+    let importados = 0;
+    Object.entries(bancoCal).forEach(([sku, d])=>{
+      if(d.cmvBr > 0 && (!dados.cmvCache[sku] || !dados.cmvCache[sku].cmv)){
+        dados.cmvCache[sku] = {cmv: d.cmvBr, nome: d.nome||sku, fonte:'calc'};
+        importados++;
+      }
+    });
+    if(importados > 0) console.log(`✅ Banco CMV: ${importados} SKUs importados da Calculadora`);
+  }catch(e){ console.warn('Banco CMV import error:', e); }
 };
 
 // ══════════════════════════════════════════════════════════════════════
@@ -891,6 +903,7 @@ async function fetchCMVs(skus){
         const prod=r?.data?.[0];
         if(prod){
           const custoB = parseFloat(prod.precoCusto||0);
+          cmvCacheSet(sku, custoB, prod.nome||prod.descricao||sku);
           dados.cmvCache[sku]={
             nome: prod.nome||prod.descricao||sku,
             cmv:  custoB,
@@ -909,7 +922,7 @@ async function fetchCMVs(skus){
 function calcMargemReal(preco, sku, uf, listing_type, frete, qtd){
   const ufData=ICMS_TB[uf]||ICMS_TB['SP'];
   const taxa=taxaML(listing_type);
-  const cmvInfo=dados.cmvCache[sku] || dados.cmvCache[String(parseInt(sku)||0)];
+  const cmvInfo=cmvLookup(sku);
   // CMV: usa cache (HISTORICO ou Bling) — NÃO estima se não tiver
   const cmv = cmvInfo?.cmv || 0;
   const temCMV = cmv > 0;
@@ -1394,7 +1407,7 @@ async function carregarPromocoes(){
 }
 
 function calcPromo(p){
-  const cmvInfo = dados.cmvCache[p.sku||'']||dados.cmvCache[String(parseInt(p.sku||0))];
+  const cmvInfo = cmvLookup(p.sku);
   const cmv = cmvInfo?.cmv||0;
   const taxa = p.listing_type==='gold_pro'?.17:.12;
   const bonus = parseFloat(p.bonus_ml||p.seller_discount||0);
@@ -1767,7 +1780,7 @@ async function carregarPromocoes(){
       itens.forEach(item=>{
         const mlb = item.item_id||item.id;
         const sku = item.seller_sku||'';
-        const cmvInfo = dados.cmvCache[sku]||dados.cmvCache[String(parseInt(sku)||0)];
+        const cmvInfo = cmvLookup(sku);
         const cmv = cmvInfo?.cmv||0;
         const taxa = item.price >= 79 ? 0.12 : 0.12;
         const bonus_ml = camp.benefits?.find(b=>b.type==='COUPON')?.value||0;
@@ -2189,7 +2202,7 @@ function renderADS(){
     const pct_a = receita>0?gasto/receita:0;
 
     // Margem sem e com ADS
-    const cmvInfo = dados.cmvCache[sku]||dados.cmvCache[String(parseInt(sku)||0)];
+    const cmvInfo = cmvLookup(sku);
     const cmv = cmvInfo?.cmv||0;
     const taxa = .12;
     const frete_est = 15;
@@ -2251,7 +2264,7 @@ function renderPedidosComADS(){
 
     // CMV por item
     const cmv = p.itens?.reduce((s,it)=>{
-      const ci=dados.cmvCache[it.sku]||dados.cmvCache[String(parseInt(it.sku)||0)];
+      const ci=cmvLookup(it.sku);
       return s+(ci?.cmv||0)*it.qtd;
     },0)||0;
 
@@ -2540,7 +2553,8 @@ let cmvManuais = JSON.parse(localStorage.getItem('fava_cmv_manuais')||'{}');
 function setCMVManual(mlb, sku, valorStr){
   const valor = parseFloat(valorStr)||0;
   if(!valor||valor<=0){alert('Informe um valor válido');return;}
-  // Salva no cache e localStorage
+  // Salva no cache e localStorage (+ banco calculadora)
+  cmvCacheSet(sku, valor, sku);
   dados.cmvCache[sku] = {cmv: valor, nome: sku};
   cmvManuais[sku] = valor;
   localStorage.setItem('fava_cmv_manuais', JSON.stringify(cmvManuais));
@@ -2579,7 +2593,7 @@ async function buscarCMVSemCMV(){
       if(prod){
         const custo = parseFloat(prod.precoCusto||0);
         if(custo>0){
-          dados.cmvCache[sku]={cmv:custo,nome:prod.nome||sku};
+          cmvCacheSet(sku, custo, prod.nome||sku); // persiste + sincroniza banco calculadora
           atualizados++;
         }
       }
@@ -2605,6 +2619,35 @@ async function buscarCMVSemCMV(){
   
   recalcGP();
   alert(`✅ ${atualizados} CMVs atualizados do Bling!${erros>0?' ('+erros+' erros)':''}`);
+}
+
+
+// ─ Lookup CMV robusto — tenta múltiplos formatos de SKU ─
+function cmvLookup(sku){
+  if(!sku) return null;
+  const s = String(sku).trim();
+  if(!s) return null;
+  // Tenta: string exata → sem zeros à esquerda → número inteiro → trim adicional
+  return dados.cmvCache[s]
+      || dados.cmvCache[s.replace(/^0+/,'')||s]
+      || (parseInt(s)>0 ? dados.cmvCache[String(parseInt(s))] : null)
+      || dados.cmvCache[s.toLowerCase()]
+      || null;
+}
+
+// Salva CMV no cache E sincroniza para o banco da Calculadora
+function cmvCacheSet(sku, cmv, nome){
+  if(!sku || !(cmv>0)) return;
+  const k = String(sku).trim();
+  dados.cmvCache[k] = {cmv, nome: nome||k};
+  // Sync para banco compartilhado com a Calculadora
+  try{
+    const banco = JSON.parse(localStorage.getItem('fava_cmv_banco')||'{}');
+    if(!banco[k] || !banco[k].cmvBr){
+      banco[k] = {...(banco[k]||{}), cmvBr: cmv, nome: nome||k, dt: new Date().toISOString().slice(0,10)};
+      localStorage.setItem('fava_cmv_banco', JSON.stringify(banco));
+    }
+  }catch(e){}
 }
 
 // Aplica CMVs manuais salvos ao carregar
@@ -2673,7 +2716,10 @@ function carregarCMVPlanilha(input){
         if(sku && cmv>0) skuMap[sku]={cmv,nome};
       });
       let n=Object.keys(skuMap).length;
-      Object.entries(skuMap).forEach(([sku,d])=>{ dados.cmvCache[sku]=d; });
+      Object.entries(skuMap).forEach(([sku,d])=>{
+        dados.cmvCache[sku]=d;
+        cmvCacheSet(sku, d.cmv, d.nome); // sincroniza banco calculadora
+      });
       alert(`✅ CMV carregado para ${n} SKUs do HISTORICO_COMPRAS!
 Agora o cálculo usa o custo real da nota fiscal.`);
       if(gpData.length) recalcGP();
@@ -2709,7 +2755,7 @@ function carregarPlanilhaGP(input){
         const status = String(r[iStatus]||'');
 
         // CMV do cache (Bling)
-        const cmvInfo = dados.cmvCache[sku] || dados.cmvCache[String(parseInt(sku)||0)];
+        const cmvInfo = cmvLookup(sku);
         const cmv = cmvInfo?.cmv || 0;
 
         // Taxa ML estimada (12% clássico, 17% premium)
@@ -2730,8 +2776,16 @@ function carregarPlanilhaGP(input){
         });
       });
 
-      document.getElementById('gp-status').textContent = `✅ ${gpData.length} anúncios carregados`;
-      document.getElementById('gp-status').style.color = '#16a34a';
+      const semCmvAuto = gpData.filter(d=>!d.temCMV&&d.sku).length;
+      const gpStatusEl = document.getElementById('gp-status');
+      if(semCmvAuto > 0){
+        gpStatusEl.textContent = `✅ ${gpData.length} anúncios | ⚠️ ${semCmvAuto} sem CMV ${tokens.bling?'— buscando no Bling...':'— carregue FAVA_ESTOQUE_V5.xlsx ou configure Bling'}`;
+        gpStatusEl.style.color = '#d97706';
+        if(tokens.bling) setTimeout(()=>buscarCMVSemCMV(), 800);
+      } else {
+        gpStatusEl.textContent = `✅ ${gpData.length} anúncios carregados com CMV`;
+        gpStatusEl.style.color = '#16a34a';
+      }
       ['gp-kpis','gp-toolbar','gp-filters','gp-table-wrap','gp-promos'].forEach(id=>{
         document.getElementById(id).style.display='';
       });
@@ -4041,7 +4095,7 @@ async function carregarAnuncios(){
     anunciosData = detalhes.map(item=>{
       const sku = item.seller_sku || '';
       // Try multiple key formats (numeric, string, trimmed)
-      const cmvInfo = dados.cmvCache[sku] || dados.cmvCache[String(parseInt(sku))] || dados.cmvCache[sku.trim()] || null;
+      const cmvInfo = cmvLookup(sku);
       const cmv = cmvInfo?.cmv || 0;
       const preco = item.price || 0;
       const taxa = item.listing_type_id==='gold_pro'?.17:.12;

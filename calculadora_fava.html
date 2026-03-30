@@ -131,6 +131,29 @@ header h1{font-size:14px;font-weight:700;flex:1}
 .c-bal{background:#f0fdf4;color:#15803d}.c-atc{background:#fffbeb;color:#b45309}
 
 @media(max-width:760px){.layout{grid-template-columns:1fr;height:auto}.left{border-right:none;border-bottom:1px solid #e0e4ea}}
+/* ═══ RECEBIMENTO NF ═══ */
+.rec-layout{display:grid;grid-template-columns:300px 1fr;height:calc(100vh - 82px)}
+.rec-left{background:#fff;border-right:1px solid #e0e4ea;overflow-y:auto;padding:13px}
+.rec-right{overflow-y:auto;padding:13px;background:#f8fafc}
+.prod-card-rec{background:#fff;border-radius:9px;border:1.5px solid #e5e7eb;margin-bottom:10px;overflow:hidden}
+.prod-card-rec.novo{border-color:#2E75B6}
+.prod-card-rec.exist{border-color:#16a34a}
+.rec-card-head{padding:9px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #f3f4f6;cursor:pointer}
+.rec-card-body{padding:11px 13px}
+.sku-field-wrap{display:flex;gap:5px;align-items:center;margin-bottom:6px}
+.sku-label{font-size:10px;font-weight:700;color:#6b7280;width:72px;flex-shrink:0}
+.sku-input{flex:1;border:1px solid #d1d5db;border-radius:5px;padding:4px 8px;font-size:12px;font-weight:700;font-family:monospace}
+.sku-input.gerado{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}
+.sku-input.confirmado{background:#f0fdf4;border-color:#86efac;color:#166534}
+.btn-ia{padding:3px 8px;font-size:10px;border-radius:4px;border:1px solid #7c3aed;background:#fff;color:#7c3aed;cursor:pointer;font-weight:700;white-space:nowrap}
+.btn-ia:hover{background:#7c3aed;color:#fff}
+.status-pill{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700}
+.sp-novo{background:#dbeafe;color:#1e40af}
+.sp-exist{background:#dcfce7;color:#166534}
+.sp-confirmado{background:#d1fae5;color:#065f46}
+.rec-section-head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#6b7280;padding:6px 0;margin:8px 0 4px;border-bottom:1px solid #e5e7eb}
+.rec-exist-row{display:grid;grid-template-columns:80px 1fr 90px 90px auto;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:11px}
+
 
 /* ORÇAMENTO */
 .orc-layout{display:grid;grid-template-columns:300px 1fr;height:calc(100vh - 82px)}
@@ -222,6 +245,7 @@ header h1{font-size:14px;font-weight:700;flex:1}
   <div class="tab" onclick="switchTab('orcamento')">📄 Orçamento</div>
   <div class="tab" onclick="switchTab('anuncio')">✍️ Anúncio</div>
   <div class="tab" onclick="switchTab('kits')">🧩 Kits</div>
+  <div class="tab" onclick="switchTab('recebimento')" id="tab-recebimento">📦 Recebimento NF</div>
 </div>
 
 <div class="layout">
@@ -1004,6 +1028,7 @@ function switchTab(t){
   document.getElementById('painel-orcamento').style.display=t==='orcamento'?'grid':'none';
   document.getElementById('painel-anuncio').style.display=t==='anuncio'?'grid':'none';
   document.getElementById('painel-kits').style.display=t==='kits'?'grid':'none';
+  document.getElementById('painel-recebimento').style.display=t==='recebimento'?'grid':'none';
   if(t==='anuncio') anInit();
   if(t==='kits') kitsInit();
 }
@@ -3349,6 +3374,454 @@ const _origRenderNfItens = typeof renderNfItens !== 'undefined' ? renderNfItens 
 // Hook NF import → kits
 function kitsReceberNF(itens){ kitsNfItens = itens||[]; }
 
+
+// ══════════════════════════════════════════════════════════════════════
+// RECEBIMENTO NF — Fluxo completo: XML → SKU → EAN → Fila
+// ══════════════════════════════════════════════════════════════════════
+let recItens = [];       // todos os itens da NF importada
+let recNovos = [];       // produtos não encontrados no banco CMV
+let recExist = [];       // produtos já conhecidos
+let recSkuBase = 0;      // próximo SKU sequencial
+let recEanBase = '';     // próximo EAN disponível
+
+// ── Importar NF XML ──────────────────────────────────────────────────
+function recImportarXML(input){
+  const file = input.files[0]; if(!file) return;
+  const st = document.getElementById('rec-xml-status');
+  st.innerHTML = '<span class="spin"></span> Lendo XML...';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(e.target.result, 'text/xml');
+      if(doc.getElementsByTagName('parsererror').length){ st.textContent='❌ XML inválido'; return; }
+      const nNF = xmlVal(doc,'nNF');
+      const detNodes = doc.getElementsByTagName('det');
+      if(!detNodes.length){ st.textContent='⚠️ Nenhum item no XML'; return; }
+      recItens = [];
+      for(let i=0;i<detNodes.length;i++){
+        const det = detNodes[i];
+        const prod = det.getElementsByTagName('prod')[0];
+        if(!prod) continue;
+        const cProd = xmlVal(prod,'cProd');
+        const xProd = xmlVal(prod,'xProd');
+        const qCom  = xmlNum(prod,'qCom');
+        const vUnCom= xmlNum(prod,'vUnCom');
+        const vProd = xmlNum(prod,'vProd');
+        const vIPI  = xmlNum(det,'vIPI');
+        const vST   = xmlNum(det,'vICMSST','vICMSSTRet');
+        const vPIS  = xmlNum(det,'vPIS');
+        const vCOFINS = xmlNum(det,'vCOFINS');
+        const vICMS = xmlNum(det,'vICMS');
+        const temST = vST > 0;
+        const custoBruto = vProd / Math.max(qCom,1);
+        const ipiUn = vIPI / Math.max(qCom,1);
+        const stUn  = vST  / Math.max(qCom,1);
+        const pisUn = vPIS / Math.max(qCom,1);
+        const cofUn = vCOFINS / Math.max(qCom,1);
+        const icmsUn= vICMS / Math.max(qCom,1);
+        const custoTotal = custoBruto + ipiUn + stUn;
+        const credICMS = temST ? 0 : icmsUn;
+        const cmvReal = Math.max(custoTotal - credICMS - pisUn - cofUn, custoTotal*0.35);
+        const cmvPrEst= Math.max(custoTotal-(temST?0:custoTotal*ICMS_PR)-pisUn-cofUn, custoTotal*0.35);
+        recItens.push({ cProd, xProd, qCom, vUnCom, custoBruto, ipiUn, stUn, temST, cmvReal, cmvPrEst, pisUn, cofUn, icmsUn });
+      }
+      // Separa novos vs existentes via banco CMV
+      recNovos = []; recExist = [];
+      recItens.forEach(it => {
+        const banco = cmvGet(it.cProd);
+        if(banco && banco.cmvBr > 0){
+          recExist.push({...it, cmvBanco: banco});
+          // Atualiza banco com dados reais da NF
+          cmvSet(it.cProd, {nome:it.xProd, custo:it.custoBruto, cmvBr:it.cmvReal, cmvPr:it.cmvPrEst});
+        } else {
+          recNovos.push({...it, skuSeq:'', skuTec:'', ean:'', confirmado:false, gerandoSku:false});
+          // Registra no banco como novo
+          cmvSet(it.cProd, {nome:it.xProd, custo:it.custoBruto, cmvBr:it.cmvReal, cmvPr:it.cmvPrEst});
+        }
+      });
+      // Sugere sequencial para os novos
+      recSugerirSequenciais();
+      st.innerHTML = `✅ NF ${nNF} — ${recItens.length} itens (${recNovos.length} novos, ${recExist.length} existentes)`;
+      recRenderDireita(nNF);
+      recAtualizarResumo();
+    }catch(err){ st.textContent='❌ Erro: '+err.message; }
+  };
+  reader.readAsText(file,'UTF-8');
+}
+
+// ── SKU Sequencial ───────────────────────────────────────────────────
+function recSugerirSequenciais(){
+  const base = parseInt(document.getElementById('rec-proximo-sku').value) || recSkuBase || 0;
+  if(base <= 0) return;
+  recNovos.forEach((it,i) => {
+    if(!it.skuSeq) it.skuSeq = String(base + i);
+  });
+}
+
+async function recBuscarProximoSKU(){
+  const infoEl = document.getElementById('rec-sku-info');
+  if(!tokens.bling){ infoEl.textContent='Token Bling não configurado'; return; }
+  infoEl.textContent = '🔍 Buscando último SKU no Bling...';
+  try{
+    let maxSku = 0;
+    for(let pag=1; pag<=5; pag++){
+      const r = await fetch(`/api/bling/produtos?pagina=${pag}&limite=100&criterio=5&tipo=T`,{
+        headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}
+      });
+      if(!r.ok) break;
+      const d = await r.json();
+      const lista = d.data||[];
+      if(!lista.length) break;
+      lista.forEach(p=>{
+        const n = parseInt(p.codigo||0);
+        if(n > 0 && n > maxSku) maxSku = n;
+      });
+      if(lista.length < 100) break;
+      await new Promise(r=>setTimeout(r,150));
+    }
+    if(maxSku > 0){
+      recSkuBase = maxSku + 1;
+      document.getElementById('rec-proximo-sku').value = recSkuBase;
+      infoEl.textContent = `✅ Maior SKU Bling: ${maxSku} → próximo: ${recSkuBase}`;
+      recSugerirSequenciais();
+      recRenderNovos();
+    } else {
+      infoEl.textContent = 'Não encontrado — informe manualmente';
+    }
+  }catch(e){ infoEl.textContent='Erro: '+e.message; }
+}
+
+// ── SKU Técnico via IA ───────────────────────────────────────────────
+async function recGerarSkuTecnico(idx){
+  const it = recNovos[idx];
+  if(!it) return;
+  it.gerandoSku = true;
+  recRenderNovos();
+  try{
+    const prompt = `Você é um sistema de geração de SKU técnico para e-commerce B2B de ferramentas, peças e equipamentos.
+
+Produto: "${it.xProd}"
+Código original NF: "${it.cProd}"
+
+Gere um SKU técnico curto e identificável seguindo este padrão:
+tipo-marca-especificação (use traços, tudo minúsculo, máximo 25 caracteres, sem espaços, sem caracteres especiais além do traço)
+
+Exemplos:
+- "Broca SDS Concreto 10x400mm MTX" → bro-mtx-sds-10-400
+- "Correia V A-44 Menegotti" → cor-mng-v-a44
+- "Roda Plástica Betoneira 400L Menegotti" → rod-mng-pla-400
+- "Cabo de Aço 4mm 12,5m Guincho" → cab-aco-4-125
+- "Rolamento 6203 2RS" → rol-6203-2rs
+- "Chave Combinada 13mm Vonder" → chv-von-comb-13
+- "Disco de Corte 4.1/2 Fino Bosch" → dis-bos-cor-412
+
+Responda APENAS o SKU técnico gerado, nada mais, sem aspas, sem explicação.`;
+
+    const r = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:prompt}]})
+    });
+    const d = await r.json();
+    const sku = (d.content?.[0]?.text||'').trim().toLowerCase().replace(/[^a-z0-9\-]/g,'').slice(0,28);
+    it.skuTec = sku;
+  }catch(e){ it.skuTec = 'erro-ia'; }
+  it.gerandoSku = false;
+  recRenderNovos();
+}
+
+async function recGerarTodosSkus(){
+  const btn = document.querySelector('[onclick="recGerarTodosSkus()"]');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Gerando...'; }
+  for(let i=0;i<recNovos.length;i++){
+    if(!recNovos[i].skuTec) await recGerarSkuTecnico(i);
+    if(i < recNovos.length-1) await new Promise(r=>setTimeout(r,400));
+  }
+  if(btn){ btn.disabled=false; btn.textContent='✨ Gerar SKUs técnicos (IA)'; }
+}
+
+// ── Render ────────────────────────────────────────────────────────────
+function recRenderDireita(nNF){
+  const div = document.getElementById('rec-right');
+  div.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div>
+        <span style="font-size:14px;font-weight:700;color:#1F3864">NF ${nNF||''}</span>
+        <span style="font-size:11px;color:#6b7280;margin-left:8px">${recItens.length} produtos</span>
+      </div>
+      <div style="display:flex;gap:6px">
+        <span class="status-pill sp-novo">${recNovos.length} novos</span>
+        <span class="status-pill sp-exist">${recExist.length} existentes</span>
+      </div>
+    </div>
+    <div id="rec-novos-wrap"></div>
+    <div id="rec-exist-wrap"></div>`;
+  recRenderNovos();
+  recRenderExist();
+}
+
+function recRenderNovos(){
+  const wrap = document.getElementById('rec-novos-wrap');
+  if(!wrap) return;
+  if(!recNovos.length){ wrap.innerHTML=''; return; }
+  let html = `<div class="rec-section-head">🆕 Produtos NOVOS — atribuir SKU (${recNovos.length})</div>`;
+  recNovos.forEach((it,i)=>{
+    const confirmCls = it.confirmado ? 'sp-confirmado' : 'sp-novo';
+    const confirmTxt = it.confirmado ? '✅ Confirmado' : '🆕 Novo';
+    html += `
+    <div class="prod-card-rec novo">
+      <div class="rec-card-head" onclick="recToggleCard('rec-body-${i}')">
+        <span class="status-pill ${confirmCls}">${confirmTxt}</span>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;color:#1e3a8a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:400px">${it.xProd}</div>
+          <div style="font-size:10px;color:#6b7280">NF: ${it.cProd} | Qtd: ${it.qCom} | Custo: R$ ${fmt(it.custoBruto)}</div>
+        </div>
+        <span style="font-size:10px;color:#9ca3af">▼</span>
+      </div>
+      <div id="rec-body-${i}" class="rec-card-body">
+
+        <div class="sku-field-wrap">
+          <span class="sku-label">SKU atual</span>
+          <input class="sku-input ${it.skuSeq?'gerado':''}" id="rec-sku-seq-${i}" value="${it.skuSeq}"
+            placeholder="Ex: 2843" oninput="recNovos[${i}].skuSeq=this.value">
+          <button class="btn-sm" onclick="recNovos[${i}].skuSeq=String(parseInt(document.getElementById('rec-proximo-sku').value||0)+${i});document.getElementById('rec-sku-seq-${i}').value=recNovos[${i}].skuSeq" style="font-size:10px">Auto</button>
+        </div>
+
+        <div class="sku-field-wrap">
+          <span class="sku-label">SKU técnico</span>
+          <input class="sku-input gerado" id="rec-sku-tec-${i}" value="${it.skuTec}"
+            placeholder="${it.gerandoSku?'gerando...':'bro-mtx-sds-10-400'}"
+            oninput="recNovos[${i}].skuTec=this.value" ${it.gerandoSku?'disabled':''}>
+          <button class="btn-ia" onclick="recGerarSkuTecnico(${i})" ${it.gerandoSku?'disabled':''}>
+            ${it.gerandoSku?'⏳':'✨ IA'}
+          </button>
+        </div>
+
+        <div class="sku-field-wrap">
+          <span class="sku-label">EAN</span>
+          <input class="sku-input" id="rec-ean-${i}" value="${it.ean}"
+            placeholder="7792191683003" oninput="recNovos[${i}].ean=this.value" style="font-family:monospace">
+          <button class="btn-sm" onclick="recNovos[${i}].ean=document.getElementById('rec-proximo-ean').value;document.getElementById('rec-ean-${i}').value=recNovos[${i}].ean" style="font-size:10px">Lista</button>
+        </div>
+
+        <div style="display:flex;gap:5px;margin-top:8px;flex-wrap:wrap">
+          <button class="btn-sm" onclick="recConfirmarNovo(${i})" style="background:#1F3864;color:#fff;border-color:#1F3864;font-size:11px">
+            ${it.confirmado?'✅ Confirmado':'Confirmar SKU'}
+          </button>
+          <button class="btn-sm" onclick="recCalcularItem(${i})" style="font-size:11px">📊 Ver preços</button>
+          <button class="btn-sm btn-green" onclick="recGerarAnuncioItem(${i})" style="font-size:11px">✍️ Gerar anúncio</button>
+        </div>
+
+        <div style="background:#f8fafc;border-radius:5px;padding:5px 8px;margin-top:6px;font-size:10px;color:#6b7280">
+          CMV BR: <strong>R$ ${fmt(it.cmvReal)}</strong> &nbsp;|&nbsp;
+          IPI: <strong>R$ ${fmt(it.ipiUn)}</strong> &nbsp;|&nbsp;
+          ${it.temST?`ST: <strong>R$ ${fmt(it.stUn)}</strong>`:'Sem ST'}
+        </div>
+      </div>
+    </div>`;
+  });
+  wrap.innerHTML = html;
+}
+
+function recRenderExist(){
+  const wrap = document.getElementById('rec-exist-wrap');
+  if(!wrap || !recExist.length){ if(wrap) wrap.innerHTML=''; return; }
+  let html = `<div class="rec-section-head">✅ Produtos EXISTENTES — já no banco (${recExist.length})</div>
+  <div style="background:#fff;border-radius:9px;border:1px solid #e5e7eb;overflow:hidden">
+  <table style="width:100%;border-collapse:collapse;font-size:11px">
+    <thead><tr style="background:#f8fafc">
+      <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:700;color:#6b7280">SKU</th>
+      <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:700;color:#6b7280">Produto</th>
+      <th style="padding:6px 10px;text-align:right;font-size:10px;font-weight:700;color:#6b7280">CMV BR</th>
+      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#6b7280">Qtd</th>
+      <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:700;color:#6b7280">Ações</th>
+    </tr></thead><tbody>`;
+  recExist.forEach((it,i)=>{
+    const cmv = it.cmvBanco?.cmvBr || it.cmvReal;
+    html += `<tr style="border-top:1px solid #f3f4f6" id="rec-exist-row-${i}">
+      <td style="padding:6px 10px;font-weight:700;font-family:monospace">${it.cProd}</td>
+      <td style="padding:6px 10px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${it.xProd}">${it.xProd}</td>
+      <td style="padding:6px 10px;text-align:right;color:#166534;font-weight:700">R$ ${fmt(cmv)}</td>
+      <td style="padding:6px 10px;text-align:center">${it.qCom}</td>
+      <td style="padding:6px 10px">
+        <div style="display:flex;gap:4px">
+          <button class="btn-sm" onclick="recCalcularExist(${i})" style="font-size:10px">📊</button>
+          <button class="btn-sm btn-green" onclick="recGerarAnuncioExist(${i})" style="font-size:10px">✍️</button>
+        </div>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  wrap.innerHTML = html;
+}
+
+function recToggleCard(id){
+  const el = document.getElementById(id); if(!el) return;
+  el.style.display = el.style.display==='none' ? '' : 'none';
+}
+
+function recAtualizarResumo(){
+  const el = document.getElementById('rec-resumo');
+  const confirmados = recNovos.filter(n=>n.confirmado).length;
+  const comSkuTec = recNovos.filter(n=>n.skuTec).length;
+  el.innerHTML = `
+    <div style="margin-bottom:3px">📦 Novos: <strong>${recNovos.length}</strong> | Existentes: <strong>${recExist.length}</strong></div>
+    <div style="margin-bottom:3px">✅ Confirmados: <strong>${confirmados}/${recNovos.length}</strong></div>
+    <div>🏷️ SKU técnico gerado: <strong>${comSkuTec}/${recNovos.length}</strong></div>`;
+}
+
+// ── Ações por item ────────────────────────────────────────────────────
+function recConfirmarNovo(idx){
+  const it = recNovos[idx];
+  if(!it.skuSeq){ alert('Informe o SKU sequencial antes de confirmar'); return; }
+  it.confirmado = true;
+  // Salva no banco CMV com SKU atribuído
+  cmvSet(it.cProd, {nome:it.xProd, cmvBr:it.cmvReal, cmvPr:it.cmvPrEst, skuSeq:it.skuSeq, skuTec:it.skuTec, ean:it.ean});
+  recRenderNovos();
+  recAtualizarResumo();
+}
+
+function recCalcularItem(idx){
+  const it = recNovos[idx];
+  switchTab('unitario');
+  setTimeout(()=>{
+    setModo('manual');
+    const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
+    set('custo-manual', it.custoBruto.toFixed(4));
+    set('ipi-manual',   (it.ipiUn>0?(it.ipiUn/it.custoBruto*100):0).toFixed(2));
+    set('st-manual',    it.stUn.toFixed(4));
+    set('tem-st-manual', it.temST?'sim':'nao');
+    prodAtual = {id:null,nome:it.xProd,codigo:it.skuSeq||it.cProd,custo:it.cmvReal,peso:.5,l:0,a:0,p:0,estoque:it.qCom};
+    mostrarCardProd();
+    document.getElementById('sku').value = it.skuSeq||it.cProd;
+    recalcCMV();
+    document.querySelector('.left').scrollTo({top:0,behavior:'smooth'});
+  },150);
+}
+
+function recCalcularExist(idx){
+  const it = recExist[idx];
+  switchTab('unitario');
+  setTimeout(()=>{
+    document.getElementById('sku').value = it.cProd;
+    buscar();
+  },150);
+}
+
+function recGerarAnuncioItem(idx){
+  const it = recNovos[idx];
+  switchTab('anuncio');
+  setTimeout(()=>{
+    const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
+    set('an-nome', it.xProd);
+    set('an-sku',  it.skuSeq||it.cProd);
+    set('an-sku-fava', it.skuSeq||it.cProd);
+    anLookupBanco(it.skuSeq||it.cProd);
+    document.getElementById('an-prod-info').innerHTML=`✅ Da NF: <strong>${it.xProd}</strong> | SKU: ${it.skuSeq||it.cProd} | CMV BR: R$ ${fmt(it.cmvReal)}`;
+    document.getElementById('an-prod-info').style.color='#166534';
+    document.getElementById('an-prod-info').style.background='#f0fdf4';
+    document.getElementById('an-prod-info').style.borderColor='#bbf7d0';
+  },150);
+}
+
+function recGerarAnuncioExist(idx){
+  const it = recExist[idx];
+  switchTab('anuncio');
+  setTimeout(()=>{
+    const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
+    set('an-nome', it.xProd);
+    set('an-sku',  it.cProd);
+    set('an-sku-fava', it.cProd);
+    anLookupBanco(it.cProd);
+  },150);
+}
+
+function recEnviarFilaAnuncio(){
+  if(!recNovos.length && !recExist.length){ alert('Importe uma NF primeiro'); return; }
+  const todos = [...recNovos, ...recExist];
+  anNfItens = todos.map(it=>({cProd:it.skuSeq||it.cProd, xProd:it.xProd, qCom:it.qCom, cmvReal:it.cmvReal}));
+  if(typeof anRegistrarItensNF === 'function') anRegistrarItensNF(anNfItens);
+  switchTab('anuncio');
+  alert(`✅ ${anNfItens.length} produtos enviados para a fila de anúncio!\nUse o modo Sequencial (1 a 1) para gerar cada anúncio.`);
+}
+
+// ── Exportar CSV ──────────────────────────────────────────────────────
+function recExportarCSV(){
+  if(!recItens.length){ alert('Importe uma NF primeiro'); return; }
+  let csv = 'SKU_ATUAL;SKU_TECNICO;EAN;PRODUTO;QTD;CUSTO_BRUTO;IPI_UN;ST_UN;CMV_BR;CMV_PR;STATUS\n';
+  recNovos.forEach(it=>{
+    csv += `${it.skuSeq||''};${it.skuTec||''};${it.ean||''};${it.xProd};${it.qCom};${it.custoBruto.toFixed(4)};${it.ipiUn.toFixed(4)};${it.stUn.toFixed(4)};${it.cmvReal.toFixed(4)};${it.cmvPrEst.toFixed(4)};NOVO\n`;
+  });
+  recExist.forEach(it=>{
+    const cmv = it.cmvBanco?.cmvBr || it.cmvReal;
+    csv += `${it.cProd};;${it.cmvBanco?.ean||''};${it.xProd};${it.qCom};${it.custoBruto.toFixed(4)};${it.ipiUn.toFixed(4)};${it.stUn.toFixed(4)};${cmv.toFixed(4)};${it.cmvPrEst.toFixed(4)};EXISTENTE\n`;
+  });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download = 'recebimento_nf_fava.csv';
+  a.click();
+}
+
+
 </script>
+
+<!-- ═══════════════════ RECEBIMENTO NF ═══════════════════ -->
+<div id="painel-recebimento" class="rec-layout" style="display:none">
+
+  <!-- ═ COLUNA ESQUERDA ═ -->
+  <div class="rec-left">
+
+    <div class="sec">Importar NF-e XML</div>
+    <label style="display:block;border:2px dashed #d1d5db;border-radius:7px;padding:12px;text-align:center;font-size:12px;color:#6b7280;cursor:pointer;margin-bottom:8px;transition:.15s" onmouseover="this.style.borderColor='#2E75B6'" onmouseout="this.style.borderColor='#d1d5db'">
+      📎 Clique ou arraste a NF-e XML aqui
+      <input type="file" accept=".xml" onchange="recImportarXML(this)" style="display:none">
+    </label>
+    <div id="rec-xml-status" style="font-size:11px;color:#6b7280;margin-bottom:8px"></div>
+
+    <div class="sec">SKU Sequencial</div>
+    <div class="field">
+      <label>Próximo SKU (sequencial numérico)</label>
+      <div style="display:flex;gap:5px">
+        <input type="number" id="rec-proximo-sku" placeholder="Ex: 2843" style="flex:1;border:1px solid #d1d5db;border-radius:6px;padding:6px 9px;font-size:13px;font-weight:700;font-family:monospace">
+        <button onclick="recBuscarProximoSKU()" class="btn-sm" style="background:#eff6ff;color:#1d4ed8;border-color:#93c5fd;white-space:nowrap">Auto (Bling)</button>
+      </div>
+    </div>
+    <div id="rec-sku-info" style="font-size:10px;color:#6b7280;margin-bottom:4px"></div>
+
+    <div class="sec">SKU Técnico (novo padrão)</div>
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:7px 9px;font-size:11px;color:#92400e;margin-bottom:8px">
+      Padrão: <strong>tipo-marca-spec-tamanho</strong><br>
+      Ex: <code>bro-mtx-sds-10-400</code> · <code>cor-mng-v-a44</code> · <code>rod-mng-pla-250</code><br>
+      A IA sugere com base no nome do produto da NF.
+    </div>
+
+    <div class="sec">EAN</div>
+    <div class="field">
+      <label>Próximo EAN disponível (da sua lista)</label>
+      <input type="text" id="rec-proximo-ean" placeholder="Ex: 7792191683003" style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:6px 9px;font-size:12px;font-family:monospace">
+    </div>
+    <div id="rec-ean-info" style="font-size:10px;color:#6b7280;margin-bottom:4px"></div>
+
+    <div class="sec" style="margin-top:10px">Ações em massa</div>
+    <button class="btn btn-blue" onclick="recGerarTodosSkus()" style="margin-bottom:4px">✨ Gerar SKUs técnicos (IA)</button>
+    <button class="btn btn-out" onclick="recExportarCSV()">📥 Exportar para Excel</button>
+    <button class="btn btn-out" onclick="recEnviarFilaAnuncio()" style="margin-top:4px">✍️ Enviar novos para fila de anúncio</button>
+
+    <div class="sec" style="margin-top:10px">Resumo</div>
+    <div id="rec-resumo" style="font-size:12px;color:#6b7280">Nenhuma NF importada</div>
+  </div>
+
+  <!-- ═ COLUNA DIREITA ═ -->
+  <div class="rec-right" id="rec-right">
+    <div style="text-align:center;padding:60px 20px;color:#9ca3af">
+      <div style="font-size:32px;margin-bottom:12px">📦</div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:6px">Recebimento de NF</div>
+      <div style="font-size:12px">Importe a NF-e XML para identificar produtos novos vs existentes,<br>gerar SKUs e entrar na fila de precificação e anúncio.</div>
+    </div>
+  </div>
+
+</div>
+
 </body>
 </html>
