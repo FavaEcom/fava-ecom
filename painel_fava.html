@@ -1365,90 +1365,101 @@ function calcMargemProm(preco, cmv, taxa_ml){
 }
 
 // ── Importar planilha ML (formato oficial) ──────────────────────────
-function importarPlanilhaML(input){
+async function importarPlanilhaML(input){
   const file = input.files[0];
   if(!file) return;
   const st = document.getElementById('prom-status');
   if(st) st.textContent = '⟳ Lendo planilha...';
 
   const reader = new FileReader();
-  reader.onload = function(e){
+  reader.onload = async function(e){
     try{
       const wb = XLSX.read(e.target.result, {type:'binary'});
-      // Procura aba "Promoções" ou usa a primeira
-      const wsName = wb.SheetNames.find(n=>n.toLowerCase().includes('promo')||n.toLowerCase().includes('promo')) || wb.SheetNames[0];
+      // Procura aba "Promoções"
+      const wsName = wb.SheetNames.find(n=>/promo/i.test(n)) || wb.SheetNames[0];
       const ws = wb.Sheets[wsName];
       const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
 
-      // Detectar linha de cabeçalho (tem ITEM_ID ou MLB)
-      let headerRow = -1;
-      for(let i=0; i<Math.min(rows.length,10); i++){
-        const r = rows[i];
-        if(r && r.some(v=>v&&String(v).includes('ITEM_ID'))){
-          headerRow = i; break;
+      // Detectar linha de início dos dados (primeiro MLB)
+      let dataStart = 0;
+      for(let i=0; i<Math.min(rows.length,15); i++){
+        if(rows[i] && rows[i][1] && String(rows[i][1]).startsWith('MLB')){
+          dataStart = i; break;
         }
       }
-      // Se não achou cabeçalho padrão, assume linha 0
-      const dataStart = headerRow >= 0 ? headerRow + 5 : 1; // pula as 4 linhas de instruções
+      promoPlanilhaRows = rows;
 
-      promoPlanilhaRows = rows; // salva original para exportar
-
+      // Lê todos os itens com MLB
       const itens = [];
+      const skusParaBuscar = new Set();
       for(let i=dataStart; i<rows.length; i++){
         const r = rows[i];
         if(!r) continue;
         const mlbId = r[1] ? String(r[1]).trim() : '';
-        if(!mlbId || !mlbId.startsWith('MLB')) continue;
-
-        const sku = r[2] ? String(r[2]).trim() : '';
-        const titulo = r[0] ? String(r[0]).trim() : '';
-        const precoOriginal = parseFloat(r[3]) || 0;
-        const descPct = parseFloat(r[4]) || 0;
-        const precoFinal = parseFloat(r[5]) || (precoOriginal*(1-descPct/100));
+        if(!mlbId.startsWith('MLB')) continue;
+        const sku    = r[2]  ? String(r[2]).trim() : '';
+        const titulo = r[0]  ? String(r[0]).trim() : '';
+        const preco  = parseFloat(r[3]) || 0;
+        const descPct= parseFloat(r[4]) || 0;
         const status = r[11] ? String(r[11]).trim() : '';
-        const acao = r[12] ? String(r[12]).trim() : '';
-
-        // Busca CMV no cache
-        const cmvInfo = cmvLookup(sku);
-        const cmv = cmvInfo?.cmv || 0;
-        const margem = calcMargemProm(precoOriginal, cmv, 0.16);
-        const margemComDesc = calcMargemProm(precoFinal, cmv, 0.16);
-
-        itens.push({
-          rowIdx: i,         // índice na planilha original (para exportar)
-          id: mlbId,
-          sku: sku,
-          titulo: titulo,
-          preco: precoOriginal,
-          descPct: descPct,
-          descEditado: descPct, // valor editável pelo usuário
-          precoFinal: precoFinal,
-          status: status,
-          acao: acao,
-          cmv: cmv,
-          margem: margem,
-          margemComDesc: margemComDesc,
-          frete: calcFreteProm(precoOriginal),
-          selecionado: false,
-        });
+        const acao   = r[12] ? String(r[12]).trim() : '';
+        if(sku) skusParaBuscar.add(sku);
+        itens.push({ rowIdx:i, id:mlbId, sku, titulo, preco, descPct,
+          descEditado:descPct, status, acao,
+          cmv:0, margem:null, margemComDesc:null,
+          frete:calcFreteProm(preco), selecionado:false });
       }
 
+      if(!itens.length){
+        if(st) st.textContent = '❌ Planilha não reconhecida. Use a planilha baixada do ML (Promoções > Criar promoção > Desconto > Baixar planilha)';
+        return;
+      }
+
+      if(st) st.textContent = `⟳ ${itens.length} produtos lidos. Buscando CMV do banco...`;
+
+      // Busca CMV do banco para todos os SKUs
+      try{
+        const rProd = await fetch('/api/db/produtos');
+        if(rProd.ok){
+          const produtos = await rProd.json();
+          const cmvMap = {};
+          produtos.forEach(p=>{ if(p.sku) cmvMap[String(p.sku).trim()] = p; });
+          itens.forEach(it=>{
+            const p = cmvMap[it.sku] || cmvMap[String(parseInt(it.sku)||'')];
+            if(p && (p.custo_br||p.custo)>0){
+              it.cmv = p.custo_br||p.custo;
+              it.margem = calcMargemProm(it.preco, it.cmv, 0.16);
+              it.margemComDesc = calcMargemProm(it.preco*(1-it.descPct/100), it.cmv, 0.16);
+            }
+          });
+        }
+      }catch(e){ console.warn('CMV do banco falhou:', e); }
+
+      // Fallback: usa cmvCache do painel (já carregado no início)
+      itens.forEach(it=>{
+        if(!it.cmv){
+          const cached = cmvLookup(it.sku);
+          if(cached?.cmv>0){
+            it.cmv = cached.cmv;
+            it.margem = calcMargemProm(it.preco, it.cmv, 0.16);
+            it.margemComDesc = calcMargemProm(it.preco*(1-it.descPct/100), it.cmv, 0.16);
+          }
+        }
+      });
+
+      const comCmv = itens.filter(i=>i.cmv>0).length;
       promoData = itens;
       promoDataFiltrada = [...itens];
       renderPromoKpis();
       renderPromoTabela(promoDataFiltrada);
 
-      const tw = document.getElementById('prom-table-wrap');
-      const pk = document.getElementById('prom-kpis');
-      const btnExp = document.getElementById('btn-exportar-prom');
-      const btnApi = document.getElementById('btn-aplicar-api-prom');
-      if(tw) tw.style.display = '';
-      if(pk) pk.style.display = 'grid';
-      if(btnExp) btnExp.style.display = '';
-      if(btnApi) btnApi.style.display = '';
-      if(st) st.textContent = `✅ ${itens.length} produtos carregados`;
+      ['prom-table-wrap','btn-exportar-prom','btn-aplicar-api-prom'].forEach(id=>{
+        const el=document.getElementById(id); if(el) el.style.display='';
+      });
+      document.getElementById('prom-kpis').style.display='grid';
+      if(st) st.textContent = `✅ ${itens.length} produtos | ${comCmv} com CMV${comCmv<itens.length?' (restante: sincronize o Bling em 🗄️ DB)':''}`;
     }catch(err){
-      if(st) st.textContent = `❌ Erro: ${err.message}`;
+      if(st) st.textContent = `❌ Erro ao ler planilha: ${err.message}`;
       console.error(err);
     }
   };
@@ -1456,6 +1467,8 @@ function importarPlanilhaML(input){
   input.value = '';
 }
 
+
+// ── Filtros
 // ── Filtros ──────────────────────────────────────────────────────────
 function filtrarPromos(){
   const q = (document.getElementById('prom-busca')?.value||'').toLowerCase();
