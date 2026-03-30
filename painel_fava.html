@@ -5201,63 +5201,7 @@ async function carregarAnuncios(){
 async function carregarAnunciosML(){
   const tbody = document.getElementById('anunc-tbody');
 
-  // Tenta primeiro pelo Bling /anuncios (tem taxa e frete prontos)
-  if(tokens.bling){
-    try{
-      if(tbody) tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:15px;color:#9ca3af"><div class="spin" style="margin:0 auto 8px"></div>Buscando do Bling (anúncios ML)...</td></tr>';
-      const det = [];
-      let pagina = 1;
-      while(true){
-        const r = await fetch(`/api/bling/anuncios?pagina=${pagina}&limite=100`,
-          {headers:{'Authorization':`Bearer ${tokens.bling}`}});
-        if(!r.ok) break;
-        const d = await r.json();
-        const items = d.data||[];
-        if(!items.length) break;
-        items.forEach(it=>{
-          det.push({
-            id: it.idSite||it.id||'',
-            sku: String(it.sku||it.codigo||'').trim(),
-            titulo: it.nome||it.titulo||'',
-            preco: parseFloat(it.preco||0),
-            sale_fee: parseFloat(it.percentualComissao||it.taxa||0),
-            listing_type: it.tipoAnuncio||'',
-            free_shipping: it.freteGratis?1:0,
-            status: it.situacao||'active',
-            frete_medio: parseFloat(it.frete||0),
-            margem_minima: 0,
-            cmv: 0,
-          });
-        });
-        if(items.length < 100) break;
-        pagina++;
-        await new Promise(r=>setTimeout(r,200));
-      }
-      if(det.length > 0){
-        // Cruza CMV
-        det.forEach(l=>{ const ci=cmvLookup(l.sku); if(ci?.cmv) l.cmv=ci.cmv; });
-        anunciosData = det.map(l=>{
-          const sku = String(l.sku||'').trim();
-          const cmvInfo = cmvLookup(sku);
-          const cmv = parseFloat(l.cmv)||cmvInfo?.cmv||0;
-          const preco = parseFloat(l.preco)||0;
-          const sfRaw = parseFloat(l.sale_fee)||0;
-          const taxa = sfRaw>1?sfRaw/100:sfRaw>0?sfRaw:.12;
-          const frete = parseFloat(l.frete_medio)||0;
-          const freteL = frete*(1-0.0365);
-          const pis=preco*.0065,cofins=preco*.03;
-          let margem_atual=null,lucro=0;
-          if(cmv>0&&preco>0&&taxa>0){lucro=preco-cmv-preco*taxa-freteL-pis-cofins;margem_atual=lucro/preco;}
-          return{...l,sku,cmv,taxa,freteL,margem_atual:isNaN(margem_atual)?null:margem_atual};
-        });
-        renderAnuncios();
-        console.log(`Bling anúncios: ${det.length}`);
-        return;
-      }
-    }catch(e){ console.warn('Bling /anuncios falhou:', e); }
-  }
-
-  // Fallback: ML API com scroll
+  // Usa ML API com scroll para pegar todos os anúncios
   if(!tokens.ml){
     if(tbody) tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:#dc2626">❌ Tokens não configurados — abra ⚙️</td></tr>';
     return;
