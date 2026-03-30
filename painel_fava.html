@@ -498,6 +498,349 @@ function fecharCfg(){
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════
+     PAINEL PRINCIPAL
+═══════════════════════════════════════════════════════════ -->
+
+<!-- HEADER -->
+<header>
+  <h1>🛒 Fava Ecom — Painel</h1>
+  <div style="display:flex;align-items:center;gap:5px">
+    <div class="dot wait" id="dot-ml"></div>
+    <span class="dlbl" id="lbl-ml">ML...</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:5px">
+    <div class="dot wait" id="dot-bling"></div>
+    <span class="dlbl" id="lbl-bling">Bling...</span>
+  </div>
+  <span class="last-update" id="last-update"></span>
+  <button class="btn-reload" onclick="recarregar()">↻ Atualizar</button>
+  <button class="btn-reload" onclick="document.getElementById('modal-cfg').style.display='flex'">⚙️</button>
+</header>
+
+<!-- ABAS DE NAVEGAÇÃO -->
+<div class="view-tabs" id="view-tabs">
+  <div class="vtab a" id="vtab-dash" onclick="setView('dashboard')">Dashboard</div>
+  <div class="vtab" id="vtab-anunc" onclick="setView('anuncios')">Anúncios</div>
+  <div class="vtab" id="vtab-fin" onclick="setView('financeiro')">Financeiro</div>
+  <div class="vtab" id="vtab-conc" onclick="setView('conciliacao')">Conciliação</div>
+  <div class="vtab" id="vtab-prec" onclick="setView('precos')">Preços/GP</div>
+  <div class="vtab" id="vtab-ads" onclick="setView('ads')">ADS</div>
+  <div class="vtab" id="vtab-ped" onclick="setView('pedidos')">Pedidos</div>
+  <div class="vtab" id="vtab-prom" onclick="setView('promocoes')">Promoções</div>
+  <div class="vtab" id="vtab-difal" onclick="setView('difal')">DIFAL</div>
+  <div class="vtab" id="vtab-perg" onclick="setView('perguntas')">Perguntas</div>
+</div>
+
+<!-- ── PERÍODO (só no dashboard) ── -->
+<div class="period-bar" id="period-bar">
+  <span class="ptab a" onclick="setPeriodo('7d',this)">7 dias</span>
+  <span class="ptab" onclick="setPeriodo('30d',this)">30 dias</span>
+  <span class="ptab" onclick="setPeriodo('mes',this)">Este mês</span>
+  <span class="ptab" onclick="setPeriodo('mes_ant',this)">Mês anterior</span>
+  <span class="spacer"></span>
+</div>
+
+<!-- ═══════════ VIEW: DASHBOARD ═══════════ -->
+<div id="view-dashboard" style="display:flex;flex-direction:column">
+  <div class="main">
+    <!-- KPIs -->
+    <div class="kpi-row" id="kpi-row">
+      <div class="kpi"><div class="kpi-accent">💰</div><div class="kl">Faturamento</div><div class="kv" id="k-fat">—</div></div>
+      <div class="kpi"><div class="kpi-accent">📦</div><div class="kl">Pedidos</div><div class="kv" id="k-ped">—</div></div>
+      <div class="kpi"><div class="kpi-accent">🎯</div><div class="kl">Ticket médio</div><div class="kv" id="k-tick">—</div></div>
+      <div class="kpi"><div class="kpi-accent">📊</div><div class="kl">Margem</div><div class="kv" id="k-mg">—</div></div>
+      <div class="kpi"><div class="kpi-accent">✅</div><div class="kl">Lucro</div><div class="kv" id="k-lucro">—</div></div>
+      <div class="kpi"><div class="kpi-accent">🏷️</div><div class="kl">SKUs vendidos</div><div class="kv" id="k-sku">—</div></div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="grid2">
+      <div class="card">
+        <div class="card-head"><h3>Faturamento diário</h3></div>
+        <div class="card-body"><div class="chart-wrap"><canvas id="chart-fat"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Por canal</h3></div>
+        <div class="card-body"><div class="chart-wrap"><canvas id="chart-canal"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- Rankings -->
+    <div class="grid2">
+      <div class="card">
+        <div class="card-head"><h3>Top produtos — faturamento</h3></div>
+        <div class="card-body" style="padding:0">
+          <table class="tbl">
+            <thead><tr><th>Produto</th><th class="num">Faturamento</th><th class="num">Qtd</th><th class="num">Margem</th></tr></thead>
+            <tbody id="body-rank-fat"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Top produtos — margem</h3></div>
+        <div class="card-body" style="padding:0">
+          <table class="tbl">
+            <thead><tr><th>Produto</th><th class="num">Margem</th><th class="num">Lucro</th><th class="num">Qtd</th></tr></thead>
+            <tbody id="body-rank-mg"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Estados + Pedidos recentes -->
+    <div class="grid2">
+      <div class="card">
+        <div class="card-head"><h3>Faturamento por estado</h3></div>
+        <div class="card-body" id="estados-body"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Pedidos recentes</h3></div>
+        <div class="card-body" style="padding:0">
+          <table class="tbl">
+            <thead><tr><th>Nº</th><th>Produto</th><th class="num">Total</th><th class="num">Margem</th><th>Estado</th></tr></thead>
+            <tbody id="body-pedidos"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ VIEW: ANÚNCIOS ═══════════ -->
+<div id="view-anuncios" style="display:none;flex-direction:column">
+  <div class="main">
+    <div class="anunc-kpis" id="anunc-kpis-wrap"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <input type="text" id="anunc-search" placeholder="Buscar produto, SKU, MLB..." oninput="filtrarAnuncios()" style="border:1px solid var(--borda);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:260px">
+      <button class="filter-btn a" id="fb-todos" onclick="filtrarAnuncioStatus('todos',this)">Todos</button>
+      <button class="filter-btn" id="fb-alerta" onclick="filtrarAnuncioStatus('alerta',this)">Alertas</button>
+      <button class="filter-btn" id="fb-promo" onclick="filtrarAnuncioStatus('promo',this)">Promoções</button>
+    </div>
+    <div class="anunc-table-wrap">
+      <table class="anunc-table">
+        <thead><tr>
+          <th onclick="sortAnuncios('titulo')">Produto</th>
+          <th onclick="sortAnuncios('sku')">SKU</th>
+          <th class="num" onclick="sortAnuncios('preco')">Preço</th>
+          <th class="num" onclick="sortAnuncios('custo')">Custo</th>
+          <th class="num" onclick="sortAnuncios('margem')">Margem</th>
+          <th class="num" onclick="sortAnuncios('vendas30')">Vendas 30d</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr></thead>
+        <tbody id="anunc-tbody"></tbody>
+      </table>
+    </div>
+    <!-- Modal preço -->
+    <div class="modal-preco" id="modal-preco" style="display:none">
+      <div class="box">
+        <h3 id="modal-preco-titulo">Alterar preço</h3>
+        <input type="number" id="modal-preco-input" placeholder="Novo preço" step="0.01">
+        <div style="display:flex;gap:8px">
+          <button class="btn-prim" onclick="confirmarPreco()">Confirmar</button>
+          <button class="btn-sec" onclick="document.getElementById('modal-preco').style.display='none'">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ VIEW: FINANCEIRO ═══════════ -->
+<div id="view-financeiro" style="display:none;flex-direction:column">
+  <div class="main" id="fin-main">
+    <div class="fin-grid" id="fin-kpis"></div>
+    <div class="fin-2col">
+      <div class="fcard">
+        <div class="fcard-head"><h3>Boletos a pagar</h3></div>
+        <div class="fcard-body" style="padding:0">
+          <table class="ftbl">
+            <thead><tr><th>Fornecedor</th><th>NF</th><th>Venc.</th><th class="num">Valor</th><th>Status</th></tr></thead>
+            <tbody id="fin-boletos-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="fcard">
+        <div class="fcard-head"><h3>Fluxo de caixa</h3></div>
+        <div class="fcard-body"><div class="chart-fin"><canvas id="chart-fluxo"></canvas></div></div>
+      </div>
+    </div>
+    <div class="fcard">
+      <div class="fcard-head"><h3>Lançamentos manuais</h3><button class="btn-fin" onclick="addLancamento()">+ Lançamento</button></div>
+      <div class="fcard-body">
+        <div class="fin-form">
+          <input type="date" id="lanc-data">
+          <input type="text" id="lanc-desc" placeholder="Descrição">
+          <input type="number" id="lanc-valor" placeholder="Valor (negativo=saída)" step="0.01">
+          <select id="lanc-tipo"><option value="entrada">Entrada</option><option value="saida">Saída</option><option value="previsto">Previsto</option></select>
+        </div>
+        <div style="padding:0">
+          <table class="ftbl">
+            <thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th class="num">Valor</th><th></th></tr></thead>
+            <tbody id="lanc-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="fcard">
+      <div class="fcard-head"><h3>NFs de entrada</h3></div>
+      <div class="fcard-body" style="padding:0">
+        <table class="ftbl">
+          <thead><tr><th>NF</th><th>Fornecedor</th><th>Emissão</th><th class="num">Valor</th><th>1º Venc.</th></tr></thead>
+          <tbody id="fin-nf-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ VIEW: CONCILIAÇÃO ═══════════ -->
+<div id="view-conciliacao" style="display:none;flex-direction:column">
+  <div class="main">
+    <div class="mp-saldo-row" id="mp-saldos"></div>
+    <div class="conc-filters">
+      <input type="date" id="conc-de">
+      <input type="date" id="conc-ate">
+      <button class="btn-fin" onclick="initConciliacao()">Buscar</button>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Extrato Mercado Pago</h3></div>
+      <div class="card-body" style="padding:0">
+        <table class="tbl">
+          <thead><tr><th>Data</th><th>Descrição</th><th class="num">Valor</th><th class="num">Saldo</th></tr></thead>
+          <tbody id="conc-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ VIEW: PREÇOS / GP ═══════════ -->
+<div id="view-precos" style="display:none;flex-direction:column">
+  <div class="main">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+      <input type="text" placeholder="Buscar SKU ou produto..." id="gp-search" oninput="filtrarGP()" style="border:1px solid var(--borda);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:240px">
+      <button class="filt-btn a" id="gp-f-todos" onclick="filtrarGPStatus('todos',this)">Todos</button>
+      <button class="filt-btn" id="gp-f-alerta" onclick="filtrarGPStatus('alerta',this)">Margem baixa</button>
+      <button class="filt-btn" id="gp-f-negativo" onclick="filtrarGPStatus('negativo',this)">Negativo</button>
+      <input type="number" id="gp-desc-global" placeholder="Desc. global %" step="1" min="0" max="99" style="width:100px;border:1px solid var(--borda);border-radius:5px;padding:5px 8px;font-size:11px;outline:none">
+      <button class="apply-all-btn" onclick="aplicarDescontoGlobal()">Aplicar desc.</button>
+    </div>
+    <div id="gp-status-bar" style="font-size:11px;color:var(--muted);margin-bottom:6px"></div>
+    <div class="gp-table-wrap">
+      <table class="gp-tbl">
+        <thead><tr>
+          <th onclick="sortGP('sku')">SKU</th>
+          <th onclick="sortGP('titulo')">Produto</th>
+          <th onclick="sortGP('canal')">Canal</th>
+          <th class="num" onclick="sortGP('preco')">Preço</th>
+          <th class="num" onclick="sortGP('custo')">Custo</th>
+          <th class="num" onclick="sortGP('margem')">Margem</th>
+          <th class="num">Desc.%</th>
+          <th>Ação</th>
+        </tr></thead>
+        <tbody id="gp-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ VIEW: ADS ═══════════ -->
+<div id="view-ads" style="display:none;flex-direction:column">
+  <div class="main">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+      <input type="date" id="ads-de">
+      <input type="date" id="ads-ate">
+      <button class="btn-fin" onclick="carregarADS()">Buscar ADS</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:10px">
+      <div class="kpi"><div class="kl">Gasto ADS</div><div class="kv" id="ak-gasto">—</div></div>
+      <div class="kpi"><div class="kl">Fat. ADS</div><div class="kv" id="ak-fat-ads">—</div></div>
+      <div class="kpi"><div class="kl">ROAS</div><div class="kv" id="ak-roas">—</div></div>
+      <div class="kpi"><div class="kl">% Fat.</div><div class="kv" id="ak-pct-ads">—</div></div>
+      <div class="kpi"><div class="kl">Cliques</div><div class="kv" id="ak-cliques">—</div></div>
+      <div class="kpi"><div class="kl">Impressões</div><div class="kv" id="ak-impress">—</div></div>
+      <div class="kpi"><div class="kl">CTR</div><div class="kv" id="ak-ctr">—</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Performance por campanha</h3></div>
+      <div class="card-body"><div style="position:relative;height:250px"><canvas id="chart-roas"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ VIEW: PEDIDOS ═══════════ -->
+<div id="view-pedidos" style="display:none;flex-direction:column">
+  <div class="main" id="ped-main">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Pedidos do período selecionado</div>
+    <div class="card">
+      <div class="card-body" style="padding:0">
+        <table class="tbl">
+          <thead><tr>
+            <th>Nº</th><th>Data</th><th>Canal</th><th>Produto</th>
+            <th class="num">Total</th><th class="num">Margem</th><th>UF</th><th>Status</th>
+          </tr></thead>
+          <tbody id="ped-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ VIEW: PROMOÇÕES ═══════════ -->
+<div id="view-promocoes" style="display:none;flex-direction:column">
+  <div class="main">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Gerenciar promoções e descontos no Mercado Livre</div>
+    <div id="promo-wrap"></div>
+  </div>
+</div>
+
+<!-- ═══════════ VIEW: DIFAL ═══════════ -->
+<div id="view-difal" style="display:none;flex-direction:column">
+  <div class="main">
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#92400e">
+      ⚠️ Seu parâmetro atual no sistema: <strong>8,5%</strong> médio de DIFAL.
+      Calculado com base no mix real de estados de destino.
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-head"><h3>DIFAL por estado</h3></div>
+        <div class="card-body"><div style="position:relative;height:300px"><canvas id="chart-difal-uf"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Resumo DIFAL</h3></div>
+        <div class="card-body" id="difal-resumo"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>DIFAL por estado — detalhado</h3></div>
+      <div class="card-body"><div style="position:relative;height:300px"><canvas id="chart-difal-estados"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Tabela DIFAL</h3></div>
+      <div class="card-body" style="padding:0">
+        <table class="tbl" id="difal-tbl">
+          <thead><tr><th>UF</th><th>Pedidos</th><th class="num">Fat.</th><th class="num">DIFAL calc.</th><th class="num">% Fat.</th></tr></thead>
+          <tbody id="difal-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ VIEW: PERGUNTAS ═══════════ -->
+<div id="view-perguntas" style="display:none;flex-direction:column">
+  <div class="main">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+      <div class="field" style="flex:1;margin:0">
+        <input type="password" id="perg-apikey" placeholder="Chave API Claude (sk-ant-...)" style="width:100%">
+      </div>
+      <button class="btn-fin" onclick="carregarPerguntas()">Carregar perguntas</button>
+    </div>
+    <div id="perg-wrap"></div>
+  </div>
+</div>
+
 <script>
 // Taxa ML por tipo de anúncio
 const ML_TAXA={gold_pro:.16,gold_special:.11,gold_premium:.16,classified:.16};
