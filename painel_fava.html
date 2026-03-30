@@ -564,14 +564,18 @@ function fazerLogin(){
     sessionStorage.setItem('fava_perfil_sess', perfilAtivo);
     (document.getElementById('login-bg')||{style:{}}).style.display = 'none';
     aplicarPermissoesPerfil();
-    // Se já tem tokens salvos, carrega direto
+    // Se já tem tokens salvos, carrega direto após login
     const sv = localStorage.getItem('fava_tk4');
     if(sv){
-      const tk = JSON.parse(sv);
-      if(tk.bling||tk.ml){
-        (document.getElementById('modal-cfg')||{style:{}}).style.display ='none';
-        // Tokens serão carregados pelo window.onload
-      }
+      try{
+        const tk = JSON.parse(sv);
+        if(tk.bling||tk.ml){
+          tokens.bling = tk.bling||'';
+          tokens.ml    = tk.ml||'';
+          (document.getElementById('modal-cfg')||{style:{}}).style.display='none';
+          carregarTudo(); // chama aqui pois window.onload já executou
+        }
+      }catch(e){}
     }
   } else {
     (document.getElementById('login-erro')||{style:{}}).style.display = 'block';
@@ -860,8 +864,19 @@ async function carregarTudo(){
     renderTudo();
     (document.getElementById('last-update')||{}).textContent ='Atualizado: '+new Date().toLocaleTimeString('pt-BR');
   }catch(e){
-    console.error(e);
-    alert('Erro ao carregar: '+e.message);
+    console.error('carregarTudo erro:', e);
+    hideLoading();
+    // Mostra estado de erro no dashboard ao invés de tela cinza
+    try{
+      const el = document.getElementById('k-fat');
+      if(el) el.closest('.kpi-grid') && (el.closest('.kpi-grid').innerHTML = 
+        `<div style="grid-column:1/-1;padding:20px;text-align:center;color:#dc2626;font-size:13px">
+          ❌ Erro ao carregar dados: ${e.message}<br>
+          <small style="color:#6b7280;margin-top:4px;display:block">Verifique os tokens nas configurações (⚙️)</small>
+          <button onclick="carregarTudo()" style="margin-top:8px;padding:6px 14px;font-size:12px;font-weight:700;background:#1F3864;color:#fff;border:none;border-radius:6px;cursor:pointer">Tentar novamente</button>
+        </div>`);
+    }catch(err){}
+    return;
   }
   hideLoading();
 }
@@ -875,7 +890,7 @@ async function fetchPedidosML(de,ate){
     const pedidos=[];
     let offset=0,total=999;
     while(offset<total&&offset<300){
-      const r=await mlGet(`orders/search?seller=537714337&order.date_created.from=${de}T00:00:00.000-03:00&order.date_created.to=${ate}T23:59:59.000-03:00&order.status=paid&sort=date_desc&limit=50&offset=${offset}`);
+      const r=await mlGet(`orders/search?seller=537714337&order.date_created.from=${de}T00:00:00.000-03:00&order.date_created.to=${ate}T23:59:59.000-03:00&sort=date_desc&limit=50&offset=${offset}`);
       if(!r||!r.results)break;
       total=r.paging?.total||0;
       if(!r.results.length)break;
@@ -1273,10 +1288,19 @@ function renderPedidosRecentes(pedidos, itensComMargem){
 }
 
 function renderRankingVazio(){
+  const msg = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#9ca3af;font-size:12px">
+    Sem pedidos no período selecionado<br>
+    <small>Tente ampliar o período ou verificar os tokens de API</small>
+  </td></tr>`;
   ['body-rank-fat','body-rank-mg','body-pedidos'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.innerHTML='<tr><td colspan="6" class="empty">Sem dados no período</td></tr>';
+    const el=document.getElementById(id);if(el)el.innerHTML=msg;
   });
-  (document.getElementById('estados-body')||{}).innerHTML ='<div class="empty">Sem dados</div>';
+  const eb = document.getElementById('estados-body');
+  if(eb) eb.innerHTML='<div style="padding:20px;text-align:center;color:#9ca3af;font-size:12px">Sem dados no período</div>';
+  // Zerar KPIs
+  ['k-fat','k-ped','k-tick','k-mg','k-lucro','k-sku'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.textContent='—';
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1296,7 +1320,7 @@ async function mlGet(path){
 // ══════════════════════════════════════════════════════════════════════
 // UI HELPERS
 // ══════════════════════════════════════════════════════════════════════
-function showLoading(msg){document.getElementById('loading').style.display='flex';document.getElementById('loading-msg').textContent=msg||'Carregando...';}
+function showLoading(msg){const _l=document.getElementById('loading');if(_l)_l.style.display='flex';const _lm=document.getElementById('loading-msg');if(_lm)_lm.textContent=msg||'Carregando...';}
 function hideLoading(){(document.getElementById('loading')||{style:{}}).style.display ='none';}
 function setDot(a,s,l){const d=document.getElementById(`dot-${a}`);const lb=document.getElementById(`lbl-${a}`);if(d)d.className=`dot ${s}`;if(lb)lb.textContent=l;}
 function recarregar(){dados.cmvCache={};carregarTudo();}
