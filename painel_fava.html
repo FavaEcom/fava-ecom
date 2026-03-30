@@ -1560,9 +1560,22 @@ function atualizarDescItem(idx, val){
   const pct = parseFloat(val) || 0;
   item.descEditado = pct;
   item.margemComDesc = calcMargemProm(item.preco*(1-pct/100), item.cmv, 0.16);
-  // Atualiza na promoData original
   const origIdx = promoData.indexOf(item);
   if(origIdx>=0){ promoData[origIdx].descEditado=pct; promoData[origIdx].margemComDesc=item.margemComDesc; }
+
+  // Atualiza DOM da linha diretamente — sem re-renderizar tudo
+  const tr = document.getElementById(`prom-tr-${idx}`);
+  if(!tr) return;
+  const tds = tr.querySelectorAll('td');
+  // td[6] = Preço com desc, td[9] = Margem atual, td[10] = Margem c/desc
+  const precoDesc = item.preco*(1-pct/100);
+  if(tds[6]) tds[6].textContent = 'R$'+precoDesc.toFixed(2);
+  if(tds[10]){
+    const mg = item.margemComDesc;
+    tds[10].textContent = mg!==null ? (mg*100).toFixed(1)+'%' : '—';
+    tds[10].style.color = mg===null ? 'var(--muted)' : mg>=.20 ? 'var(--verde)' : mg>=.10 ? 'var(--amarelo)' : 'var(--vermelho)';
+    tds[10].style.fontWeight = '700';
+  }
 }
 
 function togglePromo(idx, checked){
