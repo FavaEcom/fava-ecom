@@ -520,7 +520,7 @@ function salvarCfg(){
   <button class="btn-reload" onclick="recarregar()">↻ Atualizar</button>
   <button class="btn-reload" id="btn-renovar-ml" onclick="forcarRenovacaoML()" style="background:rgba(239,68,68,.3);border-color:rgba(239,68,68,.5)" title="Renovar token ML expirado">🔑 Renovar ML</button>
   <button class="btn-reload" id="btn-renovar-bling" onclick="forcarRenovacaoBling()" style="background:rgba(251,146,60,.3);border-color:rgba(251,146,60,.5)" title="Renovar token Bling expirado (401)">🔑 Renovar Bling</button>
-  <button class="btn-reload" onclick="sincBlingAnuncios()" style="background:rgba(99,102,241,.3);border-color:rgba(99,102,241,.5)" title="Baixar todos os anúncios ML do Bling para o banco">📥 Sync Anúncios</button>
+  <button class="btn-reload" onclick="sincBlingAnuncios(this)" style="background:rgba(99,102,241,.3);border-color:rgba(99,102,241,.5)" title="Baixar todos os anúncios ML do Bling para o banco">📥 Sync Anúncios</button>
   <button class="btn-reload" id="btn-db-status" onclick="mostrarStatusDB()" title="Status do banco de dados">🗄️ DB</button>
   <button class="btn-reload" onclick="document.getElementById('modal-cfg').style.display='flex'">⚙️</button>
 </header>
@@ -1229,19 +1229,16 @@ async function mostrarStatusDB(){
 
 // Força renovação manual do Bling
 
-async function sincBlingAnuncios(){
-  const btn = event.target;
-  btn.textContent='⟳ Baixando...'; btn.disabled=true;
+async function sincBlingAnuncios(btnEl){
+  if(btnEl){btnEl.textContent='⟳ Baixando...';btnEl.disabled=true;}
   try{
     const r = await fetch('/api/sync/bling-anuncios');
-    const d = await r.json();
-    btn.textContent='✅ Aguarde ~1min';
-    setTimeout(()=>{btn.textContent='📥 Sync Anúncios';btn.disabled=false;},8000);
-    // Recarrega anúncios após 30s
-    setTimeout(()=>{ if(anunciosData.length===0) carregarAnuncios(); },30000);
-    alert('Sync de anúncios Bling iniciado!\nAguarde ~1 minuto e clique na aba Anúncios.');
+    if(btnEl){btnEl.textContent='✅ Aguarde ~1min';}
+    setTimeout(()=>{if(btnEl){btnEl.textContent='📥 Sync Anúncios';btnEl.disabled=false;}},10000);
+    setTimeout(()=>{ carregarAnuncios(); },35000);
+    alert('Sync de anuncios Bling iniciado! Aguarde ~1 minuto e a aba Anuncios sera preenchida.');
   }catch(e){
-    btn.textContent='📥 Sync Anúncios'; btn.disabled=false;
+    if(btnEl){btnEl.textContent='📥 Sync Anúncios';btnEl.disabled=false;}
     alert('Erro: '+e.message);
   }
 }
@@ -1257,8 +1254,7 @@ async function forcarRenovacaoBling(){
       carregarTudo();
     } else {
       if(btn){ btn.textContent='❌ Falhou'; btn.disabled=false; }
-      alert('Não foi possível renovar o token Bling.
-Verifique o refresh token em ⚙️ Tokens.');
+      alert('Nao foi possivel renovar o token Bling. Verifique o refresh token em Tokens.');
     }
   }catch(e){
     if(btn){ btn.textContent='🔑 Renovar Bling'; btn.disabled=false; }
