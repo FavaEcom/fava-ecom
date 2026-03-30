@@ -263,6 +263,10 @@ header h1{font-size:14px;font-weight:700;flex:1}
         <label>Access Token ML (APP_USR-...)</label>
         <input type="password" id="tk-ml" placeholder="Cole aqui">
       </div>
+      <div class="field">
+        <label>Chave API Claude (para gerar anúncios)</label>
+        <input type="password" id="tk-claude" placeholder="sk-ant-...">
+      </div>
       <button class="btn btn-blue" onclick="salvarTokens()">Salvar e testar</button>
     </div>
   </div>
@@ -652,9 +656,13 @@ header h1{font-size:14px;font-weight:700;flex:1}
     </div>
     <div class="row2">
       <div class="field">
-        <label>SKU</label>
-        <input type="text" id="an-sku" placeholder="Ex: 2806" oninput="anLookupBanco(this.value)">
+        <label>SKU Fava Ecom <span style="font-size:10px;color:#6b7280;font-weight:400">(seu número interno)</span></label>
+        <input type="text" id="an-sku" placeholder="Ex: 2843" oninput="anLookupBanco(this.value)">
         <div id="an-banco-info" style="display:none;font-size:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:4px 8px;margin-top:3px;color:#166534;line-height:1.6"></div>
+      </div>
+      <div class="field">
+        <label>Código produto NF/fornecedor <span style="font-size:10px;color:#6b7280;font-weight:400">(cProd da nota)</span></label>
+        <input type="text" id="an-cod-nf" placeholder="Ex: 29113418">
       </div>
       <div class="field"><label>Tipo</label>
         <select id="an-tipo"><option>Peça</option><option>Kit</option><option>Acessório</option><option>Ferramenta</option><option>Equipamento</option></select>
@@ -1063,6 +1071,8 @@ function toggleCfg(){const b=document.getElementById('cfg-body');b.classList.tog
 function salvarTokens(){
   tokens.bling=document.getElementById('tk-bling').value.trim();
   tokens.ml=document.getElementById('tk-ml').value.trim();
+  const tkClaude=document.getElementById('tk-claude')?.value.trim()||'';
+  if(tkClaude) localStorage.setItem('fava_claude_key', tkClaude);
   if(!tokens.bling){alert('Cole o token do Bling antes de salvar');return;}
   localStorage.setItem('fava_tk4',JSON.stringify(tokens));
   localStorage.setItem('fava_dash_tk',JSON.stringify(tokens));
@@ -2501,8 +2511,9 @@ function irParaAnuncio(){
     const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
     set('an-nome',  prodAtual.nome);
     set('an-sku',   prodAtual.codigo);
-    set('an-sku-fava', prodAtual.codigo); // SKU Bling = SKU Fava Ecom
-    set('an-codfab',  ''); // usuário preenche com código do fabricante
+    set('an-sku-fava', prodAtual.codigo);
+    set('an-codfab',  '');  // código do fabricante — usuário preenche
+    set('an-cod-nf', '');   // código da NF — usuário preenche se vier de NF
     set('an-peso',  prodAtual.peso);
     // Tenta extrair marca do nome
     const marcasEl=document.getElementById('an-marcas');
@@ -2523,9 +2534,16 @@ function irParaAnuncio(){
 
 // Chamada à API do Claude (mesma do gerador standalone)
 async function chamarClaudeAn(prompt){
+  const apiKey = localStorage.getItem('fava_claude_key')||'';
+  if(!apiKey){ throw new Error('Configure a Chave API Claude em ⚙️ Tokens'); }
   const r=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
-    headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    headers:{
+      'Content-Type':'application/json',
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true',
+      'x-api-key': apiKey
+    },
     body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})
   });
   if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(`API ${r.status}: ${e.error?.message||JSON.stringify(e)}`);}
@@ -2540,6 +2558,7 @@ function anMontarPrompt(p){
 
   // Campos específicos da peça
   const skuFava    = document.getElementById('an-sku-fava')?.value  || p.sku  || '';
+  const codNF      = document.getElementById('an-cod-nf')?.value || '';
   const posCatalog = document.getElementById('an-pos-catalogo')?.value || '';
   const desgaste   = document.getElementById('an-desgaste')?.value  || '';
   const material   = document.getElementById('an-material')?.value  || '';
@@ -2559,7 +2578,8 @@ function anMontarPrompt(p){
 DADOS DA PEÇA:
 Nome: ${p.nome}
 Marca: ${p.marca||'—'}
-Código do fabricante: ${p.codfab||'—'}
+Código do produto na NF/fornecedor: ${codNF||p.codfab||'—'}
+Código do fabricante: ${p.codfab||codNF||'—'}
 SKU Fava Ecom: ${skuFava||'—'}
 Posição no catálogo: ${posCatalog ? 'N.'+posCatalog : '—'}
 Equipamento / Família: ${p.familia||'—'}
@@ -2838,7 +2858,7 @@ function anSeqCarregar(idx){
   const it = anSeqItens[idx];
   anSeqIdx = idx;
   // Limpa campos dinâmicos
-  ['an-codfab','an-marca','an-familia','an-fornecedor','an-compat','an-ficha','an-desgaste','an-material','an-extra','an-pos-catalogo'].forEach(id=>{
+  ['an-codfab','an-cod-nf','an-marca','an-familia','an-fornecedor','an-compat','an-ficha','an-desgaste','an-material','an-extra','an-pos-catalogo'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
   // Pre-fill com dados da NF
@@ -3295,7 +3315,7 @@ Retorne SOMENTE um array JSON válido com os ${nSugestoes} kits. Sem texto antes
   try{
     const r = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true','x-api-key':localStorage.getItem('fava_claude_key')||''},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,
         messages:[{role:'user',content:prompt}]})
     });
@@ -3631,7 +3651,7 @@ Responda APENAS o SKU técnico gerado, nada mais, sem aspas, sem explicação.`;
 
     const r = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true','x-api-key':localStorage.getItem('fava_claude_key')||''},
       body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:prompt}]})
     });
     const d = await r.json();
@@ -3868,8 +3888,10 @@ function recGerarAnuncioItem(idx){
   setTimeout(()=>{
     const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
     set('an-nome', it.xProd);
-    set('an-sku',  it.skuSeq||it.cProd);
-    set('an-sku-fava', it.skuSeq||it.cProd);
+    set('an-sku',  it.skuSeq||'');   // SKU Fava Ecom (sequencial atribuído)
+    set('an-sku-fava', it.skuSeq||'');
+    set('an-cod-nf', it.cProd||'');  // código do fornecedor da NF
+    set('an-codfab', it.cProd||'');  // também preenche código fabricante
     anLookupBanco(it.skuSeq||it.cProd);
     document.getElementById('an-prod-info').innerHTML=`✅ Da NF: <strong>${it.xProd}</strong> | SKU: ${it.skuSeq||it.cProd} | CMV BR: R$ ${fmt(it.cmvReal)}`;
     document.getElementById('an-prod-info').style.color='#166534';
@@ -3884,8 +3906,9 @@ function recGerarAnuncioExist(idx){
   setTimeout(()=>{
     const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
     set('an-nome', it.xProd);
-    set('an-sku',  it.cProd);
+    set('an-sku',  it.cProd);    // para existentes, cProd É o SKU
     set('an-sku-fava', it.cProd);
+    set('an-cod-nf', it.cProd);
     anLookupBanco(it.cProd);
   },150);
 }
