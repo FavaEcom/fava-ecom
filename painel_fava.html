@@ -790,8 +790,71 @@ function fecharCfg(){
 <!-- ═══════════ VIEW: PROMOÇÕES ═══════════ -->
 <div id="view-promocoes" style="display:none;flex-direction:column">
   <div class="main">
-    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Gerenciar promoções e descontos no Mercado Livre</div>
-    <div id="promo-wrap"></div>
+
+    <!-- Controles topo -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <button class="btn-reload" onclick="carregarPromocoes()" style="background:var(--azul);color:#fff;padding:7px 14px;font-size:12px">
+        ↻ Carregar anúncios ativos
+      </button>
+      <input type="text" id="prom-busca" placeholder="Buscar produto ou SKU..."
+        oninput="filtrarPromos()" style="border:1px solid var(--borda);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:220px">
+      <span id="prom-status" style="font-size:12px;color:var(--muted)">Clique em Carregar para listar seus anúncios</span>
+    </div>
+
+    <!-- Ação em massa -->
+    <div id="prom-acao" style="display:none;background:#fff;border:1px solid var(--borda);border-radius:9px;padding:12px 16px;margin-bottom:10px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <strong style="font-size:12px" id="prom-sel-count">0 selecionados</strong>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:12px;color:var(--muted)">Desconto %:</span>
+          <input type="number" id="prom-desc-pct" value="10" min="1" max="80" step="1"
+            style="width:60px;border:1px solid var(--borda);border-radius:5px;padding:4px 7px;font-size:13px;font-weight:700;text-align:center;outline:none">
+        </div>
+        <button onclick="verImpactoPromo()" style="padding:6px 12px;font-size:12px;font-weight:700;background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:6px;cursor:pointer">
+          Simular impacto
+        </button>
+        <button onclick="aplicarDescontoPromo()" style="padding:6px 14px;font-size:12px;font-weight:700;background:#1F3864;color:#fff;border:none;border-radius:6px;cursor:pointer">
+          Aplicar desconto no ML
+        </button>
+        <button onclick="removerDescontoPromo()" style="padding:6px 12px;font-size:12px;font-weight:700;background:#fff;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;cursor:pointer">
+          Remover desconto
+        </button>
+      </div>
+      <div id="prom-simulacao" style="margin-top:8px;font-size:11px;color:var(--muted)"></div>
+    </div>
+
+    <!-- KPIs -->
+    <div id="prom-kpis" style="display:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:10px">
+      <div class="kpi"><div class="kl">Anúncios</div><div class="kv" id="pk-total">—</div></div>
+      <div class="kpi"><div class="kl">Com desconto</div><div class="kv" id="pk-desc">—</div></div>
+      <div class="kpi"><div class="kl">Preço médio</div><div class="kv" id="pk-preco">—</div></div>
+      <div class="kpi"><div class="kl">Margem média</div><div class="kv" id="pk-mg">—</div></div>
+    </div>
+
+    <!-- Tabela -->
+    <div id="prom-table-wrap" style="display:none;background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden">
+      <div style="padding:8px 12px;background:#f8fafc;border-bottom:1px solid var(--borda);display:flex;gap:8px;align-items:center">
+        <input type="checkbox" id="prom-check-all" onchange="toggleTodosPromos(this.checked)" title="Selecionar todos">
+        <span style="font-size:11px;color:var(--muted)">Selecionar todos</span>
+      </div>
+      <table class="tbl" id="prom-tbl">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Produto</th>
+            <th>SKU</th>
+            <th class="num">Preço atual</th>
+            <th class="num">Com desc.</th>
+            <th class="num">Custo</th>
+            <th class="num">Margem atual</th>
+            <th class="num">Margem c/desc.</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="prom-tbody"></tbody>
+      </table>
+    </div>
+
   </div>
 </div>
 
@@ -1176,6 +1239,234 @@ function getDatas(){
     default:{const d=new Date(hoje);d.setDate(d.getDate()-6);return{de:fmt(d),ate:fmt(hoje)};}
   }
 }
+
+
+// ══════════════════════════════════════════════════════════════════════
+// PROMOÇÕES — GESTÃO DE DESCONTOS ML
+// ══════════════════════════════════════════════════════════════════════
+let promoData = [];
+let promoDataFiltrada = [];
+
+async function carregarPromocoes(){
+  if(!tokens.ml){ alert('Configure o token ML em ⚙️'); return; }
+  const st = document.getElementById('prom-status');
+  if(st) st.textContent = '⟳ Buscando anúncios ativos...';
+
+  try{
+    // Busca IDs dos anúncios ativos
+    let allIds = [];
+    let scroll = null;
+    for(let i=0; i<5; i++){
+      const url = scroll
+        ? `/api/ml/users/537714337/items/search?status=active&limit=50&scroll_id=${scroll}`
+        : `/api/ml/users/537714337/items/search?status=active&limit=50`;
+      const r = await fetch(url, {headers:{'Authorization':`Bearer ${tokens.ml}`}});
+      if(!r.ok) break;
+      const d = await r.json();
+      const ids = d.results||[];
+      allIds = allIds.concat(ids);
+      scroll = d.scroll_id||null;
+      if(!ids.length || ids.length < 50 || !scroll) break;
+    }
+    if(st) st.textContent = `⟳ Carregando detalhes de ${allIds.length} anúncios...`;
+
+    // Busca detalhes em lotes de 20
+    const itens = [];
+    for(let i=0; i<allIds.length; i+=20){
+      const lote = allIds.slice(i,i+20).join(',');
+      const r = await fetch(`/api/ml/items?ids=${lote}&attributes=id,title,price,original_price,seller_sku,listing_type_id,status`,{
+        headers:{'Authorization':`Bearer ${tokens.ml}`}
+      });
+      if(!r.ok) continue;
+      const d = await r.json();
+      d.forEach(x=>{
+        if(x.code===200 && x.body?.id){
+          const it = x.body;
+          const cmvInfo = cmvLookup(it.seller_sku);
+          const cmv = cmvInfo?.cmv||0;
+          const margem = (it.price && cmv) ? (it.price - cmv - it.price*0.21 - it.price*0.0925) / it.price : null;
+          itens.push({
+            id: it.id,
+            titulo: it.title,
+            sku: it.seller_sku||'',
+            preco: it.price,
+            precoOriginal: it.original_price||null,
+            listingType: it.listing_type_id,
+            status: it.status,
+            cmv,
+            margem,
+            selecionado: false,
+          });
+        }
+      });
+      if(allIds.length > 20) await new Promise(r=>setTimeout(r,100));
+    }
+
+    promoData = itens;
+    promoDataFiltrada = [...itens];
+    renderPromoKpis();
+    renderPromoTabela(promoDataFiltrada);
+
+    const tw = document.getElementById('prom-table-wrap');
+    const pk = document.getElementById('prom-kpis');
+    if(tw) tw.style.display = '';
+    if(pk) pk.style.display = 'grid';
+    if(st) st.textContent = `✅ ${itens.length} anúncios carregados`;
+
+  }catch(e){
+    if(st) st.textContent = `❌ ${e.message}`;
+    console.error('Promoções erro:', e);
+  }
+}
+
+function filtrarPromos(){
+  const q = (document.getElementById('prom-busca')?.value||'').toLowerCase();
+  promoDataFiltrada = q
+    ? promoData.filter(p => p.titulo.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q))
+    : [...promoData];
+  renderPromoTabela(promoDataFiltrada);
+}
+
+function renderPromoKpis(){
+  const total = promoData.length;
+  const comDesc = promoData.filter(p=>p.precoOriginal && p.preco < p.precoOriginal).length;
+  const precoMed = total ? promoData.reduce((s,p)=>s+p.preco,0)/total : 0;
+  const comMargem = promoData.filter(p=>p.margem!==null);
+  const mgMed = comMargem.length ? comMargem.reduce((s,p)=>s+p.margem,0)/comMargem.length : 0;
+  const s=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  s('pk-total', total);
+  s('pk-desc', comDesc);
+  s('pk-preco', 'R$ '+precoMed.toFixed(2));
+  const mgEl = document.getElementById('pk-mg');
+  if(mgEl){ mgEl.textContent=(mgMed*100).toFixed(1)+'%'; mgEl.style.color=mgMed>=.20?'var(--verde)':mgMed>=.10?'var(--amarelo)':'var(--vermelho)'; }
+}
+
+function renderPromoTabela(lista){
+  const tbody = document.getElementById('prom-tbody');
+  if(!tbody) return;
+  const desc = parseFloat(document.getElementById('prom-desc-pct')?.value||10)/100;
+
+  tbody.innerHTML = lista.map((p,i)=>{
+    const temDesc = p.precoOriginal && p.preco < p.precoOriginal;
+    const precoComDesc = (p.preco*(1-desc)).toFixed(2);
+    const mgAtual = p.margem !== null ? (p.margem*100).toFixed(1)+'%' : '—';
+    const mgComDesc = p.cmv ? (((p.preco*(1-desc) - p.cmv - p.preco*(1-desc)*0.21 - p.preco*(1-desc)*0.0925) / (p.preco*(1-desc)))*100).toFixed(1)+'%' : '—';
+    const mgCor = p.margem!==null ? (p.margem>=.20?'var(--verde)':p.margem>=.10?'var(--amarelo)':'var(--vermelho)') : 'var(--muted)';
+    const tagDesc = temDesc ? '<span class="pill pill-g">Com desconto</span>' : '';
+
+    return `<tr id="prom-row-${i}" style="${p.selecionado?'background:#eff6ff':''}">
+      <td><input type="checkbox" ${p.selecionado?'checked':''} onchange="togglePromo(${i},this.checked)"></td>
+      <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.titulo}">${p.titulo}</td>
+      <td><code style="font-size:10px">${p.sku||p.id}</code></td>
+      <td class="num" style="font-weight:700">R$ ${p.preco.toFixed(2)}</td>
+      <td class="num" style="color:var(--azul2)">R$ ${precoComDesc}</td>
+      <td class="num" style="color:var(--muted)">${p.cmv?'R$ '+p.cmv.toFixed(2):'—'}</td>
+      <td class="num" style="color:${mgCor};font-weight:700">${mgAtual}</td>
+      <td class="num" style="color:var(--amarelo)">${mgComDesc}</td>
+      <td>${tagDesc}</td>
+    </tr>`;
+  }).join('');
+
+  // Atualiza contador e painel de ação
+  const sel = promoData.filter(p=>p.selecionado).length;
+  const selEl = document.getElementById('prom-sel-count');
+  const acaoEl = document.getElementById('prom-acao');
+  if(selEl) selEl.textContent = `${sel} selecionados`;
+  if(acaoEl) acaoEl.style.display = sel > 0 ? '' : 'none';
+}
+
+function togglePromo(idx, checked){
+  // Encontrar o item correto na promoData original
+  const item = promoDataFiltrada[idx];
+  if(!item) return;
+  const origIdx = promoData.indexOf(item);
+  if(origIdx > -1) promoData[origIdx].selecionado = checked;
+  item.selecionado = checked;
+  renderPromoTabela(promoDataFiltrada);
+}
+
+function toggleTodosPromos(checked){
+  promoData.forEach(p=>p.selecionado=checked);
+  promoDataFiltrada.forEach(p=>p.selecionado=checked);
+  renderPromoTabela(promoDataFiltrada);
+}
+
+function verImpactoPromo(){
+  const sel = promoData.filter(p=>p.selecionado);
+  if(!sel.length){ alert('Selecione ao menos um anúncio'); return; }
+  const desc = parseFloat(document.getElementById('prom-desc-pct')?.value||10)/100;
+  const fatAtual = sel.reduce((s,p)=>s+p.preco,0);
+  const fatComDesc = sel.reduce((s,p)=>s+p.preco*(1-desc),0);
+  const comCmv = sel.filter(p=>p.cmv>0);
+  const mgMedAtual = comCmv.length ? comCmv.reduce((s,p)=>s+p.margem,0)/comCmv.length : 0;
+  const mgMedDesc = comCmv.length ? comCmv.reduce((s,p)=>{
+    const pd=p.preco*(1-desc);
+    return s+((pd-p.cmv-pd*0.21-pd*0.0925)/pd);
+  },0)/comCmv.length : 0;
+  const sim = document.getElementById('prom-simulacao');
+  if(sim) sim.innerHTML = `Desconto ${(desc*100).toFixed(0)}% em ${sel.length} anúncios | 
+    Preço total: <strong>R$ ${fatAtual.toFixed(2)}</strong> → <strong style="color:var(--azul2)">R$ ${fatComDesc.toFixed(2)}</strong> |
+    Margem média: <strong style="color:${mgMedAtual>=.10?'var(--verde)':'var(--vermelho)'}">${(mgMedAtual*100).toFixed(1)}%</strong> → 
+    <strong style="color:${mgMedDesc>=.10?'var(--verde)':'var(--vermelho)'}">${(mgMedDesc*100).toFixed(1)}%</strong>`;
+}
+
+async function aplicarDescontoPromo(){
+  const sel = promoData.filter(p=>p.selecionado);
+  if(!sel.length){ alert('Selecione ao menos um anúncio'); return; }
+  const desc = parseFloat(document.getElementById('prom-desc-pct')?.value||10)/100;
+  if(!confirm(`Aplicar desconto de ${(desc*100).toFixed(0)}% em ${sel.length} anúncios no Mercado Livre?`)) return;
+
+  const st = document.getElementById('prom-status');
+  let ok=0, erros=0;
+
+  for(const p of sel){
+    try{
+      const novoPreco = parseFloat((p.preco*(1-desc)).toFixed(2));
+      const r = await fetch(`/api/ml/items/${p.id}`,{
+        method:'PUT',
+        headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},
+        body:JSON.stringify({price: novoPreco})
+      });
+      if(r.ok){ p.precoOriginal = p.precoOriginal||p.preco; p.preco = novoPreco; ok++; }
+      else { erros++; const e=await r.json(); console.error(`${p.id}:`,e); }
+      if(st) st.textContent = `⟳ Atualizando... ${ok+erros}/${sel.length}`;
+      await new Promise(r=>setTimeout(r,200));
+    }catch(e){ erros++; }
+  }
+
+  renderPromoKpis();
+  renderPromoTabela(promoDataFiltrada);
+  if(st) st.textContent = `✅ ${ok} atualizados${erros?' | ❌ '+erros+' erros':''}`;
+  if(erros) alert(`${ok} anúncios atualizados. ${erros} erros — verifique o console.`);
+}
+
+async function removerDescontoPromo(){
+  const sel = promoData.filter(p=>p.selecionado && p.precoOriginal);
+  if(!sel.length){ alert('Selecione anúncios com desconto aplicado (em azul)'); return; }
+  if(!confirm(`Restaurar preço original de ${sel.length} anúncios?`)) return;
+
+  const st = document.getElementById('prom-status');
+  let ok=0, erros=0;
+
+  for(const p of sel){
+    try{
+      const r = await fetch(`/api/ml/items/${p.id}`,{
+        method:'PUT',
+        headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},
+        body:JSON.stringify({price: p.precoOriginal})
+      });
+      if(r.ok){ p.preco = p.precoOriginal; p.precoOriginal = null; ok++; }
+      else erros++;
+      await new Promise(r=>setTimeout(r,200));
+    }catch(e){ erros++; }
+  }
+
+  renderPromoKpis();
+  renderPromoTabela(promoDataFiltrada);
+  if(st) st.textContent = `✅ ${ok} restaurados${erros?' | ❌ '+erros+' erros':''}`;
+}
+
+function initPromocoes(){ if(promoData.length) renderPromoTabela(promoDataFiltrada); }
 
 // ══════════════════════════════════════════════════════════════════════
 // CARREGAR TUDO
@@ -1815,58 +2106,6 @@ let promoData=[], promoFiltro='todos';
 
 function initPromocoes(){ if(promoData.length) renderPromoTable(promoData); }
 
-async function carregarPromocoes(){
-  if(!tokens.ml){alert('Configure o token ML');return;}
-  (document.getElementById('prom-status')||{}).textContent ='⟳ Carregando...';
-  try{
-    // Busca campanhas de promoções disponíveis
-    const r = await fetch(`/api/ml/seller-promotions/search?seller_id=537714337&status=active&limit=100`,{
-      headers:{'Authorization':`Bearer ${tokens.ml}`}
-    });
-    let proms = [];
-    if(r.ok){
-      const d = await r.json();
-      proms = d.results||d.campaigns||d||[];
-    }
-    // Se não tiver campanha, busca ofertas disponíveis por anúncio
-    if(!proms.length){
-      const r2 = await fetch(`/api/ml/users/537714337/items/search?status=active&limit=50`,{
-        headers:{'Authorization':`Bearer ${tokens.ml}`}
-      });
-      if(r2.ok){
-        const d2=await r2.json();
-        const items=d2.results||[];
-        // Para cada item verifica promoções disponíveis
-        const lote=items.slice(0,20).join(',');
-        if(lote){
-          const r3=await fetch(`/api/ml/items?ids=${lote}&attributes=id,title,price,listing_type_id,seller_sku`,{
-            headers:{'Authorization':`Bearer ${tokens.ml}`}
-          });
-          if(r3.ok){
-            const d3=await r3.json();
-            proms=d3.filter(x=>x.body?.id).map(x=>({
-              id:x.body.id,
-              titulo:x.body.title,
-              sku:x.body.seller_sku||'',
-              preco:x.body.price,
-              listing_type:x.body.listing_type_id,
-              bonus_ml:0, // sem campanha ativa
-              meu_desc:0,
-            }));
-          }
-        }
-      }
-    }
-    promoData = proms.map(p=>calcPromo(p));
-    renderPromoKpis();
-    renderPromoTable(promoData);
-    (document.getElementById('prom-kpis')||{style:{}}).style.display ='';
-    (document.getElementById('prom-table-wrap')||{style:{}}).style.display ='';
-    (document.getElementById('prom-status')||{}).textContent =`✅ ${promoData.length} anúncios`;
-  }catch(e){
-    (document.getElementById('prom-status')||{}).textContent =`❌ ${e.message}`;
-  }
-}
 
 function calcPromo(p){
   const cmvInfo = cmvLookup(p.sku);
@@ -2218,96 +2457,7 @@ async function enviarResposta(perguntaId, idx){
 promoData = [];
 chartDifal = null;
 
-async function carregarPromocoes(){
-  if(!tokens.ml){alert('Configure o token ML');return;}
-  (document.getElementById('prom-status')||{}).textContent ='⟳ Carregando...';
-  try{
-    // Busca campanhas de promoção disponíveis
-    const r = await fetch(`/api/ml/seller-promotions/search?seller_id=537714337&status=active&limit=50`,{
-      headers:{'Authorization':`Bearer ${tokens.ml}`}
-    });
-    if(!r.ok) throw new Error(`${r.status}`);
-    const d = await r.json();
-    const campanhas = d.results||d||[];
 
-    promoData = [];
-    // Para cada campanha, busca os itens elegíveis
-    for(const camp of campanhas.slice(0,10)){
-      const ri = await fetch(`/api/ml/seller-promotions/${camp.id}/items?limit=50`,{
-        headers:{'Authorization':`Bearer ${tokens.ml}`}
-      }).catch(()=>null);
-      if(!ri||!ri.ok) continue;
-      const di = await ri.json();
-      const itens = di.results||[];
-      itens.forEach(item=>{
-        const mlb = item.item_id||item.id;
-        const sku = item.seller_sku||'';
-        const cmvInfo = cmvLookup(sku);
-        const cmv = cmvInfo?.cmv||0;
-        const taxa = item.price >= 79 ? 0.12 : 0.12;
-        const bonus_ml = camp.benefits?.find(b=>b.type==='COUPON')?.value||0;
-        const meu_desc = item.promotion?.discount_percentage||0;
-        const preco_orig = item.original_price||item.price||0;
-        const preco_final = preco_orig * (1-(meu_desc/100)) * (1-(bonus_ml/100));
-
-        let margem_prom = null;
-        if(cmv>0&&preco_final>0){
-          const calc = calcMargemGP(preco_final, cmv, taxa);
-          margem_prom = calc.margem;
-        }
-        const mg_min = getMgMinCategoria(item.title||'');
-        const viavel = margem_prom===null?null:margem_prom>=mg_min?'ok':margem_prom>=.10?'atencao':'inviavel';
-
-        promoData.push({
-          mlb, sku, titulo:item.title||'', campanha:camp.name||camp.type||'Promoção',
-          preco_orig, bonus_ml, meu_desc, preco_final, cmv, margem_prom, mg_min, viavel,
-          camp_id: camp.id, item_id: item.id
-        });
-      });
-    }
-    renderPromocoes();
-    (document.getElementById('prom-status')||{}).textContent =`✅ ${promoData.length} itens em promoção`;
-  }catch(e){
-    (document.getElementById('prom-status')||{}).textContent =`❌ ${e.message}`;
-  }
-}
-
-function renderPromocoes(){
-  const viaveis=promoData.filter(p=>p.viavel==='ok').length;
-  const atencao=promoData.filter(p=>p.viavel==='atencao').length;
-  const inviaveis=promoData.filter(p=>p.viavel==='inviavel').length;
-  const bonusMed=promoData.length?promoData.reduce((s,p)=>s+p.bonus_ml,0)/promoData.length:0;
-  (document.getElementById('pm-total')||{}).textContent =promoData.length;
-  (document.getElementById('pm-viaveis')||{}).textContent =viaveis;
-  (document.getElementById('pm-atencao')||{}).textContent =atencao;
-  (document.getElementById('pm-inviaveis')||{}).textContent =inviaveis;
-  (document.getElementById('pm-bonus')||{}).textContent =bonusMed.toFixed(1)+'%';
-
-  const rows=promoData.map(p=>{
-    const rowCls=p.viavel==='ok'?'viavel':p.viavel==='atencao'?'atencao':p.viavel==='inviavel'?'inviavel':'';
-    const mgStr=p.margem_prom!==null?(p.margem_prom*100).toFixed(1)+'%':'sem CMV';
-    const mgCor=p.margem_prom===null?'#9ca3af':p.margem_prom>=p.mg_min?'#16a34a':p.margem_prom>=.10?'#d97706':'#dc2626';
-    const viTag=p.viavel==='ok'?'<span class="pill pill-g">✅ Viável</span>':
-                p.viavel==='atencao'?'<span class="pill pill-y">⚠️ Atenção</span>':
-                p.viavel==='inviavel'?'<span class="pill pill-r">❌ Inviável</span>':
-                '<span style="color:#9ca3af;font-size:10px">sem CMV</span>';
-    return`<tr class="${rowCls}">
-      <td style="font-size:10px;color:var(--azul2)">${p.mlb}</td>
-      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="${p.titulo}">${p.titulo}</td>
-      <td style="font-size:10px">${p.campanha}</td>
-      <td class="num">R$ ${fmt(p.preco_orig)}</td>
-      <td class="num" style="color:#16a34a;font-weight:700">+${p.bonus_ml}%</td>
-      <td class="num">${p.meu_desc}%</td>
-      <td class="num" style="font-weight:700">R$ ${fmt(p.preco_final)}</td>
-      <td class="num" style="color:var(--muted)">${p.cmv>0?'R$ '+fmt(p.cmv):'—'}</td>
-      <td class="num" style="font-weight:700;color:${mgCor}">${mgStr}</td>
-      <td>${viTag}</td>
-      <td>${p.viavel==='ok'||p.viavel==='atencao'?`<button class="btn-resp" onclick="participarPromo('${p.camp_id}','${p.item_id}')">Participar</button>`:'—'}</td>
-    </tr>`;
-  });
-  (document.getElementById('prom-tbody')||{})['innerHTML']=rows.join('')||
-    '<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--muted)">Nenhuma promoção disponível</td></tr>';
-}
 
 async function participarPromo(campId, itemId){
   if(!tokens.ml){alert('Token ML necessário');return;}
@@ -3546,68 +3696,6 @@ async function aplicarTodosSelecionados(){
 }
 
 // ── PROMOÇÕES ML COM BONUS ────────────────────────────────────────────────
-async function carregarPromocoesML(){
-  if(!tokens.ml){ alert('Token ML não configurado'); return; }
-  const btn = document.getElementById('btn-load-promos');
-  const status = document.getElementById('promo-status');
-  btn.textContent = '⟳ Buscando...';
-  status.textContent = '';
-
-  try{
-    // Busca promoções disponíveis para o vendedor
-    const r = await fetch(`/api/ml/seller-promotions/${dados.userId||'me'}/search?limit=50`, {
-      headers:{'Authorization':`Bearer ${tokens.ml}`}
-    });
-
-    let promos = [];
-    if(r.ok){
-      const d = await r.json();
-      promos = d.results || d.promotions || [];
-    }
-
-    // Se não tiver promos via API, tenta via items/search com promoções ativas
-    if(!promos.length){
-      const r2 = await fetch(`/api/ml/users/${dados.userId||'me'}/items/search?promotion_type=price_discount&limit=50`, {
-        headers:{'Authorization':`Bearer ${tokens.ml}`}
-      });
-      if(r2.ok){
-        const d2 = await r2.json();
-        // Monta promos simuladas dos anúncios elegíveis no gpData
-        promos = gpData.filter(d=>d.status?.toLowerCase().includes('elegi')||d.status?.toLowerCase().includes('particip')).map(d=>({
-          item_id: d.mlb,
-          promotion_type: 'DEAL_OF_THE_DAY',
-          ml_bonus: 5,  // ML paga 5% (padrão)
-          required_discount: 10, // vendedor paga 10%
-          name: 'Promoção ML',
-        }));
-      }
-    }
-
-    // Se ainda não tiver — usa os elegíveis do gpData (status "Elegível")
-    if(!promos.length){
-      promos = gpData
-        .filter(d=> d.status && (
-          d.status.toLowerCase().includes('eleg') ||
-          d.status.toLowerCase().includes('particip') ||
-          d.status.toLowerCase().includes('deal')
-        ))
-        .map(d=>({
-          item_id: d.mlb,
-          name: d.status,
-          ml_bonus: 5,
-          required_discount: 15,
-          promotion_type: 'price_discount',
-        }));
-    }
-
-    renderPromocoesML(promos);
-    btn.textContent = '🔄 Atualizar';
-    status.textContent = `${promos.length} promoções encontradas`;
-  }catch(e){
-    btn.textContent = '🔍 Buscar promoções disponíveis';
-    status.textContent = `❌ ${e.message}`;
-  }
-}
 
 function renderPromocoesML(promos){
   const tbody = document.getElementById('promo-tbody');
