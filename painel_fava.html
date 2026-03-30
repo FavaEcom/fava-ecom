@@ -1934,40 +1934,37 @@ function aplicarRegrasMargemMinima(){
   const mg50  = (parseFloat(document.getElementById('regra-mg-50')?.value)||20)/100;
   const mg200 = (parseFloat(document.getElementById('regra-mg-200')?.value)||18)/100;
   const mgAlto= (parseFloat(document.getElementById('regra-mg-alto')?.value)||15)/100;
-  let n=0;
+  // Aplica em TODOS os produtos (sobrescreve valores existentes)
   promoData.forEach(p=>{
-    if(!p.mgMin){ // só aplica onde ainda não há mínimo definido
-      const mg = p.preco<=50 ? mg50 : p.preco<=200 ? mg200 : mgAlto;
-      p.mgMin = mg;
-      if(p.sku) mgMinimas[p.sku] = mg;
-      if(p.id)  mgMinimas[p.id]  = mg;
-      n++;
-    }
+    const mg = p.preco<=50 ? mg50 : p.preco<=200 ? mg200 : mgAlto;
+    p.mgMin = mg;
+    if(p.sku) mgMinimas[p.sku] = mg;
+    if(p.id)  mgMinimas[p.id]  = mg;
   });
   promoDataFiltrada = [...promoData];
   salvarMgMinimasLocal();
   renderPromoTabela(promoDataFiltrada);
   const el = document.getElementById('regras-info');
-  if(el) el.textContent = `✅ Regras aplicadas em ${n} produtos sem mínimo definido`;
+  if(el) el.textContent = `✅ Regras aplicadas em todos os ${promoData.length} produtos. Agora clique "Calcular desc. máximo".`;
 }
 
 // Calcula o desconto máximo para cada produto e aplica
 function calcularDescontoPorMargem(){
   let n=0, semCmv=0, semMin=0;
-  promoDataFiltrada.forEach((p,i)=>{
-    if(!p.cmv){ semCmv++; return; }
+  promoData.forEach(p=>{
+    if(!p.cmv || p.cmv<=0){ semCmv++; return; }
     const mgMin = p.mgMin || (p.preco<=50?0.20 : p.preco<=200?0.18 : 0.15);
-    const desc = calcDescMaximo(p.preco, p.cmv, mgMin);
-    if(desc<5){ semMin++; return; } // desconto mínimo é 5% no ML
+    const taxa = p.taxa || 0.16;
+    const frete = p.frete || 0;
+    const desc = calcDescMaximo(p.preco, p.cmv, mgMin, taxa, frete);
+    if(desc<5){ semMin++; return; }
     p.descEditado = desc;
-    p.margemComDesc = calcMargemProm(p.preco*(1-desc/100), p.cmv, 0.16);
-    const origIdx = promoData.indexOf(p);
-    if(origIdx>=0){ promoData[origIdx].descEditado=desc; promoData[origIdx].margemComDesc=p.margemComDesc; }
-    n++;
+    p.margemComDesc = calcMargemProm(p.preco*(1-desc/100), p.cmv, taxa, frete);
   });
+  promoDataFiltrada = [...promoData];
   renderPromoTabela(promoDataFiltrada);
   const el = document.getElementById('regras-info');
-  if(el) el.textContent = `✅ ${n} produtos com desconto calculado | ${semCmv} sem CMV | ${semMin} já no limite`;
+  if(el) el.textContent = `✅ ${n} com desconto | ${semCmv} sem CMV | ${semMin} já no limite de margem`;
 }
 
 // Aplicar desconto máximo calculado em TODOS e mandar para ML
