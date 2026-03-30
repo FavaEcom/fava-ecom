@@ -2611,7 +2611,7 @@ async function chamarClaudeAn(prompt){
       'anthropic-dangerous-direct-browser-access':'true',
       'x-api-key': apiKeyFinal
     },
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})
+    body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:2000,messages:[{role:'user',content:prompt}]})
   });
   if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(`API ${r.status}: ${e.error?.message||JSON.stringify(e)}`);}
   const d=await r.json();return d.content?.[0]?.text||'';
@@ -3383,7 +3383,7 @@ Retorne SOMENTE um array JSON válido com os ${nSugestoes} kits. Sem texto antes
     const r = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true','x-api-key':localStorage.getItem('fava_claude_key')||''},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4000,
         messages:[{role:'user',content:prompt}]})
     });
     if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(`API ${r.status}: ${e.error?.message||'erro'}`);}
