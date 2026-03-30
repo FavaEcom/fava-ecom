@@ -848,7 +848,16 @@ function salvarCfg(){
           💾 Salvar margens mínimas
         </button>
       </div>
-      <div id="regras-info" style="font-size:10px;color:var(--muted)">
+      <div style="display:flex;gap:12px;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #f3f4f6;flex-wrap:wrap">
+        <label style="font-size:11px;display:flex;align-items:center;gap:6px;color:var(--texto)">
+          Frete médio (R$):
+          <input type="number" id="prom-frete-medio" value="0" min="0" step="0.50"
+            style="width:70px;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;font-size:12px;font-weight:700;text-align:center;outline:none"
+            oninput="recalcularTodasMargens()" placeholder="0,00">
+          <span style="font-size:10px;color:var(--muted)">(frete que você paga ao ML — varia por produto/peso. Coloque a média real.)</span>
+        </label>
+      </div>
+      <div id="regras-info" style="font-size:10px;color:var(--muted);margin-top:6px">
         As margens mínimas ficam salvas por produto — ao reabrir a planilha no futuro, os mínimos já aparecem preenchidos.
       </div>
     </div>
@@ -1389,21 +1398,43 @@ let promoDataFiltrada = [];
 let promoStatusFiltro = 'todos';
 let promoPlanilhaRows = []; // linhas originais da planilha para exportar
 
+// Frete médio configurável pelo usuário (não estimativa de %)
+// O usuário informa o frete médio real dos seus produtos
+function getFreteMedioConfig(){
+  return parseFloat(document.getElementById('prom-frete-medio')?.value||'0') || 0;
+}
+
 function calcFreteProm(preco){
-  // Estimativa de frete ML baseada no preço
-  if(preco <= 49) return preco * 0.18;
-  if(preco <= 99) return preco * 0.13;
-  if(preco <= 199) return preco * 0.10;
-  return preco * 0.08;
+  // Usa o frete médio configurado pelo usuário
+  // Se não configurado, usa R$0 (margem sem frete = margem bruta)
+  return getFreteMedioConfig();
+}
+
+
+// Recalcula todas as margens quando o frete médio muda
+function recalcularTodasMargens(){
+  promoData.forEach(p=>{
+    if(p.cmv && p.preco){
+      p.frete = getFreteMedioConfig();
+      p.margem = calcMargemProm(p.preco, p.cmv, 0.16);
+      p.margemComDesc = calcMargemProm(p.preco*(1-p.descEditado/100), p.cmv, 0.16);
+    }
+  });
+  promoDataFiltrada = [...promoData]; // mantém filtro atual mas recalcula
+  renderPromoTabela(promoDataFiltrada);
+  renderPromoKpis();
 }
 
 function calcMargemProm(preco, cmv, taxa_ml){
   if(!preco || !cmv) return null;
-  const taxa = taxa_ml || 0.16; // gold_pro padrão
-  const frete = calcFreteProm(preco);
+  const taxa = taxa_ml || 0.16;
+  const frete = getFreteMedioConfig(); // frete configurado pelo usuário
   const pis = preco * 0.0065;
   const cofins = preco * 0.03;
-  const lucro = preco - cmv - preco*taxa - frete - pis - cofins;
+  // Crédito PIS/COFINS sobre frete (Lucro Real)
+  const credFretePisCof = frete * 0.0365;
+  const freteL = frete - credFretePisCof; // frete líquido
+  const lucro = preco - cmv - preco*taxa - freteL - pis - cofins;
   return lucro / preco;
 }
 
@@ -4989,7 +5020,7 @@ let modalMLB = null;
 const PIS_A=.0165, COF_A=.076, ICMS_A=.12; // médias para margem dos anúncios
 
 async function carregarAnuncios(){
-  (document.getElementById('anunc-body')||{}).innerHTML =
+  (document.getElementById('anunc-tbody')||{}).innerHTML =
     '<tr><td colspan="10" class="empty"><span class="spin"></span> Carregando anúncios...</td></tr>';
 
   try{
@@ -5030,11 +5061,13 @@ async function carregarAnuncios(){
     // Monta dados com CMV do cache e calcula margem
     anunciosData = detalhes.map(item=>{
       const sku = item.seller_sku || '';
-      // Try multiple key formats (numeric, string, trimmed)
+      // Usa CMV do banco (se disponível) ou do cache de sessão
       const cmvInfo = cmvLookup(sku);
-      const cmv = cmvInfo?.cmv || 0;
+      const cmv = item._cmv || cmvInfo?.cmv || 0;
       const preco = item.price || 0;
-      const taxa = item.listing_type_id==='gold_pro'?.17:.12;
+      // Usa taxa real do anúncio se disponível (sale_fee da API ML)
+      const taxaReal = item.sale_fee_pct || item.sale_fee || 0;
+      const taxa = taxaReal > 0 ? taxaReal/100 : (item.listing_type_id==='gold_pro'?.17:.12);
       const frete = freteAnuncio(preco);
       // Margem: só calcula se tiver CMV real no Bling
       // Lucro = Preço - CMV - PIS(1,65%) - COFINS(7,6%) - Taxa ML - Frete
@@ -5081,7 +5114,7 @@ async function carregarAnuncios(){
     renderAnuncKpis();
     filtrarAnuncios();
   }catch(e){
-    (document.getElementById('anunc-body')||{}).innerHTML =
+    (document.getElementById('anunc-tbody')||{}).innerHTML =
       `<tr><td colspan="10" class="empty">Erro: ${e.message}</td></tr>`;
   }
 }
@@ -5148,7 +5181,7 @@ function sortAnunc(col){
 
 function renderAnuncTable(lista){
   if(!lista.length){
-    (document.getElementById('anunc-body')||{}).innerHTML =
+    (document.getElementById('anunc-tbody')||{}).innerHTML =
       '<tr><td colspan="10" class="empty">Nenhum anúncio encontrado</td></tr>';
     return;
   }
@@ -5197,7 +5230,7 @@ function renderAnuncTable(lista){
     </tr>`;
   }).join('');
 
-  (document.getElementById('anunc-body')||{}).innerHTML = rows;
+  (document.getElementById('anunc-tbody')||{}).innerHTML = rows;
 }
 
 // MODAL PREÇO

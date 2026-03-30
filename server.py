@@ -95,6 +95,11 @@ def criar_tabelas():
                 nf TEXT, emissao TEXT, valor_nf REAL DEFAULT 0, parcela TEXT,
                 vencimento TEXT, valor REAL DEFAULT 0, status TEXT DEFAULT 'A PAGAR',
                 created_at TIMESTAMP DEFAULT NOW())""",
+            """CREATE TABLE IF NOT EXISTS ml_listings (
+                id TEXT PRIMARY KEY, sku TEXT, titulo TEXT, preco REAL DEFAULT 0,
+                sale_fee REAL DEFAULT 0, listing_type TEXT, free_shipping INTEGER DEFAULT 0,
+                status TEXT, margem_minima REAL DEFAULT 0, frete_medio REAL DEFAULT 0,
+                updated_at TIMESTAMP DEFAULT NOW())""",
             """CREATE TABLE IF NOT EXISTS pedidos (
                 id TEXT PRIMARY KEY, canal TEXT, data TEXT, status TEXT,
                 total REAL DEFAULT 0, uf TEXT, frete REAL DEFAULT 0, itens TEXT,
@@ -128,6 +133,11 @@ def criar_tabelas():
                 parcela TEXT, vencimento TEXT, valor REAL DEFAULT 0,
                 status TEXT DEFAULT 'A PAGAR',
                 created_at DATETIME DEFAULT (datetime('now')))""",
+            """CREATE TABLE IF NOT EXISTS ml_listings (
+                id TEXT PRIMARY KEY, sku TEXT, titulo TEXT, preco REAL DEFAULT 0,
+                sale_fee REAL DEFAULT 0, listing_type TEXT, free_shipping INTEGER DEFAULT 0,
+                status TEXT, margem_minima REAL DEFAULT 0, frete_medio REAL DEFAULT 0,
+                updated_at DATETIME DEFAULT (datetime('now')))""",
             """CREATE TABLE IF NOT EXISTS pedidos (
                 id TEXT PRIMARY KEY, canal TEXT, data TEXT, status TEXT,
                 total REAL DEFAULT 0, uf TEXT, frete REAL DEFAULT 0, itens TEXT,
@@ -303,10 +313,76 @@ def sync_pedidos():
         pagina+=1; time.sleep(0.3)
     print(f'[SYNC] {n} pedidos'); return n
 
+
+def ml_get(path):
+    """GET na API do ML."""
+    token = _ml_token.get('access','')
+    if not token: return None
+    url = f'https://api.mercadolibre.com/{path}'
+    req = urllib.request.Request(url, headers={'Authorization':f'Bearer {token}','Accept':'application/json'})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        print(f'[ML] {path[:60]} erro {e.code}'); return None
+    except Exception as e:
+        print(f'[ML] {path[:60]} erro: {e}'); return None
+
+def sync_ml_listings():
+    """Sincroniza TODOS os anúncios ativos do ML → banco."""
+    if not _ml_token.get('access'): return 0
+    print('[SYNC] Anúncios ML...')
+    all_ids = []
+    scroll = None
+    for _ in range(30):
+        path = f'users/537714337/items/search?status=active&limit=50'
+        if scroll: path += f'&scroll_id={scroll}'
+        d = ml_get(path)
+        if not d: break
+        ids = d.get('results',[])
+        if not ids: break
+        all_ids += ids
+        scroll = d.get('scroll_id')
+        if len(ids) < 50 or not scroll: break
+        time.sleep(0.2)
+
+    if not all_ids:
+        print('[ML] Nenhum anúncio encontrado'); return 0
+    print(f'[ML] {len(all_ids)} anúncios — buscando detalhes em lotes...')
+
+    salvos = 0
+    for i in range(0, len(all_ids), 20):
+        lote = ','.join(all_ids[i:i+20])
+        d = ml_get(f'items?ids={lote}&attributes=id,title,price,seller_sku,listing_type_id,status,sale_fee,shipping')
+        if not d: continue
+        for x in (d if isinstance(d, list) else []):
+            if x.get('code') != 200: continue
+            it = x.get('body', {})
+            iid = it.get('id','')
+            if not iid: continue
+            sku        = str(it.get('seller_sku','') or '').strip()
+            titulo     = (it.get('title','') or '').strip()
+            preco      = float(it.get('price') or 0)
+            sale_fee   = float(it.get('sale_fee') or 0)
+            ltype      = it.get('listing_type_id','')
+            free_ship  = 1 if (it.get('shipping',{}).get('free_shipping') or ltype in ('gold_pro','gold_premium')) else 0
+            status_it  = it.get('status','')
+            try:
+                c = 'ON CONFLICT(id) DO UPDATE SET sku=EXCLUDED.sku,titulo=EXCLUDED.titulo,preco=EXCLUDED.preco,sale_fee=EXCLUDED.sale_fee,listing_type=EXCLUDED.listing_type,free_shipping=EXCLUDED.free_shipping,status=EXCLUDED.status' if IS_PG else                     'ON CONFLICT(id) DO UPDATE SET sku=excluded.sku,titulo=excluded.titulo,preco=excluded.preco,sale_fee=excluded.sale_fee,listing_type=excluded.listing_type,free_shipping=excluded.free_shipping,status=excluded.status'
+                exe(f"INSERT INTO ml_listings (id,sku,titulo,preco,sale_fee,listing_type,free_shipping,status) VALUES ({qmark(8)}) {c}",
+                    (iid,sku,titulo,preco,sale_fee,ltype,free_ship,status_it))
+                salvos += 1
+            except Exception as e:
+                print(f'[ML] listing {iid}: {e}')
+        time.sleep(0.3)
+    print(f'[ML] {salvos} anúncios salvos no banco')
+    return salvos
+
 def sync_all():
     n1 = sync_produtos()
     n2 = sync_pedidos()
-    msg = f'produtos={n1} pedidos={n2}'
+    n3 = sync_ml_listings() if _ml_token.get('access') else 0
+    msg = f'produtos={n1} pedidos={n2} listings_ml={n3}'
     p = '%s' if IS_PG else '?'
     try: exe(f"INSERT INTO sync_log (tipo,resultado) VALUES ({p},{p})", ('sync', msg))
     except: pass
@@ -343,6 +419,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/pedidos': self._get_pedidos,
             '/api/db/boletos': self._get_boletos,
             '/api/db/nfs': self._get_nfs,
+            '/api/db/listings': self._get_listings,
             '/api/db/status': self._get_status,
             '/api/cmv-cache': self._get_cmv_compat,
             '/api/sync/now': self._sync_now,
@@ -357,6 +434,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/produto': self._post_produto,
             '/api/db/historico': self._post_historico,
             '/api/db/nf': self._post_nf,
+            '/api/db/listing': self._post_listing,
             '/api/auth/tokens': self._post_tokens,
             '/api/cmv-cache': self._post_cmv,
         }
@@ -403,6 +481,34 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def _get_nfs(self):
         try: self._ok(exe("SELECT * FROM nf_entrada ORDER BY emissao DESC LIMIT 300", fetchall=True))
+        except Exception as e: self._err(500, str(e))
+
+    def _get_listings(self):
+        """GET /api/db/listings — retorna anúncios ML com CMV cruzado."""
+        try:
+            rows = exe("""
+                SELECT l.id, l.sku, l.titulo, l.preco, l.sale_fee, l.listing_type,
+                       l.free_shipping, l.status, l.margem_minima, l.frete_medio,
+                       p.custo_br as cmv, p.custo_pr, p.nome as nome_produto
+                FROM ml_listings l
+                LEFT JOIN produtos p ON p.sku = l.sku
+                ORDER BY l.titulo
+            """, fetchall=True)
+            self._ok(rows)
+        except Exception as e: self._err(500, str(e))
+
+    def _post_listing(self):
+        """POST /api/db/listing — salva margem_minima e frete_medio de um anúncio."""
+        try:
+            d = self._body()
+            mlb = d.get('id','')
+            if not mlb: self._err(400,'id obrigatorio'); return
+            p = '%s' if IS_PG else '?'
+            fields = {k:v for k,v in d.items() if k in ('margem_minima','frete_medio','sku') and v is not None}
+            if fields:
+                for col, val in fields.items():
+                    exe(f"UPDATE ml_listings SET {col}={p} WHERE id={p}", (val, mlb))
+            self._ok({'ok':True})
         except Exception as e: self._err(500, str(e))
 
     def _get_status(self):
