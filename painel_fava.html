@@ -1683,9 +1683,41 @@ async function importarPlanilhaML(input){
         return;
       }
 
-      if(st) st.textContent = `⟳ ${itens.length} produtos lidos. Buscando CMV do banco...`;
+      if(st) st.textContent = `⟳ ${itens.length} produtos lidos. Buscando CMV...`;
 
-      // Busca CMV do banco para todos os SKUs
+      // Recarrega CMV do banco para garantir valores atualizados
+      try{
+        const rFresh = await fetch('/api/db/produtos');
+        if(rFresh.ok){
+          const prodsFresh = await rFresh.json();
+          prodsFresh.forEach(p=>{
+            if(p.sku && (p.custo_br||p.custo)>0){
+              dados.cmvCache[String(p.sku).trim()] = {
+                cmv: p.custo_br||p.custo||0,
+                cmvPr: p.custo_pr||p.custo_br||0,
+                nome: p.nome||p.sku, fonte:'db'
+              };
+            }
+          });
+        }
+      }catch(e){}
+
+      // 1. Prioridade: cmvCache (PLANILHA.xlsx — fonte de verdade)
+      itens.forEach(it=>{
+        const cached = cmvLookup(it.sku);
+        if(cached?.cmv>0){
+          it.cmv = cached.cmv;
+        }
+        // Taxa real: busca de anunciosData pelo MLB
+        const anuncio = anunciosData.find(a=>a.id===it.id);
+        it.taxa = anuncio?.taxa || it.taxa || 0.12;
+        if(it.cmv>0){
+          it.margem = calcMargemProm(it.preco, it.cmv, it.taxa);
+          it.margemComDesc = calcMargemProm(it.preco*(1-it.descPct/100), it.cmv, it.taxa);
+        }
+      });
+
+      // 2. Fallback: banco PostgreSQL para quem não tem no cmvCache
       try{
         const rProd = await fetch('/api/db/produtos');
         if(rProd.ok){
@@ -1693,27 +1725,16 @@ async function importarPlanilhaML(input){
           const cmvMap = {};
           produtos.forEach(p=>{ if(p.sku) cmvMap[String(p.sku).trim()] = p; });
           itens.forEach(it=>{
+            if(it.cmv>0) return; // já tem do cmvCache
             const p = cmvMap[it.sku] || cmvMap[String(parseInt(it.sku)||'')];
             if(p && (p.custo_br||p.custo)>0){
               it.cmv = p.custo_br||p.custo;
-              it.margem = calcMargemProm(it.preco, it.cmv, 0.16);
-              it.margemComDesc = calcMargemProm(it.preco*(1-it.descPct/100), it.cmv, 0.16);
+              it.margem = calcMargemProm(it.preco, it.cmv, it.taxa||0.12);
+              it.margemComDesc = calcMargemProm(it.preco*(1-it.descPct/100), it.cmv, it.taxa||0.12);
             }
           });
         }
       }catch(e){ console.warn('CMV do banco falhou:', e); }
-
-      // Fallback 1: usa cmvCache do painel (carregado do PostgreSQL no início)
-      itens.forEach(it=>{
-        if(!it.cmv){
-          const cached = cmvLookup(it.sku);
-          if(cached?.cmv>0){
-            it.cmv = cached.cmv;
-            it.margem = calcMargemProm(it.preco, it.cmv, 0.16);
-            it.margemComDesc = calcMargemProm(it.preco*(1-it.descPct/100), it.cmv, 0.16);
-          }
-        }
-      });
 
       // Fallback 2: localStorage fava_cmv_banco (banco da calculadora — 179 SKUs)
       try{
@@ -5411,7 +5432,8 @@ async function carregarAnuncios(){
     const semFrete = anunciosData.filter(a=>a.frete===0).length;
     console.log(`Anúncios: ${anunciosData.length} | com CMV: ${comCmv} | sem frete: ${semFrete}`);
 
-    // Busca taxa real do ML em background (lotes de 20)
+    // Busca taxa real do ML em background — sempre, a cada carregamento
+    taxasAtualizadas = false;
     if(tokens.ml && anunciosData.length > 0){
       atualizarTaxasReaisML();
     }
