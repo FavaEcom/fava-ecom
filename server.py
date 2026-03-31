@@ -779,8 +779,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     sku = row.get('sku','').strip()
                     cmv_br = float(row.get('cmv_br',0))
                     if sku and cmv_br>0:
-                        upsert_produto(sku, row.get('nome',''), custo=cmv_br, custo_br=cmv_br,
-                                       custo_pr=float(row.get('cmv_pr',cmv_br)))
+                        # Só atualiza CMV se o produto não tiver CMV da BASE_DADOS_V2
+                        # (não sobrescreve CMV já calculado com créditos fiscais)
+                        prod_atual = exe(f"SELECT custo_br FROM produtos WHERE sku={'%s' if IS_PG else '?'}",
+                                        (sku,), fetchone=True)
+                        if not prod_atual or not prod_atual.get('custo_br'):
+                            upsert_produto(sku, row.get('nome',''), custo=cmv_br, custo_br=cmv_br,
+                                           custo_pr=float(row.get('cmv_pr',cmv_br)))
                     n+=1
                 except Exception as e: print(f'[HIST] {e}')
             self._ok({'ok':True,'inseridos':n})
