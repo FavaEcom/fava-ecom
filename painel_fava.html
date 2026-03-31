@@ -5721,7 +5721,7 @@ async function salvarCMVCalculado(){
   }
 }
 
-
+async function initCMV(){
   const tbody = document.getElementById('cmv-tbody');
   if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)"><div class="spin" style="margin:0 auto 10px"></div>Carregando produtos...</td></tr>';
   try{
