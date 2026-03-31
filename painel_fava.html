@@ -5865,6 +5865,9 @@ async function salvarCMVNovo(){
 
 function marcarAlteracaoCMV(sku,valor){
   const v=parseFloat(valor);
+  if(v>0) cmvAlterados[sku]=v; else delete cmvAlterados[sku];
+  renderCMVKpis();
+}
 
 async function salvarCMVUnitario(sku,btn){
   const input=document.querySelector(`input[data-sku="${sku}"]`);
