@@ -5632,84 +5632,49 @@ async function atualizarTaxasReaisML(){
   if(taxasAtualizadas) return;
   if(!tokens.ml) return;
 
-  console.log('[Taxa+Frete ML] Buscando em background...');
+  console.log('[Taxa+Frete ML] Buscando via marketplace/benchmarks...');
   const ids = anunciosData.map(a=>a.id).filter(Boolean);
   let atualizados = 0;
 
-  // Busca via /marketplace/benchmarks — retorna selling_fees e shipping_fees reais
-  for(let i=0; i<ids.length; i+=20){
-    const lote = ids.slice(i, i+20);
+  for(let i=0; i<ids.length; i++){
+    const mlb  = ids[i];
+    const item = anunciosData.find(a=>a.id===mlb);
+    if(!item) continue;
     try{
-      // Usa items batch para pegar sale_fee, category_id e price
       const r = await fetch(
-        `/api/ml/items?ids=${lote.join(',')}&attributes=id,sale_fee,price,listing_type_id,category_id,shipping`,
+        `/api/ml/marketplace/benchmarks/items/${mlb}/details`,
         {headers:{'Authorization':`Bearer ${tokens.ml}`}}
       );
-      if(!r.ok) break;
-      const data = await r.json();
-      if(!Array.isArray(data)) break;
+      if(!r.ok) continue;
+      const d = await r.json();
 
-      for(const x of data){
-        if(x.code !== 200 || !x.body?.id) continue;
-        const b    = x.body;
-        const item = anunciosData.find(a=>a.id===b.id);
-        if(!item) continue;
+      const taxaR  = parseFloat(d.costs?.selling_fees || 0);
+      const freteR = parseFloat(d.costs?.shipping_fees || 0);
+      const preco  = item.preco || 0;
 
-        // Taxa real
-        const sfRaw = parseFloat(b.sale_fee||0);
-        if(sfRaw > 0){
-          item.taxa     = sfRaw > 1 ? sfRaw/100 : sfRaw;
-          item.sale_fee = sfRaw;
-        }
-
-        // Frete via listing_prices com category_id real
-        const catId    = b.category_id;
-        const preco    = parseFloat(b.price||item.preco||0);
-        const tipo     = b.listing_type_id || item.listing_type || 'gold_special';
-        const freeShip = b.shipping?.free_shipping ? 'true' : 'false';
-
-        if(catId && preco > 0){
-          try{
-            const fp = await fetch(
-              `/api/ml/sites/MLB/listing_prices?category_id=${catId}&price=${preco}&listing_type_id=${tipo}&shipping_mode=me2&logistic_type=drop_off&free_shipping=${freeShip}`,
-              {headers:{'Authorization':`Bearer ${tokens.ml}`}}
-            );
-            if(fp.ok){
-              const fd = await fp.json();
-              // Extrai custo de frete do vendedor
-              const freteR = parseFloat(
-                fd.shipping?.cost ||
-                fd.sale_fee?.shipping_cost ||
-                fd.sale_cost?.value ||
-                0
-              );
-              if(freteR > 0 && freteR < preco * 0.50){
-                item.frete  = freteR;
-                item.freteL = freteR;
-              }
-            }
-          }catch(e2){}
-        }
-
-        // Recalcula margem
-        if(item.cmv > 0 && item.preco > 0 && item.taxa > 0){
-          const pis    = item.preco * 0.0065;
-          const cofins = item.preco * 0.03;
-          const lucro  = item.preco - item.cmv - item.preco*item.taxa - item.freteL - pis - cofins;
-          item.lucro        = isNaN(lucro) ? 0 : lucro;
-          item.margem_atual = isNaN(lucro/item.preco) ? null : lucro/item.preco;
-        }
-        atualizados++;
+      if(taxaR > 0 && preco > 0){
+        item.taxa     = taxaR / preco;
+        item.sale_fee = taxaR;
+      }
+      if(freteR > 0 && preco > 0 && freteR < preco * 0.50){
+        item.frete  = freteR;
+        item.freteL = freteR;
       }
 
-      if((i/20+1) % 5 === 0 && atualizados > 0){
-        renderAnuncios();
-        atualizados = 0;
+      // Recalcula margem
+      if(item.cmv > 0 && preco > 0 && item.taxa > 0){
+        const pis    = preco * 0.0065;
+        const cofins = preco * 0.03;
+        const lucro  = preco - item.cmv - preco*item.taxa - item.freteL - pis - cofins;
+        item.lucro        = isNaN(lucro) ? 0 : lucro;
+        item.margem_atual = isNaN(lucro/preco) ? null : lucro/preco;
       }
-      await new Promise(r=>setTimeout(r,200));
+      atualizados++;
+
+      if(atualizados % 20 === 0) renderAnuncios();
+      await new Promise(r=>setTimeout(r,150));
     }catch(e){
-      console.warn('[Taxa ML] Erro:', e);
-      break;
+      console.warn('[Taxa ML] Erro em', mlb, e);
     }
   }
 
