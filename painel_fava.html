@@ -5632,37 +5632,61 @@ async function atualizarTaxasReaisML(){
   if(taxasAtualizadas) return;
   if(!tokens.ml) return;
 
-  console.log('[Taxa+Frete ML] Buscando via marketplace/benchmarks...');
+  console.log('[Taxa+Frete ML] Buscando taxa via /items e frete via shipping_options/free...');
   const ids = anunciosData.map(a=>a.id).filter(Boolean);
   let atualizados = 0;
 
+  // Busca taxa em lotes de 20
+  for(let i=0; i<ids.length; i+=20){
+    const lote = ids.slice(i,i+20);
+    try{
+      const r = await fetch(
+        `/api/ml/items?ids=${lote.join(',')}&attributes=id,sale_fee,listing_type_id`,
+        {headers:{'Authorization':`Bearer ${tokens.ml}`}}
+      );
+      if(r.ok){
+        const data = await r.json();
+        if(Array.isArray(data)){
+          data.forEach(x=>{
+            if(x.code!==200||!x.body?.id) return;
+            const item = anunciosData.find(a=>a.id===x.body.id);
+            if(!item) return;
+            const sfRaw = parseFloat(x.body.sale_fee||0);
+            if(sfRaw>0){
+              item.taxa     = sfRaw>1 ? sfRaw/100 : sfRaw;
+              item.sale_fee = sfRaw;
+            }
+          });
+        }
+      }
+      await new Promise(r=>setTimeout(r,150));
+    }catch(e){ console.warn('[Taxa ML] Erro taxa lote:', e); }
+  }
+
+  // Busca frete um a um via shipping_options/free
   for(let i=0; i<ids.length; i++){
     const mlb  = ids[i];
     const item = anunciosData.find(a=>a.id===mlb);
     if(!item) continue;
     try{
+      const freeShip = item.free_shipping ? 'true' : 'false';
       const r = await fetch(
-        `/api/ml/marketplace/benchmarks/items/${mlb}/details`,
+        `/api/ml/users/537714337/shipping_options/free?item_id=${mlb}&verbose=true&free_shipping=${freeShip}`,
         {headers:{'Authorization':`Bearer ${tokens.ml}`}}
       );
-      if(!r.ok) continue;
-      const d = await r.json();
-
-      const taxaR  = parseFloat(d.costs?.selling_fees || 0);
-      const freteR = parseFloat(d.costs?.shipping_fees || 0);
-      const preco  = item.preco || 0;
-
-      if(taxaR > 0 && preco > 0){
-        item.taxa     = taxaR / preco;
-        item.sale_fee = taxaR;
-      }
-      if(freteR > 0 && preco > 0 && freteR < preco * 0.50){
-        item.frete  = freteR;
-        item.freteL = freteR;
+      if(r.ok){
+        const d = await r.json();
+        const cov = d.coverage?.all_country || {};
+        const freteR = parseFloat(cov.list_cost || 0);
+        if(freteR > 0 && freteR < (item.preco||0) * 0.80){
+          item.frete  = freteR;
+          item.freteL = freteR;
+        }
       }
 
       // Recalcula margem
-      if(item.cmv > 0 && preco > 0 && item.taxa > 0){
+      const preco = item.preco || 0;
+      if(item.cmv>0 && preco>0 && item.taxa>0){
         const pis    = preco * 0.0065;
         const cofins = preco * 0.03;
         const lucro  = preco - item.cmv - preco*item.taxa - item.freteL - pis - cofins;
@@ -5670,12 +5694,9 @@ async function atualizarTaxasReaisML(){
         item.margem_atual = isNaN(lucro/preco) ? null : lucro/preco;
       }
       atualizados++;
-
       if(atualizados % 20 === 0) renderAnuncios();
-      await new Promise(r=>setTimeout(r,150));
-    }catch(e){
-      console.warn('[Taxa ML] Erro em', mlb, e);
-    }
+      await new Promise(r=>setTimeout(r,200));
+    }catch(e){ console.warn('[Frete ML] Erro em', mlb, e); }
   }
 
   if(atualizados > 0) renderAnuncios();
