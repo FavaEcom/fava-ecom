@@ -5306,6 +5306,11 @@ async function carregarAnuncios(){
     const semFrete = anunciosData.filter(a=>a.frete===0).length;
     console.log(`Anúncios: ${anunciosData.length} | com CMV: ${comCmv} | sem frete: ${semFrete}`);
 
+    // Busca taxa real do ML em background (lotes de 20)
+    if(tokens.ml && anunciosData.length > 0){
+      atualizarTaxasReaisML();
+    }
+
   }catch(e){
     console.error('carregarAnuncios:', e);
     if(tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:20px;color:#dc2626">❌ ${e.message}<br><button onclick="carregarAnuncios()" style="margin-top:8px;padding:5px 12px;background:#1F3864;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">Tentar novamente</button></td></tr>`;
@@ -5492,8 +5497,69 @@ function renderAnuncTable(lista){
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// HISTÓRICO DE COMPRAS
+// TAXA REAL ML — busca em background por lotes de 20
 // ══════════════════════════════════════════════════════════════════════
+let taxasAtualizadas = false;
+
+async function atualizarTaxasReaisML(){
+  if(taxasAtualizadas) return;
+  if(!tokens.ml) return;
+
+  console.log('[Taxa ML] Buscando taxas reais em background...');
+  const ids = anunciosData.map(a=>a.id).filter(Boolean);
+  let atualizados = 0;
+
+  for(let i=0; i<ids.length; i+=20){
+    const lote = ids.slice(i, i+20);
+    try{
+      const r = await fetch(`/api/ml/items?ids=${lote.join(',')}&attributes=id,sale_fee,listing_type_id`,{
+        headers:{'Authorization':`Bearer ${tokens.ml}`}
+      });
+      if(!r.ok) break;
+      const data = await r.json();
+      if(!Array.isArray(data)) break;
+
+      data.forEach(x=>{
+        if(x.code !== 200 || !x.body?.id) return;
+        const mlb = x.body.id;
+        const sfRaw = parseFloat(x.body.sale_fee||0);
+        const taxa = sfRaw > 1 ? sfRaw/100 : sfRaw > 0 ? sfRaw : null;
+        if(!taxa) return;
+
+        const item = anunciosData.find(a=>a.id===mlb);
+        if(item && Math.abs(item.taxa - taxa) > 0.001){
+          item.taxa = taxa;
+          item.sale_fee = sfRaw;
+          // Recalcula margem com taxa correta
+          if(item.cmv > 0 && item.preco > 0){
+            const pis = item.preco * 0.0065;
+            const cofins = item.preco * 0.03;
+            const lucro = item.preco - item.cmv - item.preco*taxa - item.freteL - pis - cofins;
+            item.lucro = isNaN(lucro) ? 0 : lucro;
+            item.margem_atual = isNaN(lucro/item.preco) ? null : lucro/item.preco;
+          }
+          atualizados++;
+        }
+      });
+
+      // Atualiza tabela a cada 5 lotes
+      if((i/20+1) % 5 === 0 && atualizados > 0){
+        renderAnuncios();
+        atualizados = 0;
+      }
+
+      await new Promise(r=>setTimeout(r,150)); // pausa entre lotes
+    }catch(e){
+      console.warn('[Taxa ML] Erro no lote:', e);
+      break;
+    }
+  }
+
+  if(atualizados > 0) renderAnuncios();
+  taxasAtualizadas = true;
+  console.log('[Taxa ML] Taxas reais atualizadas');
+}
+
 let historicoData = [];
 let historicoCarregado = false;
 
