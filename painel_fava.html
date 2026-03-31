@@ -1816,6 +1816,17 @@ function zerarDescSelecionados(){
 // ── Exportar planilha ML (mantém formato original, só muda col E = desconto) ──
 function exportarPlanilhaML(){
   if(!promoPlanilhaRows.length){ alert('Importe a planilha primeiro'); return; }
+  // Aviso: produtos com desconto mas sem CMV — podem ter margem negativa
+  const semCmvComDesc = promoData.filter(p=>!p.cmv && p.descEditado>=5);
+  if(semCmvComDesc.length){
+    const ok = confirm(
+      `ATENÇÃO: ${semCmvComDesc.length} produtos têm desconto definido mas SEM CMV carregado.\n` +
+      `Esses produtos podem ter margem negativa.\n\n` +
+      `Exemplos: ${semCmvComDesc.slice(0,3).map(p=>p.sku+' ('+p.descEditado+'%)').join(', ')}\n\n` +
+      `Deseja exportar mesmo assim?\n(Recomendado: carregue o CMV primeiro)`
+    );
+    if(!ok) return;
+  }
   try{
     // Cria cópia dos dados originais e atualiza o desconto (col E = índice 4)
     const exportRows = promoPlanilhaRows.map(r => r ? [...r] : []);
