@@ -5275,7 +5275,8 @@ async function carregarAnuncios(){
     anunciosData = listings.map(l=>{
       const sku = String(l.sku||'').trim();
       const cmvInfo = cmvLookup(sku);
-      const cmv = parseFloat(l.cmv)||parseFloat(l.cmv_br)||cmvInfo?.cmv||0;
+      // Prioridade: 1) cmvCache (BASE_DADOS_V2 — mais confiável) 2) banco
+      const cmv = cmvInfo?.cmv || parseFloat(l.cmv)||parseFloat(l.cmv_br)||0;
       const preco = parseFloat(l.preco)||0;
       // sale_fee: decimal (0.12) da API ML ou percentual (12.0) do banco — normalizar
       const sfRaw = parseFloat(l.sale_fee)||0;
