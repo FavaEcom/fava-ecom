@@ -536,6 +536,7 @@ function salvarCfg(){
   <div class="vtab" id="vtab-ped" onclick="setView('pedidos')">Pedidos</div>
   <div class="vtab" id="vtab-prom" onclick="setView('promocoes')">Promoções</div>
   <div class="vtab" id="vtab-difal" onclick="setView('difal')">DIFAL</div>
+  <div class="vtab" id="vtab-hist" onclick="setView('historico')">Histórico</div>
   <div class="vtab" id="vtab-perg" onclick="setView('perguntas')">Perguntas</div>
 </div>
 
@@ -624,17 +625,29 @@ function salvarCfg(){
       <button class="filter-btn" id="fb-alerta" onclick="filtrarAnuncioStatus('alerta',this)">Alertas</button>
       <button class="filter-btn" id="fb-promo" onclick="filtrarAnuncioStatus('promo',this)">Promoções</button>
     </div>
-    <div class="anunc-table-wrap">
-      <table class="anunc-table">
+    <div class="anunc-table-wrap" style="overflow-x:auto">
+      <table class="anunc-table" style="table-layout:fixed;width:100%">
+        <colgroup>
+          <col style="width:28%"><!-- Produto -->
+          <col style="width:7%"> <!-- SKU -->
+          <col style="width:13%"><!-- MLB -->
+          <col style="width:8%"> <!-- Preço -->
+          <col style="width:8%"> <!-- CMV -->
+          <col style="width:6%"> <!-- Taxa -->
+          <col style="width:8%"> <!-- Frete liq -->
+          <col style="width:8%"> <!-- Margem -->
+          <col style="width:14%"><!-- Frete tipo -->
+        </colgroup>
         <thead><tr>
-          <th onclick="sortAnuncios('titulo')">Produto</th>
-          <th onclick="sortAnuncios('sku')">SKU</th>
-          <th class="num" onclick="sortAnuncios('preco')">Preço</th>
-          <th class="num" onclick="sortAnuncios('custo')">Custo</th>
-          <th class="num" onclick="sortAnuncios('margem')">Margem</th>
-          <th class="num" onclick="sortAnuncios('vendas30')">Vendas 30d</th>
-          <th>Status</th>
-          <th>Ações</th>
+          <th onclick="sortAnuncios('titulo')" style="cursor:pointer">Produto ↕</th>
+          <th onclick="sortAnuncios('sku')" style="cursor:pointer">SKU ↕</th>
+          <th>MLB</th>
+          <th class="num" onclick="sortAnuncios('preco')" style="cursor:pointer">Preço ↕</th>
+          <th class="num" onclick="sortAnuncios('cmv')" style="cursor:pointer">CMV ↕</th>
+          <th class="num">Taxa</th>
+          <th class="num">Frete liq.</th>
+          <th class="num" onclick="sortAnuncios('margem_atual')" style="cursor:pointer">Margem ↕</th>
+          <th>Frete tipo</th>
         </tr></thead>
         <tbody id="anunc-tbody"></tbody>
       </table>
@@ -869,8 +882,9 @@ function salvarCfg(){
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <strong style="font-size:12px" id="prom-sel-count">0 selecionados</strong>
         <span style="font-size:12px;color:var(--muted)">Ou aplicar % fixo:</span>
-        <input type="number" id="prom-desc-pct" value="10" min="5" max="80" step="1"
-          style="width:60px;border:1px solid var(--borda);border-radius:5px;padding:4px 7px;font-size:13px;font-weight:700;text-align:center;outline:none">
+        <input type="number" id="prom-desc-pct" value="" min="5" max="80" step="1"
+          style="width:60px;border:1px solid var(--borda);border-radius:5px;padding:4px 7px;font-size:13px;font-weight:700;text-align:center;outline:none"
+          placeholder="0">
         <button onclick="aplicarDescSelecionados()" style="padding:5px 14px;font-size:12px;font-weight:700;background:#1F3864;color:#fff;border:none;border-radius:6px;cursor:pointer">
           Aplicar nos selecionados
         </button>
@@ -973,6 +987,52 @@ function salvarCfg(){
   </div>
 </div>
 
+<!-- ═══════════ VIEW: HISTÓRICO ═══════════ -->
+<div id="view-historico" style="display:none;flex-direction:column">
+  <div class="main">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <input type="text" id="hist-search" placeholder="Buscar SKU, produto, fornecedor..."
+        oninput="filtrarHistorico()"
+        style="border:1px solid var(--borda);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:280px">
+      <span id="hist-status" style="font-size:12px;color:var(--muted)">Carregando...</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:10px" id="hist-kpis"></div>
+    <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden">
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed">
+          <colgroup>
+            <col style="width:8%"> <!-- NF -->
+            <col style="width:10%"><!-- Data -->
+            <col style="width:22%"><!-- Fornecedor -->
+            <col style="width:8%"> <!-- SKU -->
+            <col style="width:22%"><!-- Produto -->
+            <col style="width:6%"> <!-- Qtd -->
+            <col style="width:9%"> <!-- V.Unit -->
+            <col style="width:8%"> <!-- CMV BR -->
+            <col style="width:7%"> <!-- CMV PR -->
+          </colgroup>
+          <thead id="hist-thead">
+            <tr style="background:#f8fafc">
+              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--borda)">NF</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--borda)">Data</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--borda)">Fornecedor</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--borda)">SKU</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--borda)">Produto</th>
+              <th style="padding:6px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--borda)">Qtd</th>
+              <th style="padding:6px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--borda)">V.Unit</th>
+              <th style="padding:6px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--azul);text-transform:uppercase;border-bottom:1px solid var(--borda)">CMV BR</th>
+              <th style="padding:6px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--borda)">CMV PR</th>
+            </tr>
+          </thead>
+          <tbody id="hist-tbody">
+            <tr><td colspan="9" style="text-align:center;padding:30px;color:var(--muted)">Carregando histórico...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════ VIEW: PERGUNTAS ═══════════ -->
 <div id="view-perguntas" style="display:none;flex-direction:column">
   <div class="main">
@@ -1013,7 +1073,7 @@ const SENHAS = {
 
 // Abas visíveis por perfil
 const ABAS_PERFIL = {
-  admin:      ['dashboard','anuncios','financeiro','conciliacao','precos','ads','pedidos','promocoes','difal','perguntas'],
+  admin:      ['dashboard','anuncios','financeiro','conciliacao','precos','ads','pedidos','promocoes','difal','historico','perguntas'],
   financeiro: ['financeiro','conciliacao','difal'],
   operacao:   ['dashboard','pedidos'],
 };
@@ -4660,7 +4720,7 @@ let currentView = 'dashboard';
 function setView(v){
   currentView = v;
   const safe=(id,fn)=>{const el=document.getElementById(id);if(el)fn(el);};
-  ['dashboard','anuncios','financeiro','conciliacao','precos','promocoes','difal','perguntas','ads','pedidos'].forEach(name=>{
+  ['dashboard','anuncios','financeiro','conciliacao','precos','promocoes','difal','perguntas','ads','pedidos','historico'].forEach(name=>{
     safe('view-'+name, el=>el.style.display = v===name?'flex':'none');
   });
   safe('period-bar', el=>el.style.display = v==='dashboard'?'flex':'none');
@@ -4674,12 +4734,14 @@ function setView(v){
   safe('vtab-perg',  el=>el.classList.toggle('a', v==='perguntas'));
   safe('vtab-ads',   el=>el.classList.toggle('a', v==='ads'));
   safe('vtab-ped',   el=>el.classList.toggle('a', v==='pedidos'));
+  safe('vtab-hist',   el=>el.classList.toggle('a', v==='historico'));
   if(v==='anuncios' && anunciosData.length===0) carregarAnuncios();
   if(v==='financeiro') initFinanceiro();
   if(v==='conciliacao') initConciliacao();
   if(v==='pedidos') initPedidos();
   if(v==='promocoes') carregarPromocoes();
   if(v==='difal') renderDifal();
+  if(v==='historico') initHistorico();
   if(v==='perguntas'){ const k=localStorage.getItem('fava_claude_key')||''; safe('perg-apikey',el=>el.value=k); }
 }
 
@@ -4854,7 +4916,7 @@ function renderFornecedores(){
     <td class="num">R$ ${fmt(d.total)}</td>
     <td class="num" style="color:${d.apagar>0?'#dc2626':'#16a34a'}">R$ ${fmt(d.apagar)}</td>
   </tr>`);
-  (document.getElementById('tbody-fornec')||{})['innerHTML'] = rows.join('')||'<tr><td colspan="4" style="text-align:center;padding:15px;color:var(--muted)">Sem dados</td></tr>';
+  (document.getElementById('tbody-fornecedores')||{})['innerHTML'] = rows.join('')||'<tr><td colspan="4" style="text-align:center;padding:15px;color:var(--muted)">Sem dados</td></tr>';
 }
 
 // ── LANÇAMENTOS MANUAIS ────────────────────────────────────────────────────
@@ -5268,12 +5330,21 @@ function renderAnuncios(){
   if(!tbody) return;
   const q = (document.getElementById('anunc-search')?.value||'').toLowerCase();
   const filtro = anunciosFiltroStatus||'todos';
-  let lista = anunciosData.filter(a=>{
+  let lista = [...anunciosData].filter(a=>{
     if(q && !a.titulo.toLowerCase().includes(q) && !a.sku.toLowerCase().includes(q) && !a.id.toLowerCase().includes(q)) return false;
     if(filtro==='alerta' && (a.margem_atual===null || a.margem_atual>=.20)) return false;
     if(filtro==='promo' && a.free_shipping!==1) return false;
     return true;
   });
+
+  // Ordenação
+  if(anuncSort && anuncSort.col){
+    lista.sort((a,b)=>{
+      const va = a[anuncSort.col]??-999, vb = b[anuncSort.col]??-999;
+      return (va>vb?1:-1)*anuncSort.dir;
+    });
+  }
+
   if(!lista.length){
     tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:#9ca3af">Nenhum anúncio encontrado</td></tr>';
     return;
@@ -5281,12 +5352,13 @@ function renderAnuncios(){
   tbody.innerHTML = lista.map(a=>{
     const mgCor = a.margem_atual===null?'var(--muted)':a.margem_atual>=.20?'var(--verde)':a.margem_atual>=.10?'var(--amarelo)':'var(--vermelho)';
     const mgStr = a.margem_atual!==null ? (a.margem_atual*100).toFixed(1)+'%' : (a.cmv>0?'—':'<span style="color:#f59e0b;font-size:9px">sem CMV</span>');
-    const freteTxt = a.frete>0 ? '<strong>R$'+a.freteL.toFixed(2)+'</strong><span style="font-size:9px;color:#9ca3af"> liq</span>' : '<span style="color:#9ca3af">—</span>';
+    const freteTxt = a.frete>0 ? '<strong>R$'+(a.freteL||0).toFixed(2)+'</strong><span style="font-size:9px;color:#9ca3af"> liq</span>' : '<span style="color:#9ca3af">—</span>';
     const taxaTxt = a.taxa>0 ? (a.taxa*100).toFixed(0)+'%' : '—';
+    const mlbLink = a.id ? `<a href="https://www.mercadolivre.com.br/p/${a.id}" target="_blank" style="font-size:9px;color:var(--azul2);text-decoration:none">${a.id}</a>` : '—';
     return `<tr style="border-bottom:1px solid #f9fafb">
       <td style="padding:5px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px" title="${a.titulo}">${a.titulo}</td>
       <td style="padding:5px 8px;font-weight:700;color:#1F3864;font-size:11px">${a.sku||'—'}</td>
-      <td style="padding:5px 8px;font-size:10px;color:#6b7280">${a.id}</td>
+      <td style="padding:5px 8px;font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${mlbLink}</td>
       <td style="padding:5px 8px;text-align:right;font-weight:700">R$${(a.preco||0).toFixed(2)}</td>
       <td style="padding:5px 8px;text-align:right;color:var(--muted)">${a.cmv>0?'R$'+a.cmv.toFixed(2):'<span style="color:#f59e0b;font-size:9px">sem CMV</span>'}</td>
       <td style="padding:5px 8px;text-align:right;color:var(--muted)">${taxaTxt}</td>
@@ -5298,12 +5370,15 @@ function renderAnuncios(){
 
   // KPIs
   const total=lista.length, comCmv=lista.filter(a=>a.cmv>0).length;
-  const mgMed = lista.filter(a=>a.margem_atual!==null).reduce((s,a)=>s+a.margem_atual,0)/(lista.filter(a=>a.margem_atual!==null).length||1);
+  const comMargem = lista.filter(a=>a.margem_atual!==null);
+  const mgMed = comMargem.length ? comMargem.reduce((s,a)=>s+a.margem_atual,0)/comMargem.length : 0;
   const kpis=document.getElementById('anunc-kpis');
   if(kpis) kpis.innerHTML=`
     <div class="kpi"><div class="kl">Anúncios</div><div class="kv">${total}</div></div>
     <div class="kpi"><div class="kl">Com CMV</div><div class="kv" style="color:${comCmv===total?'var(--verde)':'var(--amarelo)'}">${comCmv}</div></div>
+    <div class="kpi"><div class="kl">Sem CMV</div><div class="kv" style="color:${total-comCmv>0?'var(--amarelo)':'var(--verde)'}">${total-comCmv}</div></div>
     <div class="kpi"><div class="kl">Margem média</div><div class="kv" style="color:${mgMed>=.20?'var(--verde)':mgMed>=.10?'var(--amarelo)':'var(--vermelho)'}">${(mgMed*100).toFixed(1)}%</div></div>
+    <div class="kpi"><div class="kl">Margem &lt; 10%</div><div class="kv" style="color:var(--vermelho)">${comMargem.filter(a=>a.margem_atual<.10).length}</div></div>
     <div class="kpi"><div class="kl">Sem frete</div><div class="kv" style="color:${lista.filter(a=>a.frete===0).length?'var(--amarelo)':'var(--verde)'}">${lista.filter(a=>a.frete===0).length}</div></div>`;
 }
 
@@ -5315,31 +5390,10 @@ function filtrarAnuncioStatus(s,btn){
   if(btn) btn.classList.add('a');
   renderAnuncios();
 }
-
-
-function filtrarAnuncios(){
-  const q = ((document.getElementById('anunc-search')||{value:''}).value||'').toLowerCase();
-  let listlista =sData.filter(a=>{
-    if(q && !a.titulo.toLowerCase().includes(q) && !a.mlb.includes(q) && !a.sku.includes(q)) return false;
-    if(anuncFiltro==='alerta') return a.margem_atual!==null && a.margem_atual<.20;
-    if(anuncFiltro==='promo') return a.margem_atual!==null && a.margem_atual>=.20;
-    if(anuncFiltro==='fora') return a.preco_sugerido>0 && Math.abs(a.delta)>2;
-    return true;
-  });
-
-  // Sort
-  lista.sort((a,b)=>{
-    const va = a[anuncSort.col]??-999, vb = b[anuncSort.col]??-999;
-    return (va>vb?1:-1)*anuncSort.dir;
-  });
-
-  renderAnuncTable(lista);
-}
-
-function sortAnunc(col){
+function sortAnuncios(col){
   if(anuncSort.col===col) anuncSort.dir*=-1;
-  else {anuncSort.col=col;anuncSort.dir=-1;}
-  filtrarAnuncios();
+  else{anuncSort.col=col;anuncSort.dir=-1;}
+  renderAnuncios();
 }
 
 function renderAnuncTable(lista){
@@ -5396,8 +5450,101 @@ function renderAnuncTable(lista){
   (document.getElementById('anunc-tbody')||{}).innerHTML = rows;
 }
 
-// MODAL PREÇO
-function abrirModal(mlb, titulo, precoAtual, precoSug){
+// ══════════════════════════════════════════════════════════════════════
+// HISTÓRICO DE COMPRAS
+// ══════════════════════════════════════════════════════════════════════
+let historicoData = [];
+let historicoCarregado = false;
+
+async function initHistorico(){
+  if(historicoCarregado && historicoData.length) return;
+  const st = document.getElementById('hist-status');
+  const tbody = document.getElementById('hist-tbody');
+  if(st) st.textContent = '⟳ Carregando...';
+
+  try{
+    const r = await fetch('/api/db/historico');
+    if(!r.ok) throw new Error('Banco indisponível: '+r.status);
+    historicoData = await r.json();
+    historicoCarregado = true;
+
+    if(st) st.textContent = `${historicoData.length} itens de compra`;
+    renderHistoricoKpis();
+    renderHistoricoTabela(historicoData);
+  }catch(e){
+    if(st) st.textContent = '❌ Erro: '+e.message;
+    if(tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:#dc2626">Erro ao carregar histórico. Verifique o banco.</td></tr>';
+  }
+}
+
+function renderHistoricoKpis(){
+  const kpis = document.getElementById('hist-kpis');
+  if(!kpis) return;
+  const total = historicoData.length;
+  const comCmv = historicoData.filter(h=>parseFloat(h.cmv_br||0)>0).length;
+  const nfs = new Set(historicoData.map(h=>h.nf)).size;
+  const forn = new Set(historicoData.map(h=>h.fornecedor).filter(Boolean)).size;
+  const skus = new Set(historicoData.map(h=>h.sku).filter(Boolean)).size;
+  kpis.innerHTML = `
+    <div class="kpi"><div class="kl">Itens</div><div class="kv">${total}</div></div>
+    <div class="kpi"><div class="kl">NFs</div><div class="kv">${nfs}</div></div>
+    <div class="kpi"><div class="kl">Fornecedores</div><div class="kv">${forn}</div></div>
+    <div class="kpi"><div class="kl">SKUs únicos</div><div class="kv">${skus}</div></div>
+    <div class="kpi"><div class="kl">Com CMV</div><div class="kv" style="color:${comCmv===total?'var(--verde)':'var(--amarelo)'}">${comCmv}</div></div>`;
+}
+
+function renderHistoricoTabela(lista){
+  const tbody = document.getElementById('hist-tbody');
+  if(!tbody) return;
+  if(!lista.length){
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)">Nenhum item encontrado</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.slice(0,500).map((h,i)=>{
+    const cmvBr = parseFloat(h.cmv_br||0);
+    const cmvPr = parseFloat(h.cmv_pr||0);
+    const vunit = parseFloat(h.vunit||0);
+    const qtd = parseFloat(h.qtd||0);
+    const data = h.data_emissao ? h.data_emissao.substring(0,10) : '—';
+    const [y,m,d] = data.split('-');
+    const dataFmt = data !== '—' ? `${d}/${m}/${y.slice(2)}` : '—';
+    const bgRow = i%2===0 ? '' : 'background:#f8fafc';
+    return `<tr style="${bgRow}">
+      <td style="padding:5px 8px;font-size:10px;font-weight:700;color:var(--azul)">${h.nf||'—'}</td>
+      <td style="padding:5px 8px;font-size:10px;color:var(--muted)">${dataFmt}</td>
+      <td style="padding:5px 8px;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${h.fornecedor||''}">${(h.fornecedor||'—').substring(0,28)}</td>
+      <td style="padding:5px 8px;font-size:10px;font-weight:700;color:var(--azul2)">${h.sku||'—'}</td>
+      <td style="padding:5px 8px;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${h.nome||''}">${(h.nome||'—').substring(0,30)}</td>
+      <td style="padding:5px 8px;text-align:right;font-size:10px">${qtd}</td>
+      <td style="padding:5px 8px;text-align:right;font-size:10px">R$ ${vunit.toFixed(2)}</td>
+      <td style="padding:5px 8px;text-align:right;font-size:10px;font-weight:700;color:${cmvBr>0?'var(--azul)':'var(--muted)'}">
+        ${cmvBr>0?'R$ '+cmvBr.toFixed(4):'—'}
+      </td>
+      <td style="padding:5px 8px;text-align:right;font-size:10px;color:var(--muted)">
+        ${cmvPr>0?'R$ '+cmvPr.toFixed(4):'—'}
+      </td>
+    </tr>`;
+  }).join('');
+  if(lista.length>500){
+    const tbody2 = document.getElementById('hist-tbody');
+    if(tbody2) tbody2.innerHTML += `<tr><td colspan="9" style="text-align:center;padding:10px;color:var(--muted);font-size:11px">Exibindo 500 de ${lista.length} itens — use a busca para filtrar</td></tr>`;
+  }
+}
+
+function filtrarHistorico(){
+  const q = (document.getElementById('hist-search')?.value||'').toLowerCase().trim();
+  if(!q){ renderHistoricoTabela(historicoData); return; }
+  const filtrado = historicoData.filter(h=>
+    (h.sku||'').toLowerCase().includes(q) ||
+    (h.nome||'').toLowerCase().includes(q) ||
+    (h.fornecedor||'').toLowerCase().includes(q) ||
+    (h.nf||'').toString().includes(q)
+  );
+  const st = document.getElementById('hist-status');
+  if(st) st.textContent = `${filtrado.length} de ${historicoData.length} itens`;
+  renderHistoricoTabela(filtrado);
+}
+
   modalMLB = mlb;
   (document.getElementById('modal-titulo')||{}).textContent = 'Atualizar preço';
   (document.getElementById('modal-info')||{}).innerHTML =
