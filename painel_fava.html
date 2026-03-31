@@ -992,17 +992,54 @@ function salvarCfg(){
 <div id="view-cmv" style="display:none;flex-direction:column">
   <div class="main">
 
-    <!-- Barra de ação -->
-    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:9px;padding:12px 16px;margin-bottom:12px">
-      <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:4px">💰 Gerenciador de CMV — Fonte de Verdade</div>
-      <div style="font-size:12px;color:#92400e">Edite o CMV Brasil de qualquer produto aqui. Este valor tem prioridade sobre tudo — histórico de NF, Bling, etc.</div>
+    <!-- CALCULADORA DE CMV — Lucro Real -->
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:#166534;margin-bottom:10px">🧮 Calcular CMV — Lucro Real | PIS 1,65% + COFINS 7,60% fixos</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div>
+          <label style="font-size:10px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px">SKU Fava</label>
+          <input type="text" id="calc-sku" placeholder="Ex: 1562"
+            style="width:85px;border:1px solid #d1d5db;border-radius:6px;padding:6px 9px;font-size:12px;outline:none">
+        </div>
+        <div>
+          <label style="font-size:10px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px">Custo Bling (já c/ IPI e ST)</label>
+          <input type="number" id="calc-custo" placeholder="R$ 0,0000" min="0" step="0.0001"
+            style="width:140px;border:1px solid #d1d5db;border-radius:6px;padding:6px 9px;font-size:12px;outline:none"
+            oninput="calcCMVNovo()">
+        </div>
+        <div>
+          <label style="font-size:10px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px">ICMS crédito</label>
+          <select id="calc-icms" onchange="calcCMVNovo()"
+            style="border:1px solid #d1d5db;border-radius:6px;padding:6px 9px;font-size:12px;outline:none;background:#fff">
+            <option value="0.04">4% (importado/reduzido)</option>
+            <option value="0.12" selected>12% (interestadual PR/SP)</option>
+            <option value="0.195">19,5% (PR interno)</option>
+            <option value="0">0% (sem crédito ICMS)</option>
+          </select>
+        </div>
+        <!-- Resultado -->
+        <div style="background:#fff;border:1.5px solid #86efac;border-radius:8px;padding:8px 14px;min-width:200px">
+          <div style="font-size:10px;color:#6b7280;margin-bottom:3px">CMV Brasil</div>
+          <div id="calc-res-br" style="font-size:20px;font-weight:700;color:#166534">—</div>
+          <div id="calc-res-det" style="font-size:10px;color:#6b7280;margin-top:2px"></div>
+        </div>
+        <div style="background:#fff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 14px;min-width:140px">
+          <div style="font-size:10px;color:#6b7280;margin-bottom:3px">CMV Paraná (−ICMS saída 12%)</div>
+          <div id="calc-res-pr" style="font-size:16px;font-weight:700;color:#2E75B6">—</div>
+        </div>
+        <button onclick="salvarCMVNovo()"
+          style="padding:8px 16px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">
+          💾 Salvar CMV
+        </button>
+        <span id="calc-msg" style="font-size:11px;color:var(--muted);align-self:center"></span>
+      </div>
     </div>
 
-    <!-- Busca e filtros -->
+    <!-- Barra de ação -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-      <input type="text" id="cmv-search" placeholder="Buscar SKU ou nome do produto..."
+      <input type="text" id="cmv-search" placeholder="Buscar SKU ou nome..."
         oninput="filtrarCMV()"
-        style="border:1px solid var(--borda);border-radius:6px;padding:7px 12px;font-size:12px;outline:none;width:300px">
+        style="border:1px solid var(--borda);border-radius:6px;padding:7px 12px;font-size:12px;outline:none;width:280px">
       <button onclick="filtrarCMVStatus('todos')" id="cmv-f-todos" class="filt-btn a">Todos</button>
       <button onclick="filtrarCMVStatus('sem')" id="cmv-f-sem" class="filt-btn">Sem CMV</button>
       <button onclick="filtrarCMVStatus('com')" id="cmv-f-com" class="filt-btn">Com CMV</button>
@@ -1020,22 +1057,22 @@ function salvarCfg(){
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed">
           <colgroup>
-            <col style="width:8%">  <!-- SKU -->
-            <col style="width:40%"> <!-- Produto -->
-            <col style="width:13%"> <!-- CMV atual -->
-            <col style="width:13%"> <!-- Novo CMV -->
-            <col style="width:10%"> <!-- CMV PR -->
-            <col style="width:8%">  <!-- Status -->
-            <col style="width:8%">  <!-- Ação -->
+            <col style="width:8%">
+            <col style="width:40%">
+            <col style="width:13%">
+            <col style="width:13%">
+            <col style="width:10%">
+            <col style="width:8%">
+            <col style="width:8%">
           </colgroup>
           <thead>
             <tr style="background:#1F3864">
               <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase">SKU</th>
               <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase">Produto</th>
-              <th style="padding:8px 10px;text-align:right;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase">CMV Brasil atual</th>
-              <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#fef9c3;text-transform:uppercase">✏️ Novo CMV</th>
+              <th style="padding:8px 10px;text-align:right;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase">CMV BR atual</th>
+              <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#fef9c3;text-transform:uppercase">✏️ Novo CMV BR</th>
               <th style="padding:8px 10px;text-align:right;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase">CMV PR</th>
-              <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase">Fonte</th>
+              <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase">Status</th>
               <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase">Ação</th>
             </tr>
           </thead>
@@ -5634,7 +5671,57 @@ let cmvDataFiltrada = [];
 let cmvFiltroStatus = 'todos';
 let cmvAlterados = {};
 
-async function initCMV(){
+function calcCMV(){
+  const custo  = parseFloat(document.getElementById('calc-custo')?.value||0);
+  if(!custo || custo<=0){ document.getElementById('calc-res').style.display='none'; return; }
+  const ipi    = parseFloat(document.getElementById('calc-ipi')?.value||0)/100;
+  const icms   = parseFloat(document.getElementById('calc-icms')?.value||12)/100;
+  const st     = parseFloat(document.getElementById('calc-st')?.value||0);
+  const pis    = parseFloat(document.getElementById('calc-pis')?.value||1.65)/100;
+  const cofins = parseFloat(document.getElementById('calc-cofins')?.value||7.6)/100;
+
+  const custoIpi   = custo * (1 + ipi);
+  const credIcms   = custoIpi * icms;
+  const credPisCof = custoIpi * (pis + cofins);
+  const cmvBr      = Math.max(custoIpi - credIcms - credPisCof, custo * 0.35);
+  const cmvPr      = cmvBr; // PR = BR quando origem PR (mesmo estado)
+
+  const fmt = v => 'R$ '+v.toFixed(4);
+  document.getElementById('calc-r-custo').textContent  = fmt(custoIpi);
+  document.getElementById('calc-r-icms').textContent   = fmt(credIcms);
+  document.getElementById('calc-r-piscof').textContent = fmt(credPisCof);
+  document.getElementById('calc-r-cmvbr').textContent  = fmt(cmvBr);
+  document.getElementById('calc-r-cmvpr').textContent  = fmt(cmvPr);
+  document.getElementById('calc-res').style.display    = '';
+
+  // Guarda resultado para salvar
+  window._calcCMVResult = {cmvBr, cmvPr};
+}
+
+async function salvarCMVCalculado(){
+  const sku = (document.getElementById('calc-sku')?.value||'').trim();
+  if(!sku){ alert('Digite o SKU'); return; }
+  if(!window._calcCMVResult){ alert('Calcule o CMV primeiro'); return; }
+  const {cmvBr, cmvPr} = window._calcCMVResult;
+  try{
+    const r = await fetch('/api/cmv-cache',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({[sku]:{cmv:cmvBr,cmvBr,cmvPr,nome:''}})});
+    if(!r.ok) throw new Error('Erro ao salvar');
+    // Atualiza tabela e cache local
+    const item = cmvData.find(p=>p.sku===sku);
+    if(item){item.cmv_br=cmvBr;item.cmv_pr=cmvPr;}
+    dados.cmvCache[sku] = {cmv:cmvBr, cmvPr, nome:item?.nome||sku, fonte:'manual'};
+    const msg = document.getElementById('calc-msg');
+    if(msg){msg.textContent=`✅ SKU ${sku} salvo — CMV BR: R$ ${cmvBr.toFixed(4)}`;msg.style.color='#166534';}
+    filtrarCMV();
+    renderCMVKpis();
+  }catch(e){
+    const msg = document.getElementById('calc-msg');
+    if(msg){msg.textContent='❌ '+e.message;msg.style.color='#dc2626';}
+  }
+}
+
+
   const tbody = document.getElementById('cmv-tbody');
   if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)"><div class="spin" style="margin:0 auto 10px"></div>Carregando produtos...</td></tr>';
   try{
@@ -5718,7 +5805,64 @@ function renderCMVTabela(){
   if(cmvDataFiltrada.length>300) tbody.innerHTML+=`<tr><td colspan="7" style="text-align:center;padding:10px;color:var(--muted);font-size:11px">Exibindo 300 de ${cmvDataFiltrada.length} — use a busca</td></tr>`;
 }
 
-function marcarAlteracaoCMV(sku,valor){
+function calcCMVNovo(){
+  const custo = parseFloat(document.getElementById('calc-custo')?.value||0);
+  const icms  = parseFloat(document.getElementById('calc-icms')?.value||0.12);
+  if(!custo){ 
+    (document.getElementById('calc-res-br')||{}).textContent='—';
+    (document.getElementById('calc-res-pr')||{}).textContent='—';
+    (document.getElementById('calc-res-det')||{}).textContent='';
+    return; 
+  }
+  // PIS e COFINS sempre fixos no Lucro Real
+  const PIS = 0.0165, COFINS = 0.076;
+  const credPis    = custo * PIS;
+  const credCofins = custo * COFINS;
+  const credIcms   = custo * icms;
+  const cmvBr = custo - credPis - credCofins - credIcms;
+  const cmvPr = cmvBr - (cmvBr * 0.12); // ICMS saída PR 12%
+
+  const fmt = v => 'R$ '+v.toFixed(4);
+  (document.getElementById('calc-res-br')||{}).textContent = fmt(cmvBr);
+  (document.getElementById('calc-res-pr')||{}).textContent = fmt(cmvPr);
+  (document.getElementById('calc-res-det')||{}).textContent = 
+    `− PIS ${fmt(credPis)} − COFINS ${fmt(credCofins)} − ICMS ${fmt(credIcms)}`;
+}
+
+async function salvarCMVNovo(){
+  const sku   = (document.getElementById('calc-sku')?.value||'').trim();
+  const custo = parseFloat(document.getElementById('calc-custo')?.value||0);
+  const icms  = parseFloat(document.getElementById('calc-icms')?.value||0.12);
+  const msg   = document.getElementById('calc-msg');
+
+  if(!sku){ alert('Digite o SKU Fava'); return; }
+  if(!custo){ alert('Digite o custo do Bling'); return; }
+
+  const PIS = 0.0165, COFINS = 0.076;
+  const cmvBr = custo - custo*PIS - custo*COFINS - custo*icms;
+  const cmvPr = cmvBr - cmvBr*0.12;
+
+  try{
+    const r = await fetch('/api/cmv-cache',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({[sku]:{cmv:cmvBr,cmvBr:cmvBr,cmvPr:cmvPr,nome:''}})});
+    if(!r.ok) throw new Error('Erro ao salvar');
+
+    // Atualiza cmvCache do painel imediatamente
+    dados.cmvCache[sku] = {cmv:cmvBr, cmvPr:cmvPr, nome:dados.cmvCache[sku]?.nome||sku, fonte:'manual'};
+
+    // Atualiza tabela CMV se carregada
+    const item = cmvData.find(p=>p.sku===sku);
+    if(item){item.cmv_br=cmvBr;item.cmv_pr=cmvPr;}
+    filtrarCMV();
+
+    if(msg) msg.textContent = `✅ SKU ${sku} → R$ ${cmvBr.toFixed(4)}`;
+    setTimeout(()=>{ if(msg) msg.textContent=''; },3000);
+  }catch(e){
+    if(msg) msg.textContent='❌ '+e.message;
+  }
+}
+
+
   const v=parseFloat(valor);
   if(v>0) cmvAlterados[sku]=v; else delete cmvAlterados[sku];
   renderCMVKpis();
