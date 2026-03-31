@@ -3786,17 +3786,57 @@ async function buscarCMVSemCMV(){
 }
 
 
-// ─ Lookup CMV robusto — tenta múltiplos formatos de SKU ─
+// ─ Lookup CMV robusto — tenta múltiplos formatos de SKU + kits ─
 function cmvLookup(sku){
   if(!sku) return null;
   const s = String(sku).trim();
   if(!s) return null;
-  // Tenta: string exata → sem zeros à esquerda → número inteiro → trim adicional
-  return dados.cmvCache[s]
-      || dados.cmvCache[s.replace(/^0+/,'')||s]
-      || (parseInt(s)>0 ? dados.cmvCache[String(parseInt(s))] : null)
-      || dados.cmvCache[s.toLowerCase()]
-      || null;
+
+  // 1. Busca direta
+  const direto = dados.cmvCache[s]
+    || dados.cmvCache[s.replace(/^0+/,'')||s]
+    || (parseInt(s)>0 ? dados.cmvCache[String(parseInt(s))] : null)
+    || dados.cmvCache[s.toLowerCase()]
+    || null;
+  if(direto) return direto;
+
+  // 2. Lógica de kits: SKU com hífen
+  // Formato: N-SKU (ex: 5-2781 = 5x CMV do 2781)
+  // Formato: N-SKU1-SKU2 (ex: 2-1562-2084 = CMV 1562 + CMV 2084)
+  // Formato: SKU1-SKU2-SKU3 (conjunto = soma dos CMVs)
+  if(s.includes('-')){
+    const partes = s.split('-');
+
+    // Caso: primeiro elemento é número puro = quantidade
+    const qtd = parseInt(partes[0]);
+    if(!isNaN(qtd) && String(qtd) === partes[0] && partes.length >= 2){
+      const resto = partes.slice(1);
+      if(resto.length === 1){
+        // N-SKU → quantidade × CMV do SKU
+        const base = cmvLookup(resto[0]);
+        if(base?.cmv) return { cmv: base.cmv * qtd, nome: `${qtd}x ${base.nome||resto[0]}`, fonte:'kit' };
+      } else {
+        // N-SKU1-SKU2 → soma dos CMVs dos componentes
+        let total = 0, nomes = [];
+        for(const p of resto){
+          const b = cmvLookup(p);
+          if(b?.cmv){ total += b.cmv; nomes.push(b.nome||p); }
+          else return null; // se algum componente não tem CMV, retorna null
+        }
+        if(total > 0) return { cmv: total, nome: nomes.join('+'), fonte:'kit' };
+      }
+    } else {
+      // SKU1-SKU2-... sem quantidade = soma simples
+      let total = 0, nomes = [], todos = true;
+      for(const p of partes){
+        const b = cmvLookup(p);
+        if(b?.cmv){ total += b.cmv; nomes.push(b.nome||p); }
+        else { todos = false; break; }
+      }
+      if(todos && total > 0) return { cmv: total, nome: nomes.join('+'), fonte:'kit' };
+    }
+  }
+  return null;
 }
 
 // Salva CMV no cache E sincroniza para o banco da Calculadora
