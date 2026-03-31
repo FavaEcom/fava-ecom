@@ -1,77 +1,130 @@
 """
-FAVA ECOM - Importar CMV da BASE_DADOS_V2 para o Banco Railway
-==============================================================
-Le a planilha PROJETO_FAVA_ECOM e envia os 1668 CMVs para o banco.
-Resolve CMV de todos os SKUs incluindo kits.
-
-USO:
-  python importar_base_dados_cmv.py
-  ou
-  python importar_base_dados_cmv.py "C:/caminho/PROJETO_FAVA_ECOM_V3_1_-_ultiima.xlsm"
+FAVA ECOM — Script 1: Importar CMV + mapa cProd da BASE_DADOS_V2
+=================================================================
+Fonte: PROJETO_FAVA_ECOM_V3_1_-_ultiima.xlsm → aba BASE_DADOS_V2
+Destinos:
+  POST /api/cmv-cache     → atualiza custo_br/custo_pr na tabela produtos
+  POST /api/db/cprod-map  → popula tabela cprod_map (liga cProd NF ao SKU Fava)
 """
-import sys, os, json, urllib.request, urllib.error
 
-RAILWAY = "https://web-production-5aa0f.up.railway.app"
+import pandas as pd
+import requests
+import sys
+import math
 
-ARQUIVO = sys.argv[1] if len(sys.argv) > 1 else \
-    r"C:\FAVAECOM\scripts\PROJETO FAVA ECOM V3.1 - ultiima.xlsm"
+# ── CONFIGURAÇÃO ────────────────────────────────────────────────────────────
+ARQUIVO   = r'C:\FAVAECOM\PROJETO_FAVA_ECOM_V3_1_-_ultiima.xlsm'
+BASE_URL  = 'https://web-production-5aa0f.up.railway.app'
+LOTE      = 200  # registros por request
+# ────────────────────────────────────────────────────────────────────────────
 
-print("=" * 60)
-print("  FAVA ECOM - Importar CMV BASE_DADOS")
-print("=" * 60)
+def limpar(val):
+    """Converte para float, retorna 0 se nulo/nan."""
+    if val is None or (isinstance(val, float) and math.isnan(val)):
+        return 0.0
+    try:
+        return float(val)
+    except:
+        return 0.0
 
-if not os.path.exists(ARQUIVO):
-    print(f"Arquivo nao encontrado: {ARQUIVO}")
-    print("Passe o caminho: python importar_base_dados_cmv.py \"C:/...xlsm\"")
-    sys.exit(1)
+def post(endpoint, payload):
+    url = BASE_URL.rstrip('/') + endpoint
+    try:
+        r = requests.post(url, json=payload, timeout=30)
+        r.raise_for_status()
+        return r.json()
+    except requests.exceptions.RequestException as e:
+        print(f'  [ERRO] {endpoint}: {e}')
+        return None
 
-try:
-    from openpyxl import load_workbook
-except ImportError:
-    import subprocess
-    subprocess.run([sys.executable, "-m", "pip", "install", "openpyxl", "-q"])
-    from openpyxl import load_workbook
+def main():
+    print(f'Lendo BASE_DADOS_V2 de:\n  {ARQUIVO}\n')
+    
+    df = pd.read_excel(ARQUIVO, sheet_name='BASE_DADOS_V2', header=2)
+    
+    # Filtra só linhas com SKU válido
+    df = df[df['SKU'].notna() & (df['SKU'] != '')].copy()
+    df['SKU']     = df['SKU'].astype(str).str.strip()
+    df['CÓDIGO']  = df['CÓDIGO'].astype(str).str.strip()
+    
+    total = len(df)
+    print(f'Registros encontrados: {total}')
+    
+    # ── 1. CMV CACHE ─────────────────────────────────────────────────────────
+    print('\n[1/2] Enviando CMV para /api/cmv-cache ...')
+    cmv_payload = {}
+    sem_cmv = 0
+    
+    for _, row in df.iterrows():
+        sku     = row['SKU']
+        cmv_br  = limpar(row.get('CMV BRASIL'))
+        cmv_pr  = limpar(row.get('CMV PARANÁ'))
+        nome    = str(row.get('PRODUTO', '') or '').strip()
+        
+        if cmv_br <= 0 and cmv_pr <= 0:
+            sem_cmv += 1
+            continue
+        
+        cmv_payload[sku] = {
+            'cmv':   cmv_br or cmv_pr,
+            'cmvBr': cmv_br,
+            'cmvPr': cmv_pr,
+            'nome':  nome,
+        }
+    
+    # Envia em lotes
+    skus = list(cmv_payload.keys())
+    ok_cmv = 0
+    for i in range(0, len(skus), LOTE):
+        lote = {k: cmv_payload[k] for k in skus[i:i+LOTE]}
+        res = post('/api/cmv-cache', lote)
+        if res:
+            ok_cmv += res.get('n', len(lote))
+            print(f'  Lote {i//LOTE + 1}: {len(lote)} SKUs → OK')
+        else:
+            print(f'  Lote {i//LOTE + 1}: FALHOU')
+    
+    print(f'  Total enviado: {ok_cmv} SKUs com CMV | {sem_cmv} sem CMV (ignorados)')
+    
+    # ── 2. CPROD MAP ─────────────────────────────────────────────────────────
+    print('\n[2/2] Enviando mapa cProd→SKU para /api/db/cprod-map ...')
+    cprod_payload = {}
+    sem_codigo = 0
+    
+    for _, row in df.iterrows():
+        sku    = row['SKU']
+        cprod  = row['CÓDIGO']
+        nome   = str(row.get('PRODUTO', '') or '').strip()
+        cmv_br = limpar(row.get('CMV BRASIL'))
+        cmv_pr = limpar(row.get('CMV PARANÁ'))
+        
+        # cProd inválido: 'nan', '', '0'
+        if not cprod or cprod in ('nan', '0', 'None'):
+            sem_codigo += 1
+            continue
+        
+        cprod_payload[cprod] = {
+            'sku':    sku,
+            'nome':   nome,
+            'cmv_br': cmv_br,
+            'cmv_pr': cmv_pr,
+        }
+    
+    # Envia em lotes
+    cprods = list(cprod_payload.keys())
+    ok_cprod = 0
+    for i in range(0, len(cprods), LOTE):
+        lote = {k: cprod_payload[k] for k in cprods[i:i+LOTE]}
+        res = post('/api/db/cprod-map', lote)
+        if res:
+            ok_cprod += res.get('ok', len(lote))
+            print(f'  Lote {i//LOTE + 1}: {len(lote)} cProds → OK')
+        else:
+            print(f'  Lote {i//LOTE + 1}: FALHOU')
+    
+    print(f'  Total enviado: {ok_cprod} cProds mapeados | {sem_codigo} sem código (ignorados)')
+    
+    print('\n✅ Script 1 concluído.')
 
-def sf(v):
-    try: return float(v) if v not in (None,'','#N/A','#REF!','#VALUE!','#DIV/0!') else 0.0
-    except: return 0.0
-
-print("  Lendo BASE_DADOS_V2...")
-wb = load_workbook(ARQUIVO, read_only=True, data_only=True)
-ws = wb['BASE_DADOS_V2']
-
-cmvs = {}
-for row in ws.iter_rows(min_row=4, values_only=True):
-    sku    = str(row[2]).strip() if row[2] else ''
-    nome   = str(row[4]).strip() if row[4] else ''
-    cmv_br = sf(row[48])  # CMV BRASIL col49
-    cmv_pr = sf(row[49])  # CMV PARANA col50
-    if not sku or sku in ('None',''): continue
-    if cmv_br > 0 or cmv_pr > 0:
-        cmvs[sku] = {'cmv': cmv_br or cmv_pr, 'cmvPr': cmv_pr or cmv_br, 'nome': nome}
-
-print(f"  {len(cmvs)} SKUs com CMV Brasil encontrados")
-
-# Enviar para Railway
-print(f"  Enviando para {RAILWAY}...")
-data = json.dumps(cmvs).encode('utf-8')
-req = urllib.request.Request(
-    f"{RAILWAY}/api/cmv-cache",
-    data=data,
-    headers={'Content-Type': 'application/json'},
-    method='POST'
-)
-try:
-    with urllib.request.urlopen(req, timeout=60) as r:
-        print(f"  Enviados: status {r.status}")
-except urllib.error.HTTPError as e:
-    print(f"  Erro HTTP {e.code}: {e.read()[:200]}")
-except Exception as e:
-    print(f"  Erro: {e}")
-
-print()
-print("  Apos rodar:")
-print("  1. Clique Atualizar no painel")
-print("  2. Pedidos vao mostrar margem com CMV real")
-print("  3. Promocoes vao calcular desconto correto")
-print("=" * 60)
+if __name__ == '__main__':
+    main()
