@@ -536,6 +536,7 @@ function salvarCfg(){
   <div class="vtab" id="vtab-ped" onclick="setView('pedidos')">Pedidos</div>
   <div class="vtab" id="vtab-prom" onclick="setView('promocoes')">Promoções</div>
   <div class="vtab" id="vtab-difal" onclick="setView('difal')">DIFAL</div>
+  <div class="vtab" id="vtab-cmv" onclick="setView('cmv')" style="background:#fef9c3;color:#92400e;font-weight:700">💰 CMV</div>
   <div class="vtab" id="vtab-hist" onclick="setView('historico')">Histórico</div>
   <div class="vtab" id="vtab-perg" onclick="setView('perguntas')">Perguntas</div>
 </div>
@@ -984,6 +985,67 @@ function salvarCfg(){
         </table>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ═══════════ VIEW: CMV ═══════════ -->
+<div id="view-cmv" style="display:none;flex-direction:column">
+  <div class="main">
+
+    <!-- Barra de ação -->
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:9px;padding:12px 16px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:4px">💰 Gerenciador de CMV — Fonte de Verdade</div>
+      <div style="font-size:12px;color:#92400e">Edite o CMV Brasil de qualquer produto aqui. Este valor tem prioridade sobre tudo — histórico de NF, Bling, etc.</div>
+    </div>
+
+    <!-- Busca e filtros -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <input type="text" id="cmv-search" placeholder="Buscar SKU ou nome do produto..."
+        oninput="filtrarCMV()"
+        style="border:1px solid var(--borda);border-radius:6px;padding:7px 12px;font-size:12px;outline:none;width:300px">
+      <button onclick="filtrarCMVStatus('todos')" id="cmv-f-todos" class="filt-btn a">Todos</button>
+      <button onclick="filtrarCMVStatus('sem')" id="cmv-f-sem" class="filt-btn">Sem CMV</button>
+      <button onclick="filtrarCMVStatus('com')" id="cmv-f-com" class="filt-btn">Com CMV</button>
+      <button onclick="salvarTodosCMV()" style="padding:6px 14px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-left:auto">
+        💾 Salvar alterações
+      </button>
+      <span id="cmv-save-status" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+
+    <!-- KPIs -->
+    <div id="cmv-kpis" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:10px"></div>
+
+    <!-- Tabela -->
+    <div style="background:#fff;border-radius:9px;border:1px solid var(--borda);overflow:hidden">
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed">
+          <colgroup>
+            <col style="width:8%">  <!-- SKU -->
+            <col style="width:40%"> <!-- Produto -->
+            <col style="width:13%"> <!-- CMV atual -->
+            <col style="width:13%"> <!-- Novo CMV -->
+            <col style="width:10%"> <!-- CMV PR -->
+            <col style="width:8%">  <!-- Status -->
+            <col style="width:8%">  <!-- Ação -->
+          </colgroup>
+          <thead>
+            <tr style="background:#1F3864">
+              <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase">SKU</th>
+              <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase">Produto</th>
+              <th style="padding:8px 10px;text-align:right;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase">CMV Brasil atual</th>
+              <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#fef9c3;text-transform:uppercase">✏️ Novo CMV</th>
+              <th style="padding:8px 10px;text-align:right;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase">CMV PR</th>
+              <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase">Fonte</th>
+              <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase">Ação</th>
+            </tr>
+          </thead>
+          <tbody id="cmv-tbody">
+            <tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -4760,7 +4822,7 @@ let currentView = 'dashboard';
 function setView(v){
   currentView = v;
   const safe=(id,fn)=>{const el=document.getElementById(id);if(el)fn(el);};
-  ['dashboard','anuncios','financeiro','conciliacao','precos','promocoes','difal','perguntas','ads','pedidos','historico'].forEach(name=>{
+  ['dashboard','anuncios','financeiro','conciliacao','precos','promocoes','difal','perguntas','ads','pedidos','historico','cmv'].forEach(name=>{
     safe('view-'+name, el=>el.style.display = v===name?'flex':'none');
   });
   safe('period-bar', el=>el.style.display = v==='dashboard'?'flex':'none');
@@ -4774,6 +4836,7 @@ function setView(v){
   safe('vtab-perg',  el=>el.classList.toggle('a', v==='perguntas'));
   safe('vtab-ads',   el=>el.classList.toggle('a', v==='ads'));
   safe('vtab-ped',   el=>el.classList.toggle('a', v==='pedidos'));
+  safe('vtab-cmv',  el=>el.classList.toggle('a', v==='cmv'));
   safe('vtab-hist',   el=>el.classList.toggle('a', v==='historico'));
   if(v==='anuncios' && anunciosData.length===0) carregarAnuncios();
   if(v==='financeiro') initFinanceiro();
@@ -4782,6 +4845,7 @@ function setView(v){
   if(v==='promocoes') carregarPromocoes();
   if(v==='difal') renderDifal();
   if(v==='historico') initHistorico();
+  if(v==='cmv') initCMV();
   if(v==='perguntas'){ const k=localStorage.getItem('fava_claude_key')||''; safe('perg-apikey',el=>el.value=k); }
 }
 
@@ -5284,15 +5348,17 @@ async function carregarAnuncios(){
       const frete = parseFloat(l.frete_medio)||0;
       const pis = preco>0 ? preco*0.0065 : 0;
       const cofins = preco>0 ? preco*0.03 : 0;
-      const freteL = frete>0 ? frete*(1-0.0365) : 0;
+      // Sanidade: frete não pode ser maior que 40% do preço — valores absurdos = dado errado no banco
+      const freteReal = (frete > 0 && preco > 0 && frete < preco * 0.40) ? frete : 0;
+      const freteL = freteReal > 0 ? freteReal*(1-0.0365) : 0;
       let margem_atual = null, lucro = 0;
       if(cmv>0 && preco>0 && taxa>0){
         lucro = preco - cmv - preco*taxa - freteL - pis - cofins;
         margem_atual = isNaN(lucro/preco) ? null : lucro/preco;
       }
       return {
-        id: l.id||'', sku, titulo: String(l.titulo||''), preco,
-        taxa, frete, freteL,
+        id: l.id||'', sku, titulo: tituloFallback, preco,
+        taxa, frete: freteReal, freteL,
         cmv, margem_atual, lucro: isNaN(lucro)?0:lucro,
         listing_type: l.listing_type||'',
         free_shipping: parseInt(l.free_shipping||0),
@@ -5560,8 +5626,160 @@ async function atualizarTaxasReaisML(){
   console.log('[Taxa ML] Taxas reais atualizadas');
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// GERENCIADOR DE CMV
+// ══════════════════════════════════════════════════════════════════════
+let cmvData = [];
+let cmvDataFiltrada = [];
+let cmvFiltroStatus = 'todos';
+let cmvAlterados = {};
+
+async function initCMV(){
+  const tbody = document.getElementById('cmv-tbody');
+  if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)"><div class="spin" style="margin:0 auto 10px"></div>Carregando produtos...</td></tr>';
+  try{
+    const r = await fetch('/api/db/produtos');
+    if(!r.ok) throw new Error('Banco indisponível');
+    const produtos = await r.json();
+    cmvData = produtos.map(p=>({
+      sku: String(p.sku||'').trim(),
+      nome: p.nome||'',
+      cmv_br: parseFloat(p.custo_br||p.custo||0),
+      cmv_pr: parseFloat(p.custo_pr||p.custo_br||p.custo||0),
+    })).filter(p=>p.sku).sort((a,b)=>a.sku.localeCompare(b.sku,undefined,{numeric:true}));
+    renderCMVKpis();
+    filtrarCMV();
+  }catch(e){
+    if(tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:20px;color:#dc2626">❌ Erro: ${e.message}</td></tr>`;
+  }
+}
+
+function renderCMVKpis(){
+  const kpis = document.getElementById('cmv-kpis');
+  if(!kpis) return;
+  const total=cmvData.length, comCmv=cmvData.filter(p=>p.cmv_br>0).length;
+  kpis.innerHTML=`
+    <div class="kpi"><div class="kl">Total produtos</div><div class="kv">${total}</div></div>
+    <div class="kpi"><div class="kl">Com CMV</div><div class="kv" style="color:var(--verde)">${comCmv}</div></div>
+    <div class="kpi"><div class="kl">Sem CMV</div><div class="kv" style="color:var(--vermelho)">${total-comCmv}</div></div>
+    <div class="kpi"><div class="kl">Alterados</div><div class="kv" style="color:var(--amarelo)">${Object.keys(cmvAlterados).length}</div></div>`;
+}
+
+function filtrarCMVStatus(s){
+  cmvFiltroStatus=s;
+  ['todos','sem','com'].forEach(x=>document.getElementById(`cmv-f-${x}`)?.classList.toggle('a',x===s));
+  filtrarCMV();
+}
+
+function filtrarCMV(){
+  const q=(document.getElementById('cmv-search')?.value||'').toLowerCase().trim();
+  cmvDataFiltrada=cmvData.filter(p=>{
+    if(q&&!p.sku.includes(q)&&!p.nome.toLowerCase().includes(q)) return false;
+    if(cmvFiltroStatus==='sem') return p.cmv_br<=0;
+    if(cmvFiltroStatus==='com') return p.cmv_br>0;
+    return true;
+  });
+  renderCMVTabela();
+}
+
+function renderCMVTabela(){
+  const tbody=document.getElementById('cmv-tbody');
+  if(!tbody) return;
+  if(!cmvDataFiltrada.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">Nenhum produto encontrado</td></tr>';return;}
+  tbody.innerHTML=cmvDataFiltrada.slice(0,300).map((p,i)=>{
+    const alt=cmvAlterados[p.sku];
+    const bg=i%2===0?'':'background:#f8fafc';
+    const destaque=alt!==undefined?';outline:2px solid #fbbf24;outline-offset:-2px':'';
+    return`<tr style="${bg}${destaque}">
+      <td style="padding:6px 10px;font-weight:700;color:var(--azul);font-size:11px">${p.sku}</td>
+      <td style="padding:6px 10px;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.nome}">${p.nome||'—'}</td>
+      <td style="padding:6px 10px;text-align:right;font-size:12px;font-weight:700;color:${p.cmv_br>0?'#166534':'#dc2626'}">
+        ${p.cmv_br>0?'R$ '+p.cmv_br.toFixed(4):'<span style="font-size:10px">sem CMV</span>'}
+      </td>
+      <td style="padding:6px 10px;text-align:center">
+        <input type="number" value="${alt!==undefined?alt:(p.cmv_br>0?p.cmv_br.toFixed(4):'')}"
+          min="0" step="0.0001" placeholder="Digite o CMV Brasil..."
+          data-sku="${p.sku}"
+          style="width:130px;border:1px solid ${alt!==undefined?'#fbbf24':'#d1d5db'};border-radius:5px;padding:5px 8px;font-size:12px;font-weight:700;text-align:right;outline:none;background:${alt!==undefined?'#fffbeb':'#fff'}"
+          oninput="marcarAlteracaoCMV('${p.sku}',this.value)">
+      </td>
+      <td style="padding:6px 10px;text-align:right;font-size:11px;color:var(--muted)">
+        ${p.cmv_pr>0?'R$ '+p.cmv_pr.toFixed(4):'—'}
+      </td>
+      <td style="padding:6px 10px;text-align:center">
+        <span class="pill ${p.cmv_br>0?'pill-g':'pill-r'}" style="font-size:9px">${p.cmv_br>0?'✅ OK':'⚠️ Vazio'}</span>
+      </td>
+      <td style="padding:6px 10px;text-align:center">
+        <button onclick="salvarCMVUnitario('${p.sku}',this)"
+          style="padding:3px 8px;font-size:10px;border-radius:4px;border:1px solid var(--azul2);background:#fff;color:var(--azul2);cursor:pointer;font-weight:700">Salvar</button>
+      </td>
+    </tr>`;
+  }).join('');
+  if(cmvDataFiltrada.length>300) tbody.innerHTML+=`<tr><td colspan="7" style="text-align:center;padding:10px;color:var(--muted);font-size:11px">Exibindo 300 de ${cmvDataFiltrada.length} — use a busca</td></tr>`;
+}
+
+function marcarAlteracaoCMV(sku,valor){
+  const v=parseFloat(valor);
+  if(v>0) cmvAlterados[sku]=v; else delete cmvAlterados[sku];
+  renderCMVKpis();
+}
+
+async function salvarCMVUnitario(sku,btn){
+  const input=document.querySelector(`input[data-sku="${sku}"]`);
+  const valor=parseFloat(input?.value||0);
+  if(!valor||valor<=0){alert('Digite um CMV válido');return;}
+  if(btn){btn.textContent='...';btn.disabled=true;}
+  try{
+    const cmvPr=parseFloat((valor*0.87).toFixed(4));
+    const r=await fetch('/api/cmv-cache',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({[sku]:{cmv:valor,cmvBr:valor,cmvPr:cmvPr,nome:''}})});
+    if(!r.ok) throw new Error('Erro ao salvar');
+    const item=cmvData.find(p=>p.sku===sku);
+    if(item){item.cmv_br=valor;item.cmv_pr=cmvPr;}
+    dados.cmvCache[sku]={cmv:valor,cmvPr:cmvPr,nome:item?.nome||sku,fonte:'manual'};
+    delete cmvAlterados[sku];
+    if(btn){btn.textContent='✅';btn.style.background='#dcfce7';btn.style.color='#166534';}
+    setTimeout(()=>{if(btn){btn.textContent='Salvar';btn.disabled=false;btn.style.background='';btn.style.color='';}filtrarCMV();},1500);
+    renderCMVKpis();
+    const st=document.getElementById('cmv-save-status');
+    if(st) st.textContent=`✅ SKU ${sku} → R$ ${valor.toFixed(4)}`;
+  }catch(e){
+    if(btn){btn.textContent='❌';btn.disabled=false;}
+    alert('Erro: '+e.message);
+  }
+}
+
+async function salvarTodosCMV(){
+  const total=Object.keys(cmvAlterados).length;
+  if(!total){alert('Nenhuma alteração pendente');return;}
+  const btn=document.querySelector('[onclick="salvarTodosCMV()"]');
+  if(btn){btn.textContent='Salvando...';btn.disabled=true;}
+  const payload={};
+  for(const [sku,valor] of Object.entries(cmvAlterados)){
+    const item=cmvData.find(p=>p.sku===sku);
+    payload[sku]={cmv:valor,cmvBr:valor,cmvPr:parseFloat((valor*0.87).toFixed(4)),nome:item?.nome||''};
+  }
+  try{
+    const r=await fetch('/api/cmv-cache',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!r.ok) throw new Error('Erro ao salvar');
+    for(const [sku,valor] of Object.entries(cmvAlterados)){
+      const item=cmvData.find(p=>p.sku===sku);
+      if(item){item.cmv_br=valor;item.cmv_pr=valor*0.87;}
+      dados.cmvCache[sku]={cmv:valor,cmvPr:valor*0.87,nome:item?.nome||sku,fonte:'manual'};
+    }
+    cmvAlterados={};
+    if(btn){btn.textContent='✅ Salvo!';btn.style.background='#16a34a';}
+    setTimeout(()=>{if(btn){btn.textContent='💾 Salvar alterações';btn.disabled=false;btn.style.background='';}},2000);
+    const st=document.getElementById('cmv-save-status');
+    if(st) st.textContent=`✅ ${total} CMVs salvos`;
+    renderCMVKpis();filtrarCMV();
+  }catch(e){
+    if(btn){btn.textContent='💾 Salvar alterações';btn.disabled=false;}
+    alert('Erro: '+e.message);
+  }
+}
+
 let historicoData = [];
-let historicoCarregado = false;
 
 async function initHistorico(){
   if(historicoCarregado && historicoData.length) return;
