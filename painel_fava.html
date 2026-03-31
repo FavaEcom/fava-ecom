@@ -5370,14 +5370,14 @@ function renderAnuncios(){
 
   // KPIs
   const total=lista.length, comCmv=lista.filter(a=>a.cmv>0).length;
-  const comMargem = lista.filter(a=>a.margem_atual!==null);
-  const mgMed = comMargem.length ? comMargem.reduce((s,a)=>s+a.margem_atual,0)/comMargem.length : 0;
+  const comMargem = lista.filter(a=>a.margem_atual!==null && !isNaN(a.margem_atual));
+  const mgMed = comMargem.length ? comMargem.reduce((s,a)=>s+a.margem_atual,0)/comMargem.length : null;
   const kpis=document.getElementById('anunc-kpis');
   if(kpis) kpis.innerHTML=`
     <div class="kpi"><div class="kl">Anúncios</div><div class="kv">${total}</div></div>
     <div class="kpi"><div class="kl">Com CMV</div><div class="kv" style="color:${comCmv===total?'var(--verde)':'var(--amarelo)'}">${comCmv}</div></div>
     <div class="kpi"><div class="kl">Sem CMV</div><div class="kv" style="color:${total-comCmv>0?'var(--amarelo)':'var(--verde)'}">${total-comCmv}</div></div>
-    <div class="kpi"><div class="kl">Margem média</div><div class="kv" style="color:${mgMed>=.20?'var(--verde)':mgMed>=.10?'var(--amarelo)':'var(--vermelho)'}">${(mgMed*100).toFixed(1)}%</div></div>
+    <div class="kpi"><div class="kl">Margem média</div><div class="kv" style="color:${mgMed===null?'var(--muted)':mgMed>=.20?'var(--verde)':mgMed>=.10?'var(--amarelo)':'var(--vermelho)'}">${mgMed!==null?(mgMed*100).toFixed(1)+'%':'—'}</div></div>
     <div class="kpi"><div class="kl">Margem &lt; 10%</div><div class="kv" style="color:var(--vermelho)">${comMargem.filter(a=>a.margem_atual<.10).length}</div></div>
     <div class="kpi"><div class="kl">Sem frete</div><div class="kv" style="color:${lista.filter(a=>a.frete===0).length?'var(--amarelo)':'var(--verde)'}">${lista.filter(a=>a.frete===0).length}</div></div>`;
 }
