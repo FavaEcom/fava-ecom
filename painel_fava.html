@@ -5545,6 +5545,8 @@ function filtrarHistorico(){
   renderHistoricoTabela(filtrado);
 }
 
+// MODAL PREÇO
+function abrirModal(mlb, titulo, precoAtual, precoSug){
   modalMLB = mlb;
   (document.getElementById('modal-titulo')||{}).textContent = 'Atualizar preço';
   (document.getElementById('modal-info')||{}).innerHTML =
