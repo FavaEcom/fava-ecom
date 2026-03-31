@@ -437,13 +437,24 @@ def sync_ml_listings():
 
 
 def sync_bling_anuncios():
-    """Sincroniza anúncios ML do Bling → banco (tem SKU, MLB, taxa, frete)."""
+    """Sincroniza anúncios ML do Bling → banco."""
     if not _bling_token.get('access'): return 0
     print('[SYNC] Anúncios Bling...')
+    # Testar endpoints possíveis
+    endpoint = None
+    for ep in ['anuncios', 'produtos?tipo=V&situacao=Ativo', 'integracoes/marketplace/anuncios']:
+        d = bling_get(ep, 1)
+        if d and d.get('data') is not None:
+            endpoint = ep
+            print(f'[BLING] Endpoint anúncios: {ep}')
+            break
+    if not endpoint:
+        print('[BLING] Nenhum endpoint de anúncios funcionou')
+        return 0
     n = 0
     pagina = 1
     while True:
-        d = bling_get('anuncios', pagina)
+        d = bling_get(endpoint, pagina)
         if not d: break
         items = d.get('data', [])
         if not items: break

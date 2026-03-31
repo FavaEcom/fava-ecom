@@ -1720,10 +1720,13 @@ function renderPromoTabela(lista){
       <td style="padding:5px 8px;font-size:10px;color:#6b7280;white-space:nowrap">${p.id}</td>
       <td style="padding:5px 8px;text-align:right;font-weight:700">R$${p.preco.toFixed(2)}</td>
       <td style="padding:5px 8px;text-align:center">
-        <input type="number" value="${p.descEditado>0?p.descEditado:''}" min="5" max="80" step="1" placeholder="—"
-          style="width:50px;border:1px solid #d1d5db;border-radius:4px;padding:2px 4px;text-align:center;font-size:11px;font-weight:700;${p.cmv<=0?'background:#fff7ed':''}"
-          oninput="atualizarDescItem(${i},this.value)">
-        ${p.cmv>0 && descMaxCalc>0 ? '<div style="font-size:9px;color:#16a34a;font-weight:700">máx '+descMaxCalc+'%</div>' : p.cmv<=0 ? '<div style="font-size:9px;color:#f59e0b">sem CMV</div>' : '<div style="font-size:9px;color:#9ca3af">no limit</div>'}
+        ${!p.cmv
+          ? '<span style="color:#f59e0b;font-size:10px">sem CMV</span>'
+          : '<input type="number" value="'+(p.descEditado>=5&&p.descEditado<=descMaxCalc?p.descEditado:'')
+            +'" min="5" max="'+(descMaxCalc||80)+'" step="1" placeholder="'+(descMaxCalc>0?'máx '+descMaxCalc:'%')+'"'
+            +' style="width:55px;border:1px solid #d1d5db;border-radius:4px;padding:2px 4px;text-align:center;font-size:11px;font-weight:700"'
+            +' oninput=\"atualizarDescItem('+i+',this.value)\">'
+            +(descMaxCalc>0?'<div style="font-size:9px;color:#6b7280">máx '+descMaxCalc+'%</div>':'')}
       </td>
       <td id="pd-preco-${i}" style="padding:5px 8px;text-align:right;color:var(--azul2);font-weight:700">R$${precoComDesc.toFixed(2)}</td>
       <td style="padding:5px 8px;text-align:right;color:var(--muted)">${p.cmv?'R$'+p.cmv.toFixed(2):'<span style=color:#f59e0b>⚠️</span>'}</td>
@@ -1964,7 +1967,7 @@ function aplicarRegrasMargemMinima(){
 function calcularDescontoPorMargem(){
   let n=0, semCmv=0, semMin=0;
   promoData.forEach(p=>{
-    if(!p.cmv || p.cmv<=0){ semCmv++; return; }
+    if(!p.cmv || p.cmv<=0){ semCmv++; p.descEditado=0; return; } // sem CMV = sem desconto
     const mgMin = p.mgMin || (p.preco<=50?0.20 : p.preco<=200?0.18 : 0.15);
     const taxa = p.taxa || 0.16;
     const frete = p.frete || 0;
