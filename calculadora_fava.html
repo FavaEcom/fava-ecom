@@ -1191,6 +1191,20 @@ window.onload=async ()=>{
       document.querySelectorAll('.cmv-banco-cnt').forEach(el=>el.textContent=n+' SKUs no banco');
       console.log(`✅ Calculadora: ${n} produtos carregados do banco`);
     }
+
+    // ── Carrega mapa cProd → SKU Fava (código fabricante → SKU Fava) ──
+    try{
+      const rcm = await fetch(RAILWAY+'/api/db/cprod-map');
+      if(rcm.ok){
+        const cprodMap = await rcm.json();
+        window._cprodMap = {};
+        Object.entries(cprodMap).forEach(([cprod, info])=>{
+          window._cprodMap[String(cprod).trim()] = info.sku;
+        });
+        console.log(`✅ cprodMap: ${Object.keys(window._cprodMap).length} códigos de fabricante mapeados`);
+      }
+    }catch(e2){ console.warn('cprodMap não carregado:', e2); }
+
   }catch(e){
     // Fallback: localStorage
     const n=Object.keys(cmvBanco).length;
@@ -1296,18 +1310,42 @@ async function buscar(){
   document.getElementById('prod-card').className='prod-card';
   try{
     if(sku.toUpperCase().startsWith('MLB')){await buscarMLItem(sku.toUpperCase());return;}
+
+    // 1. Busca pelo SKU Fava (código no Bling)
     const r=await fetch(`/api/bling/produtos?pagina=1&limite=5&criterio=1&tipo=T&codigo=${encodeURIComponent(sku)}`,
       {headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});
     if(!r.ok){const e=await r.json().catch(()=>({}));alerta('balert',`Erro Bling ${r.status}: ${e.error?.description||'verifique o token'}. Abra ⚙️ e cole o token novamente.`,'err');return;}
     const data=await r.json();
     let lista=data.data||[];
+
+    // 2. Fallback: busca por nome/descrição
     if(!lista.length){
-      // fallback: busca por nome
       const r2=await fetch(`/api/bling/produtos?pagina=1&limite=5&criterio=1&tipo=T&descricao=${encodeURIComponent(sku)}`,
         {headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});
       const d2=await r2.json();lista=d2.data||[];
     }
-    if(!lista.length){alerta('balert','Produto não encontrado. O código deve ser exatamente igual ao cadastrado no Bling (campo "Código").','warn');return;}
+
+    // 3. Fallback: busca pelo código do fabricante no mapa cprod → SKU Fava
+    if(!lista.length){
+      try{
+        const skuFava = window._cprodMap && window._cprodMap[sku.trim()];
+        if(skuFava){
+          alerta('balert',`Código fabricante → SKU Fava: ${skuFava}. Buscando...`,'info');
+          const r3=await fetch(`/api/bling/produtos?pagina=1&limite=5&criterio=1&tipo=T&codigo=${encodeURIComponent(skuFava)}`,
+            {headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});
+          const d3=await r3.json();lista=d3.data||[];
+        }
+      }catch(e2){}
+    }
+
+    // 4. Fallback: busca pelo codFornecedor no Bling
+    if(!lista.length){
+      const r4=await fetch(`/api/bling/produtos?pagina=1&limite=5&criterio=1&tipo=T&codigo=${encodeURIComponent(sku)}&codFornecedor=${encodeURIComponent(sku)}`,
+        {headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});
+      const d4=await r4.json();lista=d4.data||[];
+    }
+
+    if(!lista.length){alerta('balert','Produto não encontrado. Tente o SKU Fava (ex: 1562) ou o MLB.','warn');return;}
     await processarBling(lista[0]);
   }catch(e){alerta('balert',`Erro: ${e.message}`,'err');}
 }

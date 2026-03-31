@@ -530,6 +530,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/boletos': self._get_boletos,
             '/api/db/nfs': self._get_nfs,
             '/api/db/listings': self._get_listings,
+            '/api/db/cprod-map': self._get_cprod_map,
             '/api/db/status': self._get_status,
             '/api/cmv-cache': self._get_cmv_compat,
             '/api/sync/now': self._sync_now,
@@ -566,6 +567,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     # ── GET routes ────────────────────────────────────────────────
     def _get_produtos(self):
         try: self._ok(exe("SELECT * FROM produtos ORDER BY sku", fetchall=True))
+        except Exception as e: self._err(500, str(e))
+
+    def _get_cprod_map(self):
+        try:
+            rows = exe("SELECT cprod, sku, nome, cmv_br, cmv_pr FROM cprod_map ORDER BY sku", fetchall=True)
+            # Retorna dict cprod → {sku, nome, cmv_br, cmv_pr}
+            result = {r['cprod']: {'sku': r['sku'], 'nome': r['nome'], 'cmv_br': r['cmv_br'], 'cmv_pr': r['cmv_pr']} for r in rows}
+            self._ok(result)
         except Exception as e: self._err(500, str(e))
 
     def _get_cmv_compat(self):
