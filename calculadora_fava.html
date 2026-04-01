@@ -1368,8 +1368,9 @@ async function processarBling(p){
       }
     }
   }catch(e){}
-  // precoCusto = custo de compra (NF); fallback para custoMedio; prod.preco é preço de VENDA (errado para CMV)
-  const custoBling = parseFloat(prod.precoCusto||prod.custoMedio||0);
+  // precoCusto = custo de compra (NF); no Bling v3 pode estar em fornecedores[0].precoCusto
+  const fornCusto = prod.fornecedores?.[0]?.precoCusto || prod.fornecedores?.[0]?.precoCompra || 0;
+  const custoBling = parseFloat(prod.precoCusto || prod.custoMedio || fornCusto || 0);
   // Debug: log campos do produto para identificar nomes reais das medidas
   console.log('BLING PRODUTO:', JSON.stringify({
     id:prod.id, codigo:prod.codigo, nome:prod.nome,
