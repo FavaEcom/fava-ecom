@@ -1377,14 +1377,14 @@ async function processarBling(p){
     }
   }catch(e){}
   // ── Custo: 3 fontes em ordem de prioridade ──────────────────────────
-  // 1. Banco Railway (CMV calculado das NFs — mais preciso)
-  // 2. Bling precoCusto (se preenchido)
-  // 3. Bling fornecedor precoCusto
+  // 1. Banco Railway — histórico de compras (NFs importadas — mais preciso)
+  // 2. Bling precoCusto direto no produto
+  // 3. Bling fornecedores (se endpoint disponível)
   const skuFava = prod.codigo || '';
   let custoFinal = 0;
   let fonteCusto = '';
 
-  // Fonte 1: Banco Railway
+  // Fonte 1: Banco Railway — busca CMV das NFs
   try{
     const RAILWAY = 'https://web-production-5aa0f.up.railway.app';
     const rbanco = await fetch(RAILWAY + '/api/db/produtos');
@@ -1393,21 +1393,18 @@ async function processarBling(p){
       const pb = prods.find(p => String(p.sku).trim() === String(skuFava).trim());
       if(pb && (pb.custo_br || pb.custo) > 0){
         custoFinal = pb.custo_br || pb.custo;
-        fonteCusto = '📦 Banco (NF)';
+        fonteCusto = '📦 Banco NF';
       }
     }
   }catch(e){}
 
-  // Fonte 2: Bling precoCusto direto no produto
+  // Fonte 2: Bling — precoCusto direto no objeto do produto
   if(!custoFinal){
-    const custoBling = parseFloat(prod.precoCusto || prod.custoMedio || 0);
-    if(custoBling > 0){
-      custoFinal = custoBling;
-      fonteCusto = '🔵 Bling precoCusto';
-    }
+    const cb = parseFloat(prod.precoCusto || prod.custoMedio || 0);
+    if(cb > 0){ custoFinal = cb; fonteCusto = '🔵 Bling'; }
   }
 
-  // Fonte 3: Bling fornecedor
+  // Fonte 3: Bling — fornecedores (tenta mas pode ser 404)
   if(!custoFinal){
     try{
       const rf = await fetch(`/api/bling/produtos/${id}/fornecedores`,
@@ -1422,7 +1419,25 @@ async function processarBling(p){
     }catch(e){}
   }
 
-  if(!custoFinal) fonteCusto = '⚠️ não encontrado — digite manualmente';
+  // Fonte 4: Histórico de compras — pega custo médio das últimas NFs
+  if(!custoFinal && skuFava){
+    try{
+      const RAILWAY = 'https://web-production-5aa0f.up.railway.app';
+      const rh = await fetch(RAILWAY + '/api/db/historico');
+      if(rh.ok){
+        const hist = await rh.json();
+        const itens = hist.filter(h => String(h.sku).trim() === String(skuFava).trim() && parseFloat(h.custo_r||0) > 0);
+        if(itens.length > 0){
+          // Usa o custo da NF mais recente
+          itens.sort((a,b) => (b.data_emissao||'').localeCompare(a.data_emissao||''));
+          custoFinal = parseFloat(itens[0].custo_r);
+          fonteCusto = `📋 Hist. NF ${itens[0].nf} (${itens[0].data_emissao||''})`;
+        }
+      }
+    }catch(e){}
+  }
+
+  if(!custoFinal) fonteCusto = '⚠️ não encontrado — digite';
   // Debug completo para identificar campo do custo
   console.log('BLING PRODUTO COMPLETO:', JSON.stringify({
     id: prod.id, codigo: prod.codigo, nome: prod.nome?.substring(0,40),
