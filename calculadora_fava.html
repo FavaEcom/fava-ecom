@@ -920,6 +920,7 @@ Vonder: fabricante nacional de ferramentas elétricas e manuais com foco em qual
 // ══════════════════════════════════════════════════════════════════════
 // CONSTANTES
 // ══════════════════════════════════════════════════════════════════════
+const RAILWAY = 'https://web-production-5aa0f.up.railway.app';
 const PIS=.0165, COFINS=.076, ICMS_PR=.195, IBS_CBS=.02, ICMS_SAIDA_MED=.12;
 // ══════════════════════════════════════════════════════════════════════
 // BANCO DE CMV — persiste em localStorage, compartilhado entre abas
@@ -1114,22 +1115,18 @@ function carregarTokenStore(){
   }
   tokens.ml    = tokenStore.ml.access    || '';
   tokens.bling = tokenStore.bling.access || '';
-  // Se não tem token local, busca do servidor
-  if(!tokens.bling){
-    fetch(RAILWAY+'/api/auth/tokens/get').then(r=>r.json()).then(d=>{
-      if(d.bling_access){
-        tokenStore.bling.access=d.bling_access; tokens.bling=d.bling_access;
-        if(document.getElementById('tk-bling')) document.getElementById('tk-bling').value=tokens.bling;
-        salvarTokenStore();
-        console.log('[Tokens] Bling recuperado do servidor');
-      }
-      if(d.ml_access && !tokens.ml){
-        tokenStore.ml.access=d.ml_access; tokens.ml=d.ml_access;
-        if(document.getElementById('tk-ml')) document.getElementById('tk-ml').value=tokens.ml;
-        salvarTokenStore();
-      }
-    }).catch(()=>{});
-  }
+  // Sempre busca do servidor — garante tokens atualizados em qualquer PC
+  fetch(RAILWAY+'/api/auth/tokens/get').then(r=>r.json()).then(d=>{
+    let mudou = false;
+    if(d.bling_access){ tokenStore.bling.access=d.bling_access; tokens.bling=d.bling_access; mudou=true; }
+    if(d.ml_access)   { tokenStore.ml.access=d.ml_access;       tokens.ml=d.ml_access;       mudou=true; }
+    if(mudou){
+      salvarTokenStore();
+      if(document.getElementById('tk-bling')) document.getElementById('tk-bling').value=tokens.bling;
+      if(document.getElementById('tk-ml'))    document.getElementById('tk-ml').value=tokens.ml;
+      console.log('[Tokens] Carregados do servidor ✅');
+    }
+  }).catch(()=>{});
   if(document.getElementById('tk-bling'))      document.getElementById('tk-bling').value      = tokens.bling;
   if(document.getElementById('tk-ml'))         document.getElementById('tk-ml').value         = tokens.ml;
   if(document.getElementById('tk-ml-refresh')) document.getElementById('tk-ml-refresh').value = tokenStore.ml.refresh||'';
