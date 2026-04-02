@@ -538,6 +538,7 @@ function salvarCfg(){
   <div class="vtab" id="vtab-difal" onclick="setView('difal')">DIFAL</div>
   <div class="vtab" id="vtab-cmv" onclick="setView('cmv')" style="background:#fef9c3;color:#92400e;font-weight:700">💰 CMV</div>
   <div class="vtab" id="vtab-hist" onclick="setView('historico')">Histórico</div>
+  <div class="vtab" id="vtab-nf" onclick="setView('nf')" style="background:rgba(16,185,129,.15);color:#065f46;font-weight:700">📄 NF Entrada</div>
   <div class="vtab" id="vtab-perg" onclick="setView('perguntas')">Perguntas</div>
 </div>
 
@@ -1145,6 +1146,66 @@ function salvarCfg(){
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- ABA NF ENTRADA                                                        -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div id="view-nf" style="display:none;flex-direction:column">
+  <div class="main">
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+      <h2 style="margin:0;font-size:18px;color:#1F3864">📄 Entrada de Nota Fiscal</h2>
+      <span style="font-size:12px;color:var(--muted)">Importe o XML da NF — calcula custo, IPI, ST e atualiza CMV</span>
+    </div>
+    <div style="background:#f0fdf4;border:2px dashed #86efac;border-radius:10px;padding:20px;text-align:center;margin-bottom:16px;cursor:pointer" onclick="document.getElementById('nf-xml-input').click()">
+      <div style="font-size:32px;margin-bottom:8px">📁</div>
+      <div style="font-weight:600;color:#166534">Clique para selecionar XML da NF-e</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:4px">Suporta múltiplos arquivos</div>
+      <input type="file" id="nf-xml-input" accept=".xml" multiple style="display:none" onchange="processarXMLsNF(this.files)">
+    </div>
+    <div id="nf-kpis" style="display:none;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+      <div class="kpi-card"><div class="kpi-label">NF Número</div><div class="kpi-value" id="nf-numero">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Fornecedor</div><div class="kpi-value" id="nf-forn" style="font-size:13px">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Total NF</div><div class="kpi-value" id="nf-total">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Total IPI</div><div class="kpi-value" id="nf-ipi" style="color:#d97706">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Total ST</div><div class="kpi-value" id="nf-st" style="color:#7c3aed">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Itens</div><div class="kpi-value" id="nf-itens">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">ICMS Crédito</div><div class="kpi-value" id="nf-icms-cred" style="color:#059669">—</div></div>
+    </div>
+    <div id="nf-tabela-wrap" style="display:none">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+        <b style="font-size:14px">Itens da NF</b>
+        <span style="font-size:12px;color:var(--muted)" id="nf-icms-info"></span>
+        <div style="flex:1"></div>
+        <button class="btn-fin" onclick="salvarNFBanco()" id="nf-btn-salvar">💾 Salvar no banco + Atualizar CMV</button>
+        <button class="btn-fin" style="background:#6b7280" onclick="exportarNFPlanilha()">📊 Exportar planilha</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table"><thead><tr>
+          <th>cProd</th><th>SKU Fava</th><th>Descrição</th>
+          <th class="num">Qtd</th><th class="num">Vl Unit</th>
+          <th class="num">IPI%</th><th class="num">IPI R$</th><th class="num">ST R$</th>
+          <th class="num">Custo Total</th><th class="num">ICMS%</th>
+          <th class="num">CMV BR</th><th class="num">CMV PR</th><th>Ação</th>
+        </tr></thead>
+        <tbody id="nf-items-tbody"></tbody></table>
+      </div>
+    </div>
+    <div style="margin-top:20px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+        <b style="font-size:14px">Histórico de NFs importadas</b>
+        <button class="btn-fin" style="font-size:11px;padding:4px 10px" onclick="carregarHistoricoNFs()">🔄 Atualizar</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table"><thead><tr>
+          <th>Data</th><th>NF Nº</th><th>Fornecedor</th>
+          <th class="num">Total NF</th><th class="num">Itens</th><th>Status</th>
+        </tr></thead>
+        <tbody id="nf-hist-tbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Carregue uma NF para começar</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // Taxa ML por tipo de anúncio
 const ML_TAXA={gold_pro:.16,gold_special:.11,gold_premium:.16,classified:.16};
@@ -1172,9 +1233,9 @@ const SENHAS = {
 
 // Abas visíveis por perfil
 const ABAS_PERFIL = {
-  admin:      ['dashboard','anuncios','financeiro','conciliacao','precos','ads','pedidos','promocoes','difal','historico','perguntas'],
+  admin:      ['dashboard','anuncios','financeiro','conciliacao','precos','ads','pedidos','promocoes','difal','historico','nf','perguntas'],
   financeiro: ['financeiro','conciliacao','difal'],
-  operacao:   ['dashboard','pedidos'],
+  operacao:   ['dashboard','pedidos','nf'],
 };
 
 let perfilAtivo = null;
@@ -1624,11 +1685,13 @@ function recalcularTodasMargens(){
 
 function calcMargemProm(preco, cmv, taxa_ml, frete_liq){
   if(!preco || !cmv) return null;
-  const taxa = taxa_ml > 0 ? taxa_ml : 0.16;
-  const frete = frete_liq || 0; // frete liquido real do banco por MLB
-  const pis = preco * 0.0065;
-  const cofins = preco * 0.03;
-  const lucro = preco - cmv - preco*taxa - frete - pis - cofins;
+  const taxa   = taxa_ml > 0 ? taxa_ml : 0.12;
+  const frete  = frete_liq || 0;
+  const pis    = preco * PIS_SAIDA;
+  const cofins = preco * COFINS_SAIDA;
+  const difal  = preco * DIFAL_MEDIO;
+  const ibscbs = preco * IBS_CBS;
+  const lucro  = preco - cmv - preco*taxa - frete - pis - cofins - difal - ibscbs;
   return lucro / preco;
 }
 
@@ -4880,7 +4943,7 @@ let currentView = 'dashboard';
 function setView(v){
   currentView = v;
   const safe=(id,fn)=>{const el=document.getElementById(id);if(el)fn(el);};
-  ['dashboard','anuncios','financeiro','conciliacao','precos','promocoes','difal','perguntas','ads','pedidos','historico','cmv'].forEach(name=>{
+  ['dashboard','anuncios','financeiro','conciliacao','precos','promocoes','difal','perguntas','ads','pedidos','historico','cmv','nf'].forEach(name=>{
     safe('view-'+name, el=>el.style.display = v===name?'flex':'none');
   });
   safe('period-bar', el=>el.style.display = v==='dashboard'?'flex':'none');
@@ -4896,6 +4959,7 @@ function setView(v){
   safe('vtab-ped',   el=>el.classList.toggle('a', v==='pedidos'));
   safe('vtab-cmv',  el=>el.classList.toggle('a', v==='cmv'));
   safe('vtab-hist',   el=>el.classList.toggle('a', v==='historico'));
+  safe('vtab-nf',     el=>el.classList.toggle('a', v==='nf'));
   if(v==='anuncios' && anunciosData.length===0) carregarAnuncios();
   if(v==='financeiro') initFinanceiro();
   if(v==='conciliacao') initConciliacao();
@@ -4904,6 +4968,7 @@ function setView(v){
   if(v==='difal') renderDifal();
   if(v==='historico') initHistorico();
   if(v==='cmv') initCMV();
+  if(v==='nf') initNF();
   if(v==='perguntas'){ const k=localStorage.getItem('fava_claude_key')||''; safe('perg-apikey',el=>el.value=k); }
 }
 
@@ -5404,14 +5469,16 @@ async function carregarAnuncios(){
       const sfRaw = parseFloat(l.sale_fee)||0;
       const taxa = sfRaw > 1 ? sfRaw/100 : sfRaw > 0 ? sfRaw : (l.listing_type==='gold_pro'?.17:.12);
       const frete = parseFloat(l.frete_medio)||0;
-      const pis = preco>0 ? preco*0.0065 : 0;
-      const cofins = preco>0 ? preco*0.03 : 0;
-      // Sanidade: frete não pode ser maior que 40% do preço — valores absurdos = dado errado no banco
+      const pis = preco>0 ? preco*PIS_SAIDA : 0;
+      const cofins = preco>0 ? preco*COFINS_SAIDA : 0;
+      const difal = preco>0 ? preco*DIFAL_MEDIO : 0;
+      const ibscbs = preco>0 ? preco*IBS_CBS : 0;
+      // Sanidade: frete não pode ser maior que 40% do preço
       const freteReal = (frete > 0 && preco > 0 && frete < preco * 0.40) ? frete : 0;
-      const freteL = freteReal > 0 ? freteReal*(1-0.0365) : 0;
+      const freteL = freteReal > 0 ? freteReal*(1-0.2125) : 0; // crédito frete Platinum 21,25%
       let margem_atual = null, lucro = 0;
       if(cmv>0 && preco>0 && taxa>0){
-        lucro = preco - cmv - preco*taxa - freteL - pis - cofins;
+        lucro = preco - cmv - preco*taxa - freteL - pis - cofins - difal - ibscbs;
         margem_atual = isNaN(lucro/preco) ? null : lucro/preco;
       }
       const tituloDb = String(l.titulo||'').trim();
@@ -5684,12 +5751,14 @@ async function atualizarTaxasReaisML(){
         }
       }
 
-      // Recalcula margem
+      // Recalcula margem com DIFAL real e IBS/CBS
       const preco = item.preco || 0;
       if(item.cmv>0 && preco>0 && item.taxa>0){
-        const pis    = preco * 0.0065;
-        const cofins = preco * 0.03;
-        const lucro  = preco - item.cmv - preco*item.taxa - item.freteL - pis - cofins;
+        const pis    = preco * PIS_SAIDA;
+        const cofins = preco * COFINS_SAIDA;
+        const difal  = preco * DIFAL_MEDIO;
+        const ibscbs = preco * IBS_CBS;
+        const lucro  = preco - item.cmv - preco*item.taxa - item.freteL - pis - cofins - difal - ibscbs;
         item.lucro        = isNaN(lucro) ? 0 : lucro;
         item.margem_atual = isNaN(lucro/preco) ? null : lucro/preco;
       }
@@ -5702,6 +5771,360 @@ async function atualizarTaxasReaisML(){
   if(atualizados > 0) renderAnuncios();
   taxasAtualizadas = true;
   console.log('[Taxa+Frete ML] Concluído');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// TABELA DE FRETE ML — MercadoLíder Platinum / Reputação Verde
+// Fonte: tabela oficial ML 2026 (sul/sudeste)
+// ══════════════════════════════════════════════════════════════════════
+// [peso_max_kg, ate18.99, 19-48.99, 49-78.99, 79-99.99, 100-119.99, 120-149.99, 150-199.99, 200+]
+const FRETE_ML_TABLE = [
+  [0.3,  5.65, 6.55, 7.75, 12.35,14.35,16.45,18.45,20.95],
+  [0.5,  5.95, 6.65, 7.85, 13.25,15.45,17.65,19.85,22.55],
+  [1.0,  6.05, 6.75, 7.95, 13.85,16.15,18.45,20.75,23.65],
+  [1.5,  6.15, 6.85, 8.05, 14.15,16.45,18.85,21.15,24.65],
+  [2.0,  6.25, 6.95, 8.15, 14.45,16.85,19.25,21.65,24.65],
+  [3.0,  6.35, 7.95, 8.55, 15.75,18.35,21.05,23.65,26.25],
+  [4.0,  6.45, 8.15, 8.95, 17.05,19.85,22.65,25.55,28.35],
+  [5.0,  6.55, 8.35, 9.75, 18.45,21.55,24.65,27.75,30.75],
+  [6.0,  6.65, 8.55, 9.95, 25.45,28.55,32.65,35.75,39.75],
+  [7.0,  6.75, 8.75,10.15, 27.05,31.05,36.05,40.05,44.05],
+  [8.0,  6.85, 8.95,10.35, 28.85,33.65,38.45,43.25,48.05],
+  [9.0,  6.95, 9.15,10.55, 29.65,34.55,39.55,44.45,49.35],
+  [11.0, 7.05, 9.55,10.95, 41.25,48.05,54.95,61.75,68.65],
+  [13.0, 7.15, 9.95,11.35, 42.15,49.25,56.25,63.25,70.25],
+  [15.0, 7.25,10.15,11.55, 45.05,52.45,59.95,67.45,74.95],
+  [17.0, 7.35,10.35,11.75, 48.55,56.05,63.55,70.75,78.65],
+  [20.0, 7.45,10.55,11.95, 54.75,63.85,72.95,82.05,91.15],
+  [25.0, 7.65,10.95,12.15, 64.05,75.05,84.75,95.35,105.95],
+  [30.0, 7.75,11.15,12.35, 65.95,75.45,85.55,96.25,106.95],
+  [40.0, 7.85,11.35,12.55, 67.75,78.95,88.95,99.15,107.05],
+  [50.0, 7.95,11.55,12.75, 70.25,81.05,92.05,102.55,110.75],
+  [999,  8.05,11.75,12.95, 74.95,86.45,98.15,109.35,118.15],
+];
+
+// DIFAL médio real calculado dos dados da empresa (março/2026)
+const DIFAL_MEDIO = 0.0381; // 3,81% sobre vendas
+const IBS_CBS = 0.02;       // 2% IBS+CBS (reforma tributária)
+const PIS_SAIDA = 0.0165;
+const COFINS_SAIDA = 0.076;
+const ICMS_SAIDA_PR = 0.12;
+
+function calcFreteML(pesoKg, precoVenda){
+  // Preço de venda já com desconto aplicado
+  if(!pesoKg || pesoKg <= 0) return 0;
+  const row = FRETE_ML_TABLE.find(r => pesoKg <= r[0]) || FRETE_ML_TABLE[FRETE_ML_TABLE.length-1];
+  let col;
+  if(precoVenda < 19)   col = 1;
+  else if(precoVenda < 49)  col = 2;
+  else if(precoVenda < 79)  col = 3;
+  else if(precoVenda < 100) col = 4;
+  else if(precoVenda < 120) col = 5;
+  else if(precoVenda < 150) col = 6;
+  else if(precoVenda < 200) col = 7;
+  else col = 8;
+  // Para preço < 19: máximo é metade do preço
+  const frete = row[col];
+  if(precoVenda < 19) return Math.min(frete, precoVenda * 0.5);
+  return frete;
+}
+
+// Crédito de frete: Platinum verde = 21,25% do frete bruto
+function calcFreteLiquido(freteB, tipoFrete, precoVenda){
+  if(!freteB) return 0;
+  if(tipoFrete === 'Frete a Combinar') return 0;
+  // Frete rápido (< R$79): sem crédito
+  if(tipoFrete === 'Taxa Fixa') return freteB;
+  const credito = freteB * 0.2125;
+  return freteB - credito;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// NF ENTRADA — PROCESSAMENTO XML
+// ══════════════════════════════════════════════════════════════════════
+let nfAtual = null; // NF carregada atualmente
+
+// Mapeamento cProd → SKU (do banco)
+let cprodMapNF = {};
+
+async function initNF(){
+  // Carrega mapeamento cProd → SKU
+  try{
+    const r = await fetch('/api/db/cprod-map');
+    if(r.ok){
+      const d = await r.json();
+      cprodMapNF = d;
+      console.log(`[NF] cprodMap: ${Object.keys(d).length} mapeamentos`);
+    }
+  }catch(e){}
+  carregarHistoricoNFs();
+}
+
+async function processarXMLsNF(files){
+  if(!files || !files.length) return;
+  // Processa primeiro arquivo por vez
+  const file = files[0];
+  const xml = await file.text();
+  processarXMLNF(xml, file.name);
+}
+
+function processarXMLNF(xmlStr, filename){
+  try{
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlStr, 'text/xml');
+
+    const g = (tag) => doc.querySelector(tag)?.textContent || '';
+    const gf = (tag) => parseFloat(g(tag)) || 0;
+
+    // Cabeçalho NF
+    const nNF    = g('nNF');
+    const dhEmi  = g('dhEmi').substring(0,10);
+    const xNome  = g('xNome'); // fornecedor
+    const CNPJ   = g('emit CNPJ');
+    const vNF    = gf('vNF');
+    const vIPI   = gf('vIPI');
+    const vST    = gf('vST');
+
+    // ICMS — pega alíquota do primeiro item
+    let icmsPct = 0;
+    const icmsEl = doc.querySelector('pICMS');
+    if(icmsEl) icmsPct = parseFloat(icmsEl.textContent) || 0;
+
+    // Processa itens
+    const dets = doc.querySelectorAll('det');
+    const itens = [];
+    let totalCusto = 0;
+    let totalIPINF = 0;
+    let totalSTNF  = 0;
+    let totalICMSCred = 0;
+
+    dets.forEach(det => {
+      const cProd  = det.querySelector('cProd')?.textContent || '';
+      const xProd  = det.querySelector('xProd')?.textContent || '';
+      const qCom   = parseFloat(det.querySelector('qCom')?.textContent) || 1;
+      const vUnCom = parseFloat(det.querySelector('vUnCom')?.textContent) || 0;
+      const vProd  = parseFloat(det.querySelector('vProd')?.textContent) || 0;
+      const pIPI   = parseFloat(det.querySelector('pIPI')?.textContent) || 0;
+      const vIPIit = parseFloat(det.querySelector('vIPI')?.textContent) || 0;
+      const vSTit  = parseFloat(det.querySelector('vICMSST')?.textContent) ||
+                     parseFloat(det.querySelector('vST')?.textContent) || 0;
+      const pICMSit= parseFloat(det.querySelector('pICMS')?.textContent) || icmsPct || 12;
+      const vICMSit= parseFloat(det.querySelector('vICMS')?.textContent) || 0;
+
+      // Custo unitário = (valor produto + IPI + ST) / qtd
+      const custoUnit = (vProd + vIPIit + vSTit) / qCom;
+
+      // CMV = custo - crédito ICMS - crédito PIS - crédito COFINS
+      const pICMS = pICMSit / 100;
+      const credICMS   = custoUnit * pICMS;
+      const credPIS    = custoUnit * PIS_SAIDA;
+      const credCOFINS = custoUnit * COFINS_SAIDA;
+      const cmvBr = custoUnit - credICMS - credPIS - credCOFINS;
+      const cmvPr = cmvBr; // PR → PR sem DIFAL adicional
+
+      // SKU Fava via mapeamento cProd
+      const skuFava = cprodMapNF[cProd] || '';
+
+      totalCusto    += vProd + vIPIit + vSTit;
+      totalIPINF    += vIPIit;
+      totalSTNF     += vSTit;
+      totalICMSCred += vICMSit * (pICMSit/100);
+
+      itens.push({
+        cProd, xProd, qCom, vUnCom, vProd, pIPI, vIPI: vIPIit,
+        vST: vSTit, pICMS: pICMSit, custoUnit,
+        credICMS, credPIS, credCOFINS, cmvBr, cmvPr, skuFava
+      });
+    });
+
+    nfAtual = {
+      nNF, dhEmi, xNome, CNPJ, vNF, vIPI, vST,
+      icmsPct, itens, filename,
+      totalCusto, totalIPINF, totalSTNF, totalICMSCred
+    };
+
+    renderNF(nfAtual);
+
+  }catch(e){
+    alert('Erro ao processar XML: ' + e.message);
+    console.error(e);
+  }
+}
+
+function renderNF(nf){
+  const fmt = v => v > 0 ? 'R$ ' + v.toFixed(2) : '—';
+
+  // KPIs
+  const kpis = document.getElementById('nf-kpis');
+  if(kpis) kpis.style.display = 'flex';
+  (document.getElementById('nf-numero')||{}).textContent = nf.nNF || '—';
+  (document.getElementById('nf-forn')||{}).textContent   = nf.xNome || '—';
+  (document.getElementById('nf-total')||{}).textContent  = fmt(nf.vNF);
+  (document.getElementById('nf-ipi')||{}).textContent    = fmt(nf.totalIPINF);
+  (document.getElementById('nf-st')||{}).textContent     = fmt(nf.totalSTNF);
+  (document.getElementById('nf-itens')||{}).textContent  = nf.itens.length;
+  (document.getElementById('nf-icms-cred')||{}).textContent = fmt(nf.totalICMSCred);
+  (document.getElementById('nf-icms-info')||{}).textContent =
+    `ICMS entrada: ${nf.icmsPct}% | CMV = Custo − ICMS(${nf.icmsPct}%) − PIS(1,65%) − COFINS(7,60%)`;
+
+  // Tabela
+  const wrap = document.getElementById('nf-tabela-wrap');
+  if(wrap) wrap.style.display = 'block';
+
+  const tbody = document.getElementById('nf-items-tbody');
+  if(!tbody) return;
+
+  tbody.innerHTML = nf.itens.map((it,i) => `
+    <tr>
+      <td style="font-family:monospace;font-size:11px">${it.cProd}</td>
+      <td>
+        <input type="text" value="${it.skuFava}"
+          style="width:80px;padding:2px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:12px"
+          onchange="nfAtual.itens[${i}].skuFava=this.value"
+          placeholder="SKU Fava">
+      </td>
+      <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${it.xProd}">${it.xProd}</td>
+      <td class="num">${it.qCom}</td>
+      <td class="num">R$ ${it.vUnCom.toFixed(4)}</td>
+      <td class="num">${it.pIPI}%</td>
+      <td class="num" style="color:#d97706">R$ ${it.vIPI.toFixed(4)}</td>
+      <td class="num" style="color:#7c3aed">R$ ${it.vST.toFixed(4)}</td>
+      <td class="num" style="font-weight:700">R$ ${it.custoUnit.toFixed(4)}</td>
+      <td class="num">${it.pICMS}%</td>
+      <td class="num" style="color:#059669;font-weight:700">R$ ${it.cmvBr.toFixed(4)}</td>
+      <td class="num" style="color:#0284c7">R$ ${it.cmvPr.toFixed(4)}</td>
+      <td>
+        ${it.skuFava ?
+          `<button onclick="atualizarCMVItem(${i})" style="font-size:11px;padding:2px 8px;background:#059669;color:#fff;border:none;border-radius:4px;cursor:pointer">✓ CMV</button>`
+          : '<span style="color:#9ca3af;font-size:11px">sem SKU</span>'}
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function atualizarCMVItem(idx){
+  if(!nfAtual) return;
+  const it = nfAtual.itens[idx];
+  if(!it.skuFava){ alert('Informe o SKU Fava primeiro'); return; }
+
+  const payload = {
+    [it.skuFava]: {
+      cmv: it.cmvBr, cmvBr: it.cmvBr, cmvPr: it.cmvPr,
+      nome: it.xProd, fonte: 'nf'
+    }
+  };
+
+  try{
+    const r = await fetch('/api/cmv-cache', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if(r.ok){
+      dados.cmvCache[it.skuFava] = payload[it.skuFava];
+      alert(`✅ CMV do SKU ${it.skuFava} atualizado para R$ ${it.cmvBr.toFixed(4)}`);
+    }
+  }catch(e){ alert('Erro: ' + e.message); }
+}
+
+async function salvarNFBanco(){
+  if(!nfAtual) return;
+  const btn = document.getElementById('nf-btn-salvar');
+  if(btn){ btn.textContent = 'Salvando...'; btn.disabled = true; }
+
+  let ok = 0, erros = 0;
+  const cmvPayload = {};
+
+  for(const it of nfAtual.itens){
+    if(!it.skuFava) continue;
+    cmvPayload[it.skuFava] = {
+      cmv: it.cmvBr, cmvBr: it.cmvBr, cmvPr: it.cmvPr,
+      nome: it.xProd, fonte: 'nf'
+    };
+  }
+
+  if(Object.keys(cmvPayload).length > 0){
+    try{
+      const r = await fetch('/api/cmv-cache', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(cmvPayload)
+      });
+      if(r.ok){
+        const d = await r.json();
+        ok = d.n || Object.keys(cmvPayload).length;
+        // Atualiza cache local
+        Object.assign(dados.cmvCache, cmvPayload);
+      }
+    }catch(e){ erros++; }
+  }
+
+  // Salva NF no histórico
+  try{
+    await fetch('/api/db/nf-entrada', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        numero: nfAtual.nNF,
+        data: nfAtual.dhEmi,
+        fornecedor: nfAtual.xNome,
+        cnpj: nfAtual.CNPJ,
+        total_nf: nfAtual.vNF,
+        total_ipi: nfAtual.totalIPINF,
+        total_st: nfAtual.totalSTNF,
+        itens: nfAtual.itens.length,
+        arquivo: nfAtual.filename
+      })
+    });
+  }catch(e){}
+
+  if(btn){ btn.textContent = `✅ ${ok} CMVs salvos`; btn.disabled = false; }
+  setTimeout(()=>{ if(btn) btn.textContent = '💾 Salvar no banco + Atualizar CMV'; }, 3000);
+  carregarHistoricoNFs();
+}
+
+async function carregarHistoricoNFs(){
+  const tbody = document.getElementById('nf-hist-tbody');
+  if(!tbody) return;
+  try{
+    const r = await fetch('/api/db/nfs');
+    if(r.ok){
+      const nfs = await r.json();
+      if(!nfs.length){
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Nenhuma NF importada ainda</td></tr>';
+        return;
+      }
+      tbody.innerHTML = nfs.slice(0,20).map(n=>`
+        <tr>
+          <td>${n.data||'—'}</td>
+          <td style="font-weight:700">${n.numero||'—'}</td>
+          <td style="font-size:12px">${(n.fornecedor||'').substring(0,40)}</td>
+          <td class="num">R$ ${parseFloat(n.total_nf||0).toFixed(2)}</td>
+          <td class="num">${n.itens||'—'}</td>
+          <td><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:4px;font-size:11px">✅ Importada</span></td>
+        </tr>
+      `).join('');
+    }
+  }catch(e){
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">—</td></tr>';
+  }
+}
+
+function exportarNFPlanilha(){
+  if(!nfAtual) return;
+  const header = ['cProd','SKU Fava','Descrição','Qtd','Vl Unit NF','IPI%','IPI R$','ST R$','Custo Total','ICMS%','CMV BR','CMV PR'];
+  const rows = nfAtual.itens.map(it=>[
+    it.cProd, it.skuFava, it.xProd, it.qCom,
+    it.vUnCom.toFixed(4), it.pIPI, it.vIPI.toFixed(4),
+    it.vST.toFixed(4), it.custoUnit.toFixed(4),
+    it.pICMS, it.cmvBr.toFixed(4), it.cmvPr.toFixed(4)
+  ]);
+  const csv = [header, ...rows].map(r=>r.join('\t')).join('\n');
+  const blob = new Blob(['\ufeff'+csv], {type:'text/tab-separated-values'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `NF_${nfAtual.nNF}_${nfAtual.dhEmi}.tsv`;
+  a.click();
 }
 
 // ══════════════════════════════════════════════════════════════════════
