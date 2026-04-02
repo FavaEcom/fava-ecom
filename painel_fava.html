@@ -1447,7 +1447,7 @@ function aplicarPermissoesPerfil(){
   if(!perfilAtivo) return;
   const abas = ABAS_PERFIL[perfilAtivo] || ABAS_PERFIL.admin;
   // Esconde abas não permitidas
-  const todasAbas = ['dashboard','anuncios','financeiro','conciliacao','precos','ads','pedidos','promocoes','difal','perguntas'];
+  const todasAbas = ['dashboard','anuncios','financeiro','conciliacao','precos','ads','pedidos','promocoes','central-prom','difal','historico','cmv','nf','perguntas'];
   todasAbas.forEach(aba=>{
     const tab = document.getElementById(`vtab-${aba.slice(0,4)}`)||
                 document.getElementById(`vtab-${aba}`)||
@@ -1756,7 +1756,7 @@ function abrirCfg(){(document.getElementById('cfg-modal')||{style:{}}).style.dis
 // ══════════════════════════════════════════════════════════════════════
 // PERÍODO
 // ══════════════════════════════════════════════════════════════════════
-function setPeriod(p){
+function setPeriodo(p){
   periodo=p;
   document.querySelectorAll('.ptab').forEach(el=>el.classList.remove('a'));
   event.target.classList.add('a');
@@ -7076,6 +7076,30 @@ async function carregarCentralPromos(){
     return; 
   }
 
+  // Garante que anunciosData e CMV estão carregados
+  try{
+    if(anunciosData.length === 0){
+      if(st) st.textContent = '⟳ Carregando catálogo de anúncios...';
+      await carregarAnuncios();
+    }
+    // Garante CMV
+    if(Object.keys(dados.cmvCache||{}).length === 0){
+      const rP = await fetch('/api/db/produtos');
+      if(rP.ok){
+        const prods = await rP.json();
+        const norm2 = s=>String(s||'').trim().replace(/^0+(?=\d)/,'');
+        prods.forEach(p=>{
+          if(p.sku && (p.custo_br||p.custo)>0){
+            if(!dados.cmvCache) dados.cmvCache={};
+            dados.cmvCache[norm2(p.sku)] = {cmv:p.custo_br||p.custo||0,nome:p.nome||p.sku,fonte:'db'};
+          }
+        });
+      }
+    }
+  }catch(e){ console.warn('Pré-carga:', e); }
+
+  if(st) st.textContent = '⟳ Buscando promoções no ML...';
+
   try{
     // Busca todas as promoções do seller
     const r = await mlGet(`seller-promotions/users/${SELLER_ID}?app_version=v2`);
@@ -7132,9 +7156,9 @@ function renderCentralPromos(promos){
 
     // Analisa itens
     const itensHTML = promo.itens.slice(0,20).map((it,ii)=>{
-      // Busca CMV pelo MLB nos anunciosData
       const anuncio = anunciosData.find(a=>a.id===it.id);
       const sku = anuncio?.sku || '';
+      const nome = anuncio?.titulo || anuncio?.nome || anuncio?.title || '';
       const cmvInfo = cmvLookup(norm(sku));
       const cmv = cmvInfo?.cmv || 0;
       const frete = anuncio?.freteL || anuncio?.frete || 0;
@@ -7147,27 +7171,30 @@ function renderCentralPromos(promos){
         const pf = precoFinal;
         const lucro = pf - cmv - pf*taxaEfetiva - frete - pf*PIS_SAIDA - pf*COFINS_SAIDA - pf*DIFAL_MEDIO - pf*IBS_CBS;
         margem = lucro/pf;
+        const mgMin = it.original_price<=50?0.20:it.original_price<=200?0.18:0.15;
         if(margem >= 0.20)      { obs='✅ Vale'; obsCor='#059669'; }
-        else if(margem >= 0.10) { obs='⚠️ Baixa'; obsCor='#d97706'; }
-        else if(margem >= 0)    { obs='⚠️ Mínima'; obsCor='#f59e0b'; }
+        else if(margem >= mgMin){ obs='⚠️ Baixa '+( margem*100).toFixed(1)+'%'; obsCor='#d97706'; }
+        else if(margem >= 0)    { obs='❌ Abaixo mín.'; obsCor='#dc2626'; }
         else                    { obs='❌ Prejuízo'; obsCor='#dc2626'; }
       } else if(!cmv){
         obs='— sem CMV'; obsCor='#9ca3af';
       }
 
       const mgStr = margem!==null ? (margem*100).toFixed(1)+'%' : '—';
+      const mgCor = margem===null?'var(--muted)':margem>=.20?'#059669':margem>=.10?'#d97706':'#dc2626';
 
-      return `<tr style="border-bottom:1px solid #f3f4f6">
-        <td style="padding:4px 8px;font-size:11px;font-family:monospace">${it.id}</td>
-        <td style="padding:4px 8px;font-size:11px;font-weight:700;color:#1F3864">${sku||'—'}</td>
+      return `<tr style="border-bottom:1px solid #f3f4f6;${obs.startsWith('✅')?'background:#f0fdf4':''}${obs.startsWith('❌')?'background:#fff5f5':''}">
+        <td style="padding:4px 8px;font-size:10px;font-family:monospace;color:#6b7280">${it.id}</td>
+        <td style="padding:4px 8px;font-size:11px;font-weight:700;color:#1F3864;white-space:nowrap">${sku||'—'}</td>
+        <td style="padding:4px 8px;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${nome}">${nome||'—'}</td>
         <td style="padding:4px 8px;text-align:right;font-size:11px">R$${(it.original_price||0).toFixed(2)}</td>
         <td style="padding:4px 8px;text-align:right;font-size:11px;color:#7c3aed;font-weight:700">R$${precoFinal.toFixed(2)}</td>
-        <td style="padding:4px 8px;text-align:right;font-size:11px;color:var(--muted)">${cmv>0?'R$'+cmv.toFixed(2):'—'}</td>
-        <td style="padding:4px 8px;text-align:right;font-size:11px;font-weight:700;color:${margem!==null?(margem>=.15?'var(--verde)':margem>=0?'var(--amarelo)':'var(--vermelho)'):'var(--muted)'}">${mgStr}</td>
-        <td style="padding:4px 8px;text-align:center;font-size:11px;font-weight:700;color:${obsCor}">${obs}</td>
+        <td style="padding:4px 8px;text-align:right;font-size:11px;color:#166534">${cmv>0?'R$'+cmv.toFixed(2):'<span style="color:#f59e0b">sem CMV</span>'}</td>
+        <td style="padding:4px 8px;text-align:right;font-size:11px;font-weight:700;color:${mgCor}">${mgStr}</td>
+        <td style="padding:4px 8px;text-align:center;font-size:11px;font-weight:700;color:${obsCor};white-space:nowrap">${obs}</td>
         <td style="padding:4px 8px;text-align:center">
           ${it.status==='candidate' ? `<button onclick="aceitarPromoItem('${it.id}','${promo.id}','${promo.type}')" 
-            style="font-size:10px;padding:2px 8px;background:#059669;color:#fff;border:none;border-radius:4px;cursor:pointer">✓ Aceitar</button>` 
+            style="font-size:10px;padding:3px 10px;background:#059669;color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap">✓ Aceitar</button>` 
           : `<span style="font-size:10px;color:#059669;font-weight:700">✅ Ativo</span>`}
         </td>
       </tr>`;
@@ -7208,6 +7235,7 @@ function renderCentralPromos(promos){
             <thead><tr style="background:#f8fafc">
               <th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:700">MLB</th>
               <th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:700">SKU</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:700">Produto</th>
               <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--muted);font-weight:700">Preço orig.</th>
               <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--muted);font-weight:700">Preço promo</th>
               <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--muted);font-weight:700">CMV</th>
