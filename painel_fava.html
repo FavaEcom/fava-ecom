@@ -1834,9 +1834,10 @@ function calcMargemProm(preco, cmv, taxa_ml, frete_liq){
   const frete  = frete_liq || 0;
   const pis    = preco * PIS_SAIDA;
   const cofins = preco * COFINS_SAIDA;
+  const icms   = preco * ICMS_SAIDA_MED;  // ICMS saída 12% interestadual
   const difal  = preco * DIFAL_MEDIO;
   const ibscbs = preco * IBS_CBS;
-  const lucro  = preco - cmv - preco*taxa - frete - pis - cofins - difal - ibscbs;
+  const lucro  = preco - cmv - preco*taxa - frete - pis - cofins - icms - difal - ibscbs;
   return lucro / preco;
 }
 
@@ -2528,15 +2529,15 @@ function atualizarMgMin(idx, val){
 // Calcula desconto máximo dado margem mínima
 function calcDescMaximo(preco, cmv, mgMin, taxa, frete_liq){
   if(!cmv || cmv<=0 || !preco) return 0;
-  const mg = mgMin > 0 ? mgMin : 0.20; // margem mínima padrão 20%
+  const mg = mgMin > 0 ? mgMin : 0.20;
   const tx = taxa > 0 ? taxa : 0.12;
   const fr = frete_liq || 0;
-  const denom = 1 - tx - PIS_SAIDA - COFINS_SAIDA - DIFAL_MEDIO - IBS_CBS - mg;
+  const denom = 1 - tx - PIS_SAIDA - COFINS_SAIDA - ICMS_SAIDA_MED - DIFAL_MEDIO - IBS_CBS - mg;
   if(denom <= 0) return 0;
   const precoMin = (cmv + fr) / denom;
   if(precoMin >= preco) return 0;
   const descMax = Math.floor((1 - precoMin/preco)*100);
-  return Math.max(0, descMax); // sem teto artificial
+  return Math.max(0, descMax);
 }
 
 // Aplica regras padrão de margem mínima por faixa de preço
@@ -6203,11 +6204,12 @@ const FRETE_ML_TABLE = [
 ];
 
 // DIFAL médio real calculado dos dados da empresa (março/2026)
-const DIFAL_MEDIO = 0.0381; // 3,81% sobre vendas
-const IBS_CBS = 0.02;       // 2% IBS+CBS (reforma tributária)
-const PIS_SAIDA = 0.0165;
-const COFINS_SAIDA = 0.076;
-const ICMS_SAIDA_PR = 0.12;
+const DIFAL_MEDIO    = 0.0381; // 3,81% — média real calculada março/2026
+const IBS_CBS        = 0.02;   // 2,00% — reforma tributária
+const PIS_SAIDA      = 0.0165; // 1,65%
+const COFINS_SAIDA   = 0.076;  // 7,60%
+const ICMS_SAIDA_MED = 0.12;   // 12,00% — ICMS saída médio interestadual (SP dominante)
+const ICMS_SAIDA_PR  = 0.12;   // mantido para compatibilidade
 
 function calcFreteML(pesoKg, precoVenda){
   // Preço de venda já com desconto aplicado
@@ -7167,15 +7169,16 @@ function renderCentralPromos(promos){
 
       let margem = null, obs = '', obsCor = '#9ca3af';
       if(cmv > 0 && precoFinal > 0){
+        // Taxa efetiva = taxa do anúncio MENOS subsídio ML (co-participação reduz a taxa)
         const taxaEfetiva = Math.max(0, taxa - (meli_pct/100));
-        const pf = precoFinal;
-        const lucro = pf - cmv - pf*taxaEfetiva - frete - pf*PIS_SAIDA - pf*COFINS_SAIDA - pf*DIFAL_MEDIO - pf*IBS_CBS;
-        margem = lucro/pf;
+        // Usa calcMargemProm mas com taxa já ajustada pelo subsídio
+        margem = calcMargemProm(precoFinal, cmv, taxaEfetiva, frete);
         const mgMin = it.original_price<=50?0.20:it.original_price<=200?0.18:0.15;
-        if(margem >= 0.20)      { obs='✅ Vale'; obsCor='#059669'; }
-        else if(margem >= mgMin){ obs='⚠️ Baixa '+( margem*100).toFixed(1)+'%'; obsCor='#d97706'; }
-        else if(margem >= 0)    { obs='❌ Abaixo mín.'; obsCor='#dc2626'; }
-        else                    { obs='❌ Prejuízo'; obsCor='#dc2626'; }
+        if(margem === null)         { obs='— sem CMV'; obsCor='#9ca3af'; }
+        else if(margem >= 0.20)     { obs='✅ Vale'; obsCor='#059669'; }
+        else if(margem >= mgMin)    { obs='⚠️ Baixa '+(margem*100).toFixed(1)+'%'; obsCor='#d97706'; }
+        else if(margem >= 0)        { obs='❌ Abaixo mín.'; obsCor='#dc2626'; }
+        else                        { obs='❌ Prejuízo'; obsCor='#dc2626'; }
       } else if(!cmv){
         obs='— sem CMV'; obsCor='#9ca3af';
       }
@@ -7205,8 +7208,9 @@ function renderCentralPromos(promos){
       const cmv = cmvLookup(norm(an?.sku||''))?.cmv||0;
       if(!cmv || !it.original_price) return false;
       const pf = it.price || it.original_price*(1-(seller_pct+meli_pct)/100);
-      const lucro = pf - cmv - pf*(Math.max(0,(an?.taxa||.12)-(meli_pct/100))) - (an?.freteL||0) - pf*(PIS_SAIDA+COFINS_SAIDA+DIFAL_MEDIO+IBS_CBS);
-      return (lucro/pf) >= 0.10;
+      const taxaEf = Math.max(0,(an?.taxa||.12)-(meli_pct/100));
+      const mg = calcMargemProm(pf, cmv, taxaEf, an?.freteL||an?.frete||0);
+      return mg !== null && mg >= 0.10;
     }).length;
 
     return `

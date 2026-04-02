@@ -18,9 +18,10 @@ header h1{font-size:14px;font-weight:700;flex:1}
 .tab{padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;color:#9ca3af;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s}
 .tab.ativo{color:#1F3864;border-bottom-color:#1F3864}
 
-.layout{display:grid;grid-template-columns:340px 1fr;height:calc(100vh - 82px)}
-.left{background:#fff;border-right:1px solid #e0e4ea;overflow-y:auto;padding:13px}
-.right{overflow-y:auto;padding:13px;display:flex;flex-direction:column;gap:10px}
+.layout{display:grid;grid-template-columns:340px 1fr;height:calc(100vh - 82px);overflow:hidden}
+.left{background:#fff;border-right:1px solid #e0e4ea;overflow-y:auto;padding:13px;height:100%;box-sizing:border-box}
+.right{overflow-y:auto;overflow-x:hidden;padding:13px;display:block;height:100%;box-sizing:border-box}
+.cenarios-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:9px;margin-bottom:10px}
 
 /* FORM */
 .sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#9ca3af;padding-bottom:4px;border-bottom:1px solid #f3f4f6;margin:11px 0 7px}
@@ -246,6 +247,7 @@ header h1{font-size:14px;font-weight:700;flex:1}
   <div class="tab ativo" onclick="switchTab('unitario')">Produto único</div>
   <div class="tab" onclick="switchTab('massa')">Precificação em massa (NF)</div>
   <div class="tab" onclick="switchTab('orcamento')">📄 Orçamento</div>
+  <div class="tab" onclick="switchTab('balcao')" id="tab-balcao" style="background:#dcfce7;color:#166534;font-weight:700">🏪 Lista Balcão</div>
   <div class="tab" onclick="switchTab('anuncio')">✍️ Anúncio</div>
   <div class="tab" onclick="switchTab('kits')">🧩 Kits</div>
   <div class="tab" onclick="switchTab('recebimento')" id="tab-recebimento">📦 Recebimento NF</div>
@@ -618,6 +620,56 @@ header h1{font-size:14px;font-weight:700;flex:1}
   </div>
 </div>
 
+<!-- ═══════════════════ LISTA BALCÃO ═══════════════════ -->
+<div id="painel-balcao" style="display:none;height:calc(100vh - 82px);overflow:hidden;display:none;grid-template-columns:280px 1fr">
+  <!-- Esquerda — busca -->
+  <div style="background:#fff;border-right:1px solid #e0e4ea;overflow-y:auto;padding:12px">
+    <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:12px">🏪 Lista de Preços — Balcão</div>
+
+    <div style="margin-bottom:10px">
+      <label style="font-size:10px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">BUSCAR PRODUTO</label>
+      <div style="display:flex;gap:4px">
+        <input type="text" id="balcao-sku" placeholder="SKU ou nome..."
+          style="flex:1;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px"
+          onkeydown="if(event.key==='Enter')buscarBalcao()">
+        <button onclick="buscarBalcao()" style="padding:5px 10px;background:#166534;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">🔍</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:10px">
+      <label style="font-size:10px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">MARGEM BALCÃO (%)</label>
+      <input type="number" id="balcao-mg" value="40" min="5" max="200" step="1"
+        style="width:100%;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:13px;font-weight:700"
+        oninput="renderBalcaoLista()">
+    </div>
+
+    <div style="margin-bottom:10px">
+      <label style="font-size:10px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">DESCONTO CLIENTE (%)</label>
+      <input type="number" id="balcao-desc" value="0" min="0" max="80" step="1"
+        style="width:100%;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:13px;font-weight:700"
+        oninput="renderBalcaoLista()">
+    </div>
+
+    <button onclick="balcaoLimpar()" style="width:100%;padding:6px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:5px;cursor:pointer;font-size:12px;margin-bottom:8px">🗑️ Limpar lista</button>
+    <button onclick="balcaoImprimir()" style="width:100%;padding:6px;background:#1F3864;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">🖨️ Imprimir lista</button>
+
+    <div id="balcao-status" style="font-size:11px;color:#6b7280;margin-top:8px"></div>
+  </div>
+
+  <!-- Direita — lista de produtos -->
+  <div style="overflow-y:auto;padding:13px;background:#f8fafc">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <b style="font-size:14px;color:#1F3864">Produtos selecionados</b>
+      <span id="balcao-total-label" style="font-size:13px;font-weight:700;color:#166534"></span>
+    </div>
+    <div id="balcao-lista-wrap">
+      <div style="text-align:center;padding:40px;color:#9ca3af">
+        Busque produtos pelo SKU e adicione à lista
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════════ ANÚNCIO ═══════════════════ -->
 <div id="painel-anuncio" class="an-layout" style="display:none">
 
@@ -868,7 +920,7 @@ Vonder: fabricante nacional de ferramentas elétricas e manuais com foco em qual
 // ══════════════════════════════════════════════════════════════════════
 // CONSTANTES
 // ══════════════════════════════════════════════════════════════════════
-const PIS=.0165, COFINS=.076, ICMS_PR=.195, IBS_CBS=.02;
+const PIS=.0165, COFINS=.076, ICMS_PR=.195, IBS_CBS=.02, ICMS_SAIDA_MED=.12;
 // ══════════════════════════════════════════════════════════════════════
 // BANCO DE CMV — persiste em localStorage, compartilhado entre abas
 // ══════════════════════════════════════════════════════════════════════
@@ -1219,18 +1271,19 @@ window.onload=async ()=>{
 function switchTab(t){
   document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('ativo',
     (t==='unitario'&&i===0)||(t==='massa'&&i===1)||(t==='orcamento'&&i===2)||
-    (t==='anuncio'&&i===3)||(t==='kits'&&i===4)||(t==='recebimento'&&i===5)));
+    (t==='balcao'&&i===3)||(t==='anuncio'&&i===4)||(t==='kits'&&i===5)||(t==='recebimento'&&i===6)));
   document.getElementById('painel-unitario').style.display=t==='unitario'?'':'none';
   document.getElementById('painel-massa').style.display=t==='massa'?'':'none';
-  // Orçamento usa layout próprio (fora do .layout principal)
   const lo=document.querySelector('.layout');
-  if(lo) lo.style.display=(t==='orcamento'||t==='anuncio'||t==='kits'||t==='recebimento')?'none':'grid';
+  if(lo) lo.style.display=(t==='orcamento'||t==='balcao'||t==='anuncio'||t==='kits'||t==='recebimento')?'none':'grid';
   document.getElementById('painel-orcamento').style.display=t==='orcamento'?'grid':'none';
+  document.getElementById('painel-balcao').style.display=t==='balcao'?'grid':'none';
   document.getElementById('painel-anuncio').style.display=t==='anuncio'?'grid':'none';
   document.getElementById('painel-kits').style.display=t==='kits'?'grid':'none';
   document.getElementById('painel-recebimento').style.display=t==='recebimento'?'grid':'none';
   if(t==='anuncio') anInit();
   if(t==='kits') kitsInit();
+  if(t==='balcao') balcaoInit();
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1377,38 +1430,48 @@ async function processarBling(p){
     }
   }catch(e){}
   // ── Custo: 3 fontes em ordem de prioridade ──────────────────────────
-  // 1. Banco Railway — histórico de compras (NFs importadas — mais preciso)
-  // 2. Bling precoCusto direto no produto
-  // 3. Bling fornecedores (se endpoint disponível)
+  // REGRA: queremos sempre o custo bruto de compra (já com IPI+ST somados)
+  // NÃO queremos CMV (custo_br) — esse é calculado depois pela calculadora
   const skuFava = prod.codigo || '';
   let custoFinal = 0;
   let fonteCusto = '';
+  let ipiFinal   = 0; // IPI já embutido no custo — não aplica de novo
 
-  // Fonte 1: Banco Railway — busca CMV das NFs
+  // Fonte 1: Banco Railway — campo `custo` = custo bruto da NF (com IPI+ST)
   try{
     const RAILWAY = 'https://web-production-5aa0f.up.railway.app';
     const rbanco = await fetch(RAILWAY + '/api/db/produtos');
     if(rbanco.ok){
       const prods = await rbanco.json();
-      // Normaliza: remove espaços, zeros à esquerda, compara como string
       const norm = s => String(s||'').trim().replace(/^0+(?=\d)/,'');
       const skuNorm = norm(skuFava);
       const pb = prods.find(p => norm(p.sku) === skuNorm);
-      console.log(`[CMV] Buscando SKU "${skuNorm}" no banco — ${pb ? `ENCONTRADO custo_br=${pb.custo_br} custo=${pb.custo}` : 'NÃO encontrado'}`);
-      if(pb && (parseFloat(pb.custo_br||0) || parseFloat(pb.custo||0)) > 0){
-        custoFinal = parseFloat(pb.custo_br||0) || parseFloat(pb.custo||0);
+      console.log(`[CMV] SKU "${skuNorm}": ${pb ? `custo=${pb.custo} custo_br=${pb.custo_br}` : 'não encontrado'}`);
+      // Usa custo bruto (inclui IPI+ST) — NÃO usa custo_br que é o CMV
+      if(pb && parseFloat(pb.custo||0) > 0){
+        custoFinal = parseFloat(pb.custo);
         fonteCusto = '📦 Banco NF';
+        ipiFinal   = 0; // já incluso no custo
+      } else if(pb && parseFloat(pb.custo_br||0) > 0){
+        // fallback: banco tem CMV mas não custo bruto — usa custo_br mas avisa
+        custoFinal = parseFloat(pb.custo_br);
+        fonteCusto = '📦 Banco NF (CMV)';
+        ipiFinal   = 0;
       }
     }
   }catch(e){ console.warn('[banco]',e); }
 
-  // Fonte 2: Bling — precoCusto direto no objeto do produto
+  // Fonte 2: Bling — precoCusto já inclui IPI+ST conforme cadastro
   if(!custoFinal){
     const cb = parseFloat(prod.precoCusto || prod.custoMedio || 0);
-    if(cb > 0){ custoFinal = cb; fonteCusto = '🔵 Bling'; }
+    if(cb > 0){
+      custoFinal = cb;
+      fonteCusto = '🔵 Bling';
+      ipiFinal   = 0; // precoCusto no Bling já tem IPI+ST somados
+    }
   }
 
-  // Fonte 3: Bling — fornecedores (tenta mas pode ser 404)
+  // Fonte 3: Bling — fornecedores
   if(!custoFinal){
     try{
       const rf = await fetch(`/api/bling/produtos/${id}/fornecedores`,
@@ -1418,12 +1481,12 @@ async function processarBling(p){
         const forns = df.data || [];
         const forn = forns.find(f=>f.padrao) || forns[0];
         const fc = parseFloat(forn?.precoCusto || forn?.precoCompra || 0);
-        if(fc > 0){ custoFinal = fc; fonteCusto = '🔵 Bling fornecedor'; }
+        if(fc > 0){ custoFinal = fc; fonteCusto = '🔵 Bling fornecedor'; ipiFinal = 0; }
       }
     }catch(e){}
   }
 
-  // Fonte 4: Histórico de compras — pega custo médio das últimas NFs
+  // Fonte 4: Histórico de compras — custo_r = custo unitário da NF
   if(!custoFinal && skuFava){
     try{
       const RAILWAY = 'https://web-production-5aa0f.up.railway.app';
@@ -1433,11 +1496,11 @@ async function processarBling(p){
         const norm = s => String(s||'').trim().replace(/^0+(?=\d)/,'');
         const skuNorm = norm(skuFava);
         const itens = hist.filter(h => norm(h.sku) === skuNorm && parseFloat(h.custo_r||0) > 0);
-        console.log(`[Hist] SKU "${skuNorm}": ${itens.length} registros encontrados`);
         if(itens.length > 0){
           itens.sort((a,b) => (b.data_emissao||'').localeCompare(a.data_emissao||''));
           custoFinal = parseFloat(itens[0].custo_r);
           fonteCusto = `📋 Hist. NF ${itens[0].nf}`;
+          ipiFinal   = 0;
         }
       }
     }catch(e){}
@@ -1460,8 +1523,8 @@ async function processarBling(p){
   const dimL = parseFloat(prod.largura || prod.dimensoes?.largura || prod.medidas?.largura || 0);
   const dimA = parseFloat(prod.altura  || prod.dimensoes?.altura  || prod.medidas?.altura  || 0);
   const dimP = parseFloat(prod.profundidade || prod.dimensoes?.profundidade || prod.medidas?.profundidade || 0);
-  prodAtual={id:prod.id,nome:prod.nome||'',codigo:prod.codigo||'',custo:custoFinal,fonteCusto,peso:parseFloat(prod.pesoBruto||prod.peso||.5),l:dimL,a:dimA,p:dimP,estoque:est,ipi:parseFloat(prod.ipi||0)};
-  // ─ salva no Banco CMV ─
+  // IPI: sempre 0 pois o custo puxado já inclui IPI+ST
+  prodAtual={id:prod.id,nome:prod.nome||'',codigo:prod.codigo||'',custo:custoFinal,fonteCusto,peso:parseFloat(prod.pesoBruto||prod.peso||.5),l:dimL,a:dimA,p:dimP,estoque:est,ipi:0};
   cmvSet(prodAtual.codigo, {nome:prodAtual.nome, custo:custoFinal});
   setModo('bling');
   const custoBEl = document.getElementById('custo-b');
@@ -1475,7 +1538,7 @@ async function processarBling(p){
     custoBEl.style.background = '#fff7ed';
     custoBEl.style.borderColor = '#fcd34d';
   }
-  document.getElementById('ipi-p').value=prodAtual.ipi||0;
+  document.getElementById('ipi-p').value = 0; // IPI já incluso no custo
   document.getElementById('peso-r').value=prodAtual.peso||.5;
   document.getElementById('dim-l').value=prodAtual.l||0;
   document.getElementById('dim-a').value=prodAtual.a||0;
@@ -1801,8 +1864,8 @@ function calcCenario(k, cmvBr, cmvPr, pesoKg){
   const difalEfetivo = comDifal ? difalM * pIntC * pPfC : 0;
   const ibsCbsEf = comDifal ? IBS_CBS : 0;
 
-  const denom = Math.max(1-taxa-PIS-COFINS-difalEfetivo-ibsCbsEf-m, .05);
-  const denomMin = Math.max(1-taxa-PIS-COFINS-difalEfetivo-ibsCbsEf, .05);
+  const denom = Math.max(1-taxa-PIS-COFINS-ICMS_SAIDA_MED-difalEfetivo-ibsCbsEf-m, .05);
+  const denomMin = Math.max(1-taxa-PIS-COFINS-ICMS_SAIDA_MED-difalEfetivo-ibsCbsEf, .05);
 
   // Estimativa inicial sem frete
   let preco_est = custo / denom;
@@ -1835,40 +1898,35 @@ function calcCenario(k, cmvBr, cmvPr, pesoKg){
     preco = (custo + frete_custo) / denom;
   } else if(k==='shp' || k==='shp20'){
     // ─ Shopee: frete Xpress + crédito PIS/COFINS sobre taxa e frete ─────
-    // No Lucro Real: PIS+COFINS incidem sobre faturamento MAS geram crédito
-    // sobre serviços pagos (comissão Shopee + frete pago pelo vendedor)
-    // denom ajustado: taxa líquida = taxa*(1 - PIS - COFINS)
     const CRED = PIS + COFINS; // 9.25%
-    const taxaLiq = taxa * (1 - CRED); // taxa efetiva após crédito
-    const denomShp = Math.max(1 - taxaLiq - PIS - COFINS - difalEfetivo - m, .05);
-    const denomShpMin = Math.max(1 - taxaLiq - PIS - COFINS - difalEfetivo, .05);
+    const taxaLiq = taxa * (1 - CRED);
+    const denomShp    = Math.max(1 - taxaLiq - PIS - COFINS - ICMS_SAIDA_MED - difalEfetivo - m, .05);
+    const denomShpMin = Math.max(1 - taxaLiq - PIS - COFINS - ICMS_SAIDA_MED - difalEfetivo, .05);
 
-    // Estima preço sem frete, depois calcula frete e itera
     let preco_est_shp = custo / denomShp;
     const frete_bruto = freteShopee(pesoCobrado || pesoKg);
-    const frete_liq   = frete_bruto * (1 - CRED); // frete líquido (com crédito)
+    const frete_liq   = frete_bruto * (1 - CRED);
     preco = (custo + frete_liq) / denomShp;
-    // Uma iteração de refinamento
     preco = (custo + frete_liq) / denomShp;
-    frete_custo = frete_liq; // custo líquido registrado
+    frete_custo = frete_liq;
 
-    // Calcula preço mínimo com denomShpMin
     const precoMinShp = (custo + frete_liq) / denomShpMin;
 
     const pis_r_shp   = preco * PIS;
     const cof_r_shp   = preco * COFINS;
-    const tx_r_shp    = preco * taxa;       // valor bruto da taxa
-    const cred_taxa   = tx_r_shp * CRED;    // crédito PIS/COFINS sobre a taxa paga
-    const cred_frete  = frete_bruto * CRED; // crédito PIS/COFINS sobre o frete pago
+    const icms_r_shp  = preco * ICMS_SAIDA_MED;
+    const tx_r_shp    = preco * taxa;
+    const cred_taxa   = tx_r_shp * CRED;
+    const cred_frete  = frete_bruto * CRED;
     const difal_r_shp = preco * difalEfetivo;
-    const lucro_shp   = preco - custo - pis_r_shp - cof_r_shp - tx_r_shp + cred_taxa - frete_bruto + cred_frete - difal_r_shp;
+    const lucro_shp   = preco - custo - pis_r_shp - cof_r_shp - icms_r_shp - tx_r_shp + cred_taxa - frete_bruto + cred_frete - difal_r_shp;
     const mgliq_shp   = preco > 0 ? lucro_shp / preco : 0;
 
     return {
       preco, precoMin: precoMinShp,
-      pis_r: pis_r_shp, cof_r: cof_r_shp,
+      pis_r: pis_r_shp, cof_r: cof_r_shp, icms_r: icms_r_shp,
       tx_r: tx_r_shp,
-      frete_custo: frete_bruto, // exibe o frete bruto no detalhe
+      frete_custo: frete_bruto,
       frete_liq,
       cred_taxa, cred_frete,
       lucro: lucro_shp, mgliq: mgliq_shp,
@@ -1880,11 +1938,12 @@ function calcCenario(k, cmvBr, cmvPr, pesoKg){
   }
 
   const precoMin = (custo + frete_custo) / denomMin;
-  const pis_r=preco*PIS, cof_r=preco*COFINS, tx_r=preco*taxa;
+  const pis_r=preco*PIS, cof_r=preco*COFINS, tx_r=preco*taxa, icms_r=preco*ICMS_SAIDA_MED;
   const difal_tmp=preco*difalEfetivo;
-  const lucro=preco-custo-pis_r-cof_r-tx_r-frete_custo-difal_tmp;
+  const ibscbs_r=preco*ibsCbsEf;
+  const lucro=preco-custo-pis_r-cof_r-icms_r-tx_r-frete_custo-difal_tmp-ibscbs_r;
   const mgliq=preco>0?lucro/preco:0;
-  const mc=preco>0?lucro/preco:0; // MC% = Lucro/Preço
+  const mc=mgliq;
 
   // Validação de aplicabilidade por regra ML
   let aplicavel=true, obs='';
@@ -1896,7 +1955,7 @@ function calcCenario(k, cmvBr, cmvPr, pesoKg){
   if(k==='mlpr'&&preco<FRETE_GRATIS_LIMITE){aplicavel=false;obs='ML Premium exige preço ≥ R$79';}
 
   const difal_r=preco*difalEfetivo;
-  return{preco,precoMin,pis_r,cof_r,tx_r,frete_custo,lucro,mgliq,custo,taxa,aplicavel,obs,difal_r,difalEfetivo};
+  return{preco,precoMin,pis_r,cof_r,icms_r,tx_r,frete_custo,lucro,mgliq,custo,taxa,aplicavel,obs,difal_r,difalEfetivo,ibscbs_r};
 }
 
 function calcAll(){
@@ -1953,10 +2012,12 @@ function calcAll(){
         <div class="dtl">
           <div class="dr"><span>Taxa canal (${(r.taxa*100).toFixed(1)}%)</span><strong>R$ ${fmt(r.tx_r)}</strong></div>
           <div class="dr"><span>PIS+COFINS</span><strong>R$ ${fmt(r.pis_r+r.cof_r)}</strong></div>
+          ${r.icms_r>0?`<div class="dr"><span>ICMS saída (12%)</span><strong>R$ ${fmt(r.icms_r)}</strong></div>`:''}
           <div class="dr"><span>Frete</span><strong>R$ ${fmt(r.frete_custo)}</strong></div>
           ${r.cred_taxa>0?`<div class="dr"><span style="color:#16a34a">Créd. s/ taxa (9,25%)</span><strong style="color:#16a34a">− R$ ${fmt(r.cred_taxa)}</strong></div>`:''}
           ${r.cred_frete>0?`<div class="dr"><span style="color:#16a34a">Créd. s/ frete (9,25%)</span><strong style="color:#16a34a">− R$ ${fmt(r.cred_frete)}</strong></div>`:''}
           ${r.difal_r>0?`<div class="dr"><span>DIFAL (${(r.difalEfetivo*100).toFixed(1)}%)</span><strong>R$ ${fmt(r.difal_r)}</strong></div>`:''}
+          ${r.ibscbs_r>0?`<div class="dr"><span>IBS/CBS (2%)</span><strong>R$ ${fmt(r.ibscbs_r)}</strong></div>`:''}
         </div>
         <div class="acoes">
           <button class="btn-sm" onclick="copiar(${r.preco.toFixed(2)})">Copiar</button>
@@ -1978,7 +2039,8 @@ function calcAll(){
       const tiers=calcAtacado(cmvBr,cmvPr,k,peso);
       if(!tiers) return;
       const card=document.createElement('div');
-      card.className='ccard';card.style.gridColumn='1/-1';
+      card.className='ccard';
+      card.style.cssText='width:100%;box-sizing:border-box;overflow-x:auto;margin-bottom:10px';
       card.innerHTML=`
         <div class="chead">
           <div class="cion ${c.c}">${c.e}</div>
@@ -2096,10 +2158,12 @@ async function calcMassa(){
         const c=CD[k];
         const custo=c.cmv==='pr'?cmvPrItem:cmvBrItem;
         const m=margens[k];
+        const isMarket = k.startsWith('ml')||k==='shp'||k==='shp20';
+        const icmsS = isMarket ? ICMS_SAIDA_MED : 0;
         let frete=k==='mlcl_fr'?13.5:k==='mlcl_fx'?7.25:k==='mlpr'||k==='mlcl_fg'?15:0;
-        const denom=Math.max(1-c.tx-PIS-COFINS-m,.05);
+        const denom=Math.max(1-c.tx-PIS-COFINS-icmsS-m,.05);
         const preco=(custo+frete)/denom;
-        const lucro=preco-custo-preco*PIS-preco*COFINS-preco*c.tx-frete;
+        const lucro=preco-custo-preco*PIS-preco*COFINS-preco*icmsS-preco*c.tx-frete;
         const mgliq=preco>0?lucro/preco:0;
         precos[k]={preco,mgliq};
       });
@@ -2192,21 +2256,21 @@ function calcAtacado(cmvBr, cmvPr, k, peso){
   const c = CD[k];
   const baseCMV = c.cmv==='pr' ? cmvPr : cmvBr;
   if(baseCMV<=0) return null;
-  
-  // Para atacado SP, usa lógica SP→SP (sem DIFAL, ICMS 18%)
-  const isSP = k==='atac_sp';
-  
+
+  // Atacado ML: incide ICMS saída + PIS/COFINS; Atacado Direto: sem ICMS interestadual
+  const temIcmsSaida = (k==='atac_ml' || k==='atac_sp');
+
   return atacadoTiers.map((tier,i)=>{
-    const custo = baseCMV; // CMV não muda por tier
-    const m = margens[k] * (1 - tier.desc); // aplica desconto na margem
-    const denom = Math.max(1 - c.tx - PIS - COFINS - m, .05);
+    const custo = baseCMV;
+    const m = margens[k] * (1 - tier.desc);
+    const icmsS = temIcmsSaida ? ICMS_SAIDA_MED : 0;
+    const denom = Math.max(1 - c.tx - PIS - COFINS - icmsS - m, .05);
     const frete = k==='atac_dir' ? 0 : freteML(pesoCobrado||peso, custo/denom);
     const preco = (custo + frete) / denom;
-    const pis_r=preco*PIS, cof_r=preco*COFINS, tx_r=preco*c.tx;
-    const lucro = preco - custo - pis_r - cof_r - tx_r - frete;
+    const pis_r=preco*PIS, cof_r=preco*COFINS, tx_r=preco*c.tx, icms_r=preco*icmsS;
+    const lucro = preco - custo - pis_r - cof_r - icms_r - tx_r - frete;
     const mc = preco>0 ? lucro/preco : 0;
-    const precoDesconto = i>0 ? preco : null; // preço com desconto vs tier 1
-    return {tier:i+1, qty:tier.qty, desc:tier.desc, preco, lucro, mc, frete, custo, tx_r};
+    return {tier:i+1, qty:tier.qty, desc:tier.desc, preco, lucro, mc, frete, custo, tx_r, icms_r};
   });
 }
 
@@ -2583,6 +2647,236 @@ function calcOrc(){
   else _origCalcOrc();
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// LISTA BALCÃO
+// ══════════════════════════════════════════════════════════════════════
+let balcaoLista = []; // [{sku, nome, cmv, qtd}]
+
+async function balcaoInit(){
+  // Carrega CMV do banco se vazio
+  if(Object.keys(cmvBanco).length < 5){
+    try{
+      const r = await fetch('https://web-production-5aa0f.up.railway.app/api/db/produtos');
+      if(r.ok){
+        const prods = await r.json();
+        prods.forEach(p=>{
+          if(p.sku){
+            const k = String(p.sku).trim();
+            cmvBanco[k] = {nome:p.nome||k, cmvBr:p.custo_br||0, cmvPr:p.custo_pr||p.custo_br||0, custo:p.custo||0};
+          }
+        });
+      }
+    }catch(e){}
+  }
+  renderBalcaoLista();
+  document.getElementById('balcao-sku')?.focus();
+}
+
+async function buscarBalcao(){
+  const inp = document.getElementById('balcao-sku');
+  const st  = document.getElementById('balcao-status');
+  const q   = inp?.value.trim();
+  if(!q){ if(st) st.textContent='Digite um SKU ou nome'; return; }
+  if(st) st.textContent = '⟳ Buscando...';
+
+  const norm = s=>String(s||'').trim().replace(/^0+(?=\d)/,'');
+  const qn   = norm(q);
+
+  // Busca no cmvBanco por SKU exato
+  let found = cmvBanco[q] || cmvBanco[qn] || null;
+
+  // Busca por nome parcial se não achou por SKU
+  if(!found){
+    const match = Object.entries(cmvBanco).find(([k,v])=>
+      k === qn || String(k).toLowerCase().includes(q.toLowerCase()) ||
+      (v.nome||'').toLowerCase().includes(q.toLowerCase())
+    );
+    if(match) found = {...match[1], sku: match[0]};
+  }
+
+  // Tenta Railway se não achou
+  if(!found){
+    try{
+      const r = await fetch(`https://web-production-5aa0f.up.railway.app/api/db/produtos`);
+      if(r.ok){
+        const prods = await r.json();
+        const prod = prods.find(p=>
+          norm(String(p.sku||''))===qn ||
+          (p.nome||'').toLowerCase().includes(q.toLowerCase())
+        );
+        if(prod){
+          found = {nome:prod.nome||q, cmvBr:prod.custo_br||0, cmvPr:prod.custo_pr||prod.custo_br||0, sku:prod.sku};
+          cmvBanco[norm(String(prod.sku))] = found;
+        }
+      }
+    }catch(e){}
+  }
+
+  if(!found || !found.cmvPr){
+    if(st) st.textContent = `❌ "${q}" não encontrado`;
+    return;
+  }
+
+  const sku = found.sku || qn;
+
+  // Verifica se já está na lista
+  const existIdx = balcaoLista.findIndex(x=>norm(String(x.sku))===norm(String(sku)));
+  if(existIdx >= 0){
+    balcaoLista[existIdx].qtd++;
+    if(st) st.textContent = `✅ ${found.nome} — qtd atualizada`;
+  } else {
+    balcaoLista.push({sku, nome:found.nome||sku, cmv:found.cmvPr, qtd:1});
+    if(st) st.textContent = `✅ ${found.nome} adicionado`;
+  }
+
+  inp.value = '';
+  inp.focus();
+  renderBalcaoLista();
+}
+
+function calcPrecoBalcao(cmv, mg, desc){
+  // Preço balcão: sem DIFAL, sem taxa marketplace, sem frete
+  const PIS_S = 0.0165, COF_S = 0.076, ICMS_S = 0.12;
+  const m = mg/100;
+  const denom = Math.max(1 - PIS_S - COF_S - ICMS_S - m, 0.1);
+  const precoBase = cmv / denom;
+  const precoDesc = precoBase * (1 - desc/100);
+  const lucro = precoDesc - cmv - precoDesc*(PIS_S+COF_S+ICMS_S);
+  const mc = precoDesc>0 ? lucro/precoDesc : 0;
+  return {precoBase, precoDesc, mc};
+}
+
+function renderBalcaoLista(){
+  const wrap  = document.getElementById('balcao-lista-wrap');
+  const mg    = parseFloat(document.getElementById('balcao-mg')?.value)||40;
+  const desc  = parseFloat(document.getElementById('balcao-desc')?.value)||0;
+  const label = document.getElementById('balcao-total-label');
+
+  if(!balcaoLista.length){
+    if(wrap) wrap.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af">Busque produtos pelo SKU e adicione à lista</div>';
+    if(label) label.textContent = '';
+    return;
+  }
+
+  let totalBruto = 0;
+  const rows = balcaoLista.map((item, i)=>{
+    const {precoDesc, mc} = calcPrecoBalcao(item.cmv, mg, desc);
+    const total = precoDesc * item.qtd;
+    totalBruto += total;
+    const mcCor = mc>=0.30?'#059669':mc>=0.15?'#d97706':'#dc2626';
+    return `<tr style="border-bottom:1px solid #e5e7eb">
+      <td style="padding:8px 10px;font-weight:700;color:#1F3864">${item.sku}</td>
+      <td style="padding:8px 10px;font-size:12px">${item.nome}</td>
+      <td style="padding:8px 10px;text-align:center">
+        <div style="display:flex;align-items:center;gap:4px;justify-content:center">
+          <button onclick="balcaoQtd(${i},-1)" style="width:22px;height:22px;border:1px solid #d1d5db;border-radius:4px;background:#f9fafb;cursor:pointer;font-size:14px;line-height:1">−</button>
+          <span style="width:28px;text-align:center;font-weight:700">${item.qtd}</span>
+          <button onclick="balcaoQtd(${i},+1)" style="width:22px;height:22px;border:1px solid #d1d5db;border-radius:4px;background:#f9fafb;cursor:pointer;font-size:14px;line-height:1">+</button>
+        </div>
+      </td>
+      <td style="padding:8px 10px;text-align:right;font-size:13px;font-weight:700">R$ ${precoDesc.toFixed(2)}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:13px;font-weight:700;color:#1F3864">R$ ${total.toFixed(2)}</td>
+      <td style="padding:8px 10px;text-align:center;font-size:11px;font-weight:700;color:${mcCor}">${(mc*100).toFixed(1)}%</td>
+      <td style="padding:8px 10px;text-align:center">
+        <button onclick="balcaoRemover(${i})" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:16px" title="Remover">×</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  if(wrap) wrap.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb">
+      <thead><tr style="background:#1F3864;color:#fff">
+        <th style="padding:8px 10px;text-align:left;font-size:11px">SKU</th>
+        <th style="padding:8px 10px;text-align:left;font-size:11px">Produto</th>
+        <th style="padding:8px 10px;text-align:center;font-size:11px">Qtd</th>
+        <th style="padding:8px 10px;text-align:right;font-size:11px">Preço Unit</th>
+        <th style="padding:8px 10px;text-align:right;font-size:11px">Total</th>
+        <th style="padding:8px 10px;text-align:center;font-size:11px">MC%</th>
+        <th style="padding:8px 10px;font-size:11px"></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr style="background:#f8fafc;border-top:2px solid #1F3864">
+        <td colspan="3" style="padding:10px;font-size:12px;color:#6b7280">
+          ${balcaoLista.length} produto(s) | Margem: ${mg}%${desc>0?' | Desconto: '+desc+'%':''}
+        </td>
+        <td colspan="2" style="padding:10px;text-align:right;font-size:16px;font-weight:700;color:#1F3864">
+          TOTAL: R$ ${totalBruto.toFixed(2)}
+        </td>
+        <td colspan="2"></td>
+      </tr></tfoot>
+    </table>`;
+
+  if(label) label.textContent = `Total: R$ ${totalBruto.toFixed(2)}`;
+}
+
+function balcaoQtd(i, delta){
+  balcaoLista[i].qtd = Math.max(1, (balcaoLista[i].qtd||1) + delta);
+  renderBalcaoLista();
+}
+
+function balcaoRemover(i){
+  balcaoLista.splice(i,1);
+  renderBalcaoLista();
+}
+
+function balcaoLimpar(){
+  balcaoLista = [];
+  renderBalcaoLista();
+  const st = document.getElementById('balcao-status');
+  if(st) st.textContent = '';
+}
+
+function balcaoImprimir(){
+  const mg   = parseFloat(document.getElementById('balcao-mg')?.value)||40;
+  const desc = parseFloat(document.getElementById('balcao-desc')?.value)||0;
+  const data = new Date().toLocaleDateString('pt-BR');
+
+  let totalBruto = 0;
+  const linhas = balcaoLista.map(item=>{
+    const {precoDesc} = calcPrecoBalcao(item.cmv, mg, desc);
+    const total = precoDesc * item.qtd;
+    totalBruto += total;
+    return `<tr>
+      <td>${item.sku}</td>
+      <td>${item.nome}</td>
+      <td style="text-align:center">${item.qtd}</td>
+      <td style="text-align:right">R$ ${precoDesc.toFixed(2)}</td>
+      <td style="text-align:right"><b>R$ ${total.toFixed(2)}</b></td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>Lista de Preços — Fava Ecom</title>
+  <style>
+    body{font-family:Arial,sans-serif;padding:20px;font-size:13px}
+    h2{color:#1F3864;margin:0 0 4px}
+    .sub{color:#6b7280;font-size:11px;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse}
+    th{background:#1F3864;color:#fff;padding:7px 10px;text-align:left;font-size:11px}
+    td{padding:6px 10px;border-bottom:1px solid #e5e7eb}
+    tr:nth-child(even) td{background:#f8fafc}
+    .total{font-size:15px;font-weight:700;text-align:right;padding:10px;border-top:2px solid #1F3864}
+    @media print{body{padding:10px}}
+  </style></head><body>
+  <h2>🏪 Fava Ecom — Lista de Preços Balcão</h2>
+  <div class="sub">Data: ${data} | Margem: ${mg}%${desc>0?' | Desconto cliente: '+desc+'%':''}</div>
+  <table>
+    <thead><tr>
+      <th>SKU</th><th>Produto</th><th style="text-align:center">Qtd</th>
+      <th style="text-align:right">Preço Unit</th><th style="text-align:right">Total</th>
+    </tr></thead>
+    <tbody>${linhas}</tbody>
+  </table>
+  <div class="total">TOTAL: R$ ${totalBruto.toFixed(2)}</div>
+  <script>window.onload=()=>window.print()<\/script>
+  </body></html>`;
+
+  const w = window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // Watch for tab switch to orcamento
 (function(){
   const origST=switchTab;
