@@ -116,17 +116,17 @@ def criar_tabelas():
                 storyselling TEXT,
                 fotos TEXT,
                 qtd_fotos INTEGER DEFAULT 0,
-                updated_at DATETIME DEFAULT (datetime('now')))""",
+                updated_at TIMESTAMP DEFAULT NOW())""",
             """CREATE TABLE IF NOT EXISTS kits (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 sku TEXT UNIQUE, nome TEXT, itens TEXT,
                 justificativa TEXT, peso REAL DEFAULT 0,
                 titulo_ml TEXT, descricao TEXT, descricao_completa TEXT,
                 categoria TEXT, tarefas TEXT,
                 status TEXT DEFAULT 'aprovado',
-                created_at DATETIME DEFAULT (datetime('now')))""",
+                created_at TIMESTAMP DEFAULT NOW())""",
             """CREATE TABLE IF NOT EXISTS produto_cadastro (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 sku TEXT UNIQUE, nome TEXT, fornecedor TEXT,
                 codigo_fornecedor TEXT, ncm TEXT, cst TEXT, cfop TEXT,
                 ipi REAL DEFAULT 0, tem_st INTEGER DEFAULT 0,
@@ -140,8 +140,8 @@ def criar_tabelas():
                 preco_shopee REAL DEFAULT 0, preco_yampi REAL DEFAULT 0,
                 preco_balcao REAL DEFAULT 0, preco_atacado REAL DEFAULT 0,
                 status_cadastro TEXT DEFAULT 'rascunho', tarefas TEXT,
-                created_at DATETIME DEFAULT (datetime('now')),
-                updated_at DATETIME DEFAULT (datetime('now')))""",
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW())""",
         ]
     else:
         sqls = [
