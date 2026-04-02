@@ -692,8 +692,62 @@ function salvarCfg(){
         </div>
       </div>
     </div>
+    <div class="fcard" style="grid-column:1/-1">
+      <div class="fcard-head">
+        <h3>📅 Contas a Pagar — Próximos 30 dias</h3>
+        <span id="fin-boletos-total" style="font-size:13px;color:#dc2626;font-weight:700"></span>
+      </div>
+      <div class="fcard-body" style="padding:0">
+        <table class="ftbl"><thead><tr>
+          <th>Vencimento</th><th>NF Nº</th><th>Fornecedor</th>
+          <th>Parcela</th><th class="num">Valor</th><th>Status</th><th></th>
+        </tr></thead>
+        <tbody id="fin-boletos-tbody"></tbody></table>
+      </div>
+    </div>
     <div class="fcard">
-      <div class="fcard-head"><h3>Por fornecedor (mês)</h3></div>
+      <div class="fcard-head"><h3>🏦 Saldo Bancário</h3><button class="btn-fin" style="font-size:11px" onclick="salvarSaldos()">💾 Salvar</button></div>
+      <div class="fcard-body">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;width:140px">Banco Inter (PJ)</span>
+            <input type="number" id="saldo-inter" step="0.01" placeholder="0,00" oninput="calcSaldoTotal()"
+              style="flex:1;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:13px">
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;width:140px">Banco Bradesco</span>
+            <input type="number" id="saldo-bradesco" step="0.01" placeholder="0,00" oninput="calcSaldoTotal()"
+              style="flex:1;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:13px">
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;width:140px">Mercado Pago</span>
+            <input type="number" id="saldo-mp" step="0.01" placeholder="0,00"
+              style="flex:1;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:13px">
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;width:140px">Outro</span>
+            <input type="number" id="saldo-outro" step="0.01" placeholder="0,00"
+              style="flex:1;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:13px">
+          </div>
+          <div style="border-top:2px solid #1F3864;padding-top:8px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-weight:700;font-size:13px">Total disponível</span>
+            <span id="saldo-total" style="font-weight:700;font-size:16px;color:#059669">R$ 0,00</span>
+          </div>
+          <div style="font-size:10px;color:#9ca3af" id="saldo-data">Não atualizado</div>
+        </div>
+      </div>
+    </div>
+    <div class="fcard">
+      <div class="fcard-head"><h3>📋 Contas Fixas Mensais</h3><button class="btn-fin" style="font-size:11px" onclick="salvarContasFixas()">💾 Salvar</button></div>
+      <div class="fcard-body">
+        <div id="contas-fixas-list" style="display:flex;flex-direction:column;gap:6px"></div>
+        <button onclick="addContaFixa()" style="margin-top:8px;font-size:11px;padding:4px 10px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:5px;cursor:pointer;width:100%">+ Adicionar conta fixa</button>
+        <div style="border-top:1px solid #e5e7eb;margin-top:8px;padding-top:8px;display:flex;justify-content:space-between">
+          <span style="font-size:12px;font-weight:700">Total fixo/mês</span>
+          <span id="contas-fixas-total" style="font-weight:700;color:#dc2626">R$ 0,00</span>
+        </div>
+      </div>
+    </div>
       <div class="fcard-body" style="padding:0">
         <table class="ftbl"><thead><tr><th>Fornecedor</th><th class="num">Total mês</th><th class="num">Em aberto</th></tr></thead>
         <tbody id="tbody-fornecedores"></tbody></table>
@@ -1202,7 +1256,8 @@ function salvarCfg(){
       <div style="overflow-x:auto">
         <table class="data-table"><thead><tr>
           <th>Data</th><th>NF Nº</th><th>Fornecedor</th>
-          <th class="num">Total NF</th><th class="num">Itens</th><th>Status</th>
+          <th class="num">Total NF</th><th class="num">Itens</th>
+          <th class="num">Parcelas</th><th>Status</th>
         </tr></thead>
         <tbody id="nf-hist-tbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Carregue uma NF para começar</td></tr></tbody>
         </table>
@@ -4990,6 +5045,7 @@ async function initFinanceiro(){
   (document.getElementById('lanc-data')||{value:''}).value = hoje;
   renderReceber();
   renderLancamentos();
+  initSaldos();
 
   // Carrega boletos e NFs do banco PostgreSQL
   try{
@@ -5103,31 +5159,63 @@ function carregarBoletos(input){
 
 function renderBoletos(){
   const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const ultSemana = new Date(hoje); ultSemana.setDate(ultSemana.getDate()-7);
   const prox30 = new Date(hoje); prox30.setDate(prox30.getDate()+30);
 
-  const sorted = [...boletosData].sort((a,b)=>(a.venc||new Date(9999,0,1))-(b.venc||new Date(9999,0,1)));
-  const rows = sorted.map(b=>{
+  // Mostra: vencidos da última semana + próximos 30 dias (não mostra antigos já pagos)
+  const filtrados = [...boletosData]
+    .filter(b=>{
+      if(!b.venc) return true;
+      const pago = b.status.toUpperCase().includes('PAGO');
+      if(pago) return b.venc >= ultSemana; // pagos: só última semana
+      return b.venc >= ultSemana;          // a pagar: da última semana em diante
+    })
+    .sort((a,b)=>(a.venc||new Date(9999,0,1))-(b.venc||new Date(9999,0,1)));
+
+  // Total a pagar nos próximos 30 dias
+  const totalApagar = filtrados
+    .filter(b=>!b.status.toUpperCase().includes('PAGO') && b.venc && b.venc <= prox30)
+    .reduce((s,b)=>s+b.valor,0);
+  const totEl = document.getElementById('fin-boletos-total');
+  if(totEl) totEl.textContent = totalApagar>0 ? `Total 30 dias: R$ ${fmt(totalApagar)}` : '';
+
+  const rows = filtrados.map(b=>{
     const pago = b.status.toUpperCase().includes('PAGO');
     const dt = b.venc;
     const diff = dt?Math.round((dt-hoje)/(1000*60*60*24)):null;
     const dtFmt = dt?`${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`:'—';
-    const tag = pago?`<span class="tag-pago">Pago</span>`:
+    const urgente = !pago && diff !== null && diff <= 7;
+    const tag = pago?`<span class="tag-pago">✅ Pago</span>`:
                 diff===null?`<span class="tag-pagar">Sem venc.</span>`:
-                diff<0?`<span class="tag-atraso">Atraso ${Math.abs(diff)}d</span>`:
-                diff===0?`<span class="tag-pagar">Hoje!</span>`:
+                diff<0?`<span class="tag-atraso">⚠️ Atraso ${Math.abs(diff)}d</span>`:
+                diff===0?`<span class="tag-pagar" style="color:#dc2626;font-weight:700">🔴 Hoje!</span>`:
+                diff<=3?`<span class="tag-pagar" style="color:#d97706;font-weight:700">🟡 Em ${diff}d</span>`:
                 `<span class="tag-pagar">Em ${diff}d</span>`;
-    const rowClass = !pago&&diff!==null&&diff<0?'venc-atras':!pago&&diff===0?'venc-hoje':'';
-    const forn_curto = b.forn.length>30?b.forn.substring(0,28)+'…':b.forn;
-    return `<tr class="${rowClass}">
-      <td title="${b.forn}" style="font-size:10px">${forn_curto}</td>
-      <td style="font-size:10px">${b.nf}</td>
-      <td>${dtFmt}</td>
-      <td class="num">R$ ${fmt(b.valor)}</td>
+    const rowStyle = pago?'opacity:.5':urgente?'background:#fef9c3':'';
+    const forn_curto = (b.forn||'').length>25?(b.forn||'').substring(0,23)+'…':(b.forn||'');
+    return `<tr style="${rowStyle}">
+      <td style="font-weight:700">${dtFmt}</td>
+      <td style="font-size:11px">${b.nf||'—'}</td>
+      <td style="font-size:11px" title="${b.forn}">${forn_curto}</td>
+      <td style="font-size:11px">${b.parcela||'—'}</td>
+      <td class="num" style="font-weight:700">R$ ${fmt(b.valor)}</td>
       <td>${tag}</td>
+      <td>${!pago?`<button onclick="marcarBoletoPago(${b.id})" style="font-size:10px;padding:2px 6px;background:#059669;color:#fff;border:none;border-radius:3px;cursor:pointer">✓ Pago</button>`:''}</td>
     </tr>`;
   });
-  (document.getElementById('fin-boletos-tbody')||{})['innerHTML'] = rows.join('')||'<tr><td colspan="5" style="text-align:center;padding:15px;color:var(--muted)">Importe a planilha</td></tr>';
-  (document.getElementById('fin-boletos-lbl')||{}).textContent = `${boletosData.length} boletos`;
+  (document.getElementById('fin-boletos-tbody')||{})['innerHTML'] = rows.join('')||
+    '<tr><td colspan="7" style="text-align:center;padding:15px;color:var(--muted)">Nenhum boleto — importe NFs para gerar parcelas</td></tr>';
+}
+
+async function marcarBoletoPago(id){
+  if(!confirm('Marcar como PAGO?')) return;
+  try{
+    await fetch(`/api/db/boleto/${id}/pago`, {method:'POST'});
+    const idx = boletosData.findIndex(b=>b.id===id);
+    if(idx>=0) boletosData[idx].status = 'PAGO';
+    renderBoletos();
+    renderFluxo();
+  }catch(e){ alert('Erro: '+e.message); }
 }
 
 function renderFornecedores(){
@@ -6074,9 +6162,8 @@ async function salvarNFBanco(){
   const btn = document.getElementById('nf-btn-salvar');
   if(btn){ btn.textContent = 'Salvando...'; btn.disabled = true; }
 
-  let ok = 0, erros = 0;
+  // 1. Salva CMV dos itens com SKU
   const cmvPayload = {};
-
   for(const it of nfAtual.itens){
     if(!it.skuFava) continue;
     cmvPayload[it.skuFava] = {
@@ -6084,44 +6171,47 @@ async function salvarNFBanco(){
       nome: it.xProd, fonte: 'nf'
     };
   }
-
+  let ok = 0;
   if(Object.keys(cmvPayload).length > 0){
     try{
       const r = await fetch('/api/cmv-cache', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
+        method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify(cmvPayload)
       });
       if(r.ok){
         const d = await r.json();
         ok = d.n || Object.keys(cmvPayload).length;
-        // Atualiza cache local
         Object.assign(dados.cmvCache, cmvPayload);
       }
-    }catch(e){ erros++; }
+    }catch(e){}
   }
 
-  // Salva NF no histórico
+  // 2. Salva NF + parcelas no banco via /api/db/nf
+  const chave = nfAtual.chaveNF || `NF-${nfAtual.nNF}-${nfAtual.CNPJ}`;
+  const parcelas = nfAtual.parcelas || [];
+
   try{
-    await fetch('/api/db/nf-entrada', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
+    await fetch('/api/db/nf', {
+      method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        numero: nfAtual.nNF,
-        data: nfAtual.dhEmi,
-        fornecedor: nfAtual.xNome,
-        cnpj: nfAtual.CNPJ,
-        total_nf: nfAtual.vNF,
-        total_ipi: nfAtual.totalIPINF,
-        total_st: nfAtual.totalSTNF,
-        itens: nfAtual.itens.length,
-        arquivo: nfAtual.filename
+        chave,
+        nf:      nfAtual.nNF,
+        forn:    nfAtual.xNome,
+        cnpj:    nfAtual.CNPJ,
+        emissao: nfAtual.dhEmi,
+        vNF:     nfAtual.vNF,
+        itens:   nfAtual.itens.length,
+        parcelas: parcelas.map((p,i)=>({
+          num:   `${i+1}/${parcelas.length}`,
+          venc:  p.venc,
+          valor: p.valor
+        }))
       })
     });
-  }catch(e){}
+  }catch(e){ console.warn('Erro salvar NF:', e); }
 
-  if(btn){ btn.textContent = `✅ ${ok} CMVs salvos`; btn.disabled = false; }
-  setTimeout(()=>{ if(btn) btn.textContent = '💾 Salvar no banco + Atualizar CMV'; }, 3000);
+  if(btn){ btn.textContent = `✅ ${ok} CMVs + ${parcelas.length} boletos salvos`; btn.disabled = false; }
+  setTimeout(()=>{ if(btn) btn.textContent = '💾 Salvar no banco + Atualizar CMV'; }, 4000);
   carregarHistoricoNFs();
 }
 
@@ -6133,23 +6223,44 @@ async function carregarHistoricoNFs(){
     if(r.ok){
       const nfs = await r.json();
       if(!nfs.length){
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Nenhuma NF importada ainda</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Nenhuma NF importada ainda</td></tr>';
         return;
       }
-      tbody.innerHTML = nfs.slice(0,20).map(n=>`
-        <tr>
-          <td>${n.data||'—'}</td>
-          <td style="font-weight:700">${n.numero||'—'}</td>
-          <td style="font-size:12px">${(n.fornecedor||'').substring(0,40)}</td>
-          <td class="num">R$ ${parseFloat(n.total_nf||0).toFixed(2)}</td>
+      tbody.innerHTML = nfs.slice(0,30).map(n=>{
+        const total = parseFloat(n.valor||n.total_nf||0);
+        return `<tr>
+          <td>${n.emissao||n.data||'—'}</td>
+          <td style="font-weight:700">${n.nf||n.numero||'—'}</td>
+          <td style="font-size:12px">${(n.fornecedor||'').substring(0,35)}</td>
+          <td class="num">${total>0?'R$ '+total.toFixed(2):'—'}</td>
           <td class="num">${n.itens||'—'}</td>
+          <td class="num" id="nf-parc-${n.nf||n.numero||n.chave||''}">—</td>
           <td><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:4px;font-size:11px">✅ Importada</span></td>
-        </tr>
-      `).join('');
+        </tr>`;
+      }).join('');
+      // Carrega boletos para cruzar parcelas
+      carregarParcelasNF(nfs.slice(0,30));
     }
   }catch(e){
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">—</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">—</td></tr>';
   }
+}
+
+async function carregarParcelasNF(nfs){
+  try{
+    const r = await fetch('/api/db/boletos');
+    if(!r.ok) return;
+    const boletos = await r.json();
+    nfs.forEach(n=>{
+      const nfNum = n.nf||n.numero||'';
+      const parc  = boletos.filter(b=>b.nf===nfNum);
+      const el    = document.getElementById(`nf-parc-${nfNum}`);
+      if(el && parc.length > 0){
+        const total = parc.reduce((s,b)=>s+parseFloat(b.valor||0),0);
+        el.textContent = `${parc.length}x R$ ${(total/parc.length).toFixed(2)}`;
+      }
+    });
+  }catch(e){}
 }
 
 function gerarCapaNF(){
@@ -6180,7 +6291,9 @@ function gerarCapaNF(){
     }
   }
 
-  // SKUs comparação de custo
+  // Salva parcelas no nfAtual para usar no salvarNFBanco
+  nfAtual.parcelas = vencimentos.map(p=>({venc: p.venc, valor: parseFloat(p.valor)}));
+  nfAtual.chaveNF  = `${nfAtual.nNF}-${nfAtual.CNPJ}`;
   const skuRows = nf.itens
     .filter(it => it.skuFava)
     .map(it => `
@@ -6323,6 +6436,134 @@ function exportarNFPlanilha(){
   a.href = URL.createObjectURL(blob);
   a.download = `NF_${nfAtual.nNF}_${nfAtual.dhEmi}.tsv`;
   a.click();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// SALDOS BANCÁRIOS E CONTAS FIXAS
+// ══════════════════════════════════════════════════════════════════════
+function initSaldos(){
+  const saved = JSON.parse(localStorage.getItem('fava_saldos')||'{}');
+  ['inter','bradesco','mp','outro'].forEach(id=>{
+    const el = document.getElementById(`saldo-${id}`);
+    if(el && saved[id]) el.value = saved[id];
+  });
+  calcSaldoTotal();
+  const dt = localStorage.getItem('fava_saldos_data');
+  const dtEl = document.getElementById('saldo-data');
+  if(dtEl && dt) dtEl.textContent = `Atualizado em ${dt}`;
+
+  // Contas fixas
+  const fixas = JSON.parse(localStorage.getItem('fava_contas_fixas')||'[]');
+  if(!fixas.length){
+    // Defaults comuns
+    ['Contador','Aluguel','Energia','Internet','Software/Sistema','Funcionários','Outros'].forEach(n=>{
+      fixas.push({nome:n, valor:0});
+    });
+  }
+  renderContasFixas(fixas);
+}
+
+function calcSaldoTotal(){
+  let total = 0;
+  ['inter','bradesco','mp','outro'].forEach(id=>{
+    const el = document.getElementById(`saldo-${id}`);
+    total += parseFloat(el?.value||0);
+  });
+  const totEl = document.getElementById('saldo-total');
+  if(totEl){
+    totEl.textContent = 'R$ '+total.toLocaleString('pt-BR',{minimumFractionDigits:2});
+    totEl.style.color = total>=0?'#059669':'#dc2626';
+  }
+}
+
+function salvarSaldos(){
+  const saved = {};
+  ['inter','bradesco','mp','outro'].forEach(id=>{
+    saved[id] = parseFloat(document.getElementById(`saldo-${id}`)?.value||0);
+  });
+  localStorage.setItem('fava_saldos', JSON.stringify(saved));
+  const dt = new Date().toLocaleString('pt-BR');
+  localStorage.setItem('fava_saldos_data', dt);
+  const dtEl = document.getElementById('saldo-data');
+  if(dtEl) dtEl.textContent = `Atualizado em ${dt}`;
+  calcSaldoTotal();
+  alert('✅ Saldos salvos!');
+}
+
+function renderContasFixas(fixas){
+  const el = document.getElementById('contas-fixas-list');
+  if(!el) return;
+  el.innerHTML = fixas.map((f,i)=>`
+    <div style="display:flex;gap:6px;align-items:center">
+      <input type="text" value="${f.nome}" placeholder="Descrição"
+        style="flex:2;border:1px solid #d1d5db;border-radius:4px;padding:4px 7px;font-size:12px"
+        onchange="atualizarContaFixa(${i},'nome',this.value)">
+      <input type="number" value="${f.valor||''}" placeholder="R$" step="0.01"
+        style="flex:1;border:1px solid #d1d5db;border-radius:4px;padding:4px 7px;font-size:12px"
+        oninput="atualizarContaFixa(${i},'valor',this.value)">
+      <button onclick="removerContaFixa(${i})" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px">✕</button>
+    </div>`).join('');
+  calcTotalFixas(fixas);
+}
+
+function atualizarContaFixa(idx, campo, val){
+  const fixas = JSON.parse(localStorage.getItem('fava_contas_fixas')||'[]');
+  if(fixas[idx]) fixas[idx][campo] = campo==='valor'?parseFloat(val||0):val;
+  localStorage.setItem('fava_contas_fixas', JSON.stringify(fixas));
+  calcTotalFixas(fixas);
+}
+
+function removerContaFixa(idx){
+  const fixas = JSON.parse(localStorage.getItem('fava_contas_fixas')||'[]');
+  fixas.splice(idx,1);
+  localStorage.setItem('fava_contas_fixas', JSON.stringify(fixas));
+  renderContasFixas(fixas);
+}
+
+function addContaFixa(){
+  const fixas = JSON.parse(localStorage.getItem('fava_contas_fixas')||'[]');
+  fixas.push({nome:'Nova conta', valor:0});
+  localStorage.setItem('fava_contas_fixas', JSON.stringify(fixas));
+  renderContasFixas(fixas);
+}
+
+function calcTotalFixas(fixas){
+  const total = fixas.reduce((s,f)=>s+parseFloat(f.valor||0),0);
+  const el = document.getElementById('contas-fixas-total');
+  if(el) el.textContent = 'R$ '+total.toLocaleString('pt-BR',{minimumFractionDigits:2});
+}
+
+function salvarContasFixas(){
+  const fixas = JSON.parse(localStorage.getItem('fava_contas_fixas')||'[]');
+  calcTotalFixas(fixas);
+  alert(`✅ ${fixas.length} contas fixas salvas!`);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// DESCONTO POR ANÚNCIO — salvo no banco por MLB
+// ══════════════════════════════════════════════════════════════════════
+let descontosAnuncio = {}; // {mlb: {desconto: 10, desc_min: 5, obs: ''}}
+
+async function carregarDescontosAnuncio(){
+  try{
+    const r = await fetch('/api/db/descontos');
+    if(r.ok) descontosAnuncio = await r.json();
+  }catch(e){}
+}
+
+async function salvarDescontoAnuncio(mlb, desconto, desc_min, obs){
+  descontosAnuncio[mlb] = {desconto, desc_min, obs};
+  try{
+    await fetch('/api/db/descontos', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({mlb, desconto, desc_min, obs})
+    });
+  }catch(e){ console.warn('Erro salvar desconto:', e); }
+}
+
+function getDescontoAnuncio(mlb){
+  return descontosAnuncio[mlb] || null;
 }
 
 // ══════════════════════════════════════════════════════════════════════
