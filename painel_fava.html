@@ -1549,10 +1549,7 @@ function salvarTokenStore(){
 
 function carregarTokenStore(){
   const s = localStorage.getItem('fava_tokens_v2');
-  if(s){
-    try{ tokenStore = JSON.parse(s); }catch(e){}
-  }
-  // Compatibilidade com formato antigo
+  if(s){ try{ tokenStore = JSON.parse(s); }catch(e){} }
   const old = localStorage.getItem('fava_tk4') || localStorage.getItem('fava_dash_tk');
   if(old && !tokenStore.ml.access){
     try{
@@ -1561,11 +1558,23 @@ function carregarTokenStore(){
       if(o.bling) tokenStore.bling.access = o.bling;
     }catch(e){}
   }
-  // Sincroniza com objeto tokens legado
   tokens.ml    = tokenStore.ml.access    || '';
   tokens.bling = tokenStore.bling.access || '';
   if(document.getElementById('tk-bling')) document.getElementById('tk-bling').value = tokens.bling;
   if(document.getElementById('tk-ml'))    document.getElementById('tk-ml').value    = tokens.ml;
+  // Se não tem token local, busca do servidor automaticamente
+  if(!tokens.bling || !tokens.ml){
+    fetch('/api/auth/tokens/get').then(r=>r.json()).then(d=>{
+      if(d.bling_access && !tokens.bling){
+        tokenStore.bling.access=d.bling_access; tokens.bling=d.bling_access; salvarTokenStore();
+        if(document.getElementById('tk-bling')) document.getElementById('tk-bling').value=tokens.bling;
+      }
+      if(d.ml_access && !tokens.ml){
+        tokenStore.ml.access=d.ml_access; tokens.ml=d.ml_access; salvarTokenStore();
+        if(document.getElementById('tk-ml')) document.getElementById('tk-ml').value=tokens.ml;
+      }
+    }).catch(()=>{});
+  }
 }
 
 

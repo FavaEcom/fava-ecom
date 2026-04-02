@@ -599,6 +599,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/kits': self._get_kits,
             '/api/db/cadastros': self._get_cadastros,
             '/api/db/status': self._get_status,
+            '/api/auth/tokens/get': self._get_tokens,
             '/api/cmv-cache': self._get_cmv_compat,
             '/api/sync/now': self._sync_now,
             '/api/sync/bling-anuncios': self._sync_bling_anuncios,
@@ -1032,6 +1033,26 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self._ok({'ok': True, 'sku': b.get('sku')}); return
             except Exception as e:
                 self._err(500, str(e)); return
+
+
+    def _get_tokens(self):
+        """GET /api/auth/tokens/get — retorna tokens salvos para autoload"""
+        try:
+            p = '%s' if IS_PG else '?'
+            row = exe(f"SELECT resultado FROM sync_log WHERE tipo={p} ORDER BY created_at DESC LIMIT 1",
+                      ('_tokens',), fetchone=True)
+            if row:
+                import base64
+                d = json.loads(base64.b64decode(row['resultado']))
+                self._ok({
+                    'bling_access': d.get('bling',{}).get('access',''),
+                    'ml_access':    d.get('ml',{}).get('access',''),
+                    'ok': True
+                })
+            else:
+                self._ok({'ok': False})
+        except Exception as e:
+            self._err(500, str(e))
 
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
