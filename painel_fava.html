@@ -1852,7 +1852,7 @@ async function importarPlanilhaML(input){
         const acao   = r[12] ? String(r[12]).trim() : '';
         if(sku) skusParaBuscar.add(sku);
         itens.push({ rowIdx:i, id:mlbId, sku, titulo, preco, descPct,
-          descEditado: descPct || 15, // padrão 15% se não tiver desconto
+          descEditado: descPct > 0 ? descPct : 20, // padrão 20%, mantém se já tinha desconto
           status, acao,
           cmv:0, margem:null, margemComDesc:null,
           frete:calcFreteProm(preco), selecionado:false });
@@ -2093,7 +2093,7 @@ function renderPromoTabela(lista){
       <td style="padding:5px 8px;text-align:center">
         ${!p.cmv
           ? '<span style="color:#f59e0b;font-size:10px">sem CMV</span>'
-          : '<input type="number" value="'+(p.descEditado||15)
+          : '<input type="number" value="'+(p.descEditado||20)
             +'" min="0" max="99" step="1" placeholder="%"'
             +' style="width:55px;border:1px solid #d1d5db;border-radius:4px;padding:2px 4px;text-align:center;font-size:11px;font-weight:700"'
             +' oninput=\"atualizarDescItem('+i+',this.value)\">'
