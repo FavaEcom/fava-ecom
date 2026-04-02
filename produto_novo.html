@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadastro de Produto — Fava Ecom</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh}
+
+/* HEADER */
+.header{background:#1F3864;color:#fff;padding:12px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.header h1{font-size:15px;font-weight:700;flex:1}
+
+/* STEPS */
+.steps{background:#fff;border-bottom:1px solid #e2e8f0;padding:0 20px;display:flex;gap:0;overflow-x:auto}
+.step{display:flex;align-items:center;gap:8px;padding:12px 20px;font-size:12px;font-weight:600;color:#94a3b8;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:.15s}
+.step.ativo{color:#1F3864;border-bottom-color:#1F3864}
+.step.done{color:#16a34a;border-bottom-color:#16a34a}
+.step .num{width:22px;height:22px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.step.ativo .num{background:#1F3864;color:#fff}
+.step.done .num{background:#16a34a;color:#fff}
+
+/* LAYOUT */
+.content{max-width:1100px;margin:0 auto;padding:20px 16px}
+
+/* CARDS */
+.card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;margin-bottom:16px;overflow:hidden}
+.card-head{background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:12px 16px;display:flex;align-items:center;gap:8px}
+.card-head h2{font-size:13px;font-weight:700;color:#1F3864;flex:1}
+.card-body{padding:16px}
+
+/* GRID */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px}
+@media(max-width:700px){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+.full{grid-column:1/-1}
+
+/* FIELDS */
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px}
+.field input,.field select,.field textarea{border:1px solid #e2e8f0;border-radius:6px;padding:7px 10px;font-size:13px;outline:none;transition:.15s;background:#fff}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#1F3864}
+.field input[readonly]{background:#f8fafc;color:#64748b}
+.field .hint{font-size:10px;color:#94a3b8;margin-top:2px}
+
+/* BOTOES */
+.btn{padding:9px 18px;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:700;transition:.15s}
+.btn-azul{background:#1F3864;color:#fff}
+.btn-azul:hover{background:#1e3a8a}
+.btn-verde{background:#16a34a;color:#fff}
+.btn-cinza{background:#f1f5f9;color:#374151;border:1px solid #e2e8f0}
+.btn-roxo{background:#7c3aed;color:#fff}
+.btn-wrap{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* STATUS */
+.status-msg{padding:10px 14px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:12px;display:none}
+.status-msg.ok{background:#dcfce7;color:#166534;display:block}
+.status-msg.err{background:#fee2e2;color:#dc2626;display:block}
+.status-msg.info{background:#dbeafe;color:#1d4ed8;display:block}
+
+/* TABELA NF */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{background:#f8fafc;padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;border-bottom:1px solid #e2e8f0}
+.tbl td{padding:7px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+.tbl tr:hover td{background:#fafbff}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+.pill-novo{background:#dbeafe;color:#1d4ed8}
+.pill-exist{background:#dcfce7;color:#166534}
+.pill-st{background:#fef3c7;color:#92400e}
+
+/* PRECIFICAÇÃO */
+.preco-canal{background:#f8fafc;border-radius:8px;padding:12px;border:1px solid #e2e8f0}
+.preco-canal h4{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+.preco-valor{font-size:22px;font-weight:700;color:#1F3864;margin:4px 0}
+.preco-margem{font-size:11px;font-weight:700}
+.mg-ok{color:#16a34a} .mg-med{color:#d97706} .mg-low{color:#dc2626}
+.preco-canal input[type=range]{width:100%;accent-color:#1F3864}
+
+/* TAREFAS */
+.tarefa-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f8fafc;border-radius:6px;margin-bottom:6px;font-size:12px}
+.tarefa-item input[type=checkbox]{accent-color:#1F3864;width:16px;height:16px}
+
+/* UPLOAD */
+.upload-area{border:2px dashed #e2e8f0;border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:.15s;background:#fafbff}
+.upload-area:hover{border-color:#1F3864;background:#eff6ff}
+.upload-area .icon{font-size:32px;margin-bottom:8px}
+.upload-area p{font-size:12px;color:#64748b}
+
+/* FORNECEDOR BADGE */
+.forn-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-bottom:12px}
+.forn-mtx{background:#dbeafe;color:#1d4ed8}
+.forn-menegotti{background:#fef3c7;color:#92400e}
+.forn-csm{background:#dcfce7;color:#166534}
+.forn-mor{background:#fce7f3;color:#9d174d}
+.forn-vonder{background:#ede9fe;color:#5b21b6}
+.forn-outro{background:#f1f5f9;color:#374151}
+
+/* PEDRINHO */
+.pedrinho-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;margin-bottom:12px}
+.pedrinho-box h4{font-size:12px;font-weight:700;color:#1d4ed8;margin-bottom:6px}
+.pedrinho-story{font-size:11px;color:#374151;line-height:1.5;max-height:80px;overflow-y:auto}
+
+/* SPIN */
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #e2e8f0;border-top-color:#1F3864;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* PRODUTO CARD */
+.prod-item{border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:10px}
+.prod-item-head{background:#f8fafc;padding:8px 12px;display:flex;align-items:center;gap:8px;cursor:pointer}
+.prod-item-head:hover{background:#eff6ff}
+.prod-item-body{padding:16px;display:none}
+.prod-item-body.open{display:block}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span style="font-size:20px">📦</span>
+  <h1>Cadastro de Produto Novo — Fava Ecom</h1>
+  <span id="hd-status" style="font-size:11px;color:#93c5fd"></span>
+</div>
+
+<div class="steps">
+  <div class="step ativo" id="step-1" onclick="irStep(1)"><span class="num">1</span> Entrada NF</div>
+  <div class="step" id="step-2" onclick="irStep(2)"><span class="num">2</span> Produtos</div>
+  <div class="step" id="step-3" onclick="irStep(3)"><span class="num">3</span> Ficha & Preços</div>
+  <div class="step" id="step-4" onclick="irStep(4)"><span class="num">4</span> Conteúdo</div>
+  <div class="step" id="step-5" onclick="irStep(5)"><span class="num">5</span> Tarefas</div>
+</div>
+
+<!-- ══ STEP 1: ENTRADA NF ══ -->
+<div id="view-1" class="content">
+  <div class="card">
+    <div class="card-head"><span>📄</span><h2>Upload do XML da Nota Fiscal</h2></div>
+    <div class="card-body">
+      <div class="status-msg" id="st-nf"></div>
+      <div class="upload-area" id="upload-area" onclick="document.getElementById('xml-input').click()"
+        ondragover="event.preventDefault();this.style.borderColor='#1F3864'"
+        ondragleave="this.style.borderColor='#e2e8f0'"
+        ondrop="event.preventDefault();processarXML(event.dataTransfer.files[0])">
+        <div class="icon">📋</div>
+        <p><b>Clique ou arraste o XML da NF aqui</b></p>
+        <p style="margin-top:4px">Arquivo .xml da nota fiscal de entrada</p>
+      </div>
+      <input type="file" id="xml-input" accept=".xml" style="display:none" onchange="processarXML(this.files[0])">
+    </div>
+  </div>
+
+  <div class="card" id="card-nf-info" style="display:none">
+    <div class="card-head"><span>🏭</span><h2 id="nf-forn-nome">Fornecedor</h2></div>
+    <div class="card-body">
+      <div id="forn-badge-wrap"></div>
+      <div class="grid4" style="margin-bottom:12px">
+        <div class="field"><label>Nº NF</label><input type="text" id="nf-num" readonly></div>
+        <div class="field"><label>Data</label><input type="text" id="nf-data" readonly></div>
+        <div class="field"><label>CNPJ Fornecedor</label><input type="text" id="nf-cnpj" readonly></div>
+        <div class="field"><label>Valor Total</label><input type="text" id="nf-valor" readonly></div>
+      </div>
+      <div class="btn-wrap">
+        <button class="btn btn-azul" onclick="irStep(2)">Ver produtos →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STEP 2: PRODUTOS DA NF ══ -->
+<div id="view-2" class="content" style="display:none">
+  <div class="card">
+    <div class="card-head"><span>📦</span><h2>Produtos da Nota Fiscal</h2>
+      <span id="badge-novos" style="background:#dbeafe;color:#1d4ed8;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700"></span>
+    </div>
+    <div class="card-body">
+      <div class="status-msg" id="st-prods"></div>
+      <div id="lista-produtos-nf"></div>
+      <div class="btn-wrap">
+        <button class="btn btn-cinza" onclick="irStep(1)">← Voltar</button>
+        <button class="btn btn-azul" id="btn-cadastrar-selecionados" onclick="iniciarCadastro()">Cadastrar selecionados →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STEP 3: FICHA + PREÇOS ══ -->
+<div id="view-3" class="content" style="display:none">
+  <div class="status-msg" id="st-ficha"></div>
+
+  <!-- Seletor de produto -->
+  <div class="card">
+    <div class="card-head"><span>📋</span><h2>Produto atual</h2>
+      <select id="sel-produto-atual" onchange="trocarProdutoAtual(this.value)" style="border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;font-size:12px;outline:none">
+      </select>
+    </div>
+  </div>
+
+  <!-- Dados fiscais (readonly, vêm do XML) -->
+  <div class="card">
+    <div class="card-head"><span>🧾</span><h2>Dados Fiscais — da NF</h2><span style="font-size:10px;color:#94a3b8">Preenchido automaticamente pelo XML</span></div>
+    <div class="card-body">
+      <div class="grid4">
+        <div class="field"><label>SKU Interno</label><input type="text" id="f-sku" placeholder="Gerado automaticamente"></div>
+        <div class="field"><label>Cód. Fornecedor</label><input type="text" id="f-cod-forn" readonly></div>
+        <div class="field"><label>NCM</label><input type="text" id="f-ncm" readonly></div>
+        <div class="field"><label>CFOP</label><input type="text" id="f-cfop" readonly></div>
+        <div class="field"><label>CST</label><input type="text" id="f-cst" readonly></div>
+        <div class="field"><label>IPI %</label><input type="text" id="f-ipi" readonly></div>
+        <div class="field"><label>Tem ST?</label><input type="text" id="f-st" readonly></div>
+        <div class="field"><label>Custo NF (R$)</label><input type="text" id="f-custo" readonly></div>
+        <div class="field"><label>CMV Brasil (R$)</label><input type="number" id="f-cmv-br" step="0.01" oninput="calcularPrecos()"></div>
+        <div class="field"><label>CMV Paraná (R$)</label><input type="number" id="f-cmv-pr" step="0.01" oninput="calcularPrecos()"></div>
+        <div class="field"><label>EAN</label><input type="text" id="f-ean"></div>
+        <div class="field"><label>Nome do produto</label><input type="text" id="f-nome" oninput="atualizarTitulos()"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dados complementares -->
+  <div class="card">
+    <div class="card-head"><span>📐</span><h2>Dados Físicos & Categoria</h2></div>
+    <div class="card-body">
+      <!-- Pedrinho info (MTX) -->
+      <div id="pedrinho-info" style="display:none"></div>
+
+      <div class="grid4">
+        <div class="field"><label>Peso (kg)</label><input type="number" id="f-peso" step="0.001" placeholder="Ex: 0.350" oninput="calcularPrecos()"></div>
+        <div class="field"><label>Comprimento (cm)</label><input type="number" id="f-comp" step="0.1" placeholder="Ex: 30"></div>
+        <div class="field"><label>Largura (cm)</label><input type="number" id="f-larg" step="0.1" placeholder="Ex: 20"></div>
+        <div class="field"><label>Altura (cm)</label><input type="number" id="f-alt" step="0.1" placeholder="Ex: 10"></div>
+        <div class="field"><label>Família</label>
+          <select id="f-familia">
+            <option value="">— selecione —</option>
+            <option>FERRAMENTAS</option><option>PEÇAS PARA BETONEIRAS</option>
+            <option>PEÇAS PARA GUINCHO</option><option>PEÇAS PARA FURADEIRAS</option>
+            <option>GRAMPOS</option><option>PINADORES</option><option>ACESSÓRIOS</option>
+            <option>EQUIPAMENTOS</option><option>CONSTRUÇÃO CIVIL</option>
+            <option>CAMPING E UTILIDADES</option><option>OUTROS</option>
+          </select>
+        </div>
+        <div class="field"><label>Categoria</label><input type="text" id="f-categoria" placeholder="Ex: Grampos 20ga"></div>
+        <div class="field"><label>Tipo produto</label>
+          <select id="f-tipo">
+            <option value="Peça">Peça de reposição</option>
+            <option value="Ferramenta">Ferramenta</option>
+            <option value="Consumível">Consumível</option>
+            <option value="Kit">Kit</option>
+            <option value="Equipamento">Equipamento</option>
+          </select>
+        </div>
+        <div class="field"><label>Fotos (URL/Drive)</label><input type="text" id="f-fotos" placeholder="https://drive.google.com/..."></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRECIFICAÇÃO -->
+  <div class="card">
+    <div class="card-head"><span>💰</span><h2>Precificação por Canal</h2>
+      <span style="font-size:11px;color:#64748b">Margem padrão:</span>
+      <input type="number" id="margem-pad" value="30" min="5" max="80" step="1"
+        style="width:55px;border:1px solid #e2e8f0;border-radius:5px;padding:3px 6px;font-size:12px;text-align:center"
+        oninput="calcularPrecos()">
+      <span style="font-size:11px;color:#64748b">%</span>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px" id="canais-grid">
+        <!-- gerado pelo JS -->
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-wrap">
+    <button class="btn btn-cinza" onclick="irStep(2)">← Voltar</button>
+    <button class="btn btn-azul" onclick="irStep(4)">Conteúdo →</button>
+    <button class="btn btn-verde" onclick="salvarProduto()">💾 Salvar produto</button>
+  </div>
+</div>
+
+<!-- ══ STEP 4: CONTEÚDO ══ -->
+<div id="view-4" class="content" style="display:none">
+  <div class="card">
+    <div class="card-head"><span>✏️</span><h2>Títulos por Canal</h2></div>
+    <div class="card-body">
+      <div class="grid2">
+        <div class="field"><label>ML Clássico / Premium (60 chars)</label>
+          <input type="text" id="t-ml" maxlength="60" placeholder="Título para ML..."
+            oninput="document.getElementById('c-ml').textContent=this.value.length+'/60'">
+          <div class="hint" id="c-ml">0/60</div>
+        </div>
+        <div class="field"><label>Shopee (120 chars)</label>
+          <input type="text" id="t-shopee" maxlength="120" placeholder="Título para Shopee..."
+            oninput="document.getElementById('c-shopee').textContent=this.value.length+'/120'">
+          <div class="hint" id="c-shopee">0/120</div>
+        </div>
+        <div class="field"><label>Yampi (120 chars)</label>
+          <input type="text" id="t-yampi" maxlength="120" placeholder="Título para Yampi..."
+            oninput="document.getElementById('c-yampi').textContent=this.value.length+'/120'">
+          <div class="hint" id="c-yampi">0/120</div>
+        </div>
+        <div class="field"><label>Facebook</label>
+          <input type="text" id="t-facebook" placeholder="Título para Facebook...">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span>📝</span><h2>Descrição do Anúncio</h2>
+      <button class="btn btn-roxo" style="padding:5px 12px;font-size:11px" onclick="gerarDescricaoIA()" id="btn-ia">
+        ✨ Gerar com IA
+      </button>
+    </div>
+    <div class="card-body">
+      <div class="status-msg" id="st-ia"></div>
+      <div class="field full">
+        <label>Descrição completa (ML / Shopee)</label>
+        <textarea id="t-descricao" rows="10" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:8px;font-size:12px;outline:none;resize:vertical" placeholder="Descrição do produto..."></textarea>
+      </div>
+      <div class="field full" style="margin-top:10px">
+        <label>Post Facebook</label>
+        <textarea id="t-facebook-post" rows="4" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:8px;font-size:12px;outline:none;resize:vertical" placeholder="Texto para o post no Facebook..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-wrap">
+    <button class="btn btn-cinza" onclick="irStep(3)">← Voltar</button>
+    <button class="btn btn-azul" onclick="irStep(5)">Tarefas →</button>
+    <button class="btn btn-verde" onclick="salvarProduto()">💾 Salvar</button>
+  </div>
+</div>
+
+<!-- ══ STEP 5: TAREFAS ══ -->
+<div id="view-5" class="content" style="display:none">
+  <div class="card">
+    <div class="card-head"><span>✅</span><h2>Tarefas geradas para funcionários</h2></div>
+    <div class="card-body">
+      <div id="lista-tarefas-produto"></div>
+      <div class="btn-wrap" style="margin-top:16px">
+        <button class="btn btn-cinza" onclick="irStep(4)">← Voltar</button>
+        <button class="btn btn-verde" onclick="finalizarCadastro()" id="btn-finalizar">
+          ✅ Finalizar e salvar tudo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resumo final -->
+  <div class="card" id="card-resumo" style="display:none">
+    <div class="card-head" style="background:#16a34a"><span>🎉</span><h2 style="color:#fff">Produto cadastrado com sucesso!</h2></div>
+    <div class="card-body" id="resumo-body"></div>
+  </div>
+</div>
+
+<script>
+const RAILWAY = 'https://web-production-5aa0f.up.railway.app';
+
+// ══════════════════════════════════════════════════════════════
+// CONSTANTES FISCAIS
+// ══════════════════════════════════════════════════════════════
+const PIS_S = 0.0165, COF_S = 0.076, ICMS_SAIDA = 0.12, DIFAL = 0.0381, IBS_CBS = 0.02;
+const ICMS_PR = 0.195;
+const TAXA_ML_CL = 0.12, TAXA_ML_PR = 0.17;
+const TAXA_SHOPEE = 0.14, TAXA_YAMPI = 0.02;
+const FRETE_ML = 22, FRETE_SHOPEE = 18;
+
+// FORNECEDORES por CNPJ
+const FORNECEDORES = {
+  '14444564000209': {nome:'MTX / Mundo Ferramentas', tipo:'mtx', badge:'forn-mtx'},
+  '14444564000128': {nome:'MTX / Mundo Ferramentas', tipo:'mtx', badge:'forn-mtx'},
+  '84431154000632': {nome:'Menegotti', tipo:'menegotti', badge:'forn-menegotti'},
+  '76840537000121': {nome:'CSM Componentes', tipo:'csm', badge:'forn-csm'},
+  '07787942000134': {nome:'MOR', tipo:'mor', badge:'forn-mor'},
+  '78976598000120': {nome:'Vonder', tipo:'vonder', badge:'forn-vonder'},
+};
+
+// ══════════════════════════════════════════════════════════════
+// ESTADO
+// ══════════════════════════════════════════════════════════════
+let dadosNF      = null;   // dados da NF parseada
+let produtosNF   = [];     // itens da NF
+let prodSelecionados = []; // índices selecionados para cadastrar
+let prodAtual    = 0;      // índice do produto sendo editado
+let fichas       = [];     // fichas de cada produto
+let prodBanco    = {};     // produtos já no banco (por codigo_fornecedor)
+let skuAtual     = '';     // SKU gerado para produto atual
+let claudeKey    = localStorage.getItem('fava_claude_key')||'';
+
+// ══════════════════════════════════════════════════════════════
+// STEPS
+// ══════════════════════════════════════════════════════════════
+function irStep(n){
+  [1,2,3,4,5].forEach(i=>{
+    document.getElementById(`view-${i}`).style.display = i===n?'block':'none';
+    const s = document.getElementById(`step-${i}`);
+    s.className = 'step'+(i===n?' ativo':i<n?' done':'');
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// XML PARSER
+// ══════════════════════════════════════════════════════════════
+function processarXML(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const parser = new DOMParser();
+      const xml    = parser.parseFromString(e.target.result, 'text/xml');
+      const nfe    = xml.querySelector('NFe,nfeProc');
+      if(!nfe){ mostrarStatus('st-nf','❌ XML inválido — não é uma NF-e','err'); return; }
+
+      const infNFe = xml.querySelector('infNFe');
+      const emit   = xml.querySelector('emit');
+      const ide    = xml.querySelector('ide');
+      const total  = xml.querySelector('vNF');
+
+      const cnpjRaw  = emit?.querySelector('CNPJ')?.textContent||'';
+      const cnpj     = cnpjRaw.replace(/\D/g,'');
+      const forn     = FORNECEDORES[cnpj] || {nome: emit?.querySelector('xNome')?.textContent||'Fornecedor', tipo:'outro', badge:'forn-outro'};
+
+      dadosNF = {
+        cnpj, cnpjRaw,
+        fornecedor: forn.nome,
+        tipoForn: forn.tipo,
+        badgeForn: forn.badge,
+        nf:     ide?.querySelector('nNF')?.textContent||'',
+        data:   ide?.querySelector('dhEmi')?.textContent?.slice(0,10)||'',
+        valor:  parseFloat(total?.textContent||0),
+      };
+
+      // Parseia itens
+      produtosNF = [];
+      xml.querySelectorAll('det').forEach(det=>{
+        const prod = det.querySelector('prod');
+        const imp  = det.querySelector('imposto');
+        const icms = imp?.querySelector('ICMS')||imp?.querySelector('ICMSSN');
+        const ipiEl= imp?.querySelector('IPI');
+        const pisEl= imp?.querySelector('PIS');
+        const cofEl= imp?.querySelector('COFINS');
+        const stEl = imp?.querySelector('ICMSST') || imp?.querySelector('ICMSUFDest');
+
+        const custo   = parseFloat(prod?.querySelector('vUnCom')?.textContent||0);
+        const ipiPct  = parseFloat(ipiEl?.querySelector('pIPI')?.textContent||0)/100;
+        const icmsPct = parseFloat(icms?.querySelector('pICMS')?.textContent||0)/100;
+        const custoNF = custo/(1+ipiPct);
+        const credPis   = custoNF * PIS_S;
+        const credCofins= custoNF * COF_S;
+        const credIcms  = custoNF * icmsPct;
+        const cmvBr = Math.max(custoNF - credPis - credCofins, custoNF * 0.35);
+        const cmvPr = Math.max(custoNF - credIcms - credPis - credCofins, custoNF * 0.30);
+        const temST = !!(stEl && parseFloat(stEl?.querySelector('vICMSST,vICMSUFDest')?.textContent||0)>0);
+
+        produtosNF.push({
+          codigo:   prod?.querySelector('cProd')?.textContent||'',
+          nome:     prod?.querySelector('xProd')?.textContent||'',
+          ncm:      prod?.querySelector('NCM')?.textContent||'',
+          cfop:     prod?.querySelector('CFOP')?.textContent||'',
+          cst:      icms?.querySelector('CST,CSOSN')?.textContent||'',
+          ean:      prod?.querySelector('cEAN')?.textContent||'',
+          qtd:      parseFloat(prod?.querySelector('qCom')?.textContent||1),
+          custo, custoNF, ipiPct, icmsPct, cmvBr, cmvPr, temST,
+          credPis, credCofins, credIcms,
+        });
+      });
+
+      // Atualiza UI
+      document.getElementById('nf-forn-nome').textContent = forn.nome;
+      document.getElementById('nf-num').value  = dadosNF.nf;
+      document.getElementById('nf-data').value = dadosNF.data;
+      document.getElementById('nf-cnpj').value = cnpjRaw;
+      document.getElementById('nf-valor').value = 'R$ '+dadosNF.valor.toLocaleString('pt-BR',{minimumFractionDigits:2});
+      document.getElementById('forn-badge-wrap').innerHTML =
+        `<span class="forn-badge ${forn.badge}">🏭 ${forn.nome} — ${forn.tipo.toUpperCase()}</span>`;
+      document.getElementById('card-nf-info').style.display='block';
+      mostrarStatus('st-nf',`✅ NF ${dadosNF.nf} lida — ${produtosNF.length} produtos encontrados`,'ok');
+
+      // Carrega produtos do banco para checar existentes
+      carregarProdutosBanco();
+    }catch(err){
+      mostrarStatus('st-nf','❌ Erro ao processar XML: '+err.message,'err');
+    }
+  };
+  reader.readAsText(file);
+}
+
+async function carregarProdutosBanco(){
+  try{
+    const r = await fetch(RAILWAY+'/api/db/produtos');
+    if(!r.ok) return;
+    const prods = await r.json();
+    prodBanco = {};
+    prods.forEach(p=>{ if(p.sku) prodBanco[String(p.sku).trim()] = p; });
+  }catch(e){}
+}
+
+// ══════════════════════════════════════════════════════════════
+// STEP 2 — LISTA DE PRODUTOS DA NF
+// ══════════════════════════════════════════════════════════════
+function renderListaProdutos(){
+  const wrap = document.getElementById('lista-produtos-nf');
+  const novos = produtosNF.filter(p=>!prodBanco[p.codigo]).length;
+  document.getElementById('badge-novos').textContent = novos+' novos';
+
+  wrap.innerHTML = produtosNF.map((p,i)=>{
+    const exist = prodBanco[p.codigo];
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:7px;margin-bottom:6px;background:${exist?'#f8fafc':'#fff'}">
+      <input type="checkbox" id="sel-${i}" ${exist?'':'checked'} onchange="toggleSel(${i},this.checked)" style="accent-color:#1F3864;width:16px;height:16px">
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:700;color:#1F3864">${p.codigo} — ${p.nome.slice(0,60)}${p.nome.length>60?'...':''}</div>
+        <div style="font-size:10px;color:#64748b;margin-top:2px">
+          NCM: ${p.ncm} | CFOP: ${p.cfop} | CMV BR: R$ ${p.cmvBr.toFixed(2)} | Qtd: ${p.qtd}
+          ${p.temST?'<span class="pill pill-st" style="margin-left:4px">ST</span>':''}
+        </div>
+      </div>
+      ${exist?'<span class="pill pill-exist">Já existe</span>':'<span class="pill pill-novo">Novo</span>'}
+    </div>`;
+  }).join('');
+
+  prodSelecionados = produtosNF.map((_,i)=>i).filter(i=>!prodBanco[produtosNF[i].codigo]);
+}
+
+function toggleSel(i, checked){
+  if(checked && !prodSelecionados.includes(i)) prodSelecionados.push(i);
+  else prodSelecionados = prodSelecionados.filter(x=>x!==i);
+}
+
+// ══════════════════════════════════════════════════════════════
+// STEP 3 — INICIAR CADASTRO
+// ══════════════════════════════════════════════════════════════
+async function iniciarCadastro(){
+  if(!prodSelecionados.length){ alert('Selecione ao menos um produto.'); return; }
+
+  // Inicializa fichas
+  fichas = prodSelecionados.map(i=>({
+    idx: i,
+    ...produtosNF[i],
+    sku: '',
+    titulo_ml:'', titulo_shopee:'', titulo_yampi:'', titulo_facebook:'',
+    descricao:'', facebook_post:'',
+    peso:0, comprimento:0, largura:0, altura:0,
+    familia:'', categoria:'', tipo:'Peça',
+    fotos:'',
+    preco_ml_classico:0, preco_ml_premium:0,
+    preco_shopee:0, preco_yampi:0,
+    preco_balcao:0, preco_atacado:0,
+    tarefas: gerarTarefasPadrao(),
+    pedrinho: null,
+  }));
+
+  // Preenche seletor
+  const sel = document.getElementById('sel-produto-atual');
+  sel.innerHTML = fichas.map((f,i)=>`<option value="${i}">${f.codigo} — ${f.nome.slice(0,40)}</option>`).join('');
+
+  // Carrega próximo SKU disponível
+  await carregarProximoSKU();
+
+  irStep(3);
+  trocarProdutoAtual(0);
+}
+
+async function carregarProximoSKU(){
+  try{
+    const r = await fetch(RAILWAY+'/api/db/produtos');
+    if(!r.ok) return;
+    const prods = await r.json();
+    const skus = prods.map(p=>parseInt(p.sku)).filter(n=>!isNaN(n));
+    const maxSKU = skus.length ? Math.max(...skus) : 1000;
+    // Atribui SKUs sequenciais
+    fichas.forEach((f,i)=>{ f.sku = String(maxSKU + i + 1); });
+    document.getElementById('hd-status').textContent = `Próximo SKU: ${maxSKU+1}`;
+  }catch(e){}
+}
+
+async function trocarProdutoAtual(idx){
+  prodAtual = parseInt(idx);
+  const f = fichas[prodAtual];
+  if(!f) return;
+
+  // Preenche campos
+  document.getElementById('f-sku').value      = f.sku||'';
+  document.getElementById('f-cod-forn').value = f.codigo||'';
+  document.getElementById('f-ncm').value      = f.ncm||'';
+  document.getElementById('f-cfop').value     = f.cfop||'';
+  document.getElementById('f-cst').value      = f.cst||'';
+  document.getElementById('f-ipi').value      = f.ipiPct>0?(f.ipiPct*100).toFixed(1)+'%':'0%';
+  document.getElementById('f-st').value       = f.temST?'✅ Sim':'❌ Não';
+  document.getElementById('f-custo').value    = 'R$ '+f.custo.toFixed(4);
+  document.getElementById('f-cmv-br').value   = f.cmvBr.toFixed(4);
+  document.getElementById('f-cmv-pr').value   = f.cmvPr.toFixed(4);
+  document.getElementById('f-ean').value      = f.ean||'';
+  document.getElementById('f-nome').value     = f.nome||'';
+  document.getElementById('f-peso').value     = f.peso||'';
+  document.getElementById('f-comp').value     = f.comprimento||'';
+  document.getElementById('f-larg').value     = f.largura||'';
+  document.getElementById('f-alt').value      = f.altura||'';
+  document.getElementById('f-familia').value  = f.familia||'';
+  document.getElementById('f-categoria').value= f.categoria||'';
+  document.getElementById('f-tipo').value     = f.tipo||'Peça';
+  document.getElementById('f-fotos').value    = f.fotos||'';
+
+  // Busca Pedrinho se MTX
+  if(dadosNF?.tipoForn === 'mtx' && !f.pedrinho){
+    buscarPedrinho(f.codigo, prodAtual);
+  } else if(f.pedrinho){
+    mostrarPedrinho(f.pedrinho);
+  } else {
+    document.getElementById('pedrinho-info').style.display='none';
+  }
+
+  calcularPrecos();
+  atualizarTitulos();
+}
+
+// ══════════════════════════════════════════════════════════════
+// PEDRINHO
+// ══════════════════════════════════════════════════════════════
+async function buscarPedrinho(codigo, idx){
+  const info = document.getElementById('pedrinho-info');
+  info.innerHTML = '<div style="font-size:12px;color:#64748b"><span class="spin"></span> Buscando no Pedrinho...</div>';
+  info.style.display = 'block';
+  try{
+    const r = await fetch(RAILWAY+`/api/db/pedrinho?codigo=${encodeURIComponent(codigo)}`);
+    if(!r.ok){ info.style.display='none'; return; }
+    const d = await r.json();
+    if(d.error){ info.style.display='none'; return; }
+    fichas[idx].pedrinho = d;
+    mostrarPedrinho(d);
+    // Preenche fotos se disponível
+    if(d.fotos){
+      const fotosArr = typeof d.fotos==='string' ? JSON.parse(d.fotos) : d.fotos;
+      if(fotosArr?.length && !fichas[idx].fotos){
+        fichas[idx].fotos = fotosArr[0];
+        document.getElementById('f-fotos').value = fotosArr[0];
+      }
+    }
+  }catch(e){ info.style.display='none'; }
+}
+
+function mostrarPedrinho(d){
+  const info = document.getElementById('pedrinho-info');
+  const fotos = typeof d.fotos==='string'?JSON.parse(d.fotos||'[]'):d.fotos||[];
+  info.innerHTML = `<div class="pedrinho-box">
+    <h4>📚 Pedrinho MTX — ${d.codigo}</h4>
+    <div style="font-size:11px;color:#1d4ed8;margin-bottom:4px">🖼️ ${d.qtd_fotos||fotos.length} fotos disponíveis
+      ${fotos[0]?`<a href="${fotos[0]}" target="_blank" style="margin-left:8px">Abrir Drive ↗</a>`:''}
+    </div>
+    <div class="pedrinho-story">${d.storyselling||''}</div>
+    <button onclick="usarStoryselling()" class="btn btn-cinza" style="margin-top:6px;padding:4px 10px;font-size:11px">
+      Usar storyselling como base da descrição
+    </button>
+  </div>`;
+  info.style.display='block';
+}
+
+function usarStoryselling(){
+  const f = fichas[prodAtual];
+  if(f?.pedrinho?.storyselling){
+    document.getElementById('t-descricao').value = f.pedrinho.storyselling;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// PRECIFICAÇÃO
+// ══════════════════════════════════════════════════════════════
+const CANAIS = [
+  {id:'ml-cl',  nome:'ML Clássico', taxa:TAXA_ML_CL, frete:FRETE_ML, difal:true,  icon:'🛒'},
+  {id:'ml-pr',  nome:'ML Premium',  taxa:TAXA_ML_PR, frete:FRETE_ML, difal:true,  icon:'⭐'},
+  {id:'shopee', nome:'Shopee',       taxa:TAXA_SHOPEE,frete:FRETE_SHOPEE,difal:true, icon:'🛍️'},
+  {id:'yampi',  nome:'Yampi/Site',  taxa:TAXA_YAMPI, frete:0, difal:false, icon:'🌐'},
+  {id:'balcao', nome:'Balcão PR',    taxa:0, frete:0, difal:false, icms_pr:true, icon:'🏪'},
+  {id:'atacado',nome:'Atacado',      taxa:0, frete:0, difal:false, icms_pr:true, icon:'📦'},
+];
+
+function calcPreco(cmv, mg, canal){
+  if(cmv<=0) return {preco:0,lucro:0,margem:0};
+  const icms  = canal.icms_pr ? ICMS_PR : ICMS_SAIDA;
+  const difal = canal.difal ? DIFAL + IBS_CBS : 0;
+  const taxa  = canal.taxa||0;
+  const frete = canal.frete||0;
+  const denom = Math.max(1 - taxa - PIS_S - COF_S - icms - difal - mg, 0.05);
+  const preco = (cmv + frete) / denom;
+  const lucro = preco - cmv - frete - preco*(taxa+PIS_S+COF_S+icms+difal);
+  return {preco, lucro, margem: preco>0?lucro/preco:0};
+}
+
+function calcularPrecos(){
+  const cmvBr = parseFloat(document.getElementById('f-cmv-br').value)||0;
+  const cmvPr = parseFloat(document.getElementById('f-cmv-pr').value)||cmvBr;
+  const mg    = (parseFloat(document.getElementById('margem-pad').value)||30)/100;
+  const f = fichas[prodAtual];
+  if(!f) return;
+
+  const grid = document.getElementById('canais-grid');
+  grid.innerHTML = CANAIS.map(c=>{
+    const cmv = c.icms_pr ? cmvPr : cmvBr;
+    const r   = calcPreco(cmv, mg, c);
+    const mc  = r.margem;
+    const cls = mc>=0.20?'mg-ok':mc>=0.10?'mg-med':'mg-low';
+    // Salva nas fichas
+    if(f){
+      if(c.id==='ml-cl')   f.preco_ml_classico = r.preco;
+      if(c.id==='ml-pr')   f.preco_ml_premium  = r.preco;
+      if(c.id==='shopee')  f.preco_shopee       = r.preco;
+      if(c.id==='yampi')   f.preco_yampi        = r.preco;
+      if(c.id==='balcao')  f.preco_balcao       = r.preco;
+      if(c.id==='atacado') f.preco_atacado      = r.preco;
+    }
+    return `<div class="preco-canal">
+      <h4>${c.icon} ${c.nome}</h4>
+      <div class="preco-valor">R$ ${r.preco.toFixed(2)}</div>
+      <div class="preco-margem ${cls}">Margem: ${(mc*100).toFixed(1)}%</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:4px">Lucro: R$ ${r.lucro.toFixed(2)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// TÍTULOS
+// ══════════════════════════════════════════════════════════════
+function atualizarTitulos(){
+  const nome = document.getElementById('f-nome').value.trim();
+  const f    = fichas[prodAtual];
+  if(!nome || !f) return;
+  const marca = dadosNF?.fornecedor?.split(' ')[0]||'';
+  const base = `${nome} ${marca}`.trim();
+  if(!document.getElementById('t-ml').value)
+    document.getElementById('t-ml').value = base.slice(0,60);
+  if(!document.getElementById('t-shopee').value)
+    document.getElementById('t-shopee').value = `${base} - Peça Original`.slice(0,120);
+  if(!document.getElementById('t-yampi').value)
+    document.getElementById('t-yampi').value = `${base} - Original`.slice(0,120);
+  if(!document.getElementById('t-facebook').value)
+    document.getElementById('t-facebook').value = base;
+  // Atualiza contadores
+  ['ml','shopee','yampi'].forEach(id=>{
+    const el = document.getElementById('t-'+id);
+    const ct = document.getElementById('c-'+id);
+    if(el&&ct) ct.textContent = el.value.length+(id==='ml'?'/60':'/120');
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// GERAR COM IA
+// ══════════════════════════════════════════════════════════════
+async function gerarDescricaoIA(){
+  if(!claudeKey){
+    claudeKey = prompt('Cole sua chave Claude API (sk-ant-...):');
+    if(!claudeKey) return;
+    localStorage.setItem('fava_claude_key', claudeKey);
+  }
+  const f    = fichas[prodAtual];
+  const nome = document.getElementById('f-nome').value;
+  const btn  = document.getElementById('btn-ia');
+  btn.disabled=true; btn.textContent='⟳ Gerando...';
+  mostrarStatus('st-ia','⟳ Claude gerando conteúdo...','info');
+
+  const story = f?.pedrinho?.storyselling||'';
+  const prompt = `Você é especialista em criação de anúncios para Fava Ecom (e-commerce de ferramentas e peças industriais).
+
+Produto: ${nome}
+Fornecedor: ${dadosNF?.fornecedor||''}
+NCM: ${f?.ncm||''} | CST: ${f?.cst||''} | Tem ST: ${f?.temST?'Sim':'Não'}
+CMV Brasil: R$ ${f?.cmvBr?.toFixed(2)||0}
+${story?'Storyselling do fornecedor:\n'+story.slice(0,500):''}
+
+Crie seguindo o padrão Fava Ecom:
+1. Trate sempre como PEÇA DE REPOSIÇÃO TÉCNICA (nunca genérico)
+2. Descrição profissional: contextualização técnica, benefícios, modo de uso, cuidados, ficha técnica, compatibilidade
+3. Gere títulos SEO para cada canal
+4. Post Facebook curto com hashtags
+
+Responda em JSON:
+{
+  "titulo_ml": "(até 60 chars)",
+  "titulo_shopee": "(até 120 chars)",
+  "titulo_yampi": "(até 120 chars)",
+  "titulo_facebook": "(comercial)",
+  "descricao": "(descrição completa marketplace)",
+  "facebook_post": "(post curto + hashtags #FavaEcom)"
+}`;
+
+  try{
+    const r = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01'},
+      body: JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})
+    });
+    const data = await r.json();
+    const txt  = data.content[0].text.replace(/```json|```/g,'').trim();
+    const json = JSON.parse(txt);
+    document.getElementById('t-ml').value           = json.titulo_ml||'';
+    document.getElementById('t-shopee').value        = json.titulo_shopee||'';
+    document.getElementById('t-yampi').value         = json.titulo_yampi||'';
+    document.getElementById('t-facebook').value      = json.titulo_facebook||'';
+    document.getElementById('t-descricao').value     = json.descricao||'';
+    document.getElementById('t-facebook-post').value = json.facebook_post||'';
+    ['ml','shopee','yampi'].forEach(id=>{
+      const el=document.getElementById('t-'+id);
+      const ct=document.getElementById('c-'+id);
+      if(el&&ct) ct.textContent=el.value.length+(id==='ml'?'/60':'/120');
+    });
+    mostrarStatus('st-ia','✅ Conteúdo gerado pela IA!','ok');
+  }catch(e){
+    mostrarStatus('st-ia','❌ Erro: '+e.message,'err');
+  }finally{
+    btn.disabled=false; btn.textContent='✨ Gerar com IA';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// TAREFAS
+// ══════════════════════════════════════════════════════════════
+function gerarTarefasPadrao(){
+  return [
+    {texto:'📸 Fotografar produto (mínimo 6 fotos)', feita:false, resp:'Funcionário'},
+    {texto:'✏️ Editar e organizar fotos', feita:false, resp:'Funcionário'},
+    {texto:'⚖️ Pesar produto na balança', feita:false, resp:'Funcionário'},
+    {texto:'📐 Medir produto (L × A × P cm)', feita:false, resp:'Funcionário'},
+    {texto:'✅ Conferir anúncio no ML', feita:false, resp:'Funcionário'},
+    {texto:'🛍️ Publicar na Shopee', feita:false, resp:'Funcionário'},
+    {texto:'🌐 Publicar no Yampi', feita:false, resp:'Funcionário'},
+    {texto:'📘 Post no Facebook', feita:false, resp:'Funcionário'},
+  ];
+}
+
+function renderTarefas(){
+  const f = fichas[prodAtual];
+  if(!f) return;
+  const wrap = document.getElementById('lista-tarefas-produto');
+  wrap.innerHTML = `
+    <div style="font-size:13px;font-weight:700;color:#1F3864;margin-bottom:12px">
+      ${f.nome?.slice(0,60)} — SKU ${f.sku}
+    </div>
+    ${f.tarefas.map((t,i)=>`
+      <div class="tarefa-item">
+        <input type="checkbox" ${t.feita?'checked':''} onchange="fichas[${prodAtual}].tarefas[${i}].feita=this.checked">
+        <span style="${t.feita?'text-decoration:line-through;color:#94a3b8':''}">${t.texto}</span>
+        <span style="margin-left:auto;font-size:10px;color:#94a3b8">${t.resp}</span>
+      </div>`).join('')}
+    <button onclick="adicionarTarefa()" class="btn btn-cinza" style="margin-top:8px;font-size:11px;padding:5px 10px">
+      + Adicionar tarefa
+    </button>`;
+}
+
+function adicionarTarefa(){
+  const txt = prompt('Descrição da tarefa:');
+  if(!txt) return;
+  fichas[prodAtual].tarefas.push({texto:txt, feita:false, resp:'Funcionário'});
+  renderTarefas();
+}
+
+// ══════════════════════════════════════════════════════════════
+// SALVAR
+// ══════════════════════════════════════════════════════════════
+function coletarFicha(){
+  const f = fichas[prodAtual];
+  f.sku        = document.getElementById('f-sku').value.trim();
+  f.nome       = document.getElementById('f-nome').value.trim();
+  f.cmvBr      = parseFloat(document.getElementById('f-cmv-br').value)||0;
+  f.cmvPr      = parseFloat(document.getElementById('f-cmv-pr').value)||0;
+  f.ean        = document.getElementById('f-ean').value.trim();
+  f.peso       = parseFloat(document.getElementById('f-peso').value)||0;
+  f.comprimento= parseFloat(document.getElementById('f-comp').value)||0;
+  f.largura    = parseFloat(document.getElementById('f-larg').value)||0;
+  f.altura     = parseFloat(document.getElementById('f-alt').value)||0;
+  f.familia    = document.getElementById('f-familia').value;
+  f.categoria  = document.getElementById('f-categoria').value;
+  f.tipo       = document.getElementById('f-tipo').value;
+  f.fotos      = document.getElementById('f-fotos').value.trim();
+  f.titulo_ml      = document.getElementById('t-ml').value;
+  f.titulo_shopee  = document.getElementById('t-shopee').value;
+  f.titulo_yampi   = document.getElementById('t-yampi').value;
+  f.titulo_facebook= document.getElementById('t-facebook').value;
+  f.descricao      = document.getElementById('t-descricao').value;
+  f.facebook_post  = document.getElementById('t-facebook-post').value;
+}
+
+async function salvarProduto(){
+  coletarFicha();
+  const f = fichas[prodAtual];
+  if(!f.sku||!f.nome){ mostrarStatus('st-ficha','❌ SKU e nome são obrigatórios','err'); return; }
+
+  mostrarStatus('st-ficha','⟳ Salvando...','info');
+  try{
+    // Salva no banco Railway
+    const r = await fetch(RAILWAY+'/api/db/cadastro',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        sku: f.sku, nome: f.nome,
+        fornecedor: dadosNF?.fornecedor||'',
+        codigo_fornecedor: f.codigo,
+        ncm: f.ncm, cst: f.cst, cfop: f.cfop,
+        ipi: f.ipiPct, tem_st: f.temST?1:0,
+        custo: f.custo, custo_br: f.cmvBr, custo_pr: f.cmvPr,
+        peso: f.peso, comprimento: f.comprimento,
+        largura: f.largura, altura: f.altura,
+        ean: f.ean, categoria: f.categoria, familia: f.familia,
+        fotos: f.fotos ? [f.fotos] : [],
+        titulo_ml: f.titulo_ml, titulo_shopee: f.titulo_shopee,
+        titulo_yampi: f.titulo_yampi, titulo_facebook: f.titulo_facebook,
+        descricao_ml: f.descricao,
+        preco_ml_classico: f.preco_ml_classico,
+        preco_ml_premium: f.preco_ml_premium,
+        preco_shopee: f.preco_shopee,
+        preco_yampi: f.preco_yampi,
+        preco_balcao: f.preco_balcao,
+        preco_atacado: f.preco_atacado,
+        status_cadastro: 'rascunho',
+        tarefas: f.tarefas,
+      })
+    });
+    if(!r.ok) throw new Error(await r.text());
+    // Também atualiza produtos (CMV)
+    await fetch(RAILWAY+'/api/cmv-cache',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({[f.sku]:{cmv:f.cmvBr, cmvPr:f.cmvPr, nome:f.nome}})
+    });
+    mostrarStatus('st-ficha',`✅ SKU ${f.sku} — ${f.nome} salvo!`,'ok');
+  }catch(e){
+    mostrarStatus('st-ficha','❌ Erro ao salvar: '+e.message,'err');
+  }
+}
+
+async function finalizarCadastro(){
+  coletarFicha();
+  const btn = document.getElementById('btn-finalizar');
+  btn.disabled=true; btn.textContent='⟳ Salvando...';
+  let salvos = 0;
+  for(const f of fichas){
+    try{
+      await fetch(RAILWAY+'/api/db/cadastro',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          sku:f.sku, nome:f.nome,
+          fornecedor:dadosNF?.fornecedor||'',
+          codigo_fornecedor:f.codigo,
+          ncm:f.ncm, cst:f.cst, cfop:f.cfop,
+          ipi:f.ipiPct, tem_st:f.temST?1:0,
+          custo:f.custo, custo_br:f.cmvBr, custo_pr:f.cmvPr,
+          peso:f.peso, comprimento:f.comprimento,
+          largura:f.largura, altura:f.altura,
+          ean:f.ean, categoria:f.categoria, familia:f.familia,
+          fotos:f.fotos?[f.fotos]:[],
+          titulo_ml:f.titulo_ml, titulo_shopee:f.titulo_shopee,
+          titulo_yampi:f.titulo_yampi, titulo_facebook:f.titulo_facebook,
+          descricao_ml:f.descricao,
+          preco_ml_classico:f.preco_ml_classico,
+          preco_ml_premium:f.preco_ml_premium,
+          preco_shopee:f.preco_shopee, preco_yampi:f.preco_yampi,
+          preco_balcao:f.preco_balcao, preco_atacado:f.preco_atacado,
+          status_cadastro:'cadastrado', tarefas:f.tarefas,
+        })
+      });
+      salvos++;
+    }catch(e){ console.warn(e); }
+  }
+
+  // Mostra resumo
+  const card = document.getElementById('card-resumo');
+  const body = document.getElementById('resumo-body');
+  body.innerHTML = fichas.map(f=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px">
+      <div><b style="color:#1F3864">SKU ${f.sku}</b> — ${f.nome?.slice(0,50)}</div>
+      <div style="display:flex;gap:8px;font-size:11px">
+        <span>ML: <b>R$ ${f.preco_ml_classico?.toFixed(2)||'—'}</b></span>
+        <span>Shopee: <b>R$ ${f.preco_shopee?.toFixed(2)||'—'}</b></span>
+        <span>Balcão: <b>R$ ${f.preco_balcao?.toFixed(2)||'—'}</b></span>
+      </div>
+    </div>`).join('');
+  card.style.display='block';
+  btn.disabled=false; btn.textContent='✅ Finalizar e salvar tudo';
+  card.scrollIntoView({behavior:'smooth'});
+}
+
+// ══════════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════════
+function mostrarStatus(id, msg, tipo){
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.textContent=msg; el.className='status-msg'+(tipo?' '+tipo:'');
+  if(tipo==='ok') setTimeout(()=>el.className='status-msg',4000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// INTERCEPTA irStep PARA RENDERIZAR
+// ══════════════════════════════════════════════════════════════
+const _irStep = irStep;
+window.irStep = function(n){
+  // Salva dados da ficha atual antes de trocar
+  if(n>3 && fichas.length) coletarFicha();
+  _irStep(n);
+  if(n===2) renderListaProdutos();
+  if(n===3) calcularPrecos();
+  if(n===5) renderTarefas();
+};
+</script>
+</body>
+</html>
