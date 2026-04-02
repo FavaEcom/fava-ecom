@@ -224,7 +224,7 @@ async function init(){
     prods.forEach(p=>{
       if(p.sku && (p.custo_br||p.custo_pr)){
         const k = norm(String(p.sku));
-        catalogo[k] = {sku:p.sku, nome:p.nome||p.sku, cmv:p.custo_br||p.custo_pr||0};
+        catalogo[k] = {sku:p.sku, nome:p.nome||p.sku, cmv:p.custo_pr||p.custo_br||0};
       }
     });
     const n = Object.keys(catalogo).length;
@@ -312,7 +312,7 @@ async function buscar(){
           (p.nome||'').toLowerCase().includes(q.toLowerCase())
         );
         if(p && (p.custo_br||p.custo_pr)){
-          found = {sku:p.sku, nome:p.nome||p.sku, cmv:p.custo_br||p.custo_pr||0};
+          found = {sku:p.sku, nome:p.nome||p.sku, cmv:p.custo_pr||p.custo_br||0};
           catalogo[norm(String(p.sku))] = found;
         }
       }
