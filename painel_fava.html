@@ -1852,7 +1852,8 @@ async function importarPlanilhaML(input){
         const acao   = r[12] ? String(r[12]).trim() : '';
         if(sku) skusParaBuscar.add(sku);
         itens.push({ rowIdx:i, id:mlbId, sku, titulo, preco, descPct,
-          descEditado:descPct, status, acao,
+          descEditado: descPct || 15, // padrão 15% se não tiver desconto
+          status, acao,
           cmv:0, margem:null, margemComDesc:null,
           frete:calcFreteProm(preco), selecionado:false });
       }
@@ -2092,8 +2093,8 @@ function renderPromoTabela(lista){
       <td style="padding:5px 8px;text-align:center">
         ${!p.cmv
           ? '<span style="color:#f59e0b;font-size:10px">sem CMV</span>'
-          : '<input type="number" value="'+(p.descEditado>=5&&p.descEditado<=descMaxCalc?p.descEditado:'')
-            +'" min="5" max="'+(descMaxCalc||80)+'" step="1" placeholder="'+(descMaxCalc>0?'máx '+descMaxCalc:'%')+'"'
+          : '<input type="number" value="'+(p.descEditado||15)
+            +'" min="0" max="99" step="1" placeholder="%"'
             +' style="width:55px;border:1px solid #d1d5db;border-radius:4px;padding:2px 4px;text-align:center;font-size:11px;font-weight:700"'
             +' oninput=\"atualizarDescItem('+i+',this.value)\">'
             +(descMaxCalc>0?'<div style="font-size:9px;color:#6b7280">máx '+descMaxCalc+'%</div>':'')}
@@ -2299,19 +2300,15 @@ function atualizarMgMin(idx, val){
 // Calcula desconto máximo dado margem mínima
 function calcDescMaximo(preco, cmv, mgMin, taxa, frete_liq){
   if(!cmv || cmv<=0 || !preco) return 0;
-  const mg = mgMin > 0 ? mgMin : 0;
-  const tx = taxa > 0 ? taxa : 0.16;
+  const mg = mgMin > 0 ? mgMin : 0.20; // margem mínima padrão 20%
+  const tx = taxa > 0 ? taxa : 0.12;
   const fr = frete_liq || 0;
-  const pis_cof = 0.0365;
-  // precoMin onde margem = mgMin
-  // preco - cmv - preco*tx - fr - preco*pis_cof = preco*mgMin
-  // preco*(1 - tx - pis_cof - mgMin) = cmv + fr
-  const denom = 1 - tx - pis_cof - mg;
+  const denom = 1 - tx - PIS_SAIDA - COFINS_SAIDA - DIFAL_MEDIO - IBS_CBS - mg;
   if(denom <= 0) return 0;
   const precoMin = (cmv + fr) / denom;
   if(precoMin >= preco) return 0;
   const descMax = Math.floor((1 - precoMin/preco)*100);
-  return Math.max(0, Math.min(descMax, 80));
+  return Math.max(0, descMax); // sem teto artificial
 }
 
 // Aplica regras padrão de margem mínima por faixa de preço
