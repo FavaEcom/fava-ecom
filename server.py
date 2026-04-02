@@ -110,6 +110,38 @@ def criar_tabelas():
             """CREATE TABLE IF NOT EXISTS cprod_map (
                 cprod TEXT PRIMARY KEY, sku TEXT, nome TEXT,
                 cmv_br REAL DEFAULT 0, cmv_pr REAL DEFAULT 0)""",
+            """CREATE TABLE IF NOT EXISTS pedrinho (
+                codigo TEXT PRIMARY KEY,
+                descricao TEXT,
+                storyselling TEXT,
+                fotos TEXT,
+                qtd_fotos INTEGER DEFAULT 0,
+                updated_at DATETIME DEFAULT (datetime('now')))""",
+            """CREATE TABLE IF NOT EXISTS kits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sku TEXT UNIQUE, nome TEXT, itens TEXT,
+                justificativa TEXT, peso REAL DEFAULT 0,
+                titulo_ml TEXT, descricao TEXT, descricao_completa TEXT,
+                categoria TEXT, tarefas TEXT,
+                status TEXT DEFAULT 'aprovado',
+                created_at DATETIME DEFAULT (datetime('now')))""",
+            """CREATE TABLE IF NOT EXISTS produto_cadastro (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sku TEXT UNIQUE, nome TEXT, fornecedor TEXT,
+                codigo_fornecedor TEXT, ncm TEXT, cst TEXT, cfop TEXT,
+                ipi REAL DEFAULT 0, tem_st INTEGER DEFAULT 0,
+                custo REAL DEFAULT 0, custo_br REAL DEFAULT 0, custo_pr REAL DEFAULT 0,
+                peso REAL DEFAULT 0, comprimento REAL DEFAULT 0,
+                largura REAL DEFAULT 0, altura REAL DEFAULT 0,
+                ean TEXT, categoria TEXT, familia TEXT, fotos TEXT,
+                titulo_ml TEXT, titulo_shopee TEXT, titulo_yampi TEXT, titulo_facebook TEXT,
+                descricao_ml TEXT,
+                preco_ml_classico REAL DEFAULT 0, preco_ml_premium REAL DEFAULT 0,
+                preco_shopee REAL DEFAULT 0, preco_yampi REAL DEFAULT 0,
+                preco_balcao REAL DEFAULT 0, preco_atacado REAL DEFAULT 0,
+                status_cadastro TEXT DEFAULT 'rascunho', tarefas TEXT,
+                created_at DATETIME DEFAULT (datetime('now')),
+                updated_at DATETIME DEFAULT (datetime('now')))""",
         ]
     else:
         sqls = [
@@ -151,6 +183,38 @@ def criar_tabelas():
             """CREATE TABLE IF NOT EXISTS cprod_map (
                 cprod TEXT PRIMARY KEY, sku TEXT, nome TEXT,
                 cmv_br REAL DEFAULT 0, cmv_pr REAL DEFAULT 0)""",
+            """CREATE TABLE IF NOT EXISTS pedrinho (
+                codigo TEXT PRIMARY KEY,
+                descricao TEXT,
+                storyselling TEXT,
+                fotos TEXT,
+                qtd_fotos INTEGER DEFAULT 0,
+                updated_at DATETIME DEFAULT (datetime('now')))""",
+            """CREATE TABLE IF NOT EXISTS kits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sku TEXT UNIQUE, nome TEXT, itens TEXT,
+                justificativa TEXT, peso REAL DEFAULT 0,
+                titulo_ml TEXT, descricao TEXT, descricao_completa TEXT,
+                categoria TEXT, tarefas TEXT,
+                status TEXT DEFAULT 'aprovado',
+                created_at DATETIME DEFAULT (datetime('now')))""",
+            """CREATE TABLE IF NOT EXISTS produto_cadastro (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sku TEXT UNIQUE, nome TEXT, fornecedor TEXT,
+                codigo_fornecedor TEXT, ncm TEXT, cst TEXT, cfop TEXT,
+                ipi REAL DEFAULT 0, tem_st INTEGER DEFAULT 0,
+                custo REAL DEFAULT 0, custo_br REAL DEFAULT 0, custo_pr REAL DEFAULT 0,
+                peso REAL DEFAULT 0, comprimento REAL DEFAULT 0,
+                largura REAL DEFAULT 0, altura REAL DEFAULT 0,
+                ean TEXT, categoria TEXT, familia TEXT, fotos TEXT,
+                titulo_ml TEXT, titulo_shopee TEXT, titulo_yampi TEXT, titulo_facebook TEXT,
+                descricao_ml TEXT,
+                preco_ml_classico REAL DEFAULT 0, preco_ml_premium REAL DEFAULT 0,
+                preco_shopee REAL DEFAULT 0, preco_yampi REAL DEFAULT 0,
+                preco_balcao REAL DEFAULT 0, preco_atacado REAL DEFAULT 0,
+                status_cadastro TEXT DEFAULT 'rascunho', tarefas TEXT,
+                created_at DATETIME DEFAULT (datetime('now')),
+                updated_at DATETIME DEFAULT (datetime('now')))""",
         ]
     with _db_lock:
         cur = db.cursor()
@@ -531,6 +595,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/nfs': self._get_nfs,
             '/api/db/listings': self._get_listings,
             '/api/db/cprod-map': self._get_cprod_map,
+            '/api/db/pedrinho': self._get_pedrinho,
+            '/api/db/kits': self._get_kits,
+            '/api/db/cadastros': self._get_cadastros,
             '/api/db/status': self._get_status,
             '/api/cmv-cache': self._get_cmv_compat,
             '/api/sync/now': self._sync_now,
@@ -549,6 +616,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/listing': self._post_listing,
             '/api/db/cprod-map': self._post_cprod_map,
             '/api/db/listings-batch': self._post_listings_batch,
+            '/api/db/pedrinho/importar': self._post_pedrinho_importar,
+            '/api/db/kit': self._post_kit,
+            '/api/db/cadastro': self._post_cadastro,
             '/api/auth/tokens': self._post_tokens,
             '/api/cmv-cache': self._post_cmv,
         }
@@ -852,6 +922,149 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_response(code); self._cors()
         self.send_header('Content-Type','application/json'); self.end_headers()
         self.wfile.write(body)
+
+
+    def _get_pedrinho(self):
+        """GET /api/db/pedrinho?codigo=XXX — busca produto no Pedrinho"""
+        from urllib.parse import urlparse, parse_qs
+        qs = parse_qs(urlparse(self.path).query)
+        cod = qs.get('codigo',[''])[0]
+        q = qs.get('q',[''])[0]
+        with _db_lock:
+            cur = db.cursor()
+            if cod:
+                cur.execute("SELECT * FROM pedrinho WHERE codigo=%s" % ('''+cod+''',) if not IS_PG else "SELECT * FROM pedrinho WHERE codigo=%s", (cod,) if IS_PG else ())
+                if not IS_PG: cur.execute("SELECT * FROM pedrinho WHERE codigo=?", (cod,))
+                row = cur.fetchone()
+                if not row: return self._json({'error':'not_found'}, 404)
+                cols = [d[0] for d in cur.description]
+                return self._json(dict(zip(cols,row)))
+            elif q:
+                if IS_PG:
+                    cur.execute("SELECT codigo,descricao,qtd_fotos FROM pedrinho WHERE descricao ILIKE %s LIMIT 20", ('%'+q+'%',))
+                else:
+                    cur.execute("SELECT codigo,descricao,qtd_fotos FROM pedrinho WHERE descricao LIKE ? LIMIT 20", ('%'+q+'%',))
+                cols = [d[0] for d in cur.description]
+                return self._json([dict(zip(cols,r)) for r in cur.fetchall()])
+            else:
+                cur.execute("SELECT COUNT(*) FROM pedrinho")
+                n = cur.fetchone()[0]
+                return self._json({'total': n})
+
+    def _post_pedrinho_importar(self):
+        """POST /api/db/pedrinho/importar — importa lote de produtos"""
+        import json as _json
+        body = self._body()
+        prods = body.get('produtos', [])
+        inseridos = 0
+        with _db_lock:
+            cur = db.cursor()
+            for p in prods:
+                fotos_json = _json.dumps(p.get('fotos',[]))
+                try:
+                    if IS_PG:
+                        cur.execute("""INSERT INTO pedrinho (codigo,descricao,storyselling,fotos,qtd_fotos)
+                            VALUES (%s,%s,%s,%s,%s)
+                            ON CONFLICT(codigo) DO UPDATE SET
+                            descricao=EXCLUDED.descricao,
+                            storyselling=EXCLUDED.storyselling,
+                            fotos=EXCLUDED.fotos,
+                            qtd_fotos=EXCLUDED.qtd_fotos,
+                            updated_at=datetime('now')""",
+                            (p['codigo'],p.get('descricao',''),p.get('storyselling',''),fotos_json,p.get('qtd_fotos',0)))
+                    else:
+                        cur.execute("""INSERT OR REPLACE INTO pedrinho
+                            (codigo,descricao,storyselling,fotos,qtd_fotos)
+                            VALUES (?,?,?,?,?)""",
+                            (p['codigo'],p.get('descricao',''),p.get('storyselling',''),fotos_json,p.get('qtd_fotos',0)))
+                    inseridos += 1
+                except Exception as e:
+                    print(f'[Pedrinho] {e}')
+            if not IS_PG: db.commit()
+        return self._json({'inseridos': inseridos, 'total': len(prods)})
+
+    def _get_kits(self):
+        """GET /api/db/kits"""
+        with _db_lock:
+            cur = db.cursor()
+            cur.execute("SELECT * FROM kits ORDER BY created_at DESC")
+            cols = [d[0] for d in cur.description]
+            return self._json([dict(zip(cols,r)) for r in cur.fetchall()])
+
+    def _post_kit(self):
+        """POST /api/db/kit — salva kit aprovado"""
+        import json as _json
+        body = self._body()
+        with _db_lock:
+            cur = db.cursor()
+            try:
+                itens  = _json.dumps(body.get('itens',[]))
+                taref  = _json.dumps(body.get('tarefas_status', body.get('tarefas',[])))
+                if IS_PG:
+                    cur.execute("""INSERT INTO kits (sku,nome,itens,justificativa,peso,titulo_ml,
+                        descricao,descricao_completa,categoria,tarefas,status)
+                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                        ON CONFLICT(sku) DO UPDATE SET nome=EXCLUDED.nome,
+                        tarefas=EXCLUDED.tarefas, status=EXCLUDED.status""",
+                        (body.get('sku'),body.get('nome'),itens,body.get('justificativa'),
+                         body.get('peso',0),body.get('titulo'),body.get('descricao'),
+                         body.get('descricao_completa'),body.get('categoria'),taref,body.get('status','aprovado')))
+                else:
+                    cur.execute("""INSERT OR REPLACE INTO kits
+                        (sku,nome,itens,justificativa,peso,titulo_ml,descricao,descricao_completa,categoria,tarefas,status)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                        (body.get('sku'),body.get('nome'),itens,body.get('justificativa'),
+                         body.get('peso',0),body.get('titulo'),body.get('descricao'),
+                         body.get('descricao_completa'),body.get('categoria'),taref,body.get('status','aprovado')))
+                if not IS_PG: db.commit()
+                return self._json({'ok': True})
+            except Exception as e:
+                return self._json({'error': str(e)}, 500)
+
+    def _get_cadastros(self):
+        """GET /api/db/cadastros"""
+        with _db_lock:
+            cur = db.cursor()
+            cur.execute("SELECT * FROM produto_cadastro ORDER BY created_at DESC LIMIT 200")
+            cols = [d[0] for d in cur.description]
+            return self._json([dict(zip(cols,r)) for r in cur.fetchall()])
+
+    def _post_cadastro(self):
+        """POST /api/db/cadastro — upsert cadastro completo de produto"""
+        import json as _json
+        b = self._body()
+        fotos = _json.dumps(b.get('fotos',[]))
+        taref = _json.dumps(b.get('tarefas',[]))
+        with _db_lock:
+            cur = db.cursor()
+            try:
+                campos = ['sku','nome','fornecedor','codigo_fornecedor','ncm','cst','cfop',
+                    'ipi','tem_st','custo','custo_br','custo_pr','peso','comprimento','largura',
+                    'altura','ean','categoria','familia','fotos','titulo_ml','titulo_shopee',
+                    'titulo_yampi','titulo_facebook','descricao_ml','preco_ml_classico',
+                    'preco_ml_premium','preco_shopee','preco_yampi','preco_balcao',
+                    'preco_atacado','status_cadastro','tarefas']
+                vals = [b.get('sku'),b.get('nome'),b.get('fornecedor'),b.get('codigo_fornecedor'),
+                    b.get('ncm'),b.get('cst'),b.get('cfop'),b.get('ipi',0),
+                    1 if b.get('tem_st') else 0,
+                    b.get('custo',0),b.get('custo_br',0),b.get('custo_pr',0),
+                    b.get('peso',0),b.get('comprimento',0),b.get('largura',0),b.get('altura',0),
+                    b.get('ean'),b.get('categoria'),b.get('familia'),fotos,
+                    b.get('titulo_ml'),b.get('titulo_shopee'),b.get('titulo_yampi'),b.get('titulo_facebook'),
+                    b.get('descricao_ml'),b.get('preco_ml_classico',0),b.get('preco_ml_premium',0),
+                    b.get('preco_shopee',0),b.get('preco_yampi',0),b.get('preco_balcao',0),
+                    b.get('preco_atacado',0),b.get('status_cadastro','rascunho'),taref]
+                ph = ['%s' if IS_PG else '?'] * len(campos)
+                sql = f"INSERT INTO produto_cadastro ({','.join(campos)}) VALUES ({','.join(ph)})"
+                if IS_PG:
+                    sql += " ON CONFLICT(sku) DO UPDATE SET " + ",".join(f"{c}=EXCLUDED.{c}" for c in campos if c!='sku')
+                else:
+                    sql = sql.replace('INSERT INTO','INSERT OR REPLACE INTO')
+                cur.execute(sql, vals)
+                if not IS_PG: db.commit()
+                return self._json({'ok': True, 'sku': b.get('sku')})
+            except Exception as e:
+                return self._json({'error': str(e)}, 500)
 
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
