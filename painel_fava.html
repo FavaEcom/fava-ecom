@@ -641,13 +641,13 @@ function salvarCfg(){
           <col style="width:14%"><!-- Frete tipo -->
         </colgroup>
         <thead><tr>
-          <th onclick="sortAnuncios('titulo')" style="cursor:pointer">Produto ↕</th>
           <th onclick="sortAnuncios('sku')" style="cursor:pointer">SKU ↕</th>
           <th>MLB</th>
+          <th onclick="sortAnuncios('titulo')" style="cursor:pointer">Produto ↕</th>
           <th class="num" onclick="sortAnuncios('preco')" style="cursor:pointer">Preço ↕</th>
           <th class="num" onclick="sortAnuncios('cmv')" style="cursor:pointer">CMV ↕</th>
           <th class="num">Taxa</th>
-          <th class="num">Frete liq.</th>
+          <th class="num">Frete (bruto→liq)</th>
           <th class="num" onclick="sortAnuncios('margem_atual')" style="cursor:pointer">Margem ↕</th>
           <th>Frete tipo</th>
         </tr></thead>
@@ -748,9 +748,35 @@ function salvarCfg(){
         </div>
       </div>
     </div>
+    <div class="fcard">
+      <div class="fcard-head"><h3>Por fornecedor (mês)</h3></div>
       <div class="fcard-body" style="padding:0">
         <table class="ftbl"><thead><tr><th>Fornecedor</th><th class="num">Total mês</th><th class="num">Em aberto</th></tr></thead>
         <tbody id="tbody-fornecedores"></tbody></table>
+      </div>
+    </div>
+    <div class="fcard">
+      <div class="fcard-head"><h3>💚 Créditos de Impostos — Mês</h3><button class="btn-fin" style="font-size:11px" onclick="calcCreditosImpostos()">🔄 Calcular</button></div>
+      <div class="fcard-body">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0">
+            <span style="font-size:12px">Crédito ICMS</span>
+            <span id="cred-icms" style="font-weight:700;color:#059669">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0">
+            <span style="font-size:12px">Crédito PIS (1,65%)</span>
+            <span id="cred-pis" style="font-weight:700;color:#059669">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0">
+            <span style="font-size:12px">Crédito COFINS (7,60%)</span>
+            <span id="cred-cofins" style="font-weight:700;color:#059669">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid #059669">
+            <span style="font-weight:700">Total créditos mês</span>
+            <span id="cred-total" style="font-weight:700;font-size:15px;color:#059669">—</span>
+          </div>
+          <div style="font-size:10px;color:#9ca3af">Baseado nas NFs importadas este mês</div>
+        </div>
       </div>
     </div>
     <div class="fcard">
@@ -864,8 +890,20 @@ function salvarCfg(){
       <div class="card-body" style="padding:0">
         <table class="tbl">
           <thead><tr>
-            <th style="width:10%">Nº</th><th style="width:12%">Data</th><th style="width:8%">Canal</th><th style="width:32%">Produto</th>
-            <th class="num" style="width:12%">Total</th><th class="num" style="width:12%">Margem</th><th style="width:7%">UF</th><th style="width:7%">Status</th>
+            <th style="width:8%">Nº</th>
+            <th style="width:7%">Data</th>
+            <th style="width:8%">SKU</th>
+            <th style="width:22%">Produto</th>
+            <th style="width:5%">UF</th>
+            <th class="num" style="width:8%">Preço</th>
+            <th class="num" style="width:7%">CMV</th>
+            <th class="num" style="width:7%">Taxa</th>
+            <th class="num" style="width:7%">Frete</th>
+            <th class="num" style="width:7%">DIFAL</th>
+            <th class="num" style="width:7%">PIS+COF</th>
+            <th class="num" style="width:7%">Créditos</th>
+            <th class="num" style="width:7%">Lucro</th>
+            <th class="num" style="width:7%">Margem</th>
           </tr></thead>
           <tbody id="ped-tbody"></tbody>
         </table>
@@ -1249,17 +1287,26 @@ function salvarCfg(){
       </div>
     </div>
     <div style="margin-top:20px">
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
         <b style="font-size:14px">Histórico de NFs importadas</b>
         <button class="btn-fin" style="font-size:11px;padding:4px 10px" onclick="carregarHistoricoNFs()">🔄 Atualizar</button>
       </div>
       <div style="overflow-x:auto">
-        <table class="data-table"><thead><tr>
-          <th>Data</th><th>NF Nº</th><th>Fornecedor</th>
-          <th class="num">Total NF</th><th class="num">Itens</th>
-          <th class="num">Parcelas</th><th>Status</th>
-        </tr></thead>
-        <tbody id="nf-hist-tbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Carregue uma NF para começar</td></tr></tbody>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:#1F3864;color:#fff">
+              <th style="padding:10px 16px;text-align:left;white-space:nowrap;min-width:100px">Data</th>
+              <th style="padding:10px 16px;text-align:left;white-space:nowrap;min-width:90px">NF Nº</th>
+              <th style="padding:10px 16px;text-align:left;min-width:220px">Fornecedor</th>
+              <th style="padding:10px 16px;text-align:right;white-space:nowrap;min-width:110px">Total NF</th>
+              <th style="padding:10px 16px;text-align:right;white-space:nowrap;min-width:60px">Itens</th>
+              <th style="padding:10px 16px;text-align:right;white-space:nowrap;min-width:120px">Parcelas</th>
+              <th style="padding:10px 16px;text-align:center;white-space:nowrap;min-width:90px">Status</th>
+            </tr>
+          </thead>
+          <tbody id="nf-hist-tbody">
+            <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">Carregue uma NF para começar</td></tr>
+          </tbody>
         </table>
       </div>
     </div>
@@ -5685,13 +5732,15 @@ function renderAnuncios(){
   tbody.innerHTML = lista.map(a=>{
     const mgCor = a.margem_atual===null?'var(--muted)':a.margem_atual>=.20?'var(--verde)':a.margem_atual>=.10?'var(--amarelo)':'var(--vermelho)';
     const mgStr = a.margem_atual!==null ? (a.margem_atual*100).toFixed(1)+'%' : (a.cmv>0?'—':'<span style="color:#f59e0b;font-size:9px">sem CMV</span>');
-    const freteTxt = a.frete>0 ? '<strong>R$'+(a.freteL||0).toFixed(2)+'</strong><span style="font-size:9px;color:#9ca3af"> liq</span>' : '<span style="color:#9ca3af">—</span>';
+    const freteTxt = a.frete>0 
+      ? `<strong>R$${a.frete.toFixed(2)}</strong><span style="font-size:9px;color:#9ca3af"> → liq R$${(a.freteL||0).toFixed(2)}</span>` 
+      : '<span style="color:#9ca3af">—</span>';
     const taxaTxt = a.taxa>0 ? (a.taxa*100).toFixed(0)+'%' : '—';
     const mlbLink = a.id ? `<a href="https://www.mercadolivre.com.br/p/${a.id}" target="_blank" style="font-size:9px;color:var(--azul2);text-decoration:none">${a.id}</a>` : '—';
     return `<tr style="border-bottom:1px solid #f9fafb">
-      <td style="padding:5px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px" title="${a.titulo}">${a.titulo}</td>
       <td style="padding:5px 8px;font-weight:700;color:#1F3864;font-size:11px">${a.sku||'—'}</td>
       <td style="padding:5px 8px;font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${mlbLink}</td>
+      <td style="padding:5px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px" title="${a.titulo}">${a.titulo}</td>
       <td style="padding:5px 8px;text-align:right;font-weight:700">R$${(a.preco||0).toFixed(2)}</td>
       <td style="padding:5px 8px;text-align:right;color:var(--muted)">${a.cmv>0?'R$'+a.cmv.toFixed(2):'<span style="color:#f59e0b;font-size:9px">sem CMV</span>'}</td>
       <td style="padding:5px 8px;text-align:right;color:var(--muted)">${taxaTxt}</td>
@@ -6047,7 +6096,8 @@ function processarXMLNF(xmlStr, filename){
       const cmvPr = cmvBr; // PR → PR sem DIFAL adicional
 
       // SKU Fava via mapeamento cProd
-      const skuFava = cprodMapNF[cProd] || '';
+      const cprodEntry = cprodMapNF[cProd];
+      const skuFava = cprodEntry ? (typeof cprodEntry === 'object' ? (cprodEntry.sku || '') : String(cprodEntry)) : '';
 
       totalCusto    += vProd + vIPIit + vSTit;
       totalIPINF    += vIPIit;
@@ -6069,6 +6119,27 @@ function processarXMLNF(xmlStr, filename){
       totalCOFCred: totalCusto * COFINS_SAIDA,
       get totalCredFiscal(){ return this.totalICMSCred + this.totalPISCred + this.totalCOFCred; }
     };
+
+    // ── Lê duplicatas (parcelas) direto do XML ──────────────────
+    const dups = doc.querySelectorAll('dup');
+    if(dups.length > 0){
+      const parcelas = [];
+      dups.forEach((dup, i) => {
+        const nDup  = dup.querySelector('nDup')?.textContent || `${i+1}`;
+        const dVenc = dup.querySelector('dVenc')?.textContent || '';
+        const vDup  = parseFloat(dup.querySelector('vDup')?.textContent || 0);
+        // dVenc vem no formato YYYY-MM-DD
+        let vencFmt = dVenc;
+        if(dVenc && dVenc.includes('-')){
+          const [a,m,d] = dVenc.split('-');
+          vencFmt = `${d}/${m}/${a}`;
+        }
+        parcelas.push({ num: nDup, venc: vencFmt, valor: vDup });
+      });
+      nfAtual.parcelas      = parcelas.map(p=>({venc: p.venc, valor: p.valor}));
+      nfAtual.parcelasInfo  = parcelas; // para mostrar na capa
+      console.log(`[NF] ${dups.length} duplicatas encontradas no XML`);
+    }
 
     renderNF(nfAtual);
 
@@ -6094,8 +6165,11 @@ function renderNF(nf){
   (document.getElementById('nf-pis-cred')||{}).textContent  = fmt(nf.totalPISCred);
   (document.getElementById('nf-cof-cred')||{}).textContent  = fmt(nf.totalCOFCred);
   (document.getElementById('nf-total-cred')||{}).textContent = fmt(nf.totalCredFiscal);
+  // ICMS varia por produto — mostra range
+  const icmsVals = [...new Set(nf.itens.map(it=>it.pICMS))].sort((a,b)=>a-b);
+  const icmsStr = icmsVals.length === 1 ? `${icmsVals[0]}%` : `${icmsVals[0]}% ~ ${icmsVals[icmsVals.length-1]}% (varia por produto)`;
   (document.getElementById('nf-icms-info')||{}).textContent =
-    `ICMS entrada: ${nf.icmsPct}% | CMV = Custo − ICMS(${nf.icmsPct}%) − PIS(1,65%) − COFINS(7,60%)`;
+    `ICMS entrada: ${icmsStr} | CMV = Custo − ICMS(produto) − PIS(1,65%) − COFINS(7,60%)`;
 
   // Tabela
   const wrap = document.getElementById('nf-tabela-wrap');
@@ -6210,7 +6284,37 @@ async function salvarNFBanco(){
     });
   }catch(e){ console.warn('Erro salvar NF:', e); }
 
-  if(btn){ btn.textContent = `✅ ${ok} CMVs + ${parcelas.length} boletos salvos`; btn.disabled = false; }
+  // 3. Salva itens no histórico de compras
+  const histItens = nfAtual.itens
+    .filter(it => it.skuFava)
+    .map(it => ({
+      nf:          nfAtual.nNF,
+      fornecedor:  nfAtual.xNome,
+      data_emissao: nfAtual.dhEmi,
+      sku:         it.skuFava,
+      nome:        it.xProd,
+      qtd:         it.qCom,
+      vunit:       it.vUnCom,
+      vtot:        it.vProd,
+      ipi_p:       it.pIPI,
+      ipi_un:      it.vIPI / Math.max(it.qCom,1),
+      icms_p:      it.pICMS,
+      custo_r:     it.custoUnit,
+      cmv_br:      it.cmvBr,
+      cmv_pr:      it.cmvPr,
+      cprod:       it.cProd
+    }));
+
+  if(histItens.length > 0){
+    try{
+      await fetch('/api/db/historico-batch', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({itens: histItens})
+      });
+    }catch(e){ console.warn('Erro salvar histórico:', e); }
+  }
+  if(btn){ btn.textContent = `✅ ${ok} CMVs + ${(nfAtual.parcelas||[]).length} boletos + ${histItens.length} hist.`; btn.disabled = false; }
   setTimeout(()=>{ if(btn) btn.textContent = '💾 Salvar no banco + Atualizar CMV'; }, 4000);
   carregarHistoricoNFs();
 }
@@ -6226,16 +6330,17 @@ async function carregarHistoricoNFs(){
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Nenhuma NF importada ainda</td></tr>';
         return;
       }
-      tbody.innerHTML = nfs.slice(0,30).map(n=>{
+      tbody.innerHTML = nfs.slice(0,30).map((n,i)=>{
         const total = parseFloat(n.valor||n.total_nf||0);
-        return `<tr>
-          <td>${n.emissao||n.data||'—'}</td>
-          <td style="font-weight:700">${n.nf||n.numero||'—'}</td>
-          <td style="font-size:12px">${(n.fornecedor||'').substring(0,35)}</td>
-          <td class="num">${total>0?'R$ '+total.toFixed(2):'—'}</td>
-          <td class="num">${n.itens||'—'}</td>
-          <td class="num" id="nf-parc-${n.nf||n.numero||n.chave||''}">—</td>
-          <td><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:4px;font-size:11px">✅ Importada</span></td>
+        const bg = i%2===0 ? '#fff' : '#f8fafc';
+        return `<tr style="background:${bg};border-bottom:1px solid #e5e7eb">
+          <td style="padding:12px 16px;white-space:nowrap;font-size:13px">${n.emissao||n.data||'—'}</td>
+          <td style="padding:12px 16px;font-weight:700;font-size:13px;white-space:nowrap">${n.nf||n.numero||'—'}</td>
+          <td style="padding:12px 16px;font-size:13px">${(n.fornecedor||'').substring(0,40)}</td>
+          <td style="padding:12px 16px;text-align:right;font-weight:700;font-size:13px">${total>0?'R$ '+total.toFixed(2):'—'}</td>
+          <td style="padding:12px 16px;text-align:right;font-size:13px">${n.itens||'—'}</td>
+          <td style="padding:12px 16px;text-align:right;font-size:12px;color:#6b7280" id="nf-parc-${n.nf||n.numero||n.chave||''}">—</td>
+          <td style="padding:12px 16px;text-align:center"><span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600">✅ Importada</span></td>
         </tr>`;
       }).join('');
       // Carrega boletos para cruzar parcelas
@@ -6270,26 +6375,37 @@ function gerarCapaNF(){
   const fmt  = v => 'R$ ' + parseFloat(v||0).toFixed(2);
   const fmtD = d => d ? String(d).substring(0,10) : '—';
 
-  // Parcelas — campo de input
-  const nParcelas = parseInt(prompt('Número de parcelas?', '1') || '1');
-  const vencStr   = prompt('Data do 1º vencimento (DD/MM/AAAA):', '') || '';
-  const obs       = prompt('Observações / condições de pagamento:', '') || '';
-
-  // Calcula vencimentos mensais
+  // Usa duplicatas do XML se disponíveis — senão pede manualmente
   let vencimentos = [];
-  if(vencStr && nParcelas > 0){
-    const [d,m,a] = vencStr.split('/').map(Number);
-    const base = new Date(a, m-1, d);
-    for(let i=0; i<nParcelas; i++){
-      const dt = new Date(base.getFullYear(), base.getMonth()+i, base.getDate());
-      vencimentos.push({
-        parcela: `${i+1}/${nParcelas}`,
-        venc: dt.toLocaleDateString('pt-BR'),
-        valor: (nf.vNF / nParcelas).toFixed(2),
-        status: 'A PAGAR'
-      });
+  if(nf.parcelasInfo && nf.parcelasInfo.length > 0){
+    // Duplicatas vieram do XML — usa direto
+    vencimentos = nf.parcelasInfo.map((p,i)=>({
+      parcela: p.num || `${i+1}/${nf.parcelasInfo.length}`,
+      venc:    p.venc,
+      valor:   parseFloat(p.valor).toFixed(2),
+      status:  'A PAGAR'
+    }));
+  } else {
+    // Sem duplicatas no XML — pede manualmente
+    const nParc = parseInt(prompt('Número de parcelas?', '1') || '1');
+    const vStr  = prompt('Data do 1º vencimento (DD/MM/AAAA):', '') || '';
+    if(vStr && nParc > 0){
+      const [d,m,a] = vStr.split('/').map(Number);
+      const base = new Date(a, m-1, d);
+      for(let i=0; i<nParc; i++){
+        const dt = new Date(base.getFullYear(), base.getMonth()+i, base.getDate());
+        vencimentos.push({
+          parcela: `${i+1}/${nParc}`,
+          venc:    dt.toLocaleDateString('pt-BR'),
+          valor:   (nf.vNF / nParc).toFixed(2),
+          status:  'A PAGAR'
+        });
+      }
     }
   }
+
+  const obs = prompt('Observações adicionais (opcional):', '') || '';
+  const nParcelas = vencimentos.length;
 
   // Salva parcelas no nfAtual para usar no salvarNFBanco
   nfAtual.parcelas = vencimentos.map(p=>({venc: p.venc, valor: parseFloat(p.valor)}));
@@ -6436,6 +6552,38 @@ function exportarNFPlanilha(){
   a.href = URL.createObjectURL(blob);
   a.download = `NF_${nfAtual.nNF}_${nfAtual.dhEmi}.tsv`;
   a.click();
+}
+
+async function calcCreditosImpostos(){
+  // Calcula créditos de impostos das NFs do mês atual
+  const mesAtual = new Date().toISOString().substring(0,7); // YYYY-MM
+  try{
+    const r = await fetch('/api/db/historico');
+    if(!r.ok) return;
+    const hist = await r.json();
+
+    // Filtra itens do mês atual
+    const doMes = hist.filter(h=>{
+      const dt = String(h.data_emissao||h.created_at||'');
+      return dt.startsWith(mesAtual);
+    });
+
+    let credICMS=0, credPIS=0, credCOFINS=0;
+    doMes.forEach(h=>{
+      const custo = parseFloat(h.custo_r||h.vtot||0);
+      const icmsPct = parseFloat(h.icms_p||4)/100;
+      credICMS   += custo * icmsPct;
+      credPIS    += custo * PIS_SAIDA;
+      credCOFINS += custo * COFINS_SAIDA;
+    });
+
+    const total = credICMS + credPIS + credCOFINS;
+    const f = v => 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2});
+    (document.getElementById('cred-icms')||{}).textContent   = f(credICMS);
+    (document.getElementById('cred-pis')||{}).textContent    = f(credPIS);
+    (document.getElementById('cred-cofins')||{}).textContent = f(credCOFINS);
+    (document.getElementById('cred-total')||{}).textContent  = f(total);
+  }catch(e){ console.warn('Créditos erro:', e); }
 }
 
 // ══════════════════════════════════════════════════════════════════════
