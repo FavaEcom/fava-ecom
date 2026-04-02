@@ -1390,13 +1390,17 @@ async function processarBling(p){
     const rbanco = await fetch(RAILWAY + '/api/db/produtos');
     if(rbanco.ok){
       const prods = await rbanco.json();
-      const pb = prods.find(p => String(p.sku).trim() === String(skuFava).trim());
-      if(pb && (pb.custo_br || pb.custo) > 0){
-        custoFinal = pb.custo_br || pb.custo;
+      // Normaliza: remove espaços, zeros à esquerda, compara como string
+      const norm = s => String(s||'').trim().replace(/^0+(?=\d)/,'');
+      const skuNorm = norm(skuFava);
+      const pb = prods.find(p => norm(p.sku) === skuNorm);
+      console.log(`[CMV] Buscando SKU "${skuNorm}" no banco — ${pb ? `ENCONTRADO custo_br=${pb.custo_br} custo=${pb.custo}` : 'NÃO encontrado'}`);
+      if(pb && (parseFloat(pb.custo_br||0) || parseFloat(pb.custo||0)) > 0){
+        custoFinal = parseFloat(pb.custo_br||0) || parseFloat(pb.custo||0);
         fonteCusto = '📦 Banco NF';
       }
     }
-  }catch(e){}
+  }catch(e){ console.warn('[banco]',e); }
 
   // Fonte 2: Bling — precoCusto direto no objeto do produto
   if(!custoFinal){
@@ -1426,12 +1430,14 @@ async function processarBling(p){
       const rh = await fetch(RAILWAY + '/api/db/historico');
       if(rh.ok){
         const hist = await rh.json();
-        const itens = hist.filter(h => String(h.sku).trim() === String(skuFava).trim() && parseFloat(h.custo_r||0) > 0);
+        const norm = s => String(s||'').trim().replace(/^0+(?=\d)/,'');
+        const skuNorm = norm(skuFava);
+        const itens = hist.filter(h => norm(h.sku) === skuNorm && parseFloat(h.custo_r||0) > 0);
+        console.log(`[Hist] SKU "${skuNorm}": ${itens.length} registros encontrados`);
         if(itens.length > 0){
-          // Usa o custo da NF mais recente
           itens.sort((a,b) => (b.data_emissao||'').localeCompare(a.data_emissao||''));
           custoFinal = parseFloat(itens[0].custo_r);
-          fonteCusto = `📋 Hist. NF ${itens[0].nf} (${itens[0].data_emissao||''})`;
+          fonteCusto = `📋 Hist. NF ${itens[0].nf}`;
         }
       }
     }catch(e){}
