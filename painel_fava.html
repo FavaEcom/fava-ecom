@@ -535,6 +535,7 @@ function salvarCfg(){
   <div class="vtab" id="vtab-ads" onclick="setView('ads')">ADS</div>
   <div class="vtab" id="vtab-ped" onclick="setView('pedidos')">Pedidos</div>
   <div class="vtab" id="vtab-prom" onclick="setView('promocoes')">Promoções</div>
+  <div class="vtab" id="vtab-central-prom" onclick="setView('central-prom')" style="background:rgba(124,58,237,.12);color:#5b21b6;font-weight:700">🎯 Central Promoções</div>
   <div class="vtab" id="vtab-difal" onclick="setView('difal')">DIFAL</div>
   <div class="vtab" id="vtab-cmv" onclick="setView('cmv')" style="background:#fef9c3;color:#92400e;font-weight:700">💰 CMV</div>
   <div class="vtab" id="vtab-hist" onclick="setView('historico')">Histórico</div>
@@ -912,6 +913,30 @@ function salvarCfg(){
   </div>
 </div>
 
+<!-- ═══════════ VIEW: CENTRAL PROMOÇÕES ═══════════ -->
+<div id="view-central-prom" style="display:none;flex-direction:column">
+  <div class="main">
+
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+      <h2 style="margin:0;font-size:18px;color:#5b21b6">🎯 Central de Promoções — Mercado Livre</h2>
+      <button class="btn-fin" style="background:#7c3aed" onclick="carregarCentralPromos()">🔄 Atualizar</button>
+      <span id="cp-status" style="font-size:12px;color:var(--muted)">Clique em Atualizar para carregar</span>
+    </div>
+
+    <!-- KPIs -->
+    <div id="cp-kpis" style="display:none;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+      <div class="kpi-card"><div class="kpi-label">Promoções ativas</div><div class="kpi-value" id="cp-total-prom">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Candidatos total</div><div class="kpi-value" id="cp-total-cand">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">✅ Vale participar</div><div class="kpi-value" id="cp-vale" style="color:#059669">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">❌ Prejuízo</div><div class="kpi-value" id="cp-prej" style="color:#dc2626">—</div></div>
+    </div>
+
+    <!-- Lista de promoções -->
+    <div id="cp-promos-wrap"></div>
+
+  </div>
+</div>
+
 <!-- ═══════════ VIEW: PROMOÇÕES ═══════════ -->
 <div id="view-promocoes" style="display:none;flex-direction:column">
   <div class="main">
@@ -930,6 +955,10 @@ function salvarCfg(){
       <label style="padding:7px 16px;font-size:12px;font-weight:700;background:#1F3864;color:#fff;border-radius:6px;cursor:pointer;white-space:nowrap">
         📥 Importar planilha ML
         <input type="file" accept=".xlsx" onchange="importarPlanilhaML(this)" style="display:none">
+      </label>
+      <label style="padding:7px 16px;font-size:12px;font-weight:700;background:#7c3aed;color:#fff;border-radius:6px;cursor:pointer;white-space:nowrap">
+        🚀 Impulsione suas vendas
+        <input type="file" accept=".xlsx" onchange="importarImpulsione(this)" style="display:none">
       </label>
       <button onclick="exportarPlanilhaML()" style="padding:7px 14px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer;display:none" id="btn-exportar-prom">
         📤 Exportar planilha ML
@@ -1348,7 +1377,7 @@ const SENHAS = {
 
 // Abas visíveis por perfil
 const ABAS_PERFIL = {
-  admin:      ['dashboard','anuncios','financeiro','conciliacao','precos','ads','pedidos','promocoes','difal','historico','nf','perguntas'],
+  admin:      ['dashboard','anuncios','financeiro','conciliacao','precos','ads','pedidos','promocoes','central-prom','difal','historico','nf','perguntas'],
   financeiro: ['financeiro','conciliacao','difal'],
   operacao:   ['dashboard','pedidos','nf'],
 };
@@ -1811,6 +1840,204 @@ function calcMargemProm(preco, cmv, taxa_ml, frete_liq){
   return lucro / preco;
 }
 
+// ── Importar planilha "Impulsione suas vendas" (MARKETPLACE_CAMPAIGN) ──
+async function importarImpulsione(input){
+  const file = input.files[0];
+  if(!file) return;
+  const st = document.getElementById('prom-status');
+  if(st) st.textContent = '⟳ Lendo planilha Impulsione...';
+
+  const reader = new FileReader();
+  reader.onload = async function(e){
+    try{
+      const wb = XLSX.read(e.target.result, {type:'binary'});
+      const wsName = wb.SheetNames.find(n=>/promo/i.test(n)) || wb.SheetNames[0];
+      const ws = wb.Sheets[wsName];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+
+      // Detecta linha de dados (primeiro MLB)
+      let dataStart = 0;
+      for(let i=0; i<Math.min(rows.length,15); i++){
+        if(rows[i] && rows[i][1] && String(rows[i][1]).startsWith('MLB')){
+          dataStart = i; break;
+        }
+      }
+
+      const itens = [];
+      for(let i=dataStart; i<rows.length; i++){
+        const r = rows[i];
+        if(!r) continue;
+        const titulo    = r[0] ? String(r[0]).trim() : '';
+        const mlbId     = r[1] ? String(r[1]).trim() : '';
+        const sku       = r[2] ? String(r[2]).trim() : '';
+        const precoOrig = parseFloat(r[3]) || 0;
+        const subsidioML= parseFloat(r[4]) || 0; // SALE_FEE — redução de tarifa do ML
+        const descPct   = parseFloat(r[5]) || 0;
+        const precoFinal= parseFloat(r[6]) || 0;
+        const status    = r[7] ? String(r[7]).trim() : '';
+        const candidateId = r[10] ? String(r[10]).trim() : '';
+
+        if(!mlbId.startsWith('MLB')) continue;
+
+        // Subsídio como % do preço original
+        const subsidio_pct = precoOrig > 0 ? subsidioML/precoOrig : 0;
+
+        itens.push({
+          rowIdx: i, id: mlbId, sku, titulo,
+          preco: precoOrig,
+          precoFinal,
+          descPct,
+          subsidioML,      // valor R$ que ML reduz da taxa
+          subsidio_pct,    // % do preço
+          candidateId,
+          status,
+          tipo: 'impulsione',
+          descEditado: descPct, // desconto fixado pelo ML — não altera
+          cmv: 0, margem: null, margemComDesc: null,
+          frete: 0, selecionado: false, obs: ''
+        });
+      }
+
+      if(!itens.length){
+        if(st) st.textContent = '❌ Planilha não reconhecida';
+        return;
+      }
+      if(st) st.textContent = `⟳ ${itens.length} produtos. Buscando CMV...`;
+
+      // Carrega CMV atualizado
+      try{
+        const rFresh = await fetch('/api/db/produtos');
+        if(rFresh.ok){
+          const prodsFresh = await rFresh.json();
+          const norm = s=>String(s||'').trim().replace(/^0+(?=\d)/,'');
+          prodsFresh.forEach(p=>{
+            if(p.sku && (p.custo_br||p.custo)>0){
+              dados.cmvCache[norm(p.sku)] = {
+                cmv: p.custo_br||p.custo||0, nome: p.nome||p.sku, fonte:'db'
+              };
+            }
+          });
+        }
+      }catch(e){}
+
+      const norm = s=>String(s||'').trim().replace(/^0+(?=\d)/,'');
+
+      // Cruza CMV e calcula margem considerando subsídio ML
+      itens.forEach(it=>{
+        // CMV por SKU
+        let cached = cmvLookup(norm(it.sku));
+        if(!cached){
+          const anuncio = anunciosData.find(a=>a.id===it.id);
+          if(anuncio?.sku) cached = cmvLookup(norm(anuncio.sku));
+          if(anuncio?.sku && !it.sku) it.sku = anuncio.sku;
+        }
+        if(cached?.cmv>0) it.cmv = cached.cmv;
+
+        // Frete por MLB
+        const anuncio = anunciosData.find(a=>a.id===it.id);
+        it.frete = anuncio?.freteL || anuncio?.frete || 0;
+
+        // Taxa: normal menos o subsídio do ML
+        const taxaNormal = anuncio?.taxa || 0.12;
+        const taxaEfetiva = Math.max(0, taxaNormal - it.subsidio_pct);
+
+        if(it.cmv>0 && it.precoFinal>0){
+          const pf = it.precoFinal;
+          const pis    = pf * PIS_SAIDA;
+          const cofins = pf * COFINS_SAIDA;
+          const difal  = pf * DIFAL_MEDIO;
+          const ibscbs = pf * IBS_CBS;
+          const taxa_r = pf * taxaEfetiva;
+          const lucro  = pf - it.cmv - taxa_r - it.frete - pis - cofins - difal - ibscbs;
+          it.margemComDesc = lucro / pf;
+          it.margem = it.margemComDesc; // para promoção o que importa é a margem com desconto
+
+          // Verifica se vale participar
+          const mgMin = it.preco<=50 ? 0.20 : it.preco<=200 ? 0.18 : 0.15;
+          if(it.margemComDesc >= mgMin){
+            it.obs = '✅ Vale participar';
+          } else if(it.margemComDesc >= 0){
+            it.obs = `⚠️ Margem baixa ${(it.margemComDesc*100).toFixed(1)}%`;
+          } else {
+            it.obs = '❌ Prejuízo';
+          }
+        } else if(!it.cmv){
+          it.obs = '⚠️ Sem CMV';
+        }
+      });
+
+      promoData = itens;
+      promoDataFiltrada = [...itens];
+      aplicarMgMinimasSalvas(itens);
+
+      // Mostra botões
+      ['prom-table-wrap','btn-exportar-prom','btn-salvar-descontos'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(el) el.style.display='';
+      });
+
+      renderPromoImpulsione(promoDataFiltrada);
+      renderPromoKpis();
+
+      const vale   = itens.filter(i=>i.obs&&i.obs.startsWith('✅')).length;
+        const baixa  = itens.filter(i=>i.obs&&i.obs.startsWith('⚠️')&&i.cmv>0).length;
+        const prejuizo = itens.filter(i=>i.obs&&i.obs.startsWith('❌')).length;
+        const semCmv = itens.filter(i=>!i.cmv).length;
+      if(st) st.textContent = `✅ ${vale} vale participar | ⚠️ ${baixa} margem baixa | ❌ ${prejuizo} prejuízo | ${semCmv} sem CMV`;
+
+    }catch(err){
+      console.error(err);
+      if(st) st.textContent = '❌ Erro: '+err.message;
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function renderPromoImpulsione(lista){
+  const tbody = document.getElementById('prom-tbody');
+  if(!tbody) return;
+
+  tbody.innerHTML = lista.map((p,i)=>{
+    const mg = p.margemComDesc;
+    const mgCor = mg===null ? 'var(--muted)' : mg>=.20 ? 'var(--verde)' : mg>=0 ? 'var(--amarelo)' : 'var(--vermelho)';
+    const mgStr = mg!==null ? (mg*100).toFixed(1)+'%' : '—';
+
+    const obsCor = p.obs?.startsWith('✅') ? '#059669' :
+                   p.obs?.startsWith('⚠️') ? '#d97706' : '#dc2626';
+
+    const taxaEfetiva = Math.max(0, (p.taxa||0.12) - p.subsidio_pct);
+
+    return `<tr style="${p.selecionado?'background:#eff6ff':''}">
+      <td style="padding:5px 8px;text-align:center">
+        <input type="checkbox" ${p.selecionado?'checked':''} onchange="togglePromo(${i},this.checked)">
+      </td>
+      <td style="padding:5px 8px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px" title="${p.titulo}">${p.titulo}</td>
+      <td style="padding:5px 8px;font-weight:700;color:#1F3864;font-size:11px">${p.sku||'—'}</td>
+      <td style="padding:5px 8px;font-size:10px;color:#6b7280">${p.id}</td>
+      <td style="padding:5px 8px;text-align:right;font-weight:700">R$${p.preco.toFixed(2)}</td>
+      <td style="padding:5px 8px;text-align:center;font-weight:700;color:#7c3aed">${p.descPct}%</td>
+      <td style="padding:5px 8px;text-align:right;font-weight:700;color:#1F3864">R$${p.precoFinal.toFixed(2)}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--muted);font-size:11px">${p.cmv>0?'R$'+p.cmv.toFixed(2):'<span style="color:#f59e0b">⚠️</span>'}</td>
+      <td style="padding:5px 8px;text-align:right;font-size:10px;color:#059669">
+        R$${p.subsidioML.toFixed(2)}<br>
+        <span style="font-size:9px;color:#9ca3af">${(p.subsidio_pct*100).toFixed(1)}% taxa</span>
+      </td>
+      <td style="padding:5px 8px;text-align:right;color:${mgCor};font-weight:700">${mgStr}</td>
+      <td style="padding:5px 8px;text-align:center;font-size:11px;font-weight:700;color:${obsCor}">${p.obs||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// Override renderPromoTabela para detectar tipo impulsione
+const _renderPromoTabela_orig = renderPromoTabela;
+function renderPromoTabela(lista){
+  if(lista.length && lista[0].tipo === 'impulsione'){
+    renderPromoImpulsione(lista);
+  } else {
+    _renderPromoTabela_orig(lista);
+  }
+}
+
 // ── Importar planilha ML (formato oficial) ──────────────────────────
 async function importarPlanilhaML(input){
   const file = input.files[0];
@@ -1852,7 +2079,7 @@ async function importarPlanilhaML(input){
         const acao   = r[12] ? String(r[12]).trim() : '';
         if(sku) skusParaBuscar.add(sku);
         itens.push({ rowIdx:i, id:mlbId, sku, titulo, preco, descPct,
-          descEditado: 20, // SEMPRE 20% — usuário ajusta manualmente
+          descEditado: 5, // padrão 5% — mínimo do ML para promoção
           status, acao,
           cmv:0, margem:null, margemComDesc:null,
           frete:calcFreteProm(preco), selecionado:false });
@@ -2093,11 +2320,12 @@ function renderPromoTabela(lista){
       <td style="padding:5px 8px;text-align:center">
         ${!p.cmv
           ? '<span style="color:#f59e0b;font-size:10px">sem CMV</span>'
-          : '<input type="number" value="'+(p.descEditado||20)
+          : '<input type="number" value="'+(p.descEditado||5)
             +'" min="0" max="99" step="1" placeholder="%"'
-            +' style="width:55px;border:1px solid #d1d5db;border-radius:4px;padding:2px 4px;text-align:center;font-size:11px;font-weight:700"'
+            +' style="width:55px;border:1px solid '+(p.obs&&p.obs.includes('⬆️')?'#fca5a5':'#d1d5db')+';border-radius:4px;padding:2px 4px;text-align:center;font-size:11px;font-weight:700"'
             +' oninput=\"atualizarDescItem('+i+',this.value)\">'
-            +(descMaxCalc>0?'<div style="font-size:9px;color:#9ca3af">ref. máx '+descMaxCalc+'%</div>':'')}
+            +(p.obs&&p.obs.includes('⬆️')?'<div style="font-size:9px;color:#dc2626;white-space:nowrap">'+p.obs+'</div>':'')
+            +(descMaxCalc>0&&!p.obs?'<div style="font-size:9px;color:#9ca3af">ref. máx '+descMaxCalc+'%</div>':'')}
       </td>
       <td id="pd-preco-${i}" style="padding:5px 8px;text-align:right;color:var(--azul2);font-weight:700">R$${precoComDesc.toFixed(2)}</td>
       <td style="padding:5px 8px;text-align:right;color:var(--muted)">${p.cmv?'R$'+p.cmv.toFixed(2):'<span style=color:#f59e0b>⚠️</span>'}</td>
@@ -2332,21 +2560,31 @@ function aplicarRegrasMargemMinima(){
 
 // Calcula o desconto máximo para cada produto e aplica
 function calcularDescontoPorMargem(){
-  let n=0, semCmv=0, semMin=0;
+  let nDesc=0, semCmv=0, semMargem=0, precisaAjuste=0;
   promoData.forEach(p=>{
-    if(!p.cmv || p.cmv<=0){ semCmv++; p.descEditado=0; return; } // sem CMV = sem desconto
+    if(!p.cmv || p.cmv<=0){ semCmv++; p.descEditado=0; p.obs='sem CMV'; return; }
     const mgMin = p.mgMin || (p.preco<=50?0.20 : p.preco<=200?0.18 : 0.15);
-    const taxa = p.taxa || 0.16;
+    const taxa  = p.taxa || 0.12;
     const frete = p.frete || 0;
-    const desc = calcDescMaximo(p.preco, p.cmv, mgMin, taxa, frete);
-    if(desc<5){ semMin++; return; }
-    p.descEditado = desc;
-    p.margemComDesc = calcMargemProm(p.preco*(1-desc/100), p.cmv, taxa, frete);
+    const desc  = calcDescMaximo(p.preco, p.cmv, mgMin, taxa, frete);
+
+    if(desc <= 0){
+      // Nem sem desconto atinge a margem mínima — precisa aumentar preço
+      const precoIdeal = (p.cmv + frete) / (1 - taxa - PIS_SAIDA - COFINS_SAIDA - DIFAL_MEDIO - IBS_CBS - mgMin);
+      p.descEditado = 0;
+      p.obs = `⬆️ Preço ideal: R$${precoIdeal.toFixed(2)}`;
+      precisaAjuste++;
+    } else {
+      p.descEditado = desc;
+      p.obs = '';
+      nDesc++;
+    }
+    p.margemComDesc = calcMargemProm(p.preco*(1-(p.descEditado||0)/100), p.cmv, taxa, frete);
   });
   promoDataFiltrada = [...promoData];
   renderPromoTabela(promoDataFiltrada);
   const el = document.getElementById('regras-info');
-  if(el) el.textContent = `✅ ${n} com desconto | ${semCmv} sem CMV | ${semMin} já no limite de margem`;
+  if(el) el.textContent = `✅ ${nDesc} com desconto | ⬆️ ${precisaAjuste} precisam ajustar preço | ${semCmv} sem CMV`;
 }
 
 // Aplicar desconto máximo calculado em TODOS e mandar para ML
@@ -5067,7 +5305,7 @@ let currentView = 'dashboard';
 function setView(v){
   currentView = v;
   const safe=(id,fn)=>{const el=document.getElementById(id);if(el)fn(el);};
-  ['dashboard','anuncios','financeiro','conciliacao','precos','promocoes','difal','perguntas','ads','pedidos','historico','cmv','nf'].forEach(name=>{
+  ['dashboard','anuncios','financeiro','conciliacao','precos','promocoes','difal','perguntas','ads','pedidos','historico','cmv','nf','central-prom'].forEach(name=>{
     safe('view-'+name, el=>el.style.display = v===name?'flex':'none');
   });
   safe('period-bar', el=>el.style.display = v==='dashboard'?'flex':'none');
@@ -5084,6 +5322,7 @@ function setView(v){
   safe('vtab-cmv',  el=>el.classList.toggle('a', v==='cmv'));
   safe('vtab-hist',   el=>el.classList.toggle('a', v==='historico'));
   safe('vtab-nf',     el=>el.classList.toggle('a', v==='nf'));
+  safe('vtab-central-prom', el=>el.classList.toggle('a', v==='central-prom'));
   if(v==='anuncios' && anunciosData.length===0) carregarAnuncios();
   if(v==='financeiro') initFinanceiro();
   if(v==='conciliacao') initConciliacao();
@@ -5093,6 +5332,7 @@ function setView(v){
   if(v==='historico') initHistorico();
   if(v==='cmv') initCMV();
   if(v==='nf') initNF();
+  if(v==='central-prom') {} // carrega só quando clicar Atualizar
   if(v==='perguntas'){ const k=localStorage.getItem('fava_claude_key')||''; safe('perg-apikey',el=>el.value=k); }
 }
 
@@ -6804,6 +7044,215 @@ async function salvarDescontoAnuncio(mlb, desconto, desc_min, obs){
 
 function getDescontoAnuncio(mlb){
   return descontosAnuncio[mlb] || null;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// CENTRAL DE PROMOÇÕES — API ML
+// ══════════════════════════════════════════════════════════════════════
+const SELLER_ID = '537714337';
+const TIPOS_PROMO = {
+  DEAL:               '📋 Campanha Tradicional',
+  MARKETPLACE_CAMPAIGN: '🤝 Co-participação ML',
+  PRICE_DISCOUNT:     '🏷️ Desconto Individual',
+  VOLUME:             '📦 Desconto por Volume',
+  LIGHTNING:          '⚡ Oferta Relâmpago',
+  DOD:                '☀️ Oferta do Dia',
+  SELLER_CAMPAIGN:    '🎯 Campanha do Vendedor',
+  SMART:              '🤖 Smart (automática)',
+  PRICE_MATCHING:     '🎯 Preço Competitivo',
+  PRE_NEGOTIATED:     '🤝 Pré-acordada',
+  UNHEALTHY_STOCK:    '📦 Liquidação Estoque',
+  BANK:               '💳 Desconto Pix',
+};
+
+async function carregarCentralPromos(){
+  const st = document.getElementById('cp-status');
+  const wrap = document.getElementById('cp-promos-wrap');
+  if(st) st.textContent = '⟳ Buscando promoções no ML...';
+  if(wrap) wrap.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted)"><div class="spin" style="margin:0 auto 10px"></div>Carregando...</div>';
+
+  if(!tokens.ml){ 
+    if(st) st.textContent = '❌ Token ML necessário — clique 🔑 Renovar ML';
+    return; 
+  }
+
+  try{
+    // Busca todas as promoções do seller
+    const r = await mlGet(`seller-promotions/users/${SELLER_ID}?app_version=v2`);
+    const promos = r.results || [];
+
+    if(!promos.length){
+      if(st) st.textContent = 'Nenhuma promoção ativa encontrada';
+      if(wrap) wrap.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">Nenhuma promoção ativa no momento</div>';
+      return;
+    }
+
+    if(st) st.textContent = `${promos.length} promoções — carregando candidatos...`;
+
+    // Para cada promoção, busca os itens candidatos
+    const promoComItens = [];
+    for(const promo of promos){
+      try{
+        const tipo = promo.type;
+        const ri = await mlGet(`seller-promotions/promotions/${promo.id}/items?promotion_type=${tipo}&app_version=v2&limit=50`);
+        const itens = (ri.results || []).filter(it => it.status === 'candidate' || it.status === 'started');
+        promoComItens.push({ ...promo, itens, total: ri.paging?.total || itens.length });
+      }catch(e){ 
+        promoComItens.push({ ...promo, itens: [], total: 0 }); 
+      }
+    }
+
+    renderCentralPromos(promoComItens);
+
+    // KPIs
+    const totalCand = promoComItens.reduce((s,p)=>s+p.total,0);
+    const kpis = document.getElementById('cp-kpis');
+    if(kpis) kpis.style.display = 'flex';
+    (document.getElementById('cp-total-prom')||{}).textContent = promos.length;
+    (document.getElementById('cp-total-cand')||{}).textContent = totalCand;
+    if(st) st.textContent = `${promos.length} promoções | ${totalCand} candidatos total`;
+
+  }catch(e){
+    if(st) st.textContent = '❌ Erro: ' + e.message;
+    console.error('[Central Promos]', e);
+  }
+}
+
+function renderCentralPromos(promos){
+  const wrap = document.getElementById('cp-promos-wrap');
+  if(!wrap) return;
+
+  const norm = s=>String(s||'').trim().replace(/^0+(?=\d)/,'');
+
+  wrap.innerHTML = promos.map((promo, pi)=>{
+    const tipoLabel = TIPOS_PROMO[promo.type] || promo.type;
+    const meli_pct  = promo.benefits?.meli_percent || 0;
+    const seller_pct= promo.benefits?.seller_percent || 0;
+    const deadline  = promo.deadline_date ? promo.deadline_date.substring(0,10) : '—';
+
+    // Analisa itens
+    const itensHTML = promo.itens.slice(0,20).map((it,ii)=>{
+      // Busca CMV pelo MLB nos anunciosData
+      const anuncio = anunciosData.find(a=>a.id===it.id);
+      const sku = anuncio?.sku || '';
+      const cmvInfo = cmvLookup(norm(sku));
+      const cmv = cmvInfo?.cmv || 0;
+      const frete = anuncio?.freteL || anuncio?.frete || 0;
+      const taxa = anuncio?.taxa || 0.12;
+      const precoFinal = it.price || (it.original_price * (1 - (seller_pct+meli_pct)/100));
+
+      let margem = null, obs = '', obsCor = '#9ca3af';
+      if(cmv > 0 && precoFinal > 0){
+        const taxaEfetiva = Math.max(0, taxa - (meli_pct/100));
+        const pf = precoFinal;
+        const lucro = pf - cmv - pf*taxaEfetiva - frete - pf*PIS_SAIDA - pf*COFINS_SAIDA - pf*DIFAL_MEDIO - pf*IBS_CBS;
+        margem = lucro/pf;
+        if(margem >= 0.20)      { obs='✅ Vale'; obsCor='#059669'; }
+        else if(margem >= 0.10) { obs='⚠️ Baixa'; obsCor='#d97706'; }
+        else if(margem >= 0)    { obs='⚠️ Mínima'; obsCor='#f59e0b'; }
+        else                    { obs='❌ Prejuízo'; obsCor='#dc2626'; }
+      } else if(!cmv){
+        obs='— sem CMV'; obsCor='#9ca3af';
+      }
+
+      const mgStr = margem!==null ? (margem*100).toFixed(1)+'%' : '—';
+
+      return `<tr style="border-bottom:1px solid #f3f4f6">
+        <td style="padding:4px 8px;font-size:11px;font-family:monospace">${it.id}</td>
+        <td style="padding:4px 8px;font-size:11px;font-weight:700;color:#1F3864">${sku||'—'}</td>
+        <td style="padding:4px 8px;text-align:right;font-size:11px">R$${(it.original_price||0).toFixed(2)}</td>
+        <td style="padding:4px 8px;text-align:right;font-size:11px;color:#7c3aed;font-weight:700">R$${precoFinal.toFixed(2)}</td>
+        <td style="padding:4px 8px;text-align:right;font-size:11px;color:var(--muted)">${cmv>0?'R$'+cmv.toFixed(2):'—'}</td>
+        <td style="padding:4px 8px;text-align:right;font-size:11px;font-weight:700;color:${margem!==null?(margem>=.15?'var(--verde)':margem>=0?'var(--amarelo)':'var(--vermelho)'):'var(--muted)'}">${mgStr}</td>
+        <td style="padding:4px 8px;text-align:center;font-size:11px;font-weight:700;color:${obsCor}">${obs}</td>
+        <td style="padding:4px 8px;text-align:center">
+          ${it.status==='candidate' ? `<button onclick="aceitarPromoItem('${it.id}','${promo.id}','${promo.type}')" 
+            style="font-size:10px;padding:2px 8px;background:#059669;color:#fff;border:none;border-radius:4px;cursor:pointer">✓ Aceitar</button>` 
+          : `<span style="font-size:10px;color:#059669;font-weight:700">✅ Ativo</span>`}
+        </td>
+      </tr>`;
+    }).join('');
+
+    const valeCount = promo.itens.filter(it=>{
+      const an = anunciosData.find(a=>a.id===it.id);
+      const cmv = cmvLookup(norm(an?.sku||''))?.cmv||0;
+      if(!cmv || !it.original_price) return false;
+      const pf = it.price || it.original_price*(1-(seller_pct+meli_pct)/100);
+      const lucro = pf - cmv - pf*(Math.max(0,(an?.taxa||.12)-(meli_pct/100))) - (an?.freteL||0) - pf*(PIS_SAIDA+COFINS_SAIDA+DIFAL_MEDIO+IBS_CBS);
+      return (lucro/pf) >= 0.10;
+    }).length;
+
+    return `
+    <div style="background:#fff;border:1px solid var(--borda);border-radius:10px;margin-bottom:14px;overflow:hidden">
+      <!-- Header promoção -->
+      <div style="background:${promo.type.includes('MARKETPLACE')||promo.type.includes('SMART')||promo.type.includes('BANK')?'#f5f3ff':'#f8fafc'};
+                  padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;cursor:pointer"
+           onclick="toggleCPPromo('cp-body-${pi}')">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#1a1a1a">${tipoLabel}</div>
+          <div style="font-size:11px;color:var(--muted)">${promo.name||''} &nbsp;|&nbsp; ID: ${promo.id}</div>
+        </div>
+        <div style="flex:1"></div>
+        ${meli_pct>0?`<span style="background:#ddd6fe;color:#5b21b6;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">🤝 ML paga ${meli_pct}%</span>`:''}
+        ${seller_pct>0?`<span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">Você paga ${seller_pct}%</span>`:''}
+        <span style="background:#f3f4f6;color:#374151;padding:3px 10px;border-radius:20px;font-size:11px">${promo.total} produtos</span>
+        ${valeCount>0?`<span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">✅ ${valeCount} valem</span>`:''}
+        <span style="font-size:11px;color:var(--muted)">Prazo: ${deadline}</span>
+        <span style="font-size:12px">▼</span>
+      </div>
+      <!-- Itens -->
+      <div id="cp-body-${pi}" style="display:none">
+        ${promo.itens.length > 0 ? `
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr style="background:#f8fafc">
+              <th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:700">MLB</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:700">SKU</th>
+              <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--muted);font-weight:700">Preço orig.</th>
+              <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--muted);font-weight:700">Preço promo</th>
+              <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--muted);font-weight:700">CMV</th>
+              <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--muted);font-weight:700">Margem</th>
+              <th style="padding:6px 8px;text-align:center;font-size:10px;color:var(--muted);font-weight:700">Status</th>
+              <th style="padding:6px 8px;text-align:center;font-size:10px;color:var(--muted);font-weight:700">Ação</th>
+            </tr></thead>
+            <tbody>${itensHTML}</tbody>
+          </table>
+          ${promo.total > 20 ? `<div style="padding:8px 16px;font-size:11px;color:var(--muted);background:#f8fafc">
+            Mostrando 20 de ${promo.total} produtos. 
+            <button onclick="carregarMaisCPPromo('${promo.id}','${promo.type}',${pi})" 
+              style="background:none;border:none;color:#1F3864;cursor:pointer;font-size:11px;font-weight:700;text-decoration:underline">
+              Ver todos →
+            </button>
+          </div>` : ''}
+        </div>` : '<div style="padding:20px;text-align:center;color:var(--muted)">Nenhum candidato encontrado</div>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCPPromo(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function aceitarPromoItem(mlbId, promoId, promoType){
+  if(!confirm(`Aceitar ${mlbId} na promoção ${promoId}?`)) return;
+  try{
+    const payload = { promotion_id: promoId, promotion_type: promoType };
+    const r = await fetch(`/api/ml/seller-promotions/items/${mlbId}?app_version=v2`,{
+      method:'POST',
+      headers:{'Authorization':`Bearer ${tokens.ml}`,'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if(r.ok){
+      alert(`✅ ${mlbId} aceito na promoção!`);
+      carregarCentralPromos();
+    } else {
+      const err = await r.json().catch(()=>({}));
+      alert(`❌ Erro: ${err.message || r.status}`);
+    }
+  }catch(e){ alert('Erro: '+e.message); }
 }
 
 // ══════════════════════════════════════════════════════════════════════
