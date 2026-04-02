@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kits & Estoque Parado — Fava Ecom</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh}
+
+.header{background:#1F3864;color:#fff;padding:12px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.header h1{font-size:15px;font-weight:700;flex:1}
+.btn-hd{padding:6px 14px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700}
+.btn-hd.azul{background:#3b82f6;color:#fff}
+.btn-hd.verde{background:#22c55e;color:#fff}
+.btn-hd.cinza{background:rgba(255,255,255,.15);color:#fff}
+
+.tabs{background:#fff;border-bottom:2px solid #e2e8f0;display:flex;gap:0;overflow-x:auto}
+.tab{padding:12px 20px;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:.15s}
+.tab.ativo{color:#1F3864;border-bottom-color:#1F3864}
+.tab:hover{background:#f8fafc}
+
+.main{max-width:1200px;margin:0 auto;padding:20px 16px}
+
+/* CARDS RESUMO */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e2e8f0}
+.kpi-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:6px}
+.kpi-value{font-size:24px;font-weight:700;color:#1F3864}
+.kpi-sub{font-size:11px;color:#94a3b8;margin-top:3px}
+
+/* FILTROS */
+.filtros{background:#fff;border-radius:10px;padding:14px 16px;margin-bottom:16px;border:1px solid #e2e8f0;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.filtros label{font-size:11px;font-weight:700;color:#64748b}
+.filtros select,.filtros input{border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;font-size:12px;outline:none}
+.filtros select:focus,.filtros input:focus{border-color:#1F3864}
+.btn-filtro{padding:7px 14px;background:#1F3864;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700}
+
+/* PRODUTO PARADO */
+.prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.prod-card{background:#fff;border-radius:10px;border:1px solid #e2e8f0;overflow:hidden;transition:.15s}
+.prod-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);border-color:#1F3864}
+.prod-card.selecionado{border-color:#1F3864;background:#eff6ff}
+.prod-head{padding:12px 14px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:flex-start}
+.prod-sku{font-size:11px;font-weight:700;color:#1F3864}
+.prod-nome{font-size:13px;font-weight:600;color:#1e293b;margin:4px 0;line-height:1.3}
+.prod-cat{font-size:10px;color:#94a3b8}
+.prod-body{padding:10px 14px;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.prod-stat{font-size:11px}
+.prod-stat span{display:block;color:#94a3b8;font-size:9px;text-transform:uppercase;letter-spacing:.3px}
+.prod-stat b{color:#1e293b}
+.dias-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+.dias-0{background:#fee2e2;color:#dc2626}
+.dias-30{background:#fef3c7;color:#92400e}
+.dias-60{background:#dcfce7;color:#166534}
+.prod-foot{padding:8px 14px;border-top:1px solid #f1f5f9;display:flex;gap:6px}
+.btn-sel{flex:1;padding:6px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc;cursor:pointer;font-size:11px;font-weight:700;transition:.15s}
+.btn-sel:hover{background:#eff6ff;border-color:#1F3864}
+.btn-sel.ativo{background:#1F3864;color:#fff;border-color:#1F3864}
+
+/* KIT SUGGESTION */
+.kit-wrap{background:#fff;border-radius:12px;border:1px solid #e2e8f0;margin-bottom:16px;overflow:hidden}
+.kit-head{background:linear-gradient(135deg,#1F3864,#2563eb);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px}
+.kit-head h3{flex:1;font-size:14px;font-weight:700}
+.kit-badge{background:rgba(255,255,255,.2);padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700}
+.kit-body{padding:16px}
+.kit-itens{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.kit-item{display:flex;align-items:center;gap:6px;background:#f0f4f8;border-radius:8px;padding:6px 10px;font-size:12px}
+.kit-item-sku{font-weight:700;color:#1F3864}
+.kit-item-nome{color:#374151;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kit-item-qtd{background:#1F3864;color:#fff;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700}
+.kit-plus{font-size:18px;color:#94a3b8;font-weight:300}
+
+.kit-info{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+.kit-info-item{background:#f8fafc;border-radius:6px;padding:8px 10px}
+.kit-info-item label{display:block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#64748b;margin-bottom:3px}
+.kit-info-item input{width:100%;border:1px solid #e2e8f0;border-radius:4px;padding:4px 6px;font-size:12px;outline:none;background:#fff}
+.kit-info-item input:focus{border-color:#1F3864}
+
+.kit-tarefas{margin-bottom:12px}
+.kit-tarefas h4{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.tarefa-item{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;border-bottom:1px solid #f1f5f9}
+.tarefa-item:last-child{border:none}
+.tarefa-item input[type=checkbox]{accent-color:#1F3864}
+.tarefa-item .resp{font-size:10px;color:#94a3b8;margin-left:auto;white-space:nowrap}
+
+.kit-desc{background:#f8fafc;border-radius:8px;padding:10px 12px;font-size:12px;color:#374151;line-height:1.5;margin-bottom:12px;max-height:100px;overflow-y:auto}
+
+.kit-acoes{display:flex;gap:8px;flex-wrap:wrap}
+.btn-aprovar{background:#16a34a;color:#fff;border:none;border-radius:7px;padding:8px 16px;cursor:pointer;font-size:12px;font-weight:700}
+.btn-editar{background:#f1f5f9;color:#374151;border:1px solid #e2e8f0;border-radius:7px;padding:8px 16px;cursor:pointer;font-size:12px;font-weight:700}
+.btn-rejeitar{background:#fee2e2;color:#dc2626;border:1px solid #fecaca;border-radius:7px;padding:8px 16px;cursor:pointer;font-size:12px;font-weight:700}
+.btn-gerar-ia{background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;border-radius:7px;padding:8px 16px;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px}
+
+/* SELECIONADOS */
+.sel-bar{background:#1F3864;color:#fff;padding:12px 16px;border-radius:10px;margin-bottom:16px;display:none;align-items:center;gap:12px;flex-wrap:wrap}
+.sel-bar.show{display:flex}
+.sel-bar span{font-size:13px;font-weight:600;flex:1}
+.sel-tags{display:flex;gap:6px;flex-wrap:wrap}
+.sel-tag{background:rgba(255,255,255,.15);border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700}
+
+/* STATUS */
+.status-msg{padding:10px 14px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:12px;display:none}
+.status-msg.ok{background:#dcfce7;color:#166534;display:block}
+.status-msg.err{background:#fee2e2;color:#dc2626;display:block}
+.status-msg.info{background:#dbeafe;color:#1d4ed8;display:block}
+
+/* LOADING */
+.loading-kit{text-align:center;padding:40px;color:#64748b}
+.spin{display:inline-block;width:24px;height:24px;border:3px solid #e2e8f0;border-top-color:#1F3864;border-radius:50%;animation:spin .7s linear infinite;margin-bottom:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* TABELA KITS APROVADOS */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{background:#f8fafc;padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;border-bottom:1px solid #e2e8f0}
+.tbl td{padding:8px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+.tbl tr:hover td{background:#fafbff}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+.pill-ok{background:#dcfce7;color:#166534}
+.pill-pend{background:#fef3c7;color:#92400e}
+.pill-rev{background:#dbeafe;color:#1d4ed8}
+
+/* EMPTY */
+.empty{text-align:center;padding:50px 20px;color:#94a3b8}
+.empty .icon{font-size:48px;margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span style="font-size:20px">📦</span>
+  <h1>Kits & Estoque Parado — Fava Ecom</h1>
+  <span id="hd-status" style="font-size:11px;color:#93c5fd"></span>
+  <button class="btn-hd cinza" onclick="carregarProdutos()">🔄 Atualizar</button>
+  <button class="btn-hd verde" onclick="gerarSugestoesIA()" id="btn-ia" style="display:none">✨ Sugerir Kits com IA</button>
+</div>
+
+<div class="tabs">
+  <div class="tab ativo" onclick="setTab('parados')">📉 Estoque Parado</div>
+  <div class="tab" onclick="setTab('sugestoes')">🧩 Sugestões de Kits</div>
+  <div class="tab" onclick="setTab('aprovados')">✅ Kits Aprovados</div>
+</div>
+
+<!-- ══ TAB: ESTOQUE PARADO ══ -->
+<div id="tab-parados" class="main">
+
+  <div class="kpi-grid" id="kpi-wrap">
+    <div class="kpi"><div class="kpi-label">Total produtos</div><div class="kpi-value" id="kpi-total">—</div><div class="kpi-sub">no catálogo</div></div>
+    <div class="kpi"><div class="kpi-label">Sem venda recente</div><div class="kpi-value" id="kpi-parados" style="color:#dc2626">—</div><div class="kpi-sub">últimos 60 dias</div></div>
+    <div class="kpi"><div class="kpi-label">Sem peso/medida</div><div class="kpi-value" id="kpi-sempeso" style="color:#d97706">—</div><div class="kpi-sub">pendente cadastro</div></div>
+    <div class="kpi"><div class="kpi-label">Selecionados</div><div class="kpi-value" id="kpi-sel" style="color:#7c3aed">0</div><div class="kpi-sub">para kit</div></div>
+  </div>
+
+  <!-- Barra de selecionados -->
+  <div class="sel-bar" id="sel-bar">
+    <span id="sel-count">0 produtos selecionados para kit</span>
+    <div class="sel-tags" id="sel-tags"></div>
+    <button class="btn-hd verde" onclick="gerarSugestoesIA()">✨ Sugerir Kit com IA</button>
+    <button class="btn-hd cinza" onclick="limparSelecao()">✕ Limpar</button>
+  </div>
+
+  <div class="filtros">
+    <label>Filtrar por:</label>
+    <select id="filt-familia" onchange="filtrar()">
+      <option value="">Todas as famílias</option>
+    </select>
+    <select id="filt-status" onchange="filtrar()">
+      <option value="">Todos os status</option>
+      <option value="parado">Sem venda 60+ dias</option>
+      <option value="sempeso">Sem peso/medida</option>
+      <option value="semcmv">Sem CMV</option>
+    </select>
+    <input type="text" id="filt-busca" placeholder="SKU ou nome..." oninput="filtrar()" style="min-width:200px">
+    <button class="btn-filtro" onclick="filtrar()">🔍 Filtrar</button>
+    <span id="filt-count" style="font-size:11px;color:#64748b;margin-left:auto"></span>
+  </div>
+
+  <div class="status-msg" id="st-parados"></div>
+  <div id="prod-wrap">
+    <div class="empty"><div class="spin"></div><p>Carregando produtos...</p></div>
+  </div>
+
+</div>
+
+<!-- ══ TAB: SUGESTÕES ══ -->
+<div id="tab-sugestoes" class="main" style="display:none">
+  <div class="status-msg" id="st-sugestoes"></div>
+
+  <div id="sugestoes-wrap">
+    <div class="empty">
+      <div class="icon">🧩</div>
+      <p>Selecione produtos na aba <b>Estoque Parado</b><br>e clique em <b>✨ Sugerir Kits com IA</b></p>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB: APROVADOS ══ -->
+<div id="tab-aprovados" class="main" style="display:none">
+  <div id="aprovados-wrap">
+    <div class="empty"><div class="icon">✅</div><p>Nenhum kit aprovado ainda.</p></div>
+  </div>
+</div>
+
+<script>
+const RAILWAY = 'https://web-production-5aa0f.up.railway.app';
+const API_KEY = localStorage.getItem('fava_claude_key')||'';
+
+// ══════════════════════════════════════════════════════════════
+// ESTADO
+// ══════════════════════════════════════════════════════════════
+let produtos     = [];   // todos do banco
+let prodFiltrado = [];   // após filtros
+let selecionados = new Set(); // SKUs selecionados para kit
+let sugestoes    = [];   // kits sugeridos pela IA
+let kitsAprov    = JSON.parse(localStorage.getItem('fava_kits_v1')||'[]');
+
+// ══════════════════════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════════════════════
+function setTab(t){
+  ['parados','sugestoes','aprovados'].forEach(id=>{
+    document.getElementById('tab-'+id).style.display = id===t?'block':'none';
+    document.querySelectorAll('.tab')[['parados','sugestoes','aprovados'].indexOf(id)]
+      .classList.toggle('ativo', id===t);
+  });
+  if(t==='aprovados') renderAprovados();
+}
+
+// ══════════════════════════════════════════════════════════════
+// CARREGAR PRODUTOS
+// ══════════════════════════════════════════════════════════════
+async function carregarProdutos(){
+  const st = document.getElementById('hd-status');
+  st.textContent = '⟳ Carregando...';
+  try{
+    // Produtos do banco
+    const [rProd, rVendas] = await Promise.allSettled([
+      fetch(RAILWAY+'/api/db/produtos').then(r=>r.ok?r.json():[]),
+      fetch(RAILWAY+'/api/db/pedidos?limit=500').then(r=>r.ok?r.json():[]),
+    ]);
+
+    const prods  = rProd.value||[];
+    const vendas = rVendas.value||[];
+
+    // Mapeia últimas vendas por SKU
+    const ultVenda = {};
+    const hoje = new Date();
+    vendas.forEach(p=>{
+      (p.itens||[]).forEach(it=>{
+        const sku = String(it.sku||'').trim();
+        if(!sku) return;
+        const dt = new Date(p.data||p.created_at||'2020-01-01');
+        if(!ultVenda[sku] || dt > ultVenda[sku]) ultVenda[sku] = dt;
+      });
+    });
+
+    // Enriquece produtos
+    produtos = prods.map(p=>{
+      const sku = String(p.sku||'').trim();
+      const uv  = ultVenda[sku];
+      const diasParado = uv ? Math.floor((hoje-uv)/86400000) : 999;
+      return {
+        ...p, sku,
+        diasParado,
+        temPeso: !!(p.peso&&p.peso>0),
+        temMedida: !!(p.comprimento&&p.largura&&p.altura),
+        temCMV: !!(p.custo_br||p.custo_pr||p.custo),
+        ultimaVenda: uv ? uv.toISOString().slice(0,10) : null,
+      };
+    }).filter(p=>p.sku && p.nome);
+
+    // KPIs
+    const parados   = produtos.filter(p=>p.diasParado>=60).length;
+    const sempeso   = produtos.filter(p=>!p.temPeso||!p.temMedida).length;
+    document.getElementById('kpi-total').textContent    = produtos.length;
+    document.getElementById('kpi-parados').textContent  = parados;
+    document.getElementById('kpi-sempeso').textContent  = sempeso;
+
+    // Popula filtro família
+    const familias = [...new Set(produtos.map(p=>p.familia||p.category||'').filter(Boolean))].sort();
+    const sel = document.getElementById('filt-familia');
+    sel.innerHTML = '<option value="">Todas as famílias</option>' +
+      familias.map(f=>`<option value="${f}">${f}</option>`).join('');
+
+    prodFiltrado = [...produtos];
+    filtrar();
+    st.textContent = `✅ ${produtos.length} produtos carregados`;
+    document.getElementById('btn-ia').style.display = '';
+
+  }catch(e){
+    st.textContent = '❌ Erro: '+e.message;
+    document.getElementById('prod-wrap').innerHTML =
+      '<div class="empty"><p>❌ Erro ao carregar: '+e.message+'</p></div>';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// FILTRAR
+// ══════════════════════════════════════════════════════════════
+function filtrar(){
+  const familia = document.getElementById('filt-familia').value;
+  const status  = document.getElementById('filt-status').value;
+  const busca   = document.getElementById('filt-busca').value.toLowerCase().trim();
+
+  prodFiltrado = produtos.filter(p=>{
+    if(familia && (p.familia||p.category||'')!==familia) return false;
+    if(status==='parado'  && p.diasParado<60) return false;
+    if(status==='sempeso' && p.temPeso && p.temMedida) return false;
+    if(status==='semcmv'  && p.temCMV) return false;
+    if(busca && !p.sku.toLowerCase().includes(busca) && !(p.nome||'').toLowerCase().includes(busca)) return false;
+    return true;
+  });
+
+  document.getElementById('filt-count').textContent = prodFiltrado.length+' produtos';
+  renderProdutos();
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER PRODUTOS
+// ══════════════════════════════════════════════════════════════
+function renderProdutos(){
+  const wrap = document.getElementById('prod-wrap');
+  if(!prodFiltrado.length){
+    wrap.innerHTML = '<div class="empty"><div class="icon">✅</div><p>Nenhum produto encontrado com esses filtros.</p></div>';
+    return;
+  }
+
+  // Ordena: mais parados primeiro
+  const lista = [...prodFiltrado].sort((a,b)=>b.diasParado-a.diasParado).slice(0,100);
+
+  wrap.innerHTML = `<div class="prod-grid">${lista.map(p=>{
+    const sel = selecionados.has(p.sku);
+    const diasCls = p.diasParado>=90?'dias-0':p.diasParado>=30?'dias-30':'dias-60';
+    const diasTxt = p.diasParado>=999?'Nunca vendeu':p.diasParado+'d sem venda';
+    const alerts = [];
+    if(!p.temPeso)   alerts.push('⚖️ sem peso');
+    if(!p.temMedida) alerts.push('📐 sem medida');
+    if(!p.temCMV)    alerts.push('💰 sem CMV');
+
+    return `<div class="prod-card ${sel?'selecionado':''}" id="pc-${p.sku}">
+      <div class="prod-head">
+        <div>
+          <div class="prod-sku">SKU ${p.sku}</div>
+          <div class="prod-nome" title="${p.nome}">${(p.nome||'').slice(0,60)}${(p.nome||'').length>60?'...':''}</div>
+          <div class="prod-cat">${p.familia||p.category||p.fornecedor||''}</div>
+        </div>
+        <span class="dias-badge ${diasCls}">${diasTxt}</span>
+      </div>
+      <div class="prod-body">
+        <div class="prod-stat"><span>CMV Brasil</span><b>${p.custo_br>0?'R$ '+parseFloat(p.custo_br).toFixed(2):'—'}</b></div>
+        <div class="prod-stat"><span>Peso</span><b>${p.peso?p.peso+'kg':'—'}</b></div>
+        <div class="prod-stat"><span>Última venda</span><b>${p.ultimaVenda?p.ultimaVenda.split('-').reverse().join('/'):'Nunca'}</b></div>
+        <div class="prod-stat"><span>Alertas</span><b style="color:#d97706;font-size:10px">${alerts.join(' ')||'✅ ok'}</b></div>
+      </div>
+      <div class="prod-foot">
+        <button class="btn-sel ${sel?'ativo':''}" onclick="toggleSel('${p.sku}','${(p.nome||'').replace(/'/g,'')}')">
+          ${sel?'✓ Selecionado':'+ Selecionar para kit'}
+        </button>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// SELEÇÃO
+// ══════════════════════════════════════════════════════════════
+function toggleSel(sku, nome){
+  if(selecionados.has(sku)) selecionados.delete(sku);
+  else selecionados.add(sku);
+  atualizarSelBar();
+  // Atualiza card visual
+  const card = document.getElementById('pc-'+sku);
+  if(card){
+    card.classList.toggle('selecionado', selecionados.has(sku));
+    const btn = card.querySelector('.btn-sel');
+    if(btn){ btn.classList.toggle('ativo', selecionados.has(sku)); btn.textContent=selecionados.has(sku)?'✓ Selecionado':'+ Selecionar para kit'; }
+  }
+}
+
+function atualizarSelBar(){
+  const n = selecionados.size;
+  document.getElementById('kpi-sel').textContent = n;
+  const bar = document.getElementById('sel-bar');
+  bar.classList.toggle('show', n>0);
+  document.getElementById('sel-count').textContent = n+' produto(s) selecionado(s) para kit';
+  const prods = [...selecionados].map(sku=>{
+    const p = produtos.find(x=>x.sku===sku);
+    return `<span class="sel-tag">SKU ${sku}${p?' — '+p.nome.slice(0,20):''}</span>`;
+  });
+  document.getElementById('sel-tags').innerHTML = prods.join('');
+}
+
+function limparSelecao(){
+  selecionados.clear();
+  atualizarSelBar();
+  renderProdutos();
+}
+
+// ══════════════════════════════════════════════════════════════
+// GERAR SUGESTÕES COM IA
+// ══════════════════════════════════════════════════════════════
+async function gerarSugestoesIA(){
+  const key = localStorage.getItem('fava_claude_key')||prompt('Cole sua chave Claude API (sk-ant-...):');
+  if(!key) return;
+  localStorage.setItem('fava_claude_key', key);
+
+  const prods_sel = [...selecionados].map(sku=>produtos.find(p=>p.sku===sku)).filter(Boolean);
+  if(!prods_sel.length){
+    alert('Selecione pelo menos 2 produtos para sugerir kits.');
+    return;
+  }
+
+  setTab('sugestoes');
+  document.getElementById('sugestoes-wrap').innerHTML =
+    '<div class="loading-kit"><div class="spin"></div><p>IA analisando produtos e sugerindo kits...<br><small>Isso pode levar alguns segundos</small></p></div>';
+  mostrarStatus('st-sugestoes','⟳ Gerando sugestões com IA...','info');
+
+  const prodInfo = prods_sel.map(p=>`- SKU ${p.sku}: ${p.nome} | Família: ${p.familia||'?'} | CMV: R$${p.custo_br||p.custo||0} | Peso: ${p.peso||'?'}kg`).join('\n');
+
+  const prompt = `Você é especialista em e-commerce de ferramentas e peças industriais da Fava Ecom.
+
+Analise estes produtos parados no estoque e sugira kits de venda que façam sentido técnico e comercial:
+
+${prodInfo}
+
+Para cada kit sugerido, gere:
+1. Nome do kit (comercial e descritivo)
+2. SKU do kit (formato: 2-SKU1-SKU2 ou 3-SKU1-SKU2-SKU3)
+3. Produtos incluídos com quantidade de cada
+4. Justificativa técnica (por que esses produtos vão juntos)
+5. Peso estimado total (kg)
+6. Título para ML (até 60 caracteres)
+7. Descrição curta (2-3 frases)
+8. Tarefas necessárias (fotos, medidas, etc.)
+9. Categoria sugerida
+
+Responda SOMENTE em JSON válido, sem texto antes ou depois:
+{
+  "kits": [
+    {
+      "nome": "Nome do Kit",
+      "sku": "2-1562-1581",
+      "itens": [{"sku":"1562","nome":"Nome","qtd":1},{"sku":"1581","nome":"Nome","qtd":1}],
+      "justificativa": "Texto explicando",
+      "peso_estimado": 0.5,
+      "titulo_ml": "Título até 60 chars",
+      "descricao": "Descrição curta",
+      "categoria": "Categoria",
+      "tarefas": ["Fotografar kit montado","Medir dimensões da caixa","Definir peso final na balança","Criar anúncio ML","Publicar Shopee"]
+    }
+  ]
+}`;
+
+  try{
+    const r = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:2000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    if(!r.ok){const e=await r.json();throw new Error(e.error?.message||r.status);}
+    const data = await r.json();
+    const txt  = data.content[0].text;
+    const json = JSON.parse(txt.replace(/```json|```/g,'').trim());
+    sugestoes  = json.kits||[];
+    renderSugestoes();
+    mostrarStatus('st-sugestoes',`✅ ${sugestoes.length} kit(s) sugerido(s) pela IA`,'ok');
+  }catch(e){
+    mostrarStatus('st-sugestoes','❌ Erro: '+e.message,'err');
+    document.getElementById('sugestoes-wrap').innerHTML =
+      '<div class="empty"><p>❌ '+e.message+'</p></div>';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER SUGESTÕES
+// ══════════════════════════════════════════════════════════════
+function renderSugestoes(){
+  const wrap = document.getElementById('sugestoes-wrap');
+  if(!sugestoes.length){
+    wrap.innerHTML='<div class="empty"><p>Nenhuma sugestão gerada.</p></div>';
+    return;
+  }
+
+  wrap.innerHTML = sugestoes.map((kit,i)=>{
+    const pesoTotal = kit.itens.reduce((s,it)=>{
+      const p = produtos.find(x=>x.sku===it.sku);
+      return s + (p?.peso||0)*it.qtd;
+    },0);
+    const cmvTotal = kit.itens.reduce((s,it)=>{
+      const p = produtos.find(x=>x.sku===it.sku);
+      return s + (parseFloat(p?.custo_br||p?.custo||0))*it.qtd;
+    },0);
+
+    return `<div class="kit-wrap">
+      <div class="kit-head">
+        <span style="font-size:20px">🧩</span>
+        <h3>${kit.nome}</h3>
+        <span class="kit-badge">SKU: ${kit.sku}</span>
+        <span class="kit-badge">${kit.categoria||''}</span>
+      </div>
+      <div class="kit-body">
+
+        <!-- Itens do kit -->
+        <div style="margin-bottom:12px">
+          <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Composição</div>
+          <div class="kit-itens">
+            ${kit.itens.map((it,j)=>`
+              ${j>0?'<span class="kit-plus">+</span>':''}
+              <div class="kit-item">
+                <span class="kit-item-sku">SKU ${it.sku}</span>
+                <span class="kit-item-nome">${it.nome}</span>
+                <span class="kit-item-qtd">${it.qtd}x</span>
+              </div>`).join('')}
+          </div>
+        </div>
+
+        <!-- Justificativa -->
+        <div class="kit-desc">💡 ${kit.justificativa}</div>
+
+        <!-- Campos editáveis -->
+        <div class="kit-info">
+          <div class="kit-info-item">
+            <label>Título ML (60 chars)</label>
+            <input type="text" id="kit-titulo-${i}" value="${kit.titulo_ml||''}" maxlength="60"
+              oninput="document.getElementById('kit-chars-${i}').textContent=this.value.length+'/60'">
+            <div style="font-size:9px;color:#94a3b8;text-align:right;margin-top:2px" id="kit-chars-${i}">${(kit.titulo_ml||'').length}/60</div>
+          </div>
+          <div class="kit-info-item">
+            <label>Peso estimado (kg)</label>
+            <input type="number" id="kit-peso-${i}" value="${kit.peso_estimado||pesoTotal.toFixed(3)}" step="0.001" min="0">
+          </div>
+          <div class="kit-info-item">
+            <label>CMV calculado</label>
+            <input type="text" value="R$ ${cmvTotal.toFixed(2)}" readonly style="background:#f0f4f8;color:#64748b">
+          </div>
+          <div class="kit-info-item">
+            <label>SKU do kit</label>
+            <input type="text" id="kit-sku-${i}" value="${kit.sku}">
+          </div>
+          <div class="kit-info-item" style="grid-column:1/-1">
+            <label>Descrição curta</label>
+            <input type="text" id="kit-desc-${i}" value="${kit.descricao||''}">
+          </div>
+        </div>
+
+        <!-- Tarefas -->
+        <div class="kit-tarefas">
+          <h4>Tarefas para criar o kit</h4>
+          ${(kit.tarefas||[]).map((t,j)=>`
+            <div class="tarefa-item">
+              <input type="checkbox" id="tref-${i}-${j}">
+              <label for="tref-${i}-${j}" style="cursor:pointer">${t}</label>
+              <span class="resp">Pendente</span>
+            </div>`).join('')}
+          <div class="tarefa-item">
+            <input type="checkbox" id="tref-${i}-foto">
+            <label for="tref-${i}-foto" style="cursor:pointer">📸 Fotografar produtos separados e kit montado (mín. 6 fotos)</label>
+            <span class="resp">Pendente</span>
+          </div>
+          <div class="tarefa-item">
+            <input type="checkbox" id="tref-${i}-peso">
+            <label for="tref-${i}-peso" style="cursor:pointer">⚖️ Pesar kit completo na balança</label>
+            <span class="resp">Pendente</span>
+          </div>
+          <div class="tarefa-item">
+            <input type="checkbox" id="tref-${i}-medida">
+            <label for="tref-${i}-medida" style="cursor:pointer">📐 Medir caixa/embalagem do kit (L × A × P cm)</label>
+            <span class="resp">Pendente</span>
+          </div>
+        </div>
+
+        <!-- Ações -->
+        <div class="kit-acoes">
+          <button class="btn-aprovar" onclick="aprovarKit(${i})">✅ Aprovar kit</button>
+          <button class="btn-editar"  onclick="editarKit(${i})">✏️ Editar</button>
+          <button class="btn-rejeitar" onclick="rejeitarKit(${i})">❌ Rejeitar</button>
+          <button class="btn-gerar-ia" onclick="gerarDescricaoCompleta(${i})">
+            <span>✨</span> Gerar descrição completa
+          </button>
+        </div>
+
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// APROVAR KIT
+// ══════════════════════════════════════════════════════════════
+function aprovarKit(i){
+  const kit = sugestoes[i];
+  if(!kit) return;
+  const aprovado = {
+    ...kit,
+    sku:    document.getElementById(`kit-sku-${i}`)?.value || kit.sku,
+    titulo: document.getElementById(`kit-titulo-${i}`)?.value || kit.titulo_ml,
+    peso:   parseFloat(document.getElementById(`kit-peso-${i}`)?.value)||kit.peso_estimado,
+    descricao: document.getElementById(`kit-desc-${i}`)?.value || kit.descricao,
+    status: 'aprovado',
+    data:   new Date().toISOString().slice(0,10),
+    tarefas_status: (kit.tarefas||[]).map(t=>({texto:t, feita:false})),
+  };
+  kitsAprov.push(aprovado);
+  localStorage.setItem('fava_kits_v1', JSON.stringify(kitsAprov));
+  // Salva no banco
+  salvarKitBanco(aprovado);
+  // Remove da lista
+  sugestoes.splice(i,1);
+  renderSugestoes();
+  mostrarStatus('st-sugestoes',`✅ Kit "${aprovado.nome}" aprovado e salvo!`,'ok');
+}
+
+function rejeitarKit(i){
+  sugestoes.splice(i,1);
+  renderSugestoes();
+}
+
+async function salvarKitBanco(kit){
+  try{
+    await fetch(RAILWAY+'/api/db/kit',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(kit)
+    });
+  }catch(e){ console.warn('Banco:', e.message); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// GERAR DESCRIÇÃO COMPLETA (prompt Fava Ecom)
+// ══════════════════════════════════════════════════════════════
+async function gerarDescricaoCompleta(i){
+  const key = localStorage.getItem('fava_claude_key');
+  if(!key){ alert('Configure a chave API Claude primeiro.'); return; }
+  const kit = sugestoes[i];
+  if(!kit) return;
+
+  const btn = document.querySelector(`.kit-wrap:nth-child(${i+1}) .btn-gerar-ia`);
+  if(btn){ btn.disabled=true; btn.innerHTML='<span class="spin" style="width:12px;height:12px;border-width:2px"></span> Gerando...'; }
+
+  const prompt = `Você é especialista em criação de anúncios para Fava Ecom.
+
+Kit: ${kit.nome}
+Composição: ${kit.itens.map(it=>it.qtd+'x '+it.nome).join(', ')}
+Categoria: ${kit.categoria}
+Justificativa: ${kit.justificativa}
+
+Crie uma descrição completa para marketplace seguindo o padrão Fava Ecom:
+- Contextualização técnica do kit
+- Benefícios de comprar o kit completo vs separado
+- Aplicação e compatibilidade
+- Ficha técnica de cada item
+- Alertas importantes
+- Bloco final Fava Ecom
+
+Depois gere:
+- 3 títulos para ML (até 60 chars cada)
+- 1 título Shopee (até 120 chars)
+- Post para Facebook (curto, com hashtags #FavaEcom)
+
+Formato: texto corrido, profissional, sem mencionar nomes de seções.`;
+
+  try{
+    const r = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:2000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data = await r.json();
+    const txt  = data.content[0].text;
+    // Injeta no kit
+    sugestoes[i].descricao_completa = txt;
+    // Mostra em modal/área
+    const el = document.querySelector(`.kit-wrap:nth-child(${i+1}) .kit-desc`);
+    if(el){ el.style.maxHeight='300px'; el.textContent=txt; }
+  }catch(e){
+    alert('Erro ao gerar: '+e.message);
+  }finally{
+    if(btn){ btn.disabled=false; btn.innerHTML='<span>✨</span> Gerar descrição completa'; }
+  }
+}
+
+function editarKit(i){
+  // Foca no primeiro campo editável
+  document.getElementById(`kit-titulo-${i}`)?.focus();
+}
+
+// ══════════════════════════════════════════════════════════════
+// APROVADOS
+// ══════════════════════════════════════════════════════════════
+function renderAprovados(){
+  const wrap = document.getElementById('aprovados-wrap');
+  if(!kitsAprov.length){
+    wrap.innerHTML='<div class="empty"><div class="icon">✅</div><p>Nenhum kit aprovado ainda.</p></div>';
+    return;
+  }
+  wrap.innerHTML=`
+  <div style="overflow-x:auto">
+  <table class="tbl">
+    <thead><tr>
+      <th>SKU Kit</th><th>Nome</th><th>Composição</th><th>Peso</th>
+      <th>Status</th><th>Data</th><th>Tarefas</th><th>Ação</th>
+    </tr></thead>
+    <tbody>${kitsAprov.map((k,i)=>{
+      const feitas = (k.tarefas_status||[]).filter(t=>t.feita).length;
+      const total  = (k.tarefas_status||[]).length;
+      const pct    = total>0?Math.round(feitas/total*100):0;
+      const statusPill = pct===100?'pill-ok':pct>0?'pill-pend':'pill-rev';
+      const statusTxt  = pct===100?'Completo':pct>0?`${pct}% feito`:'Pendente';
+      return `<tr>
+        <td style="font-weight:700;color:#1F3864">${k.sku}</td>
+        <td style="max-width:200px">${k.nome}</td>
+        <td style="font-size:11px;color:#64748b">${(k.itens||[]).map(it=>`${it.qtd}x SKU${it.sku}`).join(' + ')}</td>
+        <td>${k.peso?k.peso+'kg':'—'}</td>
+        <td><span class="pill ${statusPill}">${statusTxt}</span></td>
+        <td>${k.data||'—'}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="background:#e2e8f0;border-radius:99px;height:6px;width:80px">
+              <div style="background:#1F3864;border-radius:99px;height:6px;width:${pct}%"></div>
+            </div>
+            <span style="font-size:10px;color:#64748b">${feitas}/${total}</span>
+          </div>
+        </td>
+        <td>
+          <button onclick="verTarefasKit(${i})" style="padding:3px 8px;font-size:11px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:4px;cursor:pointer">
+            Ver tarefas
+          </button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>
+  </div>`;
+}
+
+function verTarefasKit(i){
+  const kit = kitsAprov[i];
+  if(!kit) return;
+  const wrap = document.getElementById('aprovados-wrap');
+  const extra = document.getElementById('tarefas-kit-detail');
+  if(extra) extra.remove();
+
+  const div = document.createElement('div');
+  div.id = 'tarefas-kit-detail';
+  div.style.cssText = 'background:#fff;border-radius:10px;border:1px solid #e2e8f0;padding:16px;margin-top:14px';
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <b style="color:#1F3864">📋 Tarefas: ${kit.nome}</b>
+      <button onclick="document.getElementById('tarefas-kit-detail').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:#94a3b8">×</button>
+    </div>
+    ${(kit.tarefas_status||[]).map((t,j)=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f1f5f9">
+        <input type="checkbox" ${t.feita?'checked':''} 
+          onchange="marcarTarefaKit(${i},${j},this.checked)" style="accent-color:#1F3864">
+        <span style="font-size:12px;${t.feita?'text-decoration:line-through;color:#94a3b8':''}">${t.texto}</span>
+        ${t.feita?`<span style="font-size:10px;color:#94a3b8;margin-left:auto">${t.hora||'feita'}</span>`:''}
+      </div>`).join('')}`;
+  wrap.appendChild(div);
+}
+
+function marcarTarefaKit(i, j, feita){
+  kitsAprov[i].tarefas_status[j].feita = feita;
+  kitsAprov[i].tarefas_status[j].hora  = feita ? new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : null;
+  localStorage.setItem('fava_kits_v1', JSON.stringify(kitsAprov));
+  renderAprovados();
+  verTarefasKit(i);
+}
+
+// ══════════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════════
+function mostrarStatus(id, msg, tipo){
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.textContent=msg; el.className='status-msg'+(tipo?' '+tipo:'');
+  if(tipo==='ok') setTimeout(()=>el.className='status-msg',4000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+carregarProdutos();
+</script>
+</body>
+</html>
