@@ -921,7 +921,8 @@ function salvarCfg(){
       <strong>Como usar:</strong>
       1. No ML → <em>Promoções → Criar promoção → Desconto → Baixar planilha</em> &nbsp;|&nbsp;
       2. Importe aqui → sistema cruza CMV e calcula margem &nbsp;|&nbsp;
-      3. Ajuste os descontos → Exportar planilha → faça upload no ML
+      3. Ajuste os descontos → Exportar planilha → faça upload no ML &nbsp;|&nbsp;
+      4. <strong>Salvar descontos</strong> → mês seguinte clique <strong>Restaurar descontos salvos</strong>
     </div>
 
     <!-- controles -->
@@ -932,6 +933,12 @@ function salvarCfg(){
       </label>
       <button onclick="exportarPlanilhaML()" style="padding:7px 14px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer;display:none" id="btn-exportar-prom">
         📤 Exportar planilha ML
+      </button>
+      <button onclick="salvarDescontosPromo()" style="padding:7px 14px;font-size:12px;font-weight:700;background:#7c3aed;color:#fff;border:none;border-radius:6px;cursor:pointer;display:none" id="btn-salvar-descontos">
+        💾 Salvar descontos
+      </button>
+      <button onclick="restaurarDescontosPromo()" style="padding:7px 14px;font-size:12px;font-weight:700;background:#0284c7;color:#fff;border:none;border-radius:6px;cursor:pointer" id="btn-restaurar-descontos">
+        🔄 Restaurar descontos salvos
       </button>
       <button onclick="aplicarDescontoPromoAPI()" style="padding:7px 14px;font-size:12px;font-weight:700;background:#d97706;color:#fff;border:none;border-radius:6px;cursor:pointer;display:none" id="btn-aplicar-api-prom">
         ⚡ Aplicar preços via API ML
@@ -1027,13 +1034,14 @@ function salvarCfg(){
           <thead>
             <tr style="background:#f8fafc">
               <th style="padding:7px 8px;width:32px;border-bottom:1px solid var(--borda)"></th>
-              <th style="padding:7px 8px;text-align:left;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;white-space:nowrap">Produto</th>
+              <th style="padding:7px 8px;text-align:left;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Produto</th>
               <th style="padding:7px 8px;text-align:left;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">SKU</th>
+              <th style="padding:7px 8px;text-align:left;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">MLB</th>
               <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Preço</th>
               <th style="padding:7px 8px;text-align:center;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Desc.%</th>
               <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Preço final</th>
               <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">CMV</th>
-              <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Frete líq.</th>
+              <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Frete liq.</th>
               <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Margem</th>
               <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">Mg c/desc.</th>
               <th style="padding:7px 8px;text-align:center;border-bottom:1px solid var(--borda);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;background:#fef9c3;color:#92400e" title="Margem mínima salva por produto">Mg.Mín%</th>
@@ -1735,7 +1743,8 @@ function getDatas(){
     case'7d':{const d=new Date(hoje);d.setDate(d.getDate()-6);return{de:fmt(d),ate:fmt(hoje)};}
     case'30d':{const d=new Date(hoje);d.setDate(d.getDate()-29);return{de:fmt(d),ate:fmt(hoje)};}
     case'mes':{const d=new Date(hoje.getFullYear(),hoje.getMonth(),1);return{de:fmt(d),ate:fmt(hoje)};}
-    case'mes-ant':{const d=new Date(hoje.getFullYear(),hoje.getMonth()-1,1);const d2=new Date(hoje.getFullYear(),hoje.getMonth(),0);return{de:fmt(d),ate:fmt(d2)};}
+    case'mes-ant':
+    case'mes_ant':{const d=new Date(hoje.getFullYear(),hoje.getMonth()-1,1);const d2=new Date(hoje.getFullYear(),hoje.getMonth(),0);return{de:fmt(d),ate:fmt(d2)};}
     default:{const d=new Date(hoje);d.setDate(d.getDate()-6);return{de:fmt(d),ate:fmt(hoje)};}
   }
 }
@@ -1874,16 +1883,26 @@ async function importarPlanilhaML(input){
 
       // 1. Prioridade: cmvCache (PLANILHA.xlsx — fonte de verdade)
       itens.forEach(it=>{
-        const cached = cmvLookup(it.sku);
-        if(cached?.cmv>0){
-          it.cmv = cached.cmv;
+        // Busca CMV: por SKU direto, ou via anunciosData pelo MLB
+        let cached = cmvLookup(it.sku);
+        if(!cached || !cached.cmv){
+          // Tenta achar SKU real pelo MLB nos anunciosData
+          const anuncio = anunciosData.find(a=>a.id===it.id);
+          if(anuncio?.sku) cached = cmvLookup(anuncio.sku) || cached;
+          if(anuncio?.sku && !it.sku) it.sku = anuncio.sku;
         }
-        // Taxa real: busca de anunciosData pelo MLB
+        if(cached?.cmv>0) it.cmv = cached.cmv;
+
+        // Taxa real por MLB
         const anuncio = anunciosData.find(a=>a.id===it.id);
         it.taxa = anuncio?.taxa || it.taxa || 0.12;
+
+        // Frete: usa calcFreteML se temos peso do anúncio, senão frete do banco
+        if(anuncio?.frete > 0) it.frete = anuncio.freteL || anuncio.frete;
+
         if(it.cmv>0){
-          it.margem = calcMargemProm(it.preco, it.cmv, it.taxa);
-          it.margemComDesc = calcMargemProm(it.preco*(1-it.descPct/100), it.cmv, it.taxa);
+          it.margem = calcMargemProm(it.preco, it.cmv, it.taxa, it.frete||0);
+          it.margemComDesc = calcMargemProm(it.preco*(1-it.descPct/100), it.cmv, it.taxa, it.frete||0);
         }
       });
 
@@ -1892,15 +1911,16 @@ async function importarPlanilhaML(input){
         const rProd = await fetch('/api/db/produtos');
         if(rProd.ok){
           const produtos = await rProd.json();
+          const norm = s => String(s||'').trim().replace(/^0+(?=\d)/,'');
           const cmvMap = {};
-          produtos.forEach(p=>{ if(p.sku) cmvMap[String(p.sku).trim()] = p; });
+          produtos.forEach(p=>{ if(p.sku) cmvMap[norm(p.sku)] = p; });
           itens.forEach(it=>{
-            if(it.cmv>0) return; // já tem do cmvCache
-            const p = cmvMap[it.sku] || cmvMap[String(parseInt(it.sku)||'')];
+            if(it.cmv>0) return;
+            const p = cmvMap[norm(it.sku)];
             if(p && (p.custo_br||p.custo)>0){
               it.cmv = p.custo_br||p.custo;
-              it.margem = calcMargemProm(it.preco, it.cmv, it.taxa||0.12);
-              it.margemComDesc = calcMargemProm(it.preco*(1-it.descPct/100), it.cmv, it.taxa||0.12);
+              it.margem = calcMargemProm(it.preco, it.cmv, it.taxa||0.12, it.frete||0);
+              it.margemComDesc = calcMargemProm(it.preco*(1-it.descPct/100), it.cmv, it.taxa||0.12, it.frete||0);
             }
           });
         }
@@ -1944,18 +1964,18 @@ async function importarPlanilhaML(input){
             }
           });
           itens.forEach(it=>{
-            // Frete real por MLB
-            const frete = freteMap[it.id] || 0;
-            it.frete = frete;
-            // Taxa real por MLB (sale_fee vem como %, ex: 12.0)
+            // Frete líquido real por MLB
+            const freteB = freteMap[it.id] || 0;
+            if(freteB > 0) it.frete = freteB;
+            // Taxa real por MLB
             const sfRaw = taxaMap[it.id] || 0;
-            it.taxa = sfRaw > 1 ? sfRaw/100 : sfRaw > 0 ? sfRaw : 0.16;
-            // CMV do banco se não veio da planilha
+            if(sfRaw > 0) it.taxa = sfRaw > 1 ? sfRaw/100 : sfRaw;
+            // CMV do banco se ainda não tem
             if(!it.cmv && cmvDbMap[it.sku]) it.cmv = cmvDbMap[it.sku];
             // Recalcular margem com dados reais
             if(it.cmv > 0){
-              it.margem = calcMargemProm(it.preco, it.cmv, it.taxa, frete);
-              it.margemComDesc = calcMargemProm(it.preco*(1-it.descPct/100), it.cmv, it.taxa, frete);
+              it.margem = calcMargemProm(it.preco, it.cmv, it.taxa, it.frete||0);
+              it.margemComDesc = calcMargemProm(it.preco*(1-it.descPct/100), it.cmv, it.taxa, it.frete||0);
             }
           });
           console.log('Frete e taxa cruzados do banco por MLB');
@@ -1974,7 +1994,7 @@ async function importarPlanilhaML(input){
       renderPromoKpis();
       renderPromoTabela(promoDataFiltrada);
 
-      ['prom-table-wrap','btn-exportar-prom','btn-aplicar-api-prom'].forEach(id=>{
+      ['prom-table-wrap','btn-exportar-prom','btn-aplicar-api-prom','btn-salvar-descontos'].forEach(id=>{
         const el=document.getElementById(id); if(el) el.style.display='';
       });
       document.getElementById('prom-kpis').style.display='grid';
@@ -2080,7 +2100,7 @@ function renderPromoTabela(lista){
       </td>
       <td id="pd-preco-${i}" style="padding:5px 8px;text-align:right;color:var(--azul2);font-weight:700">R$${precoComDesc.toFixed(2)}</td>
       <td style="padding:5px 8px;text-align:right;color:var(--muted)">${p.cmv?'R$'+p.cmv.toFixed(2):'<span style=color:#f59e0b>⚠️</span>'}</td>
-      
+      <td style="padding:5px 8px;text-align:right;color:var(--muted);font-size:10px">${frete_item>0?'R$'+frete_item.toFixed(2):'—'}</td>
       <td style="padding:5px 8px;text-align:right;color:${mgCor};font-weight:700">${mgStr}</td>
       <td id="pd-mg-${i}" style="padding:5px 8px;text-align:right;color:${mgDescCor2||mgDescCor};font-weight:700">${mgDescStr}</td>
       <td style="padding:5px 8px;text-align:center;background:#fefce8">
@@ -6584,6 +6604,81 @@ async function calcCreditosImpostos(){
     (document.getElementById('cred-cofins')||{}).textContent = f(credCOFINS);
     (document.getElementById('cred-total')||{}).textContent  = f(total);
   }catch(e){ console.warn('Créditos erro:', e); }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// DESCONTOS SALVOS POR MLB — persiste entre meses
+// ══════════════════════════════════════════════════════════════════════
+async function salvarDescontosPromo(){
+  if(!promoData.length){ alert('Importe a planilha primeiro'); return; }
+
+  // Salva desconto de cada MLB que tem valor definido
+  const para_salvar = promoData.filter(p => p.descEditado > 0);
+  if(!para_salvar.length){ alert('Nenhum desconto definido para salvar'); return; }
+
+  // Salva no localStorage como backup imediato
+  const local = {};
+  para_salvar.forEach(p => {
+    local[p.id] = { desconto: p.descEditado, desc_min: p.mgMin || 0, titulo: p.titulo, sku: p.sku };
+  });
+  localStorage.setItem('fava_descontos_promo', JSON.stringify(local));
+
+  // Salva no banco Railway
+  let ok = 0;
+  try{
+    const r = await fetch('/api/db/descontos', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(local)
+    });
+    if(r.ok) ok = (await r.json()).n || para_salvar.length;
+  }catch(e){
+    ok = para_salvar.length; // salvou pelo menos no localStorage
+  }
+
+  Object.assign(descontosAnuncio, local);
+  alert(`✅ ${para_salvar.length} descontos salvos!\n\nMês que vem clique "🔄 Restaurar descontos salvos" após importar a planilha.`);
+}
+
+async function restaurarDescontosPromo(){
+  if(!promoData.length){ alert('Importe a planilha do ML primeiro'); return; }
+
+  // Carrega do banco Railway
+  await carregarDescontosAnuncio();
+
+  // Se não tem no banco, tenta localStorage
+  if(!Object.keys(descontosAnuncio).length){
+    const local = JSON.parse(localStorage.getItem('fava_descontos_promo') || '{}');
+    Object.assign(descontosAnuncio, local);
+  }
+
+  if(!Object.keys(descontosAnuncio).length){
+    alert('Nenhum desconto salvo encontrado.\nImporte e ajuste os descontos, depois clique "💾 Salvar descontos".');
+    return;
+  }
+
+  // Aplica descontos salvos nos itens da planilha atual
+  let aplicados = 0, nao_encontrados = 0;
+  promoData.forEach(p => {
+    const salvo = descontosAnuncio[p.id];
+    if(salvo && salvo.desconto > 0){
+      p.descEditado = salvo.desconto;
+      p.mgMin       = salvo.desc_min || p.mgMin;
+      p.margemComDesc = calcMargemProm(p.preco*(1-salvo.desconto/100), p.cmv, p.taxa, p.freteL);
+      aplicados++;
+    } else {
+      nao_encontrados++;
+    }
+  });
+
+  filtrarPromos();
+  alert(`✅ ${aplicados} descontos restaurados!\n${nao_encontrados > 0 ? `${nao_encontrados} anúncios sem desconto salvo (novos ou sem histórico)` : ''}`);
+}
+
+// Mostra botão salvar após importar planilha
+function mostrarBotoesPromo(){
+  const s = document.getElementById('btn-salvar-descontos');
+  if(s) s.style.display = 'block';
 }
 
 // ══════════════════════════════════════════════════════════════════════
