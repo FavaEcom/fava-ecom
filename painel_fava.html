@@ -2082,7 +2082,7 @@ function renderPromoTabela(lista){
 
     const mgMinSalva = (p.mgMin||0)*100;
     const descMaxCalc = calcDescMaximo(p.preco, p.cmv, p.mgMin||0, taxa_item, frete_item);
-    if(p.cmv > 0 && descMaxCalc > 0 && !p.descEditado) p.descEditado = descMaxCalc;
+    // NÃO auto-preenche desconto — usuário define manualmente
     return `<tr style="${p.selecionado?'background:#eff6ff':''}" id="prom-tr-${i}">
       <td style="padding:5px 8px;text-align:center"><input type="checkbox" ${p.selecionado?'checked':''} onchange="togglePromo(${i},this.checked)"></td>
       <td style="padding:5px 8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.titulo}">${p.titulo}</td>
