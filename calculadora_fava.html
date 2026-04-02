@@ -1114,6 +1114,22 @@ function carregarTokenStore(){
   }
   tokens.ml    = tokenStore.ml.access    || '';
   tokens.bling = tokenStore.bling.access || '';
+  // Se não tem token local, busca do servidor
+  if(!tokens.bling){
+    fetch(RAILWAY+'/api/auth/tokens/get').then(r=>r.json()).then(d=>{
+      if(d.bling_access){
+        tokenStore.bling.access=d.bling_access; tokens.bling=d.bling_access;
+        if(document.getElementById('tk-bling')) document.getElementById('tk-bling').value=tokens.bling;
+        salvarTokenStore();
+        console.log('[Tokens] Bling recuperado do servidor');
+      }
+      if(d.ml_access && !tokens.ml){
+        tokenStore.ml.access=d.ml_access; tokens.ml=d.ml_access;
+        if(document.getElementById('tk-ml')) document.getElementById('tk-ml').value=tokens.ml;
+        salvarTokenStore();
+      }
+    }).catch(()=>{});
+  }
   if(document.getElementById('tk-bling'))      document.getElementById('tk-bling').value      = tokens.bling;
   if(document.getElementById('tk-ml'))         document.getElementById('tk-ml').value         = tokens.ml;
   if(document.getElementById('tk-ml-refresh')) document.getElementById('tk-ml-refresh').value = tokenStore.ml.refresh||'';
@@ -1306,6 +1322,15 @@ function salvarTokens(){
   salvarTokenStore();
   localStorage.setItem('fava_tk4',    JSON.stringify(tokens));
   localStorage.setItem('fava_dash_tk',JSON.stringify(tokens));
+  // Salva no Railway para funcionar em qualquer PC
+  fetch(RAILWAY+'/api/auth/tokens',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      bling_access: tokens.bling, bling_refresh: rtBling||tokenStore.bling.refresh||'',
+      ml_access: tokens.ml, ml_refresh: rtML||tokenStore.ml.refresh||''
+    })
+  }).then(()=>console.log('[Tokens] Salvos no servidor'))
+    .catch(e=>console.warn('[Tokens] Erro ao salvar no servidor:', e));
   const btn=document.querySelector('[onclick="salvarTokens()"]');
   if(btn){btn.textContent='Salvando...';btn.disabled=true;}
   testar().finally(()=>{
@@ -2399,9 +2424,13 @@ async function buscarSkuOrc(idx){
     const local = cmvBanco[sku] || cmvBanco[String(parseInt(sku))] || null;
     if(local && local.cmvPr>0){
       orcItems[idx-1]={...orcItems[idx-1], sku, nome:local.nome||sku, cmvUnit:local.cmvPr, manual:false};
-      document.getElementById(`orc-nome-${idx}`).textContent=local.nome||sku;
-      document.getElementById(`orc-cmv-${idx}`).value=local.cmvPr.toFixed(4);
-      calcOrc();
+      const elNome1=document.getElementById(`orc-nome-${idx}`);
+      const elCmv1=document.getElementById(`orc-cmv-${idx}`);
+      if(elNome1) elNome1.textContent=local.nome||sku;
+      if(elCmv1)  elCmv1.value=local.cmvPr.toFixed(4);
+      // força re-render se tabela ainda não existe
+      if(!document.getElementById('orc-precounit-1')) renderOrcTabela();
+      else calcOrc();
       return;
     }
     // 2. Tenta banco Railway
@@ -2414,9 +2443,12 @@ async function buscarSkuOrc(idx){
           const cmvPr = prod.custo_pr||prod.custo_br||0;
           cmvBanco[sku] = {nome:prod.nome||sku, cmvBr:prod.custo_br||0, cmvPr, custo:prod.custo||0, dt:new Date().toISOString().slice(0,10)};
           orcItems[idx-1]={...orcItems[idx-1], sku, nome:prod.nome||sku, cmvUnit:cmvPr, manual:false};
-          document.getElementById(`orc-nome-${idx}`).textContent=prod.nome||sku;
-          document.getElementById(`orc-cmv-${idx}`).value=cmvPr.toFixed(4);
-          calcOrc();
+          const elNome2=document.getElementById(`orc-nome-${idx}`);
+          const elCmv2=document.getElementById(`orc-cmv-${idx}`);
+          if(elNome2) elNome2.textContent=prod.nome||sku;
+          if(elCmv2)  elCmv2.value=cmvPr.toFixed(4);
+          if(!document.getElementById('orc-precounit-1')) renderOrcTabela();
+          else calcOrc();
           return;
         }
       }
@@ -2442,9 +2474,12 @@ async function buscarSkuOrc(idx){
     const cmvPrCalc=Math.max(custoNF-credIcms-credPis-credCofins, custoNF*0.35);
     cmvBanco[sku]={nome:prod.descricao||sku, cmvBr:custo, cmvPr:cmvPrCalc, custo, dt:new Date().toISOString().slice(0,10)};
     orcItems[idx-1]={...orcItems[idx-1], sku:prod.codigo||sku, nome:prod.descricao||prod.nome||'', cmvUnit:cmvPrCalc, manual:false};
-    document.getElementById(`orc-nome-${idx}`).textContent=prod.descricao||prod.nome||'';
-    document.getElementById(`orc-cmv-${idx}`).value=cmvPrCalc.toFixed(4);
-    calcOrc();
+    const elNome3=document.getElementById(`orc-nome-${idx}`);
+    const elCmv3=document.getElementById(`orc-cmv-${idx}`);
+    if(elNome3) elNome3.textContent=prod.descricao||prod.nome||'';
+    if(elCmv3)  elCmv3.value=cmvPrCalc.toFixed(4);
+    if(!document.getElementById('orc-precounit-1')) renderOrcTabela();
+    else calcOrc();
   }catch(e){alert(`Erro: ${e.message}`);}
   finally{btn.textContent='Buscar';btn.disabled=false;}
 }
@@ -2640,11 +2675,22 @@ function renderOrcTabela(){
 const _origSwitchTab=switchTab;
 window._orcRendered=false;
 
-// Override calcOrc to render first if needed
+// calcOrc robusto: sempre re-renderiza e recalcula
 const _origCalcOrc=calcOrc;
 function calcOrc(){
+  // Garante que a tabela existe
   if(!document.getElementById('orc-precounit-1')) renderOrcTabela();
-  _origCalcOrc(); // sempre calcula depois de renderizar
+  // Lê os inputs e atualiza orcItems ANTES de calcular
+  orcItems.forEach((it,i)=>{
+    const inpCmv = document.getElementById(`orc-cmv-${i+1}`);
+    const inpQtd = document.getElementById(`orc-qtd-${i+1}`);
+    const inpMc  = document.getElementById(`orc-mc-${i+1}`);
+    const mcPad  = (parseFloat(document.getElementById('orc-mc')?.value)||30)/100;
+    if(inpCmv) orcItems[i].cmvUnit = parseFloat(inpCmv.value)||orcItems[i].cmvUnit||0;
+    if(inpQtd) orcItems[i].qtd     = parseFloat(inpQtd.value)||1;
+    orcItems[i].mc = inpMc ? (parseFloat(inpMc.value)||30)/100 : mcPad;
+  });
+  _origCalcOrc();
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -2735,10 +2781,10 @@ async function buscarBalcao(){
 }
 
 function calcPrecoBalcao(cmv, mg, desc){
-  // Preço balcão: sem DIFAL, sem taxa marketplace, sem frete
-  const PIS_S = 0.0165, COF_S = 0.076, ICMS_S = 0.12;
+  // Preço balcão: venda local PR — sem DIFAL, sem taxa marketplace, sem frete
+  const PIS_S = 0.0165, COF_S = 0.076, ICMS_S = 0.195; // 19,5% PR interno
   const m = mg/100;
-  const denom = Math.max(1 - PIS_S - COF_S - ICMS_S - m, 0.1);
+  const denom = Math.max(1 - PIS_S - COF_S - ICMS_S - m, 0.05);
   const precoBase = cmv / denom;
   const precoDesc = precoBase * (1 - desc/100);
   const lucro = precoDesc - cmv - precoDesc*(PIS_S+COF_S+ICMS_S);
