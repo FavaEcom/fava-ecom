@@ -312,7 +312,7 @@ header h1{font-size:14px;font-weight:700;flex:1}
     <!-- MODO BLING -->
     <div id="painel-modo-bling">
       <div class="field">
-        <label>Custo Bling (R$) — com IPI e ST embutidos</label>
+        <label>Custo (R$) <span id="custo-fonte" style="font-size:10px;font-weight:400;color:#6b7280"></span></label>
         <input type="number" id="custo-b" step="0.01" min="0" placeholder="0,00" oninput="recalcCMV()">
       </div>
       <div class="row3">
@@ -340,10 +340,10 @@ header h1{font-size:14px;font-weight:700;flex:1}
         <div class="field"><label>Tem ST?</label><select id="tem-st-manual" onchange="recalcCMV()"><option value="nao">Não</option><option value="sim">Sim</option></select></div>
       </div>
       <!-- campos espelho para compatibilidade -->
-      <input type="hidden" id="custo-b" value="0">
-      <input type="hidden" id="ipi-p" value="0">
-      <input type="hidden" id="st-v" value="0">
-      <input type="hidden" id="tem-st" value="nao">
+      <input type="hidden" id="custo-b-mirror" value="0">
+      <input type="hidden" id="ipi-p-mirror" value="0">
+      <input type="hidden" id="st-v-mirror" value="0">
+      <input type="hidden" id="tem-st-mirror" value="nao">
     </div>
 
     <!-- NF-e XML Import -->
@@ -399,7 +399,7 @@ header h1{font-size:14px;font-weight:700;flex:1}
     </div>
     <div class="row2">
       <div class="field"><label>ICMS inter. médio (%)</label><input type="number" id="icms-m" value="12" step="0.1" oninput="recalcCMV()"></div>
-      <div class="field"><label>DIFAL médio (%)</label><input type="number" id="difal-m" value="8.5" step="0.1" oninput="recalcCMV()"></div>
+      <div class="field"><label>DIFAL médio (%)</label><input type="number" id="difal-m" value="3.81" step="0.1" oninput="recalcCMV()"></div>
     </div>
 
     <div class="sec">Origem fiscal</div>
@@ -486,7 +486,7 @@ header h1{font-size:14px;font-weight:700;flex:1}
     </div>
     <div class="row2">
       <div class="field"><label>ICMS inter (%)</label><input type="number" id="m-icms" value="12" step="0.1"></div>
-      <div class="field"><label>DIFAL médio (%)</label><input type="number" id="m-difal" value="8.5" step="0.1"></div>
+      <div class="field"><label>DIFAL médio (%)</label><input type="number" id="m-difal" value="3.81" step="0.1"></div>
     </div>
 
     <button class="btn btn-blue" onclick="calcMassa()">Calcular NF</button>
@@ -868,7 +868,7 @@ Vonder: fabricante nacional de ferramentas elétricas e manuais com foco em qual
 // ══════════════════════════════════════════════════════════════════════
 // CONSTANTES
 // ══════════════════════════════════════════════════════════════════════
-const PIS=.0165, COFINS=.076, ICMS_PR=.195;
+const PIS=.0165, COFINS=.076, ICMS_PR=.195, IBS_CBS=.02;
 // ══════════════════════════════════════════════════════════════════════
 // BANCO DE CMV — persiste em localStorage, compartilhado entre abas
 // ══════════════════════════════════════════════════════════════════════
@@ -1351,57 +1351,109 @@ async function buscar(){
 }
 
 async function processarBling(p){
-  let prod=p;
-  try{const r=await fetch(`/api/bling/produtos/${p.id}`,{headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});if(r.ok){const d=await r.json();prod=d.data||p;}}catch(e){}
+  // Garante ID como string inteira (evita notação científica ex: 1.63e10)
+  const prodId = String(parseInt(p.id || p.produto?.id || 0));
+  let prod = p;
+  try{
+    const r = await fetch(`/api/bling/produtos/${prodId}`,
+      {headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});
+    if(r.ok){ const d = await r.json(); prod = d.data || p; }
+  }catch(e){}
+
+  // ID correto para chamadas seguintes
+  const id = String(parseInt(prod.id || prodId));
   let est=0;
   try{
-    // Bling v3: endpoint correto para saldo de estoque é /estoques/saldos?idsProdutos[]={id}
-    const re=await fetch(`/api/bling/estoques/saldos?idsProdutos[]=${prod.id}`,{headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});
+    const re = await fetch(`/api/bling/estoques/saldos?idsProdutos[]=${id}`,
+      {headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});
     if(re.ok){
-      const de=await re.json();
-      // Response: { data: [{ produto:{id}, depositos:[{saldoFisico, saldoVirtual}] }] }
-      const item=de.data?.[0];
+      const de = await re.json();
+      const item = de.data?.[0];
       if(item?.depositos){
-        est=item.depositos.reduce((acc,d)=>acc+(parseFloat(d.saldoFisico)||0),0);
+        est = item.depositos.reduce((acc,d)=>acc+(parseFloat(d.saldoFisico)||0),0);
       } else {
-        est=de.data?.saldoFisicoTotal||de.data?.saldoVirtual||0;
+        est = de.data?.saldoFisicoTotal || de.data?.saldoVirtual || 0;
       }
     }
   }catch(e){}
-  // Busca custo do fornecedor via endpoint separado /produtos/{id}/fornecedores
-  let fornCusto = 0;
+  // ── Custo: 3 fontes em ordem de prioridade ──────────────────────────
+  // 1. Banco Railway (CMV calculado das NFs — mais preciso)
+  // 2. Bling precoCusto (se preenchido)
+  // 3. Bling fornecedor precoCusto
+  const skuFava = prod.codigo || '';
+  let custoFinal = 0;
+  let fonteCusto = '';
+
+  // Fonte 1: Banco Railway
   try{
-    const rf = await fetch(`/api/bling/produtos/${prod.id}/fornecedores`, {
-      headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}
-    });
-    if(rf.ok){
-      const df = await rf.json();
-      const forns = df.data || [];
-      // Pega o fornecedor padrão ou o primeiro
-      const forn = forns.find(f=>f.padrao) || forns[0];
-      fornCusto = parseFloat(forn?.precoCusto || forn?.precoCompra || 0);
-      console.log('BLING FORNECEDOR:', JSON.stringify(forn));
+    const RAILWAY = 'https://web-production-5aa0f.up.railway.app';
+    const rbanco = await fetch(RAILWAY + '/api/db/produtos');
+    if(rbanco.ok){
+      const prods = await rbanco.json();
+      const pb = prods.find(p => String(p.sku).trim() === String(skuFava).trim());
+      if(pb && (pb.custo_br || pb.custo) > 0){
+        custoFinal = pb.custo_br || pb.custo;
+        fonteCusto = '📦 Banco (NF)';
+      }
     }
   }catch(e){}
-  const custoBling = parseFloat(prod.precoCusto || prod.custoMedio || fornCusto || 0);
-  // Debug: log campos do produto para identificar nomes reais das medidas
-  console.log('BLING PRODUTO:', JSON.stringify({
-    id:prod.id, codigo:prod.codigo, nome:prod.nome,
-    precoCusto:prod.precoCusto, custoMedio:prod.custoMedio,
-    pesoBruto:prod.pesoBruto, peso:prod.peso,
-    largura:prod.largura, altura:prod.altura, profundidade:prod.profundidade,
-    // campos alternativos que o Bling v3 pode usar
-    pesoLiq:prod.pesoLiquido, dimL:prod.dimensoes?.largura, dimA:prod.dimensoes?.altura, dimP:prod.dimensoes?.profundidade,
-    medidas:prod.medidas
+
+  // Fonte 2: Bling precoCusto direto no produto
+  if(!custoFinal){
+    const custoBling = parseFloat(prod.precoCusto || prod.custoMedio || 0);
+    if(custoBling > 0){
+      custoFinal = custoBling;
+      fonteCusto = '🔵 Bling precoCusto';
+    }
+  }
+
+  // Fonte 3: Bling fornecedor
+  if(!custoFinal){
+    try{
+      const rf = await fetch(`/api/bling/produtos/${id}/fornecedores`,
+        {headers:{'Authorization':`Bearer ${tokens.bling}`,'Accept':'application/json'}});
+      if(rf.ok){
+        const df = await rf.json();
+        const forns = df.data || [];
+        const forn = forns.find(f=>f.padrao) || forns[0];
+        const fc = parseFloat(forn?.precoCusto || forn?.precoCompra || 0);
+        if(fc > 0){ custoFinal = fc; fonteCusto = '🔵 Bling fornecedor'; }
+      }
+    }catch(e){}
+  }
+
+  if(!custoFinal) fonteCusto = '⚠️ não encontrado — digite manualmente';
+  // Debug completo para identificar campo do custo
+  console.log('BLING PRODUTO COMPLETO:', JSON.stringify({
+    id: prod.id, codigo: prod.codigo, nome: prod.nome?.substring(0,40),
+    precoCusto: prod.precoCusto,
+    custoMedio: prod.custoMedio,
+    preco: prod.preco,
+    pesoBruto: prod.pesoBruto, peso: prod.peso,
+    largura: prod.largura, altura: prod.altura, profundidade: prod.profundidade,
+    dimensoes: prod.dimensoes,
+    estrutura: prod.estrutura,
+    // mostra todas as chaves do objeto
+    _chaves: Object.keys(prod).join(',')
   }));
   const dimL = parseFloat(prod.largura || prod.dimensoes?.largura || prod.medidas?.largura || 0);
   const dimA = parseFloat(prod.altura  || prod.dimensoes?.altura  || prod.medidas?.altura  || 0);
   const dimP = parseFloat(prod.profundidade || prod.dimensoes?.profundidade || prod.medidas?.profundidade || 0);
-  prodAtual={id:prod.id,nome:prod.nome||'',codigo:prod.codigo||'',custo:custoBling,peso:parseFloat(prod.pesoBruto||prod.peso||.5),l:dimL,a:dimA,p:dimP,estoque:est,ipi:parseFloat(prod.ipi||0)};
+  prodAtual={id:prod.id,nome:prod.nome||'',codigo:prod.codigo||'',custo:custoFinal,fonteCusto,peso:parseFloat(prod.pesoBruto||prod.peso||.5),l:dimL,a:dimA,p:dimP,estoque:est,ipi:parseFloat(prod.ipi||0)};
   // ─ salva no Banco CMV ─
-  cmvSet(prodAtual.codigo, {nome:prodAtual.nome, custo:custoBling});
+  cmvSet(prodAtual.codigo, {nome:prodAtual.nome, custo:custoFinal});
   setModo('bling');
-  document.getElementById('custo-b').value=prodAtual.custo.toFixed(2);
+  const custoBEl = document.getElementById('custo-b');
+  const fonteEl  = document.getElementById('custo-fonte');
+  if(custoBEl) custoBEl.value = custoFinal > 0 ? custoFinal.toFixed(2) : '';
+  if(fonteEl)  fonteEl.textContent = fonteCusto ? `— ${fonteCusto}` : '';
+  if(custoFinal > 0){
+    custoBEl.style.background = '#f0fdf4';
+    custoBEl.style.borderColor = '#86efac';
+  } else {
+    custoBEl.style.background = '#fff7ed';
+    custoBEl.style.borderColor = '#fcd34d';
+  }
   document.getElementById('ipi-p').value=prodAtual.ipi||0;
   document.getElementById('peso-r').value=prodAtual.peso||.5;
   document.getElementById('dim-l').value=prodAtual.l||0;
@@ -1434,7 +1486,12 @@ async function buscarMLItem(mlb){
 function mostrarCardProd(){
   if(!prodAtual)return;
   const c=document.getElementById('prod-card');c.className='prod-card show';
-  c.innerHTML=`<div class="pname">${prodAtual.nome}</div>
+  const fonteBadge = prodAtual.fonteCusto === 'Banco Railway (NF)'
+    ? `<span style="background:#dcfce7;color:#166534;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700">✅ CMV banco NF</span>`
+    : prodAtual.custo > 0
+      ? `<span style="background:#fef9c3;color:#92400e;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700">⚠️ Custo Bling</span>`
+      : `<span style="background:#fee2e2;color:#991b1b;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700">❌ Sem custo</span>`;
+  c.innerHTML=`<div class="pname">${prodAtual.nome} ${fonteBadge}</div>
     <div class="pmeta">
       <span>Cód: <strong>${prodAtual.codigo}</strong></span>
       <span>Custo: <strong>R$ ${fmt(prodAtual.custo)}</strong></span>
@@ -1442,7 +1499,90 @@ function mostrarCardProd(){
       ${prodAtual.mlb?`<span>MLB: <strong>${prodAtual.mlb}</strong></span>`:''}
       <span>Estoque: <strong>${prodAtual.estoque}</strong></span>
     </div>
-    <button onclick="irParaAnuncio()" style="margin-top:6px;padding:4px 10px;font-size:11px;font-weight:700;background:#1F3864;color:#fff;border:none;border-radius:5px;cursor:pointer;width:100%">✍️ Gerar anúncio para este produto</button>`;
+    <div style="display:flex;gap:6px;margin-top:6px">
+      <button onclick="atualizarCMVBanco()" style="flex:1;padding:4px 8px;font-size:11px;font-weight:700;background:#059669;color:#fff;border:none;border-radius:5px;cursor:pointer">🔄 CMV do banco</button>
+      <button onclick="atualizarMedidasBanco()" style="flex:1;padding:4px 8px;font-size:11px;font-weight:700;background:#7c3aed;color:#fff;border:none;border-radius:5px;cursor:pointer">📐 Medidas do banco</button>
+      <button onclick="irParaAnuncio()" style="flex:1;padding:4px 8px;font-size:11px;font-weight:700;background:#1F3864;color:#fff;border:none;border-radius:5px;cursor:pointer">✍️ Gerar anúncio</button>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ATUALIZAR CMV E MEDIDAS DO BANCO RAILWAY
+// ══════════════════════════════════════════════════════════════════════
+async function atualizarCMVBanco(){
+  if(!prodAtual){ alert('Busque um produto primeiro'); return; }
+  const sku = prodAtual.codigo;
+  if(!sku){ alert('Produto sem SKU'); return; }
+
+  try{
+    const RAILWAY = 'https://web-production-5aa0f.up.railway.app';
+    const r = await fetch(RAILWAY + '/api/db/produtos');
+    if(!r.ok){ alert('Erro ao acessar o banco'); return; }
+    const prods = await r.json();
+    const pb = prods.find(p => String(p.sku).trim() === String(sku).trim());
+
+    if(pb && (pb.custo_br || pb.custo) > 0){
+      const cmv = pb.custo_br || pb.custo;
+      prodAtual.custo = cmv;
+      prodAtual.fonteCusto = 'Banco Railway (NF)';
+      document.getElementById('custo-b').value = cmv.toFixed(2);
+      mostrarCardProd();
+      recalcCMV();
+      alerta('balert', `✅ CMV atualizado do banco: R$ ${fmt(cmv)} (${pb.nome||sku})`, 'info');
+    } else {
+      // Busca no histórico de compras — pega o mais recente
+      const rh = await fetch(RAILWAY + '/api/db/historico');
+      if(rh.ok){
+        const hist = await rh.json();
+        const compras = hist.filter(h => String(h.sku).trim() === String(sku).trim() && h.cmv_br > 0)
+                            .sort((a,b) => (b.data_emissao||'').localeCompare(a.data_emissao||''));
+        if(compras.length > 0){
+          const c = compras[0];
+          prodAtual.custo = c.cmv_br;
+          prodAtual.fonteCusto = `Histórico NF ${c.nf} (${c.data_emissao||''})`;
+          document.getElementById('custo-b').value = c.cmv_br.toFixed(2);
+          mostrarCardProd();
+          recalcCMV();
+          alerta('balert', `✅ CMV da NF ${c.nf}: R$ ${fmt(c.cmv_br)} | Data: ${c.data_emissao||'—'}`, 'info');
+          return;
+        }
+      }
+      alerta('balert', `⚠️ SKU ${sku} não encontrado no banco. Importe as NFs pelo painel.`, 'warn');
+    }
+  }catch(e){ alerta('balert', 'Erro: ' + e.message, 'err'); }
+}
+
+async function atualizarMedidasBanco(){
+  if(!prodAtual){ alert('Busque um produto primeiro'); return; }
+  const sku = prodAtual.codigo;
+
+  try{
+    const RAILWAY = 'https://web-production-5aa0f.up.railway.app';
+    const r = await fetch(RAILWAY + '/api/db/produtos');
+    if(!r.ok){ alert('Erro ao acessar o banco'); return; }
+    const prods = await r.json();
+    const pb = prods.find(p => String(p.sku).trim() === String(sku).trim());
+
+    if(pb){
+      const peso = pb.peso || pb.peso_bruto || prodAtual.peso;
+      const l = pb.largura || prodAtual.l || 0;
+      const a = pb.altura  || prodAtual.a || 0;
+      const p = pb.profundidade || prodAtual.p || 0;
+
+      prodAtual.peso = peso;
+      prodAtual.l = l; prodAtual.a = a; prodAtual.p = p;
+
+      document.getElementById('peso-r').value = peso;
+      if(document.getElementById('dim-l')) document.getElementById('dim-l').value = l;
+      if(document.getElementById('dim-a')) document.getElementById('dim-a').value = a;
+      if(document.getElementById('dim-p')) document.getElementById('dim-p').value = p;
+
+      calcFrete();
+      alerta('balert', `✅ Medidas atualizadas — Peso: ${peso}kg | ${l}×${a}×${p}cm`, 'info');
+    } else {
+      alerta('balert', `⚠️ SKU ${sku} sem medidas no banco. Atualize pelo Bling.`, 'warn');
+    }
+  }catch(e){ alerta('balert', 'Erro: ' + e.message, 'err'); }
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1638,9 +1778,10 @@ function calcCenario(k, cmvBr, cmvPr, pesoKg){
   // Para Shopee e ML: DIFAL impacta; para Balcão e Site próprio: sem DIFAL
   const comDifal = k.startsWith('ml') || k==='shp' || k==='shp20';
   const difalEfetivo = comDifal ? difalM * pIntC * pPfC : 0;
+  const ibsCbsEf = comDifal ? IBS_CBS : 0;
 
-  const denom = Math.max(1-taxa-PIS-COFINS-difalEfetivo-m, .05);
-  const denomMin = Math.max(1-taxa-PIS-COFINS-difalEfetivo, .05);
+  const denom = Math.max(1-taxa-PIS-COFINS-difalEfetivo-ibsCbsEf-m, .05);
+  const denomMin = Math.max(1-taxa-PIS-COFINS-difalEfetivo-ibsCbsEf, .05);
 
   // Estimativa inicial sem frete
   let preco_est = custo / denom;
