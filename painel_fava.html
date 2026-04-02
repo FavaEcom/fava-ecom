@@ -886,25 +886,35 @@ function salvarCfg(){
 <!-- ═══════════ VIEW: PEDIDOS ═══════════ -->
 <div id="view-pedidos" style="display:none;flex-direction:column">
   <div class="main" id="ped-main">
-    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Pedidos do período selecionado</div>
+    <!-- Filtro -->
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+      <div style="font-size:12px;color:var(--muted)">Pedidos do período</div>
+      <div style="flex:1"></div>
+      <input type="text" id="ped-filtro" placeholder="🔍 Filtrar por nº pedido, SKU ou produto..."
+        oninput="filtrarPedidos()"
+        style="padding:5px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;width:280px">
+      <button onclick="document.getElementById('ped-filtro').value='';filtrarPedidos()"
+        style="padding:5px 10px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;font-size:12px;cursor:pointer">✕ Limpar</button>
+      <span id="ped-count" style="font-size:11px;color:var(--muted)"></span>
+    </div>
     <div class="card">
       <div class="card-body" style="padding:0">
         <table class="tbl">
           <thead><tr>
             <th style="width:8%">Nº</th>
             <th style="width:7%">Data</th>
-            <th style="width:8%">SKU</th>
-            <th style="width:22%">Produto</th>
+            <th style="width:7%">SKU</th>
+            <th style="width:20%">Produto</th>
             <th style="width:5%">UF</th>
-            <th class="num" style="width:8%">Preço</th>
-            <th class="num" style="width:7%">CMV</th>
-            <th class="num" style="width:7%">Taxa</th>
-            <th class="num" style="width:7%">Frete</th>
-            <th class="num" style="width:7%">DIFAL</th>
-            <th class="num" style="width:7%">PIS+COF</th>
-            <th class="num" style="width:7%">Créditos</th>
-            <th class="num" style="width:7%">Lucro</th>
-            <th class="num" style="width:7%">Margem</th>
+            <th class="num" style="width:7%">Preço</th>
+            <th class="num" style="width:6%">CMV</th>
+            <th class="num" style="width:6%">Taxa</th>
+            <th class="num" style="width:6%">Frete</th>
+            <th class="num" style="width:6%">ICMS</th>
+            <th class="num" style="width:6%">DIFAL</th>
+            <th class="num" style="width:6%">PIS+COF</th>
+            <th class="num" style="width:6%">Lucro</th>
+            <th class="num" style="width:6%">Margem</th>
           </tr></thead>
           <tbody id="ped-tbody"></tbody>
         </table>
@@ -2571,7 +2581,7 @@ function calcularDescontoPorMargem(){
 
     if(desc <= 0){
       // Nem sem desconto atinge a margem mínima — precisa aumentar preço
-      const precoIdeal = (p.cmv + frete) / (1 - taxa - PIS_SAIDA - COFINS_SAIDA - DIFAL_MEDIO - IBS_CBS - mgMin);
+      const precoIdeal = (p.cmv + frete) / (1 - taxa - PIS_SAIDA - COFINS_SAIDA - ICMS_SAIDA_MED - DIFAL_MEDIO - IBS_CBS - mgMin);
       p.descEditado = 0;
       p.obs = `⬆️ Preço ideal: R$${precoIdeal.toFixed(2)}`;
       precisaAjuste++;
@@ -3962,7 +3972,8 @@ function renderPedidosComADS(){
       return s+(ci?.cmv||0)*it.qtd;
     },0)||0;
 
-    const lucro = preco-cmv-pis_r-cof_r-tx_r-frete-difal_r-adsPorPedido;
+    const icms_r = preco*ICMS_SAIDA_MED;
+    const lucro = preco-cmv-pis_r-cof_r-icms_r-tx_r-frete-difal_r-adsPorPedido;
     const margem = preco>0?lucro/preco:0;
     const mc=margem>=.15?'#16a34a':margem>=.10?'#d97706':'#dc2626';
     const [y,m,d]=p.data.split('-');
@@ -4080,8 +4091,9 @@ function buildPedidosDetalhados(){
         preco: it.preco,
         cmv: m.cmv,
         taxa_r: m.taxa_r,
-        frete_un: m.frete_un,
-        difal: m.difal,
+        frete_un: m.frete_un||0,
+        difal: m.difal||0,
+        icms_r: m.icms_r || it.preco*ICMS_SAIDA_MED,
         pis_r: m.pis_r,
         cof_r: m.cof_r,
         cred_taxa: m.cred_taxa||0,
@@ -4167,31 +4179,51 @@ function renderKpisPedidos(lista){
   (document.getElementById('pk-tick')||{}).textContent ='R$ '+fmt(tick);
 }
 
+let pedidosFiltrados = [];
+
+function filtrarPedidos(){
+  const q = (document.getElementById('ped-filtro')?.value||'').toLowerCase().trim();
+  const lista = q
+    ? pedidosDetalhados.filter(p=>
+        String(p.id).toLowerCase().includes(q) ||
+        (p.sku||'').toLowerCase().includes(q) ||
+        (p.titulo||'').toLowerCase().includes(q)
+      )
+    : pedidosDetalhados;
+  pedidosFiltrados = lista;
+  const ct = document.getElementById('ped-count');
+  if(ct) ct.textContent = lista.length + ' pedido(s)';
+  renderTabelaPedidos(lista);
+}
+
 function renderTabelaPedidos(lista){
   const rows=lista.map(p=>{
     const mg=p.margem;
     const mc=mg===null?'#9ca3af':mg>=.15?'#16a34a':mg>=0?'#d97706':'#dc2626';
     const mgStr=mg===null?'sem CMV':(mg*100).toFixed(1)+'%';
     const [y,m,d]=p.data.split('-');
+    const icms_r = p.icms_r || p.preco*ICMS_SAIDA_MED;
     return`<tr>
       <td style="font-size:10px;color:var(--muted)">${String(p.id).slice(-8)}</td>
       <td>${d}/${m}</td>
       <td style="font-weight:700;color:var(--azul);font-size:10px">${p.sku||'—'}</td>
-      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="${p.titulo}">${p.titulo}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="${p.titulo}">${p.titulo}</td>
       <td><span class="pill pill-b" style="font-size:9px">${p.uf}</span></td>
       <td class="num" style="font-weight:700">R$ ${fmt(p.preco)}</td>
       <td class="num" style="color:var(--muted)">${p.temCMV?'R$ '+fmt(p.cmv):'—'}</td>
       <td class="num" style="color:#d97706">R$ ${fmt(p.taxa_r)}</td>
       <td class="num" style="color:#6b7280">R$ ${fmt(p.frete_un)}</td>
+      <td class="num" style="color:#7c3aed">R$ ${fmt(icms_r)}</td>
       <td class="num" style="color:#d97706">${p.uf!=='PR'?'R$ '+fmt(p.difal):'—'}</td>
       <td class="num" style="color:#6b7280">R$ ${fmt(p.pis_r+p.cof_r)}</td>
-      <td class="num" style="color:#16a34a">R$ ${fmt(p.cred_taxa+p.cred_frete)}</td>
       <td class="num" style="font-weight:700;color:${mc}">${p.temCMV?'R$ '+fmt(p.lucro):'—'}</td>
       <td class="num" style="font-weight:700;color:${mc}">${mgStr}</td>
     </tr>`;
   });
   (document.getElementById('ped-tbody')||{})['innerHTML']=rows.join('')||
     '<tr><td colspan="14" style="text-align:center;padding:20px;color:var(--muted)">Sem pedidos</td></tr>';
+  const ct = document.getElementById('ped-count');
+  if(ct && !document.getElementById('ped-filtro')?.value) ct.textContent = lista.length+' pedido(s)';
 }
 
 function exportarPedidos(){
@@ -5876,7 +5908,8 @@ async function carregarAnuncios(){
       const freteL = freteReal > 0 ? freteReal*(1-0.2125) : 0; // crédito frete Platinum 21,25%
       let margem_atual = null, lucro = 0;
       if(cmv>0 && preco>0 && taxa>0){
-        lucro = preco - cmv - preco*taxa - freteL - pis - cofins - difal - ibscbs;
+        const icms_s = preco * ICMS_SAIDA_MED;
+        lucro = preco - cmv - preco*taxa - freteL - pis - cofins - icms_s - difal - ibscbs;
         margem_atual = isNaN(lucro/preco) ? null : lucro/preco;
       }
       const tituloDb = String(l.titulo||'').trim();
@@ -6156,9 +6189,10 @@ async function atualizarTaxasReaisML(){
       if(item.cmv>0 && preco>0 && item.taxa>0){
         const pis    = preco * PIS_SAIDA;
         const cofins = preco * COFINS_SAIDA;
+        const icms   = preco * ICMS_SAIDA_MED;
         const difal  = preco * DIFAL_MEDIO;
         const ibscbs = preco * IBS_CBS;
-        const lucro  = preco - item.cmv - preco*item.taxa - item.freteL - pis - cofins - difal - ibscbs;
+        const lucro  = preco - item.cmv - preco*item.taxa - item.freteL - pis - cofins - icms - difal - ibscbs;
         item.lucro        = isNaN(lucro) ? 0 : lucro;
         item.margem_atual = isNaN(lucro/preco) ? null : lucro/preco;
       }

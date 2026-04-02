@@ -2643,8 +2643,8 @@ window._orcRendered=false;
 // Override calcOrc to render first if needed
 const _origCalcOrc=calcOrc;
 function calcOrc(){
-  if(!document.getElementById('orc-precounit-1')){renderOrcTabela();}
-  else _origCalcOrc();
+  if(!document.getElementById('orc-precounit-1')) renderOrcTabela();
+  _origCalcOrc(); // sempre calcula depois de renderizar
 }
 
 // ══════════════════════════════════════════════════════════════════════
