@@ -2495,10 +2495,8 @@ async function buscarSkuOrc(idx){
 
 function calcOrc(){
   // Garante que a tabela existe
-  if(!document.getElementById('orc-precounit-1')){
-    renderOrcTabela();
-    return; // renderOrcTabela já chama calcOrc no final
-  }
+  if(!document.getElementById('orc-precounit-1')) renderOrcTabela();
+  if(!document.getElementById('orc-precounit-1')) return; // se ainda não existe, desiste
 
   const {icmsSaida, difal, geraDifal, uf, tipo, ie} = getParamsFiscaisOrc();
   const mcPad = (parseFloat(document.getElementById('orc-mc').value)||30)/100;
@@ -2693,8 +2691,7 @@ function renderOrcTabela(){
   // Re-attach event listener for obs
   const obs=document.getElementById('orc-obs');
   if(obs) obs.oninput=()=>calcOrc();
-
-  calcOrc();
+  // NÃO chama calcOrc aqui — quem chamou renderOrcTabela faz isso
 }
 
 // Watch for tab switch to orcamento - renderiza quando abre a aba
