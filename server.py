@@ -137,6 +137,15 @@ def criar_tabelas():
                 qtd REAL DEFAULT 1,
                 fonte TEXT DEFAULT 'auto',
                 PRIMARY KEY (sku_componente, sku_kit))""",
+            """CREATE TABLE IF NOT EXISTS pedidos_pc (
+                id TEXT PRIMARY KEY,
+                numero TEXT, data TEXT, canal TEXT, uf TEXT,
+                total REAL DEFAULT 0, lucro REAL,
+                margem REAL, frete REAL DEFAULT 0,
+                sem_imposto INTEGER DEFAULT 0,
+                sem_custo INTEGER DEFAULT 0,
+                itens TEXT,
+                created_at TIMESTAMP DEFAULT NOW())""",
             """CREATE TABLE IF NOT EXISTS produto_cadastro (
                 id SERIAL PRIMARY KEY,
                 sku TEXT UNIQUE, nome TEXT, fornecedor TEXT,
@@ -211,6 +220,15 @@ def criar_tabelas():
                 categoria TEXT, tarefas TEXT,
                 status TEXT DEFAULT 'aprovado',
                 created_at DATETIME DEFAULT (datetime('now')))""",
+            """CREATE TABLE IF NOT EXISTS pedidos_pc (
+                id TEXT PRIMARY KEY,
+                numero TEXT, data TEXT, canal TEXT, uf TEXT,
+                total REAL DEFAULT 0, lucro REAL,
+                margem REAL, frete REAL DEFAULT 0,
+                sem_imposto INTEGER DEFAULT 0,
+                sem_custo INTEGER DEFAULT 0,
+                itens TEXT,
+                created_at DATETIME DEFAULT (datetime('now')))""",
             """CREATE TABLE IF NOT EXISTS produto_cadastro (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 sku TEXT UNIQUE, nome TEXT, fornecedor TEXT,
@@ -239,6 +257,14 @@ def criar_tabelas():
     # Migração: adiciona coluna desconto se não existir
     try:
         exe("ALTER TABLE ml_listings ADD COLUMN desconto REAL DEFAULT 0")
+    except: pass
+    try:
+        exe("""CREATE TABLE IF NOT EXISTS pedidos_pc (
+            id TEXT PRIMARY KEY, numero TEXT, data TEXT, canal TEXT, uf TEXT,
+            total REAL DEFAULT 0, lucro REAL, margem REAL, frete REAL DEFAULT 0,
+            sem_imposto INTEGER DEFAULT 0, sem_custo INTEGER DEFAULT 0,
+            itens TEXT, created_at TIMESTAMP DEFAULT NOW())""")
+        print('[DB] Tabela pedidos_pc criada/verificada')
         print('[DB] Coluna desconto adicionada em ml_listings')
     except: pass
 
@@ -613,6 +639,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/kits':              self._get_kits,
             '/api/db/cadastros':         self._get_cadastros,
             '/api/db/status':            self._get_status,
+            '/api/db/pedidos-pc':         self._get_pedidos_pc,
             '/api/cmv-cache':            self._get_cmv_compat,
             '/api/sync/now':             self._sync_now,
             '/api/sync/bling-anuncios':  self._sync_bling_anuncios,
@@ -639,6 +666,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/pedrinho/importar':  self._post_pedrinho_importar,
             '/api/db/kit':                self._post_kit,
             '/api/db/cadastro':           self._post_cadastro,
+            '/api/db/pedidos-pc':         self._post_pedidos_pc,
             '/api/auth/tokens':           self._post_tokens,
             '/api/cmv-cache':             self._post_cmv,
         }
@@ -902,6 +930,46 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     # ────────────────────────────────────────────────────────────
     # POST routes
     # ────────────────────────────────────────────────────────────
+
+    def _get_pedidos_pc(self):
+        try:
+            rows = exe("SELECT id,numero,data,canal,uf,total,lucro,margem,frete,sem_imposto,sem_custo FROM pedidos_pc ORDER BY data DESC LIMIT 1000", fetchall=True)
+            self._ok({'total': len(rows), 'rows': rows})
+        except Exception as e: self._err(500, str(e))
+
+    def _post_pedidos_pc(self):
+        """POST /api/db/pedidos-pc — bulk insert pedidos do Preço Certo"""
+        try:
+            payload = self._body()
+            pedidos = payload if isinstance(payload, list) else payload.get('pedidos', [])
+            ok = 0; errs = 0
+            ignore = 'ON CONFLICT DO NOTHING' if IS_PG else ''
+            for p in pedidos:
+                try:
+                    pid = str(p.get('id',''))
+                    if not pid: continue
+                    itens = json.dumps(p.get('itens', []))
+                    sql = (f"INSERT {'OR IGNORE ' if not IS_PG else ''}INTO pedidos_pc "
+                           f"(id,numero,data,canal,uf,total,lucro,margem,frete,sem_imposto,sem_custo,itens) "
+                           f"VALUES ({qmark(12)}) {ignore if IS_PG else ''}")
+                    exe(sql, (
+                        pid, str(p.get('numero','')), str(p.get('data',''))[:10],
+                        str(p.get('canal','')), str(p.get('uf','')),
+                        float(p.get('total',0) or 0),
+                        float(p.get('lucro',0)) if p.get('lucro') is not None else None,
+                        float(p.get('margem',0)) if p.get('margem') is not None else None,
+                        float(p.get('frete',0) or 0),
+                        1 if p.get('sem_imposto') else 0,
+                        1 if p.get('sem_custo') else 0,
+                        itens
+                    ))
+                    ok += 1
+                except Exception as e2:
+                    errs += 1
+            self._ok({'ok': ok, 'errors': errs})
+            print(f'[PC] {ok} pedidos salvos | {errs} erros')
+        except Exception as e: self._err(500, str(e))
+
     def _post_tokens(self):
         try:
             d = self._body()
