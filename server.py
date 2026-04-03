@@ -100,6 +100,7 @@ def criar_tabelas():
                 id TEXT PRIMARY KEY, sku TEXT, titulo TEXT, preco REAL DEFAULT 0,
                 sale_fee REAL DEFAULT 0, listing_type TEXT, free_shipping INTEGER DEFAULT 0,
                 status TEXT, margem_minima REAL DEFAULT 0, frete_medio REAL DEFAULT 0,
+                desconto REAL DEFAULT 0,
                 updated_at TIMESTAMP DEFAULT NOW())""",
             """CREATE TABLE IF NOT EXISTS pedidos (
                 id TEXT PRIMARY KEY, canal TEXT, data TEXT, status TEXT,
@@ -179,6 +180,7 @@ def criar_tabelas():
                 id TEXT PRIMARY KEY, sku TEXT, titulo TEXT, preco REAL DEFAULT 0,
                 sale_fee REAL DEFAULT 0, listing_type TEXT, free_shipping INTEGER DEFAULT 0,
                 status TEXT, margem_minima REAL DEFAULT 0, frete_medio REAL DEFAULT 0,
+                desconto REAL DEFAULT 0,
                 updated_at DATETIME DEFAULT (datetime('now')))""",
             """CREATE TABLE IF NOT EXISTS pedidos (
                 id TEXT PRIMARY KEY, canal TEXT, data TEXT, status TEXT,
@@ -230,6 +232,11 @@ def criar_tabelas():
             except Exception as e: print(f'[DB] {e}')
         if not IS_PG: db.commit()
     print('[DB] Tabelas prontas')
+    # Migração: adiciona coluna desconto se não existir
+    try:
+        exe("ALTER TABLE ml_listings ADD COLUMN desconto REAL DEFAULT 0")
+        print('[DB] Coluna desconto adicionada em ml_listings')
+    except: pass
 
 def qmark(n):
     return ','.join(['%s' if IS_PG else '?']*n)
@@ -779,7 +786,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             rows = exe("""
                 SELECT l.id, l.sku, l.titulo, l.preco,
                        l.sale_fee, l.listing_type, l.free_shipping, l.status,
-                       l.margem_minima, l.frete_medio,
+                       l.margem_minima, l.frete_medio, l.desconto,
                        COALESCE(p.custo_br, cm.cmv_br, 0) as cmv,
                        COALESCE(p.custo_pr, cm.cmv_pr, 0) as cmv_pr
                 FROM ml_listings l
@@ -958,15 +965,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             status_it = str(d.get('status','active') or 'active')
             frete     = float(d.get('frete_medio',0) or 0)
             mg_min    = float(d.get('margem_minima',0) or 0)
+            desconto  = float(d.get('desconto',0) or 0)
             cmv       = float(d.get('cmv',0) or 0)
             c = ('ON CONFLICT(id) DO UPDATE SET sku=EXCLUDED.sku,titulo=EXCLUDED.titulo,preco=EXCLUDED.preco,'
                  'sale_fee=EXCLUDED.sale_fee,listing_type=EXCLUDED.listing_type,free_shipping=EXCLUDED.free_shipping,'
-                 'status=EXCLUDED.status,frete_medio=EXCLUDED.frete_medio,margem_minima=EXCLUDED.margem_minima') if IS_PG else \
+                 'status=EXCLUDED.status,frete_medio=EXCLUDED.frete_medio,margem_minima=EXCLUDED.margem_minima,'
+                 'desconto=EXCLUDED.desconto') if IS_PG else \
                 ('ON CONFLICT(id) DO UPDATE SET sku=excluded.sku,titulo=excluded.titulo,preco=excluded.preco,'
                  'sale_fee=excluded.sale_fee,listing_type=excluded.listing_type,free_shipping=excluded.free_shipping,'
-                 'status=excluded.status,frete_medio=excluded.frete_medio,margem_minima=excluded.margem_minima')
-            exe(f"INSERT INTO ml_listings (id,sku,titulo,preco,sale_fee,listing_type,free_shipping,status,frete_medio,margem_minima) VALUES ({qmark(10)}) {c}",
-                (mlb,sku,titulo,preco,sale_fee,ltype,free_ship,status_it,frete,mg_min))
+                 'status=excluded.status,frete_medio=excluded.frete_medio,margem_minima=excluded.margem_minima,'
+                 'desconto=excluded.desconto')
+            exe(f"INSERT INTO ml_listings (id,sku,titulo,preco,sale_fee,listing_type,free_shipping,status,frete_medio,margem_minima,desconto) VALUES ({qmark(11)}) {c}",
+                (mlb,sku,titulo,preco,sale_fee,ltype,free_ship,status_it,frete,mg_min,desconto))
             if cmv > 0 and sku:
                 upsert_produto(sku, titulo, custo=cmv, custo_br=cmv)
             self._ok({'ok':True,'id':mlb})

@@ -7,14 +7,10 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh}
-
 .header{background:#1F3864;color:#fff;padding:12px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3)}
 .header h1{font-size:15px;font-weight:700;flex:1}
 .hd-status{font-size:11px;color:#93c5fd}
-
 .main{max-width:1200px;margin:0 auto;padding:20px 16px}
-
-/* BUSCA */
 .busca-card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:20px;margin-bottom:20px}
 .busca-titulo{font-size:14px;font-weight:700;color:#1F3864;margin-bottom:14px}
 .busca-wrap{display:flex;gap:10px;flex-wrap:wrap}
@@ -25,8 +21,6 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
 .btn-azul:hover{background:#1e3a8a}
 .btn-verde{background:#16a34a;color:#fff}
 .btn-cinza{background:#f1f5f9;color:#374151;border:1px solid #e2e8f0}
-
-/* KPIs DO PRODUTO */
 .produto-header{background:linear-gradient(135deg,#1F3864,#2563eb);color:#fff;border-radius:12px;padding:16px 20px;margin-bottom:16px;display:none}
 .prod-nome{font-size:16px;font-weight:700;margin-bottom:4px}
 .prod-sku{font-size:12px;color:#93c5fd}
@@ -35,10 +29,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
 .kpi-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#93c5fd;margin-bottom:4px}
 .kpi-value{font-size:18px;font-weight:700}
 .kpi-sub{font-size:10px;color:#bfdbfe;margin-top:2px}
-
-/* CANAIS */
 .canais-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;margin-bottom:20px}
-
 .canal-card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden}
 .canal-head{padding:12px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #f1f5f9}
 .canal-head h3{font-size:13px;font-weight:700;color:#1F3864;flex:1}
@@ -48,10 +39,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
 .badge-yampi{background:#dbeafe;color:#1d4ed8}
 .badge-classico{background:#f3f4f6;color:#374151}
 .badge-premium{background:#fef3c7;color:#92400e}
-
 .canal-body{padding:14px 16px}
-
-/* MÉTRICAS DO ANÚNCIO */
 .metricas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
 .metrica{text-align:center;background:#f8fafc;border-radius:6px;padding:8px}
 .metrica-valor{font-size:16px;font-weight:700;color:#1F3864}
@@ -59,30 +47,22 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
 .metrica-valor.verde{color:#16a34a}
 .metrica-valor.vermelho{color:#dc2626}
 .metrica-valor.amarelo{color:#d97706}
-
-/* DECOMPOSIÇÃO */
 .decomp{font-size:11px;border-top:1px solid #f1f5f9;padding-top:10px;margin-top:10px}
 .decomp-linha{display:flex;justify-content:space-between;padding:2px 0;color:#64748b}
 .decomp-linha.destaque{color:#1e293b;font-weight:700;border-top:1px solid #e2e8f0;margin-top:4px;padding-top:4px}
 .decomp-linha.negativo{color:#dc2626}
-
-/* DESCONTO */
 .desconto-wrap{background:#eff6ff;border-radius:8px;padding:10px 12px;margin-top:10px}
 .desconto-label{font-size:10px;font-weight:700;color:#1d4ed8;margin-bottom:6px;text-transform:uppercase}
 .desconto-row{display:flex;align-items:center;gap:8px}
 .desconto-row input[type=range]{flex:1;accent-color:#1F3864}
 .desconto-val{font-size:13px;font-weight:700;color:#1F3864;min-width:40px;text-align:center}
 .preco-com-desc{font-size:11px;color:#64748b;margin-top:4px}
-
-/* AÇÕES */
 .canal-acoes{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
 .btn-sm{padding:5px 12px;font-size:11px;font-weight:700;border:none;border-radius:6px;cursor:pointer}
 .btn-sm-azul{background:#1F3864;color:#fff}
 .btn-sm-verde{background:#16a34a;color:#fff}
 .btn-sm-amarelo{background:#d97706;color:#fff}
 .btn-sm-cinza{background:#f1f5f9;color:#374151;border:1px solid #e2e8f0}
-
-/* NOVO ANÚNCIO */
 .novo-anuncio-card{background:#fff;border-radius:12px;border:2px dashed #e2e8f0;padding:20px;margin-bottom:20px;display:none}
 .novo-anuncio-card.show{display:block}
 .novo-titulo{font-size:13px;font-weight:700;color:#1F3864;margin-bottom:14px}
@@ -92,34 +72,16 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
 .field input,.field select{border:1px solid #e2e8f0;border-radius:6px;padding:7px 10px;font-size:13px;outline:none}
 .field input:focus,.field select:focus{border-color:#1F3864}
 .field.full{grid-column:1/-1}
-
-/* EMPTY */
 .empty{text-align:center;padding:50px 20px;color:#94a3b8}
 .empty .icon{font-size:48px;margin-bottom:12px}
-
-/* STATUS */
 .status-msg{padding:8px 12px;border-radius:6px;font-size:12px;font-weight:600;margin-bottom:12px;display:none}
 .status-msg.ok{background:#dcfce7;color:#166534;display:block}
 .status-msg.err{background:#fee2e2;color:#dc2626;display:block}
 .status-msg.info{background:#dbeafe;color:#1d4ed8;display:block}
-
-/* SPIN */
 .spin{display:inline-block;width:16px;height:16px;border:2px solid #e2e8f0;border-top-color:#1F3864;border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-
-/* LISTA RAPIDA */
-.lista-rapida{background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:20px;display:none}
-.lista-rapida-head{background:#f8fafc;padding:10px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #e2e8f0}
-.lista-rapida-head h3{font-size:12px;font-weight:700;color:#1F3864;flex:1}
-.tbl{width:100%;border-collapse:collapse;font-size:12px}
-.tbl th{background:#f8fafc;padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;border-bottom:1px solid #e2e8f0;white-space:nowrap}
-.tbl td{padding:7px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
-.tbl tr:hover td{background:#fafbff;cursor:pointer}
-.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
-.pill-g{background:#dcfce7;color:#166534}
-.pill-y{background:#fef3c7;color:#92400e}
-.pill-r{background:#fee2e2;color:#dc2626}
-.pill-b{background:#dbeafe;color:#1d4ed8}
+/* Badge salvo */
+.desc-salvo{display:inline-block;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:700;background:#dcfce7;color:#166534;margin-left:6px;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -132,7 +94,6 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
 
 <div class="main">
 
-  <!-- BUSCA -->
   <div class="busca-card">
     <div class="busca-titulo">🔍 Buscar produto por SKU ou nome</div>
     <div class="busca-wrap">
@@ -143,20 +104,17 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
       <button class="btn btn-verde" onclick="toggleNovoAnuncio()" id="btn-novo">+ Novo Anúncio</button>
       <button class="btn btn-cinza" onclick="limpar()">✕ Limpar</button>
     </div>
-    <!-- Lista rápida de sugestões -->
     <div id="sugestoes-wrap" style="margin-top:8px"></div>
   </div>
 
   <div class="status-msg" id="st-main"></div>
 
-  <!-- HEADER DO PRODUTO -->
   <div class="produto-header" id="prod-header">
     <div class="prod-nome" id="prod-nome"></div>
     <div class="prod-sku" id="prod-sku-info"></div>
     <div class="prod-kpis" id="prod-kpis"></div>
   </div>
 
-  <!-- NOVO ANÚNCIO -->
   <div class="novo-anuncio-card" id="novo-anuncio-card">
     <div class="novo-titulo">➕ Adicionar anúncio</div>
     <div class="form-grid">
@@ -205,10 +163,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
     </div>
   </div>
 
-  <!-- KITS ALERTA -->
   <div id="kits-alerta-wrap"></div>
-
-  <!-- CANAIS DO PRODUTO -->
   <div id="canais-wrap">
     <div class="empty">
       <div class="icon">📢</div>
@@ -221,19 +176,17 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
 <script>
 const RAILWAY = 'https://web-production-5aa0f.up.railway.app';
 
-// Constantes fiscais
 const PIS_S = 0.0165, COF_S = 0.076, DIFAL_MED = 0.0381, IBS_CBS = 0.02;
 const ICMS_SAIDA_MED = 0.12;
 
-// Taxas por canal
-const TAXA_ML_CL = 0.12, TAXA_ML_PR = 0.17;
+let todosAnuncios = [];
+let todosProdutos = [];
+let prodAtual    = null;
+let anunciosProd = [];
 
-let todosAnuncios = [];  // todos do banco
-let todosProdutos = [];  // todos os produtos
-let prodAtual    = null; // produto selecionado
-let anunciosProd = [];   // anúncios do produto atual
+// Mapa de dados dos cards para recálculo: idx → {preco, cmvBr, taxa, frete}
+const _cardDados = {};
 
-// ══ INIT ══
 async function init(){
   const st = document.getElementById('hd-status');
   try{
@@ -250,50 +203,30 @@ async function init(){
   }
 }
 
-// ══ BUSCA ══
 function buscar(){
   const q = document.getElementById('busca-input').value.trim();
   if(!q) return;
-
-  // Busca por SKU EXATO primeiro
   const sku = q.replace(/^0+/, '');
   let prod = todosProdutos.find(p => String(p.sku).trim() === sku);
-
-  // Só busca por nome se não encontrou por SKU exato
   if(!prod && isNaN(parseInt(q))){
-    prod = todosProdutos.find(p =>
-      (p.nome||'').toLowerCase().includes(q.toLowerCase())
-    );
+    prod = todosProdutos.find(p => (p.nome||'').toLowerCase().includes(q.toLowerCase()));
   }
-
   if(!prod){
-    // Tenta nos anúncios por SKU exato
     const anSkuMatch = todosAnuncios.find(a => String(a.sku||'').trim() === sku);
     if(anSkuMatch){
       prod = {sku: anSkuMatch.sku, nome: anSkuMatch.titulo||anSkuMatch.sku,
               custo_br: anSkuMatch.cmv||0, custo_pr: anSkuMatch.cmv_pr||0};
     }
   }
-
-  if(!prod){
-    mostrarStatus('st-main', `❌ SKU/produto "${q}" não encontrado`, 'err');
-    return;
-  }
+  if(!prod){ mostrarStatus('st-main', `❌ SKU/produto "${q}" não encontrado`, 'err'); return; }
 
   prodAtual = prod;
   mostrarStatus('st-main','','');
-
-  // Filtra anúncios do produto — SKU EXATO apenas
-  // Kits que contêm este produto aparecem no alerta de kits (verificarKits)
   const skuProd = String(prod.sku).trim();
-  anunciosProd = todosAnuncios.filter(a => {
-    const skuA = String(a.sku||'').trim();
-    return skuA === skuProd;
-  });
-
+  anunciosProd = todosAnuncios.filter(a => String(a.sku||'').trim() === skuProd);
   renderProdHeader();
   renderCanais();
-  verificarKits(String(prod.sku).trim());
+  verificarKits(skuProd);
 }
 
 function buscarRapido(sku){
@@ -301,12 +234,10 @@ function buscarRapido(sku){
   buscar();
 }
 
-// ══ ALERTA DE KITS ══
 let kitsDoComponente = [];
 async function verificarKits(sku){
   const wrap = document.getElementById('kits-alerta-wrap');
-  if(!wrap) return;
-  wrap.innerHTML = '';
+  if(wrap) wrap.innerHTML = '';
   kitsDoComponente = [];
   try{
     const r = await fetch(RAILWAY + '/api/db/kits-mapa?sku=' + encodeURIComponent(sku));
@@ -314,32 +245,22 @@ async function verificarKits(sku){
     const d = await r.json();
     if(!d.data || !d.data.length) return;
     kitsDoComponente = d.data;
-    renderKitsAlerta();
   } catch(e){}
 }
 
-function renderKitsAlerta(){
-  // Alerta removido — kits aparecem diretamente na seção de anúncios abaixo
-  const wrap = document.getElementById('kits-alerta-wrap');
-  if(wrap) wrap.innerHTML = '';
-}
-
-// ══ HEADER DO PRODUTO ══
 function renderProdHeader(){
   const p = prodAtual;
   const cmvBr = p.custo_br || p.custo || 0;
   const cmvPr = p.custo_pr || cmvBr;
-
   document.getElementById('prod-nome').textContent = p.nome || 'Produto ' + p.sku;
   document.getElementById('prod-sku-info').textContent =
     `SKU ${p.sku} | ${anunciosProd.length} anúncio(s) encontrado(s)`;
-
-  // KPIs agregados
-  const margens = anunciosProd.filter(a => a.margem_minima > 0).map(a => a.margem_minima);
-  const mgMedia = margens.length ? margens.reduce((s,v) => s+v, 0) / margens.length : 0;
-  const precos  = anunciosProd.filter(a => a.preco > 0).map(a => a.preco);
+  const precos = anunciosProd.filter(a => a.preco > 0).map(a => a.preco);
   const precoMin = precos.length ? Math.min(...precos) : 0;
   const precoMax = precos.length ? Math.max(...precos) : 0;
+  // Calcular margem média real
+  const margens = anunciosProd.map(a => calcMargem(a.preco, cmvBr, a.sale_fee||0.12, a.frete_medio||0, (a.desconto||0)/100));
+  const mgMedia = margens.length ? margens.reduce((s,v)=>s+v,0)/margens.length : 0;
 
   document.getElementById('prod-kpis').innerHTML = `
     <div class="kpi"><div class="kpi-label">CMV Brasil</div><div class="kpi-value">R$ ${fmt(cmvBr)}</div><div class="kpi-sub">Gerencial/Marketplaces</div></div>
@@ -351,100 +272,70 @@ function renderProdHeader(){
   document.getElementById('prod-header').style.display = 'block';
 }
 
-// ══ RENDER CANAIS ══
+// Função centralizada de cálculo de margem
+function calcMargem(preco, cmvBr, taxa, frete, descPct){
+  const pv = preco * (1 - descPct);
+  const difal = DIFAL_MED + IBS_CBS;
+  const lucro = pv - cmvBr - pv*taxa - pv*PIS_S - pv*COF_S - pv*ICMS_SAIDA_MED - pv*difal - frete;
+  const margem = pv > 0 ? lucro / pv : 0;
+  return margem;
+}
+
 function renderCanais(){
   const wrap = document.getElementById('canais-wrap');
   const cmvBr = prodAtual?.custo_br || prodAtual?.custo || 0;
-
   if(!anunciosProd.length && !kitsDoComponente.length){
-    wrap.innerHTML = `
-      <div class="empty">
-        <div class="icon">📭</div>
-        <p>Nenhum anúncio encontrado para SKU ${prodAtual?.sku}</p>
-        <p style="margin-top:8px;font-size:12px">Clique em <b>+ Novo Anúncio</b> para adicionar</p>
-      </div>`;
+    wrap.innerHTML = `<div class="empty"><div class="icon">📭</div>
+      <p>Nenhum anúncio encontrado para SKU ${prodAtual?.sku}</p>
+      <p style="margin-top:8px;font-size:12px">Clique em <b>+ Novo Anúncio</b> para adicionar</p></div>`;
     return;
   }
-
   let html = '';
-
-  // ── Anúncios diretos do produto ──
   if(anunciosProd.length){
     html += `<div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;
       letter-spacing:.5px;margin-bottom:10px;padding-left:4px">
-      📦 Anúncios diretos — SKU ${prodAtual?.sku} (${anunciosProd.length})
-    </div>`;
+      📦 Anúncios diretos — SKU ${prodAtual?.sku} (${anunciosProd.length})</div>`;
     html += `<div class="canais-grid" style="margin-bottom:24px">
-      ${anunciosProd.map((a,i) => renderCardAnuncio(a, 'd'+i, cmvBr)).join('')}
-    </div>`;
-  } else {
-    html += `<div style="background:#f8fafc;border-radius:8px;padding:12px 16px;margin-bottom:20px;
-      font-size:12px;color:#64748b;border:1px solid #e2e8f0">
-      📭 Nenhum anúncio direto para SKU ${prodAtual?.sku}
-    </div>`;
+      ${anunciosProd.map((a,i) => renderCardAnuncio(a, 'd'+i, cmvBr)).join('')}</div>`;
   }
-
-  // ── Kits que contêm este produto ──
   renderKitsSecao(html, cmvBr, wrap);
 }
 
 async function renderKitsSecao(htmlBase, cmvBr, wrap){
   const skuProd = String(prodAtual?.sku||'').trim();
-
-  // Busca kits do banco se não carregados ainda
   if(!kitsDoComponente.length){
     try{
       const r = await fetch(RAILWAY+'/api/db/kits-mapa?sku='+encodeURIComponent(skuProd));
       if(r.ok){ const d=await r.json(); kitsDoComponente=d.data||[]; }
     }catch(e){}
   }
-
   let html = htmlBase;
-
   if(kitsDoComponente.length){
-    // Para cada kit, busca os anúncios correspondentes
     const skusKits = [...new Set(kitsDoComponente.map(k=>k.sku_kit))];
     const anunciosKits = todosAnuncios.filter(a => skusKits.includes(String(a.sku||'').trim()));
-
     html += `<div style="border-top:2px solid #e2e8f0;padding-top:16px;margin-top:4px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <span style="font-size:14px">🔗</span>
         <span style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px">
-          Kits que contêm SKU ${skuProd} (${skusKits.length} kits — ${anunciosKits.length} anúncios)
-        </span>
-      </div>`;
-
-    if(!anunciosKits.length){
-      html += `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;font-size:12px;color:#92400e">
-        ⚠️ Kits mapeados: ${skusKits.slice(0,8).join(', ')}${skusKits.length>8?'...':''}
-        <br>Mas nenhum anúncio encontrado para esses kits no banco.
-        <br><span style="color:#64748b">Rode <b>importar_anuncios_ml.py</b> para importar os anúncios dos kits.</span>
-      </div>`;
-    } else {
-      // Agrupa por SKU de kit
+          🔗 Kits que contêm SKU ${skuProd} (${skusKits.length} kits)</span></div>`;
+    if(anunciosKits.length){
       html += skusKits.map(skuKit => {
         const ansKit = anunciosKits.filter(a => String(a.sku||'').trim() === skuKit);
         if(!ansKit.length) return '';
-        const compInfo = kitsDoComponente.find(k=>k.sku_kit===skuKit);
+        const comp = kitsDoComponente.find(k=>k.sku_kit===skuKit);
         const cmvKit = ansKit[0]?.cmv || 0;
         return `<div style="margin-bottom:16px">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;
             background:#f0f4ff;border-radius:8px;padding:8px 12px">
             <span style="font-size:11px;font-weight:700;color:#1F3864">Kit: ${skuKit}</span>
-            <span style="font-size:10px;color:#64748b">
-              ${compInfo?`SKU ${skuProd} × ${compInfo.qtd}x neste kit`:''}
-            </span>
-            <span style="font-size:10px;color:#64748b;margin-left:auto">${ansKit.length} anúncio(s)</span>
-          </div>
+            <span style="font-size:10px;color:#64748b">${comp?`SKU ${skuProd} × ${comp.qtd}x`:''}</span>
+            <span style="font-size:10px;color:#64748b;margin-left:auto">${ansKit.length} anúncio(s)</span></div>
           <div class="canais-grid">
-            ${ansKit.map((a,i) => renderCardAnuncio(a, 'k'+skuKit.replace(/[^a-z0-9]/gi,'')+i, cmvKit||cmvBr)).join('')}
-          </div>
-        </div>`;
+            ${ansKit.map((a,i)=>renderCardAnuncio(a,'k'+skuKit.replace(/[^a-z0-9]/gi,'')+i,cmvKit||cmvBr)).join('')}
+          </div></div>`;
       }).join('');
     }
     html += '</div>';
   }
-
   wrap.innerHTML = html;
 }
 
@@ -455,146 +346,181 @@ function detectarCanal(a){
 }
 
 function renderCardAnuncio(a, idx, cmvBr){
-  const preco    = parseFloat(a.preco||0);
-  const taxa     = parseFloat(a.sale_fee||0.12);
-  const frete    = parseFloat(a.frete_medio||0);
-  const difal    = DIFAL_MED + IBS_CBS;
-  const desc     = parseFloat(a.desconto||0)/100;
+  const preco   = parseFloat(a.preco||0);
+  const taxa    = parseFloat(a.sale_fee||0.12);
+  const frete   = parseFloat(a.frete_medio||0);
+  const difal   = DIFAL_MED + IBS_CBS;
+  // ── desconto salvo no banco (em %) ──
+  const descPct = parseFloat(a.desconto||0);
+  const desc    = descPct / 100;
+  const pv      = preco * (1 - desc);
 
-  // Preço real (com desconto se houver)
-  const precoVenda = preco * (1 - desc);
+  // Guardar dados do card para recálculo no slider
+  _cardDados[idx] = {preco, cmvBr, taxa, frete};
 
-  // Decomposição fiscal
-  const taxaR   = precoVenda * taxa;
-  const pisR    = precoVenda * PIS_S;
-  const cofR    = precoVenda * COF_S;
-  const icmsR   = precoVenda * ICMS_SAIDA_MED;
-  const difalR  = precoVenda * difal;
-  const lucro   = precoVenda - cmvBr - taxaR - pisR - cofR - icmsR - difalR - frete;
-  const margem  = precoVenda > 0 ? lucro / precoVenda : 0;
+  // Decomposição
+  const taxaR  = pv * taxa;
+  const pisR   = pv * PIS_S;
+  const cofR   = pv * COF_S;
+  const icmsR  = pv * ICMS_SAIDA_MED;
+  const difalR = pv * difal;
+  const lucro  = pv - cmvBr - taxaR - pisR - cofR - icmsR - difalR - frete;
+  const mg     = pv > 0 ? lucro / pv : 0;
 
-  // Ponto de equilíbrio (margem 0)
+  // Ponto zero
   const denom0  = Math.max(1 - taxa - PIS_S - COF_S - ICMS_SAIDA_MED - difal, 0.05);
   const zero    = (cmvBr + frete) / denom0;
-
-  // Desconto máximo (margem mín 15%)
-  const denom15 = Math.max(1 - taxa - PIS_S - COF_S - ICMS_SAIDA_MED - difal - 0.15, 0.05);
+  // Desc máx (margem mín 15%)
+  const denom15 = Math.max(denom0 - 0.15, 0.05);
   const preco15 = (cmvBr + frete) / denom15;
   const descMax = preco > 0 ? Math.max(0, (1 - preco15/preco) * 100) : 0;
 
-  const tipo    = a.listing_type || '';
-  const isPrem  = tipo.includes('gold_pro') || tipo.includes('premium') || (a.status_gestao||'').includes('PREMIUM');
+  const isPrem  = (a.listing_type||'').includes('gold_pro') || (a.listing_type||'').includes('premium');
   const canal   = detectarCanal(a);
+  const mcCls   = mg >= 0.20 ? 'verde' : mg >= 0.10 ? 'amarelo' : 'vermelho';
+  const lucroCls= lucro >= 0 ? 'verde' : 'vermelho';
 
-  const mc = margem;
-  const mcClass = mc >= 0.20 ? 'verde' : mc >= 0.10 ? 'amarelo' : 'vermelho';
-
+  const badgeCanal = canal==='shopee'
+    ? '<span class="canal-badge badge-shopee">🛍️ Shopee</span>'
+    : canal==='yampi'
+    ? '<span class="canal-badge badge-yampi">🌐 Yampi</span>'
+    : '<span class="canal-badge badge-ml">🛒 ML</span>';
   const badgeTipo = isPrem
     ? '<span class="canal-badge badge-premium">⭐ Premium</span>'
     : '<span class="canal-badge badge-classico">📦 Clássico</span>';
 
-  const badgeCanal = canal === 'shopee'
-    ? '<span class="canal-badge badge-shopee">🛍️ Shopee</span>'
-    : canal === 'yampi'
-    ? '<span class="canal-badge badge-yampi">🌐 Yampi</span>'
-    : '<span class="canal-badge badge-ml">🛒 ML</span>';
+  // Badge "desconto salvo" se tiver desconto > 0
+  const badgeDesc = descPct > 0
+    ? `<span class="desc-salvo">💾 ${descPct}% salvo</span>` : '';
 
   return `<div class="canal-card">
     <div class="canal-head">
       ${badgeCanal} ${badgeTipo}
       <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:700;color:#1F3864">${a.id||'—'}</div>
+        <div style="font-size:11px;font-weight:700;color:#1F3864">${a.id||'—'}${badgeDesc}</div>
         <div style="font-size:10px;color:#94a3b8;margin-top:1px">SKU ${a.sku||'—'}</div>
       </div>
-      <span style="font-size:10px;color:#94a3b8">${a.status_gestao||a.status||''}</span>
+      <span style="font-size:10px;color:#94a3b8">${a.status||''}</span>
     </div>
     <div class="canal-body">
-
-      <!-- Título -->
       <div style="font-size:12px;color:#374151;margin-bottom:10px;font-weight:600;line-height:1.3">
         ${(a.titulo||'').slice(0,70)}${(a.titulo||'').length>70?'...':''}
       </div>
 
-      <!-- Métricas principais -->
+      <!-- ── Métricas com IDs para atualizar em tempo real ── -->
       <div class="metricas">
         <div class="metrica">
-          <div class="metrica-valor">R$ ${fmt(precoVenda)}</div>
-          <div class="metrica-label">Preço venda${desc>0?' (c/ desc.)':''}</div>
+          <div class="metrica-valor" id="mv-preco-${idx}">R$ ${fmt(pv)}</div>
+          <div class="metrica-label" id="mv-preco-label-${idx}">Preço${desc>0?' c/desc':''}</div>
         </div>
         <div class="metrica">
-          <div class="metrica-valor ${mcClass}">${(mc*100).toFixed(1)}%</div>
+          <div class="metrica-valor ${mcCls}" id="mv-mg-${idx}">${(mg*100).toFixed(1)}%</div>
           <div class="metrica-label">Margem real</div>
         </div>
         <div class="metrica">
-          <div class="metrica-valor ${lucro>=0?'verde':'vermelho'}">R$ ${fmt(lucro)}</div>
+          <div class="metrica-valor ${lucroCls}" id="mv-lucro-${idx}">R$ ${fmt(lucro)}</div>
           <div class="metrica-label">Lucro</div>
         </div>
       </div>
 
-      <!-- Decomposição -->
+      <!-- Decomposição com IDs -->
       <div class="decomp">
         <div class="decomp-linha"><span>CMV Brasil</span><span>R$ ${fmt(cmvBr)}</span></div>
-        <div class="decomp-linha negativo"><span>Taxa ML (${(taxa*100).toFixed(0)}%)</span><span>- R$ ${fmt(taxaR)}</span></div>
+        <div class="decomp-linha negativo"><span>Taxa ML (${(taxa*100).toFixed(0)}%)</span><span id="dc-taxa-${idx}">- R$ ${fmt(taxaR)}</span></div>
         <div class="decomp-linha negativo"><span>Frete</span><span>- R$ ${fmt(frete)}</span></div>
-        <div class="decomp-linha negativo"><span>PIS+COFINS</span><span>- R$ ${fmt(pisR+cofR)}</span></div>
-        <div class="decomp-linha negativo"><span>ICMS saída (12%)</span><span>- R$ ${fmt(icmsR)}</span></div>
-        <div class="decomp-linha negativo"><span>DIFAL+IBS (${((difal)*100).toFixed(1)}%)</span><span>- R$ ${fmt(difalR)}</span></div>
-        <div class="decomp-linha destaque"><span>= Lucro</span><span style="color:${lucro>=0?'#16a34a':'#dc2626'}">R$ ${fmt(lucro)}</span></div>
+        <div class="decomp-linha negativo"><span>PIS+COFINS</span><span id="dc-pc-${idx}">- R$ ${fmt(pisR+cofR)}</span></div>
+        <div class="decomp-linha negativo"><span>ICMS saída (12%)</span><span id="dc-icms-${idx}">- R$ ${fmt(icmsR)}</span></div>
+        <div class="decomp-linha negativo"><span>DIFAL+IBS (${(difal*100).toFixed(1)}%)</span><span id="dc-difal-${idx}">- R$ ${fmt(difalR)}</span></div>
+        <div class="decomp-linha destaque"><span>= Lucro</span>
+          <span id="dc-lucro-${idx}" style="color:${lucro>=0?'#16a34a':'#dc2626'}">R$ ${fmt(lucro)}</span></div>
         <div class="decomp-linha" style="color:#94a3b8;font-size:10px;margin-top:4px">
-          <span>Ponto zero (margem 0)</span><span>R$ ${fmt(zero)}</span>
-        </div>
+          <span>Ponto zero (margem 0)</span><span>R$ ${fmt(zero)}</span></div>
         <div class="decomp-linha" style="color:#94a3b8;font-size:10px">
-          <span>Desc. máx (mg 15%)</span><span>${descMax.toFixed(1)}%</span>
-        </div>
+          <span>Desc. máx (mg 15%)</span><span>${descMax.toFixed(1)}%</span></div>
       </div>
 
       <!-- Desconto -->
       <div class="desconto-wrap">
-        <div class="desconto-label">Desconto ativo: <span id="desc-val-${idx}">${(desc*100).toFixed(0)}%</span></div>
+        <div class="desconto-label">Desconto ativo: <span id="desc-val-${idx}">${descPct.toFixed(0)}%</span></div>
         <div class="desconto-row">
-          <input type="range" min="0" max="${Math.min(descMax+5,50).toFixed(0)}" step="1"
-            value="${(desc*100).toFixed(0)}"
-            oninput="atualizarDesconto(${idx}, this.value, ${preco}, ${cmvBr}, ${taxa}, ${frete})">
-          <span class="desconto-val" id="desc-inp-${idx}">${(desc*100).toFixed(0)}%</span>
+          <input type="range" id="slider-${idx}"
+            min="0" max="${Math.min(descMax+5,50).toFixed(0)}" step="1"
+            value="${descPct.toFixed(0)}"
+            oninput="atualizarDesconto('${idx}', this.value)">
+          <span class="desconto-val" id="desc-inp-${idx}">${descPct.toFixed(0)}%</span>
         </div>
         <div class="preco-com-desc" id="desc-preco-${idx}">
-          Preço com desconto: <b>R$ ${fmt(precoVenda)}</b>
-          | Margem: <b style="color:${mcClass==='verde'?'#16a34a':mcClass==='amarelo'?'#d97706':'#dc2626'}">${(mc*100).toFixed(1)}%</b>
+          Preço c/ desc: <b>R$ ${fmt(pv)}</b> |
+          Lucro: <b>R$ ${fmt(lucro)}</b> |
+          Margem: <b style="color:${mcCls==='verde'?'#16a34a':mcCls==='amarelo'?'#d97706':'#dc2626'}">${(mg*100).toFixed(1)}%</b>
         </div>
       </div>
 
       <!-- Ações -->
       <div class="canal-acoes">
         ${canal==='ml'?`<a href="https://www.mercadolivre.com.br/anuncios/${a.id}" target="_blank" class="btn-sm btn-sm-azul">🔗 Abrir ML</a>`:''}
-        <button class="btn-sm btn-sm-verde" onclick="salvarDesconto('${a.id}', ${idx})">💾 Salvar desconto</button>
+        <button class="btn-sm btn-sm-verde" onclick="salvarDesconto('${a.id}', '${idx}')">💾 Salvar desconto</button>
         <button class="btn-sm btn-sm-cinza" onclick="copiarId('${a.id}')">📋 Copiar ID</button>
       </div>
-
     </div>
   </div>`;
 }
 
-// ══ DESCONTO ══
-function atualizarDesconto(idx, pct, preco, cmvBr, taxa, frete){
-  const desc = pct/100;
-  const pv   = preco * (1 - desc);
-  const difal = DIFAL_MED + IBS_CBS;
-  const lucro = pv - cmvBr - pv*taxa - pv*PIS_S - pv*COF_S - pv*ICMS_SAIDA_MED - pv*difal - frete;
-  const mg    = pv > 0 ? lucro/pv : 0;
-  const mc    = mg >= 0.20 ? '#16a34a' : mg >= 0.10 ? '#d97706' : '#dc2626';
+// ══ DESCONTO — recalcula tudo em tempo real ══
+function atualizarDesconto(idx, pctStr){
+  const pct  = parseFloat(pctStr) || 0;
+  const d    = _cardDados[idx];
+  if(!d) return;
 
-  const elVal   = document.getElementById(`desc-val-${idx}`);
-  const elInp   = document.getElementById(`desc-inp-${idx}`);
-  const elPreco = document.getElementById(`desc-preco-${idx}`);
-  if(elVal)   elVal.textContent   = pct + '%';
-  if(elInp)   elInp.textContent   = pct + '%';
-  if(elPreco) elPreco.innerHTML   =
-    `Preço com desconto: <b>R$ ${fmt(pv)}</b> | Lucro: <b>R$ ${fmt(lucro)}</b> | Margem: <b style="color:${mc}">${(mg*100).toFixed(1)}%</b>`;
+  const desc  = pct / 100;
+  const pv    = d.preco * (1 - desc);
+  const difal = DIFAL_MED + IBS_CBS;
+  const taxaR = pv * d.taxa;
+  const pisR  = pv * PIS_S;
+  const cofR  = pv * COF_S;
+  const icmsR = pv * ICMS_SAIDA_MED;
+  const difalR= pv * difal;
+  const lucro = pv - d.cmvBr - taxaR - pisR - cofR - icmsR - difalR - d.frete;
+  const mg    = pv > 0 ? lucro / pv : 0;
+  const mcCls = mg >= 0.20 ? '#16a34a' : mg >= 0.10 ? '#d97706' : '#dc2626';
+  const lCls  = lucro >= 0 ? '#16a34a' : '#dc2626';
+
+  // Atualiza label %
+  const eVal = document.getElementById(`desc-val-${idx}`);
+  const eInp = document.getElementById(`desc-inp-${idx}`);
+  if(eVal) eVal.textContent = pct + '%';
+  if(eInp) eInp.textContent = pct + '%';
+
+  // ── Atualiza as 3 caixas de métricas ──
+  const ePreco = document.getElementById(`mv-preco-${idx}`);
+  const eMg    = document.getElementById(`mv-mg-${idx}`);
+  const eLucro = document.getElementById(`mv-lucro-${idx}`);
+  const eLbl   = document.getElementById(`mv-preco-label-${idx}`);
+  if(ePreco) ePreco.textContent = 'R$ ' + fmt(pv);
+  if(eLbl)   eLbl.textContent   = pct > 0 ? 'Preço c/desc' : 'Preço venda';
+  if(eMg){   eMg.textContent = (mg*100).toFixed(1) + '%';
+             eMg.style.color = mcCls; }
+  if(eLucro){ eLucro.textContent = 'R$ ' + fmt(lucro);
+              eLucro.style.color = lCls; }
+
+  // ── Atualiza decomposição ──
+  const set = (id, v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+  set(`dc-taxa-${idx}`,  `- R$ ${fmt(taxaR)}`);
+  set(`dc-pc-${idx}`,    `- R$ ${fmt(pisR+cofR)}`);
+  set(`dc-icms-${idx}`,  `- R$ ${fmt(icmsR)}`);
+  set(`dc-difal-${idx}`, `- R$ ${fmt(difalR)}`);
+  const eDcLucro = document.getElementById(`dc-lucro-${idx}`);
+  if(eDcLucro){ eDcLucro.textContent = `R$ ${fmt(lucro)}`; eDcLucro.style.color = lCls; }
+
+  // ── Atualiza linha de resumo embaixo ──
+  const ePrecoDesc = document.getElementById(`desc-preco-${idx}`);
+  if(ePrecoDesc) ePrecoDesc.innerHTML =
+    `Preço c/ desc: <b>R$ ${fmt(pv)}</b> | Lucro: <b>R$ ${fmt(lucro)}</b> | Margem: <b style="color:${mcCls}">${(mg*100).toFixed(1)}%</b>`;
 }
 
+// ══ SALVAR DESCONTO no banco ══
 async function salvarDesconto(mlbId, idx){
-  const slider = document.querySelector(`#desc-val-${idx}`)?.closest('.desconto-wrap')
-    ?.querySelector('input[type=range]');
+  const slider = document.getElementById(`slider-${idx}`);
   const pct = slider ? parseFloat(slider.value) : 0;
   mostrarStatus('st-main', `💾 Salvando desconto ${pct}% para ${mlbId}...`, 'info');
   try{
@@ -604,9 +530,13 @@ async function salvarDesconto(mlbId, idx){
       body: JSON.stringify({id: mlbId, desconto: pct})
     });
     if(!r.ok) throw new Error(r.status);
-    // Atualiza local
-    const an = anunciosProd.find(a => a.id === mlbId);
+    // Atualiza local (para persistir sem recarregar)
+    const an = todosAnuncios.find(a => a.id === mlbId);
     if(an) an.desconto = pct;
+    const an2 = anunciosProd.find(a => a.id === mlbId);
+    if(an2) an2.desconto = pct;
+    // Mostra badge "salvo" no cabeçalho do card
+    const cardHead = slider?.closest('.canal-card')?.querySelector('.canal-head .metrica-valor, .canal-head div');
     mostrarStatus('st-main', `✅ Desconto ${pct}% salvo para ${mlbId}`, 'ok');
   } catch(e){
     mostrarStatus('st-main', '❌ Erro: ' + e.message, 'err');
@@ -617,10 +547,8 @@ async function salvarDesconto(mlbId, idx){
 function toggleNovoAnuncio(){
   const card = document.getElementById('novo-anuncio-card');
   card.classList.toggle('show');
-  if(card.classList.contains('show')){
-    // Pré-preenche SKU
-    if(prodAtual) document.getElementById('novo-titulo').value = prodAtual.nome || '';
-  }
+  if(card.classList.contains('show') && prodAtual)
+    document.getElementById('novo-titulo').value = prodAtual.nome || '';
 }
 
 async function salvarNovoAnuncio(){
@@ -633,28 +561,21 @@ async function salvarNovoAnuncio(){
   const taxa   = parseFloat(document.getElementById('novo-taxa').value)||12;
   const desc   = parseFloat(document.getElementById('novo-desc').value)||0;
   const titulo = document.getElementById('novo-titulo').value.trim();
-
   if(!id || !preco){ alert('ID e preço são obrigatórios.'); return; }
-
   const payload = {
-    id, sku: prodAtual?.sku||'', titulo,
-    preco, frete_medio: frete,
-    sale_fee: taxa/100,
-    listing_type: tipo,
-    free_shipping: fTipo === 'gratis' ? 1 : 0,
-    status: 'active',
-    desconto: desc,
-    canal,
+    id, sku: prodAtual?.sku||'', titulo, preco, frete_medio: frete,
+    sale_fee: taxa/100, listing_type: tipo,
+    free_shipping: fTipo==='gratis' ? 1 : 0,
+    status: 'active', desconto: desc, canal,
     cmv: prodAtual?.custo_br || 0,
   };
-
   try{
-    const r = await fetch(RAILWAY + '/api/db/listing', {
+    const r = await fetch(RAILWAY+'/api/db/listing',{
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(payload)
     });
     if(!r.ok) throw new Error(r.status);
-    anunciosProd.push({...payload, margem_minima:0, status_gestao:''});
+    anunciosProd.push({...payload, margem_minima:0});
     todosAnuncios.push({...payload});
     toggleNovoAnuncio();
     renderCanais();
@@ -665,32 +586,25 @@ async function salvarNovoAnuncio(){
   }
 }
 
-// ══ HELPERS ══
 function fmt(v){ return (v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-
 function mostrarStatus(id, msg, tipo){
   const el = document.getElementById(id);
   if(!el) return;
   el.textContent = msg; el.className = 'status-msg' + (tipo?' '+tipo:'');
   if(tipo==='ok') setTimeout(()=>el.className='status-msg',4000);
 }
-
 function copiarId(id){
-  navigator.clipboard.writeText(id).then(()=>{
-    mostrarStatus('st-main', `📋 "${id}" copiado!`, 'ok');
-  });
+  navigator.clipboard.writeText(id).then(()=>{ mostrarStatus('st-main',`📋 "${id}" copiado!`,'ok'); });
 }
-
 function limpar(){
-  prodAtual = null; anunciosProd = [];
-  document.getElementById('busca-input').value = '';
-  document.getElementById('prod-header').style.display = 'none';
-  document.getElementById('canais-wrap').innerHTML =
+  prodAtual=null; anunciosProd=[];
+  document.getElementById('busca-input').value='';
+  document.getElementById('prod-header').style.display='none';
+  document.getElementById('canais-wrap').innerHTML=
     '<div class="empty"><div class="icon">📢</div><p>Digite um SKU ou nome para ver os anúncios</p></div>';
   mostrarStatus('st-main','','');
 }
 
-// Input: sugestões ao digitar
 document.addEventListener('DOMContentLoaded', ()=>{
   const inp = document.getElementById('busca-input');
   inp.addEventListener('input', ()=>{
@@ -703,9 +617,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
     document.getElementById('sugestoes-wrap').innerHTML =
       '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
       matches.map(p=>`<button onclick="buscarRapido('${p.sku}')"
-        style="padding:4px 10px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600">
-        SKU ${p.sku} — ${(p.nome||'').slice(0,30)}</button>`).join('') +
-      '</div>';
+        style="padding:4px 10px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;
+        border-radius:6px;cursor:pointer;font-size:11px;font-weight:600">
+        SKU ${p.sku} — ${(p.nome||'').slice(0,30)}</button>`).join('')+'</div>';
   });
 });
 
