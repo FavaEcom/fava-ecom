@@ -2390,24 +2390,36 @@ function getParamsFiscaisOrc(){
   const tipo = document.getElementById('orc-tipo').value  || 'PF';
   const ie   = document.getElementById('orc-ie').value   === 'sim';
   const dest = ICMS_PR_DEST[uf] || {icms_int:0.18,inter:0.12,difal:0.06};
+
+  // ICMS saída:
+  // PR interno → 19,5%
+  // Interestadual → 12% (alíquota inter)
   const icmsSaida = uf==='PR' ? 0.195 : dest.inter;
-  // DIFAL: PF sempre paga; PJ só paga se não tem IE
+
+  // DIFAL: só para interestadual e PF ou PJ sem IE
   const geraDir = tipo==='PF' || (tipo==='PJ' && !ie);
   const difal   = (uf==='PR') ? 0 : (geraDir ? dest.difal : 0);
-  return {uf, tipo, ie, icmsSaida, difal, geraDifal:geraDir&&uf!=='PR'};
+
+  // CMV a usar: PR → CMV PR ; outros → CMV Brasil
+  // (lógica Fava Ecom: CMV PR para vendas locais/balcão/orçamento PR)
+  const usarCmvPR = (uf === 'PR');
+
+  return {uf, tipo, ie, icmsSaida, difal, geraDifal:geraDir&&uf!=='PR', usarCmvPR};
 }
 
-function calcItemOrc(cmvUnit, mc, icmsSaida, difal){
+function calcItemOrc(cmvUnit, mc, icmsSaida, difal, temST){
   if(cmvUnit<=0) return null;
-  const denom = Math.max(1 - PIS - COFINS - icmsSaida - difal - mc, 0.05);
+  // Produto com ST vendido no PR: sem ICMS na saída (já pago na entrada)
+  const icmsEfetivo = (temST && icmsSaida === 0.195) ? 0 : icmsSaida;
+  const denom = Math.max(1 - PIS - COFINS - icmsEfetivo - difal - mc, 0.05);
   const preco  = cmvUnit / denom;
   const pisR   = preco * PIS;
   const cofR   = preco * COFINS;
-  const icmsR  = preco * icmsSaida;
+  const icmsR  = preco * icmsEfetivo;
   const difalR = preco * difal;
   const lucro  = preco - cmvUnit - pisR - cofR - icmsR - difalR;
   const mgliq  = preco>0 ? lucro/preco : 0;
-  return {preco, pisR, cofR, icmsR, difalR, lucro, mgliq};
+  return {preco, pisR, cofR, icmsR, difalR, lucro, mgliq, icmsEfetivo};
 }
 
 async function buscarSkuOrc(idx){
@@ -2482,6 +2494,12 @@ async function buscarSkuOrc(idx){
 }
 
 function calcOrc(){
+  // Garante que a tabela existe
+  if(!document.getElementById('orc-precounit-1')){
+    renderOrcTabela();
+    return; // renderOrcTabela já chama calcOrc no final
+  }
+
   const {icmsSaida, difal, geraDifal, uf, tipo, ie} = getParamsFiscaisOrc();
   const mcPad = (parseFloat(document.getElementById('orc-mc').value)||30)/100;
   const frete = parseFloat(document.getElementById('orc-frete').value)||0;
@@ -2489,29 +2507,40 @@ function calcOrc(){
 
   // Atualiza info fiscal
   const dest = ICMS_PR_DEST[uf]||{icms_int:0.18,inter:0.12,difal:0.06};
+  const cmvOrigem = uf==='PR' ? 'CMV Paraná' : 'CMV Brasil';
   document.getElementById('orc-fiscal-info').innerHTML=
     `<span class="orc-icms-badge">ICMS saída: ${(icmsSaida*100).toFixed(1)}%</span> `+
     `<span class="orc-difal-badge">DIFAL: ${(difal*100).toFixed(1)}%</span><br>`+
     `Tipo: <strong>${tipo}</strong> | IE: <strong>${ie?'Sim':'Não'}</strong> | `+
-    `DIFAL? <strong>${geraDifal?'✅ Sim':'❌ Não'}</strong><br>`+
+    `DIFAL? <strong>${geraDifal?'✅ Sim':'❌ Não'}</strong> | `+
+    `<strong style="color:#1d4ed8">${cmvOrigem}</strong><br>`+
     (uf!=='PR'?`ICMS inter: ${(dest.inter*100).toFixed(0)}% | ICMS destino: ${(dest.icms_int*100).toFixed(1)}%`:'Operação interna PR — ICMS 19,5%');
 
-  // Atualiza CMV de cada item a partir do input
+  // Sincroniza inputs → orcItems E orcItems → inputs
   orcItems.forEach((it,i)=>{
-    const inputCmv=document.getElementById(`orc-cmv-${i+1}`);
-    if(inputCmv) orcItems[i].cmvUnit=parseFloat(inputCmv.value)||0;
-    const inputQtd=document.getElementById(`orc-qtd-${i+1}`);
-    if(inputQtd) orcItems[i].qtd=parseFloat(inputQtd.value)||1;
-    const inputMc=document.getElementById(`orc-mc-${i+1}`);
-    if(inputMc) orcItems[i].mc=(parseFloat(inputMc.value)||30)/100;
-    else orcItems[i].mc=mcPad;
+    const inpCmv = document.getElementById(`orc-cmv-${i+1}`);
+    const inpQtd = document.getElementById(`orc-qtd-${i+1}`);
+    const inpMc  = document.getElementById(`orc-mc-${i+1}`);
+    const elNome = document.getElementById(`orc-nome-${i+1}`);
+    // CMV: input tem prioridade; se vazio mas orcItem tem valor, popula input
+    const cmvInp = inpCmv ? parseFloat(inpCmv.value)||0 : 0;
+    if(cmvInp > 0) orcItems[i].cmvUnit = cmvInp;
+    else if(orcItems[i].cmvUnit > 0 && inpCmv) inpCmv.value = orcItems[i].cmvUnit.toFixed(4);
+    // Qtd e MC
+    if(inpQtd) orcItems[i].qtd = parseFloat(inpQtd.value)||1;
+    orcItems[i].mc = inpMc ? (parseFloat(inpMc.value)||30)/100 : mcPad;
+    // Nome: corrige se elemento mostra SKU ou traço
+    if(elNome && orcItems[i].nome && orcItems[i].nome !== orcItems[i].sku &&
+       (elNome.textContent==='—'||elNome.textContent===orcItems[i].sku||!elNome.textContent)){
+      elNome.textContent = orcItems[i].nome;
+    }
   });
 
   // Calcula todos os itens
   let subTotal=0, totPis=0, totCofins=0, totIcms=0, totDifal=0;
   const resultados=orcItems.map(it=>{
     if(it.cmvUnit<=0||it.qtd<=0) return null;
-    const r=calcItemOrc(it.cmvUnit, it.mc, icmsSaida, difal);
+    const r=calcItemOrc(it.cmvUnit, it.mc, icmsSaida, difal, it.temST||false);
     if(!r) return null;
     const totalItem=r.preco*it.qtd;
     subTotal+=totalItem;
@@ -2537,12 +2566,12 @@ function calcOrc(){
       setEl(`orc-cmvtot-${i+1}`,   'R$ '+fmt(it.cmvUnit*it.qtd));
       setEl(`orc-pis-${i+1}`,      'R$ '+fmt(r.pisR*it.qtd));
       setEl(`orc-cofins-${i+1}`,   'R$ '+fmt(r.cofR*it.qtd));
-      setEl(`orc-icms-${i+1}`,     'R$ '+fmt(r.icmsR*it.qtd));
+      setEl(`orc-icms-${i+1}`,     icmsSaida>0?'R$ '+fmt(r.icmsR*it.qtd):'—');
       setEl(`orc-difal-${i+1}`,    difal>0?'R$ '+fmt(r.difalR*it.qtd):'—');
       setEl(`orc-total-${i+1}`,    'R$ '+fmt(r.totalItem));
       setEl(`orc-mg-${i+1}`,       (r.mgliq*100).toFixed(1)+'%');
-      const el=document.getElementById(`orc-mg-${i+1}`);
-      if(el) el.style.color=r.mgliq>=0.20?'#16a34a':r.mgliq>=0.10?'#d97706':'#dc2626';
+      const elMg=document.getElementById(`orc-mg-${i+1}`);
+      if(elMg) elMg.style.color=r.mgliq>=0.20?'#16a34a':r.mgliq>=0.10?'#d97706':'#dc2626';
     } else {
       ['precounit','cmvtot','pis','cofins','icms','difal','total','mg'].forEach(f=>{
         const el=document.getElementById(`orc-${f}-${i+1}`);if(el)el.textContent='—';
@@ -2552,17 +2581,17 @@ function calcOrc(){
 
   // Resumo
   const setR=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-  setR('orc-r-subtotal',  'R$ '+fmt(subTotal));
-  setR('orc-r-frete',     'R$ '+fmt(frete));
-  setR('orc-r-taxas',     'R$ '+fmt(taxas));
-  setR('orc-r-total',     'R$ '+fmt(totalOrc));
-  setR('orc-r-pis',       'R$ '+fmt(totPis));
-  setR('orc-r-cofins',    'R$ '+fmt(totCofins));
-  setR('orc-r-icms',      'R$ '+fmt(totIcms));
-  setR('orc-r-difal',     difal>0?'R$ '+fmt(totDifal):'—');
-  setR('orc-r-impostos',  'R$ '+fmt(totImpostos));
-  setR('orc-r-cmv',       'R$ '+fmt(cmvTotal));
-  setR('orc-r-lucro',     'R$ '+fmt(lucroTotal));
+  setR('orc-r-subtotal', 'R$ '+fmt(subTotal));
+  setR('orc-r-frete',    'R$ '+fmt(frete));
+  setR('orc-r-taxas',    'R$ '+fmt(taxas));
+  setR('orc-r-total',    'R$ '+fmt(totalOrc));
+  setR('orc-r-pis',      'R$ '+fmt(totPis));
+  setR('orc-r-cofins',   'R$ '+fmt(totCofins));
+  setR('orc-r-icms',     icmsSaida>0?'R$ '+fmt(totIcms):'—');
+  setR('orc-r-difal',    difal>0?'R$ '+fmt(totDifal):'—');
+  setR('orc-r-impostos', 'R$ '+fmt(totImpostos));
+  setR('orc-r-cmv',      'R$ '+fmt(cmvTotal));
+  setR('orc-r-lucro',    'R$ '+fmt(lucroTotal));
   const mgEl=document.getElementById('orc-r-mgliq');
   if(mgEl){mgEl.textContent=(mgLiqTotal*100).toFixed(1)+'%';mgEl.style.color=mgLiqTotal>=.20?'#16a34a':mgLiqTotal>=.10?'#d97706':'#dc2626';}
 }
@@ -2668,44 +2697,14 @@ function renderOrcTabela(){
   calcOrc();
 }
 
-// Render on tab switch
-const _origSwitchTab=switchTab;
-window._orcRendered=false;
-
-// calcOrc robusto
-const _origCalcOrc=calcOrc;
-function calcOrc(){
-  // Garante tabela existe — mas NÃO re-renderiza se já tem dados
-  const jaTemTabela = !!document.getElementById('orc-precounit-1');
-  const temDados = orcItems.some(it=>it.cmvUnit>0||it.sku);
-  if(!jaTemTabela) renderOrcTabela();
-  // Se re-renderizou, precisa repopular os campos com os dados do orcItems
-  else if(jaTemTabela && !temDados){}
-  // Sincroniza: inputs → orcItems E orcItems → inputs
-  const mcPad = (parseFloat(document.getElementById('orc-mc')?.value)||30)/100;
-  orcItems.forEach((it,i)=>{
-    const inpCmv  = document.getElementById(`orc-cmv-${i+1}`);
-    const inpQtd  = document.getElementById(`orc-qtd-${i+1}`);
-    const inpMc   = document.getElementById(`orc-mc-${i+1}`);
-    const elNome  = document.getElementById(`orc-nome-${i+1}`);
-    // CMV: se input tem valor usa ele; senão usa orcItem e popula input
-    const cmvInp  = inpCmv ? parseFloat(inpCmv.value)||0 : 0;
-    if(cmvInp > 0){
-      orcItems[i].cmvUnit = cmvInp;
-    } else if(orcItems[i].cmvUnit > 0 && inpCmv){
-      inpCmv.value = orcItems[i].cmvUnit.toFixed(4);
-    }
-    // Qtd
-    if(inpQtd) orcItems[i].qtd = parseFloat(inpQtd.value)||1;
-    // MC
-    orcItems[i].mc = inpMc ? (parseFloat(inpMc.value)||30)/100 : mcPad;
-    // Nome: se elemento mostra SKU mas orcItem tem nome real, corrige
-    if(elNome && orcItems[i].nome && (elNome.textContent==='—'||elNome.textContent===orcItems[i].sku||elNome.textContent==='')){
-      elNome.textContent = orcItems[i].nome;
-    }
-  });
-  _origCalcOrc();
-}
+// Watch for tab switch to orcamento - renderiza quando abre a aba
+(function(){
+  const origST = switchTab;
+  switchTab = function(t){
+    origST(t);
+    if(t === 'orcamento') setTimeout(calcOrc, 50);
+  };
+})();
 
 // ══════════════════════════════════════════════════════════════════════
 // LISTA BALCÃO
