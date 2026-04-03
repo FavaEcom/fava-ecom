@@ -2672,20 +2672,37 @@ function renderOrcTabela(){
 const _origSwitchTab=switchTab;
 window._orcRendered=false;
 
-// calcOrc robusto: sempre re-renderiza e recalcula
+// calcOrc robusto
 const _origCalcOrc=calcOrc;
 function calcOrc(){
-  // Garante que a tabela existe
-  if(!document.getElementById('orc-precounit-1')) renderOrcTabela();
-  // Lê os inputs e atualiza orcItems ANTES de calcular
+  // Garante tabela existe — mas NÃO re-renderiza se já tem dados
+  const jaTemTabela = !!document.getElementById('orc-precounit-1');
+  const temDados = orcItems.some(it=>it.cmvUnit>0||it.sku);
+  if(!jaTemTabela) renderOrcTabela();
+  // Se re-renderizou, precisa repopular os campos com os dados do orcItems
+  else if(jaTemTabela && !temDados){}
+  // Sincroniza: inputs → orcItems E orcItems → inputs
+  const mcPad = (parseFloat(document.getElementById('orc-mc')?.value)||30)/100;
   orcItems.forEach((it,i)=>{
-    const inpCmv = document.getElementById(`orc-cmv-${i+1}`);
-    const inpQtd = document.getElementById(`orc-qtd-${i+1}`);
-    const inpMc  = document.getElementById(`orc-mc-${i+1}`);
-    const mcPad  = (parseFloat(document.getElementById('orc-mc')?.value)||30)/100;
-    if(inpCmv) orcItems[i].cmvUnit = parseFloat(inpCmv.value)||orcItems[i].cmvUnit||0;
-    if(inpQtd) orcItems[i].qtd     = parseFloat(inpQtd.value)||1;
+    const inpCmv  = document.getElementById(`orc-cmv-${i+1}`);
+    const inpQtd  = document.getElementById(`orc-qtd-${i+1}`);
+    const inpMc   = document.getElementById(`orc-mc-${i+1}`);
+    const elNome  = document.getElementById(`orc-nome-${i+1}`);
+    // CMV: se input tem valor usa ele; senão usa orcItem e popula input
+    const cmvInp  = inpCmv ? parseFloat(inpCmv.value)||0 : 0;
+    if(cmvInp > 0){
+      orcItems[i].cmvUnit = cmvInp;
+    } else if(orcItems[i].cmvUnit > 0 && inpCmv){
+      inpCmv.value = orcItems[i].cmvUnit.toFixed(4);
+    }
+    // Qtd
+    if(inpQtd) orcItems[i].qtd = parseFloat(inpQtd.value)||1;
+    // MC
     orcItems[i].mc = inpMc ? (parseFloat(inpMc.value)||30)/100 : mcPad;
+    // Nome: se elemento mostra SKU mas orcItem tem nome real, corrige
+    if(elNome && orcItems[i].nome && (elNome.textContent==='—'||elNome.textContent===orcItems[i].sku||elNome.textContent==='')){
+      elNome.textContent = orcItems[i].nome;
+    }
   });
   _origCalcOrc();
 }
