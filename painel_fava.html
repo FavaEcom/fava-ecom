@@ -6830,6 +6830,43 @@ ${skuRows ? `
   Gerado em ${new Date().toLocaleString('pt-BR')} â Fava Ecom Sistema de GestÃ£o
 </p>
 
+
+<!-- SYNC PRECO CERTO -->
+<div id="sync-pc-box" style="position:fixed;bottom:16px;right:16px;z-index:9999;background:#fff;border:1px solid #ccc;border-radius:10px;padding:14px 18px;box-shadow:0 2px 10px rgba(0,0,0,.15);min-width:290px;font-family:sans-serif">
+  <b style="font-size:14px">Sync Preco Certo</b>
+  <span id="sync-pc-st" style="margin-left:10px;font-size:12px;color:#888">Pronto</span><br>
+  <small style="color:#aaa">out/2025 a abr/2026</small><br><br>
+  <button onclick="syncPC(false)" style="padding:5px 12px;cursor:pointer">Importar novos</button>
+  <button onclick="syncPC(true)" style="color:#c00;margin-left:6px;padding:5px 12px;cursor:pointer">Resync completo</button>
+  <div style="margin-top:8px;height:6px;background:#eee;border-radius:3px">
+    <div id="sync-pc-bar" style="height:100%;background:#4caf50;border-radius:3px;width:0%;transition:width .4s"></div>
+  </div>
+</div>
+<script>
+async function syncPC(full){
+  const st=document.getElementById('sync-pc-st');const bar=document.getElementById('sync-pc-bar');
+  const SRV='https://web-production-5aa0f.up.railway.app';
+  if(full&&!confirm('Apagar os pedidos existentes e reimportar tudo?'))return;
+  bar.style.background='#4caf50';bar.style.width='2%';
+  try{
+    const DF='2025-10-01',DT='2026-04-03',LIM=1000;let offset=0,total=null,saved=0;
+    if(!full){const ex=await fetch(SRV+'/api/db/pedidos-pc?limit=1').then(r=>r.json());offset=ex.total||0;}
+    st.textContent=full?'Iniciando resync...':'Ja '+offset+' buscando novos...';
+    do{
+      const url='https://sys.precocerto.co/api/order?date_after='+DF+'&date_before='+DT+'&ordering=source_created&limit='+LIM+'&offset='+offset;
+      const d=await fetch(url).then(r=>r.json());total=d.total;const rows=d.rows||[];
+      if(!rows.length)break;
+      const res=await fetch(SRV+'/api/db/pedidos-pc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows})}).then(r=>r.json());
+      saved+=res.saved||0;offset+=rows.length;
+      bar.style.width=Math.min(99,Math.round(offset/total*100))+'%';
+      st.textContent=offset+'/'+total+' - '+saved+' salvos';
+      if(!d.next)break;
+      await new Promise(r=>setTimeout(r,150));
+    }while(offset<(total||Infinity));
+    bar.style.width='100%';bar.style.background='#2196f3';st.textContent='OK - '+saved+' pedidos salvos';
+  }catch(e){bar.style.background='#f44336';st.textContent='Erro: '+e.message;}
+}
+</script>
 </body>
 </html>`;
 
