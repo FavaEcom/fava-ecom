@@ -524,6 +524,13 @@ function salvarCfg(){
   <button class="btn-reload" id="btn-db-status" onclick="mostrarStatusDB()" title="Status do banco de dados">🗄️ DB</button>
   <button class="btn-reload" onclick="document.getElementById('modal-cfg').style.display='flex'">⚙️</button>
 </header>
+<nav style="background:#162040;padding:0 18px;display:flex;gap:4px;border-bottom:2px solid #0f1f3a">
+  <a href="https://web-production-5aa0f.up.railway.app/painel_fava.html"    style="padding:7px 14px;color:#93c5fd;font-size:12px;font-weight:600;text-decoration:none;border-bottom:2px solid #60a5fa;margin-bottom:-2px">🏠 Painel</a>
+  <a href="https://web-production-5aa0f.up.railway.app/balcao_fava.html"    style="padding:7px 14px;color:#9ca3af;font-size:12px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#9ca3af'">🏪 Balcão</a>
+  <a href="https://web-production-5aa0f.up.railway.app/produto_novo.html"   style="padding:7px 14px;color:#9ca3af;font-size:12px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#9ca3af'">➕ Produto Novo</a>
+  <a href="https://web-production-5aa0f.up.railway.app/gestor_anuncios.html" style="padding:7px 14px;color:#9ca3af;font-size:12px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#9ca3af'">📢 Gestor Anúncios</a>
+  <a href="https://web-production-5aa0f.up.railway.app/calculadora_fava.html" style="padding:7px 14px;color:#9ca3af;font-size:12px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#9ca3af'">🧮 Calculadora</a>
+</nav>
 
 <!-- ABAS DE NAVEGAÇÃO -->
 <div class="view-tabs" id="view-tabs">
@@ -7738,7 +7745,7 @@ async function syncPC(full){
   if(full&&!confirm('Apagar os pedidos existentes e reimportar tudo?'))return;
   bar.style.background='#4caf50';bar.style.width='2%';
   try{
-    const DF='2025-10-01',DT='2026-04-03',LIM=1000;let offset=0,total=null,saved=0;
+    const DF='2025-10-01',DT='2026-04-03',LIM=500;let offset=0,total=null,saved=0;
     if(!full){const ex=await fetch(SRV+'/api/db/pedidos-pc?limit=1').then(r=>r.json());offset=ex.total||0;}
     st.textContent=full?'Iniciando resync...':'Ja '+offset+' buscando novos...';
     do{
@@ -7750,7 +7757,7 @@ async function syncPC(full){
       bar.style.width=Math.min(99,Math.round(offset/total*100))+'%';
       st.textContent=offset+'/'+total+' - '+saved+' salvos';
       if(!d.next)break;
-      await new Promise(r=>setTimeout(r,150));
+      await new Promise(r=>setTimeout(r,300));
     }while(offset<(total||Infinity));
     bar.style.width='100%';bar.style.background='#2196f3';st.textContent='OK - '+saved+' pedidos salvos';
   }catch(e){bar.style.background='#f44336';st.textContent='Erro: '+e.message;}
