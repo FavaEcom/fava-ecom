@@ -1,5 +1,5 @@
 """
-FAVA ECOM - Servidor Railway v3
+FAVA ECOM — Servidor Railway v3
 ================================
 - Proxy para Bling / ML / MP
 - Banco PostgreSQL persistente (ou SQLite como fallback)
@@ -58,7 +58,7 @@ def get_db():
             print('[DB] PostgreSQL conectado')
             return _db
         except Exception as e:
-            print(f'[DB] PostgreSQL falhou ({e}) - usando SQLite')
+            print(f'[DB] PostgreSQL falhou ({e}) — usando SQLite')
 
     import sqlite3
     db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fava.db')
@@ -116,17 +116,23 @@ def criar_tabelas():
                 storyselling TEXT,
                 fotos TEXT,
                 qtd_fotos INTEGER DEFAULT 0,
-                updated_at TIMESTAMP DEFAULT NOW())""",
+                updated_at DATETIME DEFAULT (datetime('now')))""",
             """CREATE TABLE IF NOT EXISTS kits (
-                id SERIAL PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 sku TEXT UNIQUE, nome TEXT, itens TEXT,
                 justificativa TEXT, peso REAL DEFAULT 0,
                 titulo_ml TEXT, descricao TEXT, descricao_completa TEXT,
                 categoria TEXT, tarefas TEXT,
                 status TEXT DEFAULT 'aprovado',
-                created_at TIMESTAMP DEFAULT NOW())""",
+                created_at DATETIME DEFAULT (datetime('now')))""",
+            """CREATE TABLE IF NOT EXISTS kits_mapa (
+                sku_componente TEXT NOT NULL,
+                sku_kit TEXT NOT NULL,
+                qtd REAL DEFAULT 1,
+                fonte TEXT DEFAULT 'auto',
+                PRIMARY KEY (sku_componente, sku_kit))""",
             """CREATE TABLE IF NOT EXISTS produto_cadastro (
-                id SERIAL PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 sku TEXT UNIQUE, nome TEXT, fornecedor TEXT,
                 codigo_fornecedor TEXT, ncm TEXT, cst TEXT, cfop TEXT,
                 ipi REAL DEFAULT 0, tem_st INTEGER DEFAULT 0,
@@ -140,8 +146,8 @@ def criar_tabelas():
                 preco_shopee REAL DEFAULT 0, preco_yampi REAL DEFAULT 0,
                 preco_balcao REAL DEFAULT 0, preco_atacado REAL DEFAULT 0,
                 status_cadastro TEXT DEFAULT 'rascunho', tarefas TEXT,
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW())""",
+                created_at DATETIME DEFAULT (datetime('now')),
+                updated_at DATETIME DEFAULT (datetime('now')))""",
         ]
     else:
         sqls = [
@@ -464,7 +470,7 @@ def sync_ml_listings():
 
     if not all_ids:
         print('[ML] Nenhum anúncio encontrado'); return 0
-    print(f'[ML] {len(all_ids)} anúncios - buscando detalhes em lotes...')
+    print(f'[ML] {len(all_ids)} anúncios — buscando detalhes em lotes...')
 
     salvos = 0
     for i in range(0, len(all_ids), 20):
@@ -594,12 +600,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/boletos': self._get_boletos,
             '/api/db/nfs': self._get_nfs,
             '/api/db/listings': self._get_listings,
+            '/api/db/kits-mapa': self._get_kits_mapa,
             '/api/db/cprod-map': self._get_cprod_map,
             '/api/db/pedrinho': self._get_pedrinho,
             '/api/db/kits': self._get_kits,
             '/api/db/cadastros': self._get_cadastros,
             '/api/db/status': self._get_status,
-            '/api/auth/tokens/get': self._get_tokens,
             '/api/cmv-cache': self._get_cmv_compat,
             '/api/sync/now': self._sync_now,
             '/api/sync/bling-anuncios': self._sync_bling_anuncios,
@@ -617,6 +623,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/listing': self._post_listing,
             '/api/db/cprod-map': self._post_cprod_map,
             '/api/db/listings-batch': self._post_listings_batch,
+            '/api/db/kits-mapa': self._post_kits_mapa,
             '/api/db/pedrinho/importar': self._post_pedrinho_importar,
             '/api/db/kit': self._post_kit,
             '/api/db/cadastro': self._post_cadastro,
@@ -677,7 +684,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception as e: self._err(500, str(e))
 
     def _get_listings(self):
-        """GET /api/db/listings - retorna anúncios ML com CMV cruzado."""
+        """GET /api/db/listings — retorna anúncios ML com CMV cruzado."""
         try:
             rows = exe("""
                 SELECT l.id, l.sku, l.titulo, l.preco,
@@ -695,7 +702,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception as e: self._err(500, str(e))
 
     def _post_listing(self):
-        """POST /api/db/listing - upsert completo de um anúncio ML."""
+        """POST /api/db/listing — upsert completo de um anúncio ML."""
         try:
             d = self._body()
             mlb = d.get('id','')
@@ -720,7 +727,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception as e: self._err(500, str(e))
 
     def _post_cprod_map(self):
-        """POST /api/db/cprod-map - salva mapa cProd->SKU Fava da BASE_DADOS."""
+        """POST /api/db/cprod-map — salva mapa cProd->SKU Fava da BASE_DADOS."""
         try:
             d = self._body()
             n = 0
@@ -740,7 +747,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception as e: self._err(500, str(e))
 
     def _post_listings_batch(self):
-        """POST /api/db/listings-batch - upsert em lote de anúncios ML."""
+        """POST /api/db/listings-batch — upsert em lote de anúncios ML."""
         try:
             d = self._body()
             listings = d.get('listings',[])
@@ -768,6 +775,41 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 except Exception as e2:
                     errs += 1
             self._ok({'ok':ok,'errors':errs})
+        except Exception as e: self._err(500, str(e))
+
+    def _post_kits_mapa(self):
+        """POST /api/db/kits-mapa — salva mapa componente→kits."""
+        try:
+            d = self._body()
+            mapa  = d.get('mapa', {})   # {sku_comp: [sku_kit, ...]}
+            kits  = d.get('kits', [])   # [{sku_kit, componentes:[{sku,qtd}]}]
+            p = '%s' if IS_PG else '?'
+            c_pk = 'ON CONFLICT(sku_componente,sku_kit) DO UPDATE SET qtd=EXCLUDED.qtd,fonte=EXCLUDED.fonte' if IS_PG else                    'ON CONFLICT(sku_componente,sku_kit) DO UPDATE SET qtd=excluded.qtd,fonte=excluded.fonte'
+            ok = 0
+            # Insere via kits detalhados (com qtd)
+            for kit in kits:
+                sku_kit = str(kit.get('sku_kit','') or '').strip()
+                fonte   = str(kit.get('fonte','auto'))
+                for comp in kit.get('componentes',[]):
+                    sku_c = str(comp.get('sku','') or '').strip()
+                    qtd   = float(comp.get('qtd', 1) or 1)
+                    if sku_c and sku_kit:
+                        exe(f"INSERT INTO kits_mapa (sku_componente,sku_kit,qtd,fonte) VALUES ({qmark(4)}) {c_pk}",
+                            (sku_c, sku_kit, qtd, fonte))
+                        ok += 1
+            self._ok({'ok': ok, 'kits': len(kits)})
+        except Exception as e: self._err(500, str(e))
+
+    def _get_kits_mapa(self):
+        """GET /api/db/kits-mapa?sku=X — retorna kits que usam o SKU."""
+        try:
+            sku = self.path.split('sku=')[-1].split('&')[0] if 'sku=' in self.path else ''
+            p = '%s' if IS_PG else '?'
+            if sku:
+                rows = exe(f"SELECT sku_kit, qtd, fonte FROM kits_mapa WHERE sku_componente={p}", (sku,), fetchall=True)
+            else:
+                rows = exe("SELECT sku_componente, sku_kit, qtd FROM kits_mapa ORDER BY sku_componente", fetchall=True)
+            self._ok({'data': [dict(r) for r in rows]})
         except Exception as e: self._err(500, str(e))
 
     def _get_status(self):
@@ -799,7 +841,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if d.get('bling_access') or d.get('ml_access'):
                 threading.Thread(target=sync_all, daemon=True).start()
             self._ok({'ok':True})
-            print('[AUTH] Tokens atualizados - sync iniciado')
+            print('[AUTH] Tokens atualizados — sync iniciado')
         except Exception as e: self._err(500, str(e))
 
     def _post_cmv(self):
@@ -926,46 +968,74 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 
     def _get_pedrinho(self):
+        """GET /api/db/pedrinho?codigo=XXX — busca produto no Pedrinho"""
         from urllib.parse import urlparse, parse_qs
-        qs  = parse_qs(urlparse(self.path).query)
+        qs = parse_qs(urlparse(self.path).query)
         cod = qs.get('codigo',[''])[0]
-        q   = qs.get('q',[''])[0]
-        try:
+        q = qs.get('q',[''])[0]
+        with _db_lock:
+            cur = db.cursor()
             if cod:
-                rows = exe("SELECT * FROM pedrinho WHERE codigo=" + ("'"+cod+"'" if not IS_PG else "%s"),
-                           (cod,) if IS_PG else (), fetchall=True)
-                if not rows: self._err(404,'not_found'); return
-                self._ok(rows[0])
+                cur.execute("SELECT * FROM pedrinho WHERE codigo=%s" % ('''+cod+''',) if not IS_PG else "SELECT * FROM pedrinho WHERE codigo=%s", (cod,) if IS_PG else ())
+                if not IS_PG: cur.execute("SELECT * FROM pedrinho WHERE codigo=?", (cod,))
+                row = cur.fetchone()
+                if not row: return self._json({'error':'not_found'}, 404)
+                cols = [d[0] for d in cur.description]
+                return self._json(dict(zip(cols,row)))
             elif q:
-                ph = '%s' if IS_PG else '?'
-                rows = exe(f"SELECT codigo,descricao,qtd_fotos FROM pedrinho WHERE descricao {'ILIKE' if IS_PG else 'LIKE'} {ph} LIMIT 20",
-                           ('%'+q+'%',), fetchall=True)
-                self._ok(rows)
-            else:
-                r = exe("SELECT COUNT(*) as n FROM pedrinho", fetchone=True)
-                self._ok({'total': r['n'] if r else 0})
-        except Exception as e: self._err(500, str(e))
-    def _post_pedrinho_importar(self):
-        import json as _j
-        prods = self._body().get('produtos', [])
-        ok = 0
-        for p in prods:
-            try:
-                fotos = _j.dumps(p.get('fotos',[]))
                 if IS_PG:
-                    exe("INSERT INTO pedrinho (codigo,descricao,storyselling,fotos,qtd_fotos) VALUES (%s,%s,%s,%s,%s) ON CONFLICT(codigo) DO UPDATE SET descricao=EXCLUDED.descricao,storyselling=EXCLUDED.storyselling,fotos=EXCLUDED.fotos,qtd_fotos=EXCLUDED.qtd_fotos",
-                        (p['codigo'],p.get('descricao',''),p.get('storyselling',''),fotos,p.get('qtd_fotos',0)))
+                    cur.execute("SELECT codigo,descricao,qtd_fotos FROM pedrinho WHERE descricao ILIKE %s LIMIT 20", ('%'+q+'%',))
                 else:
-                    exe("INSERT OR REPLACE INTO pedrinho (codigo,descricao,storyselling,fotos,qtd_fotos) VALUES (?,?,?,?,?)",
-                        (p['codigo'],p.get('descricao',''),p.get('storyselling',''),fotos,p.get('qtd_fotos',0)))
-                ok += 1
-            except Exception as e: print(f'[Pedrinho] {e}')
-        self._ok({'inseridos': ok, 'total': len(prods)})
+                    cur.execute("SELECT codigo,descricao,qtd_fotos FROM pedrinho WHERE descricao LIKE ? LIMIT 20", ('%'+q+'%',))
+                cols = [d[0] for d in cur.description]
+                return self._json([dict(zip(cols,r)) for r in cur.fetchall()])
+            else:
+                cur.execute("SELECT COUNT(*) FROM pedrinho")
+                n = cur.fetchone()[0]
+                return self._json({'total': n})
+
+    def _post_pedrinho_importar(self):
+        """POST /api/db/pedrinho/importar — importa lote de produtos"""
+        import json as _json
+        body = self._body()
+        prods = body.get('produtos', [])
+        inseridos = 0
+        with _db_lock:
+            cur = db.cursor()
+            for p in prods:
+                fotos_json = _json.dumps(p.get('fotos',[]))
+                try:
+                    if IS_PG:
+                        cur.execute("""INSERT INTO pedrinho (codigo,descricao,storyselling,fotos,qtd_fotos)
+                            VALUES (%s,%s,%s,%s,%s)
+                            ON CONFLICT(codigo) DO UPDATE SET
+                            descricao=EXCLUDED.descricao,
+                            storyselling=EXCLUDED.storyselling,
+                            fotos=EXCLUDED.fotos,
+                            qtd_fotos=EXCLUDED.qtd_fotos,
+                            updated_at=datetime('now')""",
+                            (p['codigo'],p.get('descricao',''),p.get('storyselling',''),fotos_json,p.get('qtd_fotos',0)))
+                    else:
+                        cur.execute("""INSERT OR REPLACE INTO pedrinho
+                            (codigo,descricao,storyselling,fotos,qtd_fotos)
+                            VALUES (?,?,?,?,?)""",
+                            (p['codigo'],p.get('descricao',''),p.get('storyselling',''),fotos_json,p.get('qtd_fotos',0)))
+                    inseridos += 1
+                except Exception as e:
+                    print(f'[Pedrinho] {e}')
+            if not IS_PG: db.commit()
+        return self._json({'inseridos': inseridos, 'total': len(prods)})
+
     def _get_kits(self):
-        try: self._ok(exe("SELECT * FROM kits ORDER BY created_at DESC", fetchall=True))
-        except Exception as e: self._err(500, str(e))
+        """GET /api/db/kits"""
+        with _db_lock:
+            cur = db.cursor()
+            cur.execute("SELECT * FROM kits ORDER BY created_at DESC")
+            cols = [d[0] for d in cur.description]
+            return self._json([dict(zip(cols,r)) for r in cur.fetchall()])
+
     def _post_kit(self):
-        """POST /api/db/kit - salva kit aprovado"""
+        """POST /api/db/kit — salva kit aprovado"""
         import json as _json
         body = self._body()
         with _db_lock:
@@ -990,15 +1060,20 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                          body.get('peso',0),body.get('titulo'),body.get('descricao'),
                          body.get('descricao_completa'),body.get('categoria'),taref,body.get('status','aprovado')))
                 if not IS_PG: db.commit()
-                self._ok({'ok': True}); return
+                return self._json({'ok': True})
             except Exception as e:
-                self._err(500, str(e)); return
+                return self._json({'error': str(e)}, 500)
 
     def _get_cadastros(self):
-        try: self._ok(exe("SELECT * FROM produto_cadastro ORDER BY created_at DESC LIMIT 200", fetchall=True))
-        except Exception as e: self._err(500, str(e))
+        """GET /api/db/cadastros"""
+        with _db_lock:
+            cur = db.cursor()
+            cur.execute("SELECT * FROM produto_cadastro ORDER BY created_at DESC LIMIT 200")
+            cols = [d[0] for d in cur.description]
+            return self._json([dict(zip(cols,r)) for r in cur.fetchall()])
+
     def _post_cadastro(self):
-        """POST /api/db/cadastro - upsert cadastro completo de produto"""
+        """POST /api/db/cadastro — upsert cadastro completo de produto"""
         import json as _json
         b = self._body()
         fotos = _json.dumps(b.get('fotos',[]))
@@ -1030,33 +1105,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     sql = sql.replace('INSERT INTO','INSERT OR REPLACE INTO')
                 cur.execute(sql, vals)
                 if not IS_PG: db.commit()
-                self._ok({'ok': True, 'sku': b.get('sku')}); return
+                return self._json({'ok': True, 'sku': b.get('sku')})
             except Exception as e:
-                self._err(500, str(e)); return
-
-
-    def _get_tokens(self):
-        """GET /api/auth/tokens/get — retorna tokens salvos para autoload"""
-        try:
-            p = '%s' if IS_PG else '?'
-            row = exe(f"SELECT resultado FROM sync_log WHERE tipo={p} ORDER BY created_at DESC LIMIT 1",
-                      ('_tokens',), fetchone=True)
-            if row:
-                import base64
-                d = json.loads(base64.b64decode(row['resultado']))
-                self._ok({
-                    'bling_access': d.get('bling',{}).get('access',''),
-                    'ml_access':    d.get('ml',{}).get('access',''),
-                    'ok': True
-                })
-            else:
-                self._ok({'ok': False})
-        except Exception as e:
-            self._err(500, str(e))
+                return self._json({'error': str(e)}, 500)
 
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    print(f'Fava Ecom v3 - porta {PORTA} | BD: {"PostgreSQL" if DATABASE_URL else "SQLite"}')
+    print(f'Fava Ecom v3 — porta {PORTA} | BD: {"PostgreSQL" if DATABASE_URL else "SQLite"}')
     criar_tabelas()
     carregar_tokens_salvos()
     agendar_sync()
