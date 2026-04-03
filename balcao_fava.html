@@ -5,536 +5,482 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Balcão — Fava Ecom</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh}
-
-  /* HEADER */
-  .header{background:#1F3864;color:#fff;padding:12px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3)}
-  .header h1{font-size:16px;font-weight:700;flex:1}
-  .header .status{font-size:11px;color:#93c5fd}
-  .btn-hd{padding:6px 14px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700}
-  .btn-new{background:#22c55e;color:#fff}
-  .btn-print{background:#fff;color:#1F3864}
-
-  /* LAYOUT */
-  .layout{display:grid;grid-template-columns:340px 1fr;height:calc(100vh - 50px);overflow:hidden}
-  @media(max-width:700px){.layout{grid-template-columns:1fr;height:auto}}
-
-  /* PAINEL ESQUERDO */
-  .left{background:#fff;border-right:2px solid #e2e8f0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
-
-  .sec-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#94a3b8;border-bottom:1px solid #f1f5f9;padding-bottom:4px}
-
-  /* BUSCA */
-  .busca-wrap{display:flex;gap:6px}
-  .busca-input{flex:1;padding:10px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;transition:.2s}
-  .busca-input:focus{border-color:#1F3864}
-  .btn-buscar{padding:10px 16px;background:#1F3864;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700}
-  .busca-status{font-size:12px;min-height:18px;margin-top:4px}
-  .busca-status.ok{color:#16a34a} .busca-status.err{color:#dc2626}
-
-  /* PAGAMENTO CARDS */
-  .pgto-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
-  .pgto-btn{padding:10px 6px;border:2px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;text-align:center;transition:.15s;font-size:11px;font-weight:700;color:#374151}
-  .pgto-btn.ativo{border-color:#1F3864;background:#eff6ff;color:#1F3864}
-  .pgto-btn .icon{font-size:20px;display:block;margin-bottom:3px}
-  .pgto-btn .desc{font-size:9px;color:#64748b;font-weight:400;margin-top:2px}
-
-  /* INFO PGTO */
-  .pgto-info{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;font-size:12px}
-  .pgto-info b{color:#1F3864}
-
-  /* CLIENTE */
-  .field{margin-bottom:8px}
-  .field label{display:block;font-size:11px;color:#64748b;font-weight:600;margin-bottom:3px}
-  .field input,.field textarea{width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:7px 10px;font-size:13px;outline:none}
-  .field input:focus,.field textarea:focus{border-color:#1F3864}
-
-  /* BOTOES ACAO */
-  .btn-acao{width:100%;padding:11px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;margin-bottom:6px}
-  .btn-calcular{background:#1F3864;color:#fff}
-  .btn-imprimir{background:#0f766e;color:#fff}
-  .btn-limpar{background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0}
-
-  /* PAINEL DIREITO */
-  .right{overflow-y:auto;padding:16px;background:#f0f4f8}
-
-  /* LISTA DE ITENS */
-  .lista-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-  .lista-header h2{font-size:15px;font-weight:700;color:#1F3864}
-
-  .item-card{background:#fff;border-radius:10px;padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:1fr auto;gap:8px;border:1px solid #e2e8f0;transition:.15s}
-  .item-card:hover{border-color:#1F3864;box-shadow:0 2px 8px rgba(31,56,100,.1)}
-  .item-sku{font-size:11px;font-weight:700;color:#1F3864}
-  .item-nome{font-size:13px;font-weight:600;color:#1e293b;margin:2px 0}
-  .item-preco{font-size:22px;font-weight:700;color:#1F3864}
-  .item-preco.desconto{color:#16a34a}
-  .item-preco-orig{font-size:12px;color:#94a3b8;text-decoration:line-through}
-  .item-parcelas{font-size:11px;color:#64748b;margin-top:2px}
-  .qtd-ctrl{display:flex;align-items:center;gap:6px}
-  .qtd-btn{width:28px;height:28px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc;cursor:pointer;font-size:16px;font-weight:700;color:#374151;display:flex;align-items:center;justify-content:center}
-  .qtd-btn:hover{background:#e2e8f0}
-  .qtd-num{font-size:15px;font-weight:700;min-width:24px;text-align:center}
-  .item-remove{background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:18px;padding:2px 6px;border-radius:4px}
-  .item-remove:hover{color:#dc2626;background:#fff1f2}
-  .item-total{font-size:13px;font-weight:700;color:#374151;text-align:right}
-  .item-total-sub{font-size:10px;color:#94a3b8}
-
-  /* TOTALIZADOR */
-  .totalizador{background:#1F3864;color:#fff;border-radius:12px;padding:16px;margin-top:10px}
-  .tot-linha{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.1)}
-  .tot-linha:last-child{border:none;font-size:18px;font-weight:700;padding-top:8px}
-  .tot-desc{color:#93c5fd}
-  .tot-val{font-weight:700}
-  .tot-parcelas{text-align:center;margin-top:8px;font-size:11px;color:#93c5fd;background:rgba(255,255,255,.1);padding:6px;border-radius:6px}
-
-  /* VAZIO */
-  .vazio{text-align:center;padding:60px 20px;color:#94a3b8}
-  .vazio .icon{font-size:48px;margin-bottom:12px}
-  .vazio p{font-size:14px}
-
-  /* PRINT */
-  @media print{
-    .left,.header .btn-new,.header .btn-print,.btn-limpar,.btn-imprimir,.btn-calcular,.qtd-ctrl,.item-remove,.busca-wrap,.busca-status,.pgto-grid,.field,.btn-acao{display:none!important}
-    .layout{display:block}
-    .right{padding:0}
-    body{background:#fff}
-    .item-card{break-inside:avoid;box-shadow:none;border:1px solid #ddd}
-    .totalizador{background:#1F3864!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  }
-
-  /* SPINNER */
-  .spin{display:inline-block;width:14px;height:14px;border:2px solid #e2e8f0;border-top-color:#1F3864;border-radius:50%;animation:spin .6s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh}
+.header{background:#1F3864;color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.header h1{font-size:14px;font-weight:700;flex:1}
+.btn-hd{padding:5px 12px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700}
+.btn-hd.verde{background:#22c55e;color:#fff}
+.btn-hd.branco{background:#fff;color:#1F3864}
+.tabs{background:#fff;border-bottom:2px solid #e2e8f0;display:flex}
+.tab{padding:10px 20px;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;border-bottom:3px solid transparent}
+.tab.ativo{color:#1F3864;border-bottom-color:#1F3864}
+.layout{display:grid;grid-template-columns:260px 1fr;height:calc(100vh - 88px);overflow:hidden}
+.sidebar{background:#fff;border-right:2px solid #e2e8f0;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.sec-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;border-bottom:1px solid #f1f5f9;padding-bottom:4px;margin-bottom:6px}
+.busca-wrap{display:flex;gap:4px}
+.busca-input{flex:1;padding:8px 10px;border:2px solid #e2e8f0;border-radius:7px;font-size:13px;outline:none}
+.busca-input:focus{border-color:#1F3864}
+.btn-buscar{padding:8px 12px;background:#1F3864;color:#fff;border:none;border-radius:7px;cursor:pointer}
+.busca-st{font-size:11px;min-height:16px;margin-top:3px}
+.busca-st.ok{color:#16a34a}.busca-st.err{color:#dc2626}
+.filtro-select{width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:7px 8px;font-size:12px;outline:none;background:#fff}
+.pgto-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px}
+.pgto-btn{padding:8px 4px;border:2px solid #e2e8f0;border-radius:7px;background:#fff;cursor:pointer;text-align:center;font-size:10px;font-weight:700;color:#374151}
+.pgto-btn.ativo{border-color:#1F3864;background:#eff6ff;color:#1F3864}
+.pgto-btn .icon{font-size:18px;display:block;margin-bottom:2px}
+.pgto-info{background:#f8fafc;border-radius:6px;padding:8px 10px;font-size:11px}
+.field{margin-bottom:6px}
+.field label{display:block;font-size:10px;font-weight:700;color:#64748b;margin-bottom:2px;text-transform:uppercase}
+.field input,.field textarea{width:100%;border:1px solid #e2e8f0;border-radius:5px;padding:6px 8px;font-size:12px;outline:none}
+.btn-acao{width:100%;padding:9px;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700;margin-bottom:5px}
+.btn-print{background:#0f766e;color:#fff}
+.btn-clear{background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0}
+.main{overflow-y:auto;padding:12px;background:#f0f4f8}
+.cat-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+.prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.prod-card{background:#fff;border-radius:9px;border:1px solid #e2e8f0;padding:10px;cursor:pointer;position:relative}
+.prod-card:hover{border-color:#1F3864;box-shadow:0 2px 8px rgba(31,56,100,.1)}
+.prod-card.no-orc{border-color:#1F3864;background:#eff6ff}
+.prod-sku{font-size:10px;font-weight:700;color:#1F3864}
+.prod-nome{font-size:11px;font-weight:600;color:#1e293b;margin:3px 0;line-height:1.3;min-height:30px}
+.prod-cat{font-size:9px;color:#94a3b8}
+.prod-preco{font-size:17px;font-weight:700;color:#1F3864;margin-top:4px}
+.prod-preco.pix{color:#16a34a}
+.prod-preco-orig{font-size:10px;color:#94a3b8;text-decoration:line-through}
+.prod-add{position:absolute;bottom:7px;right:7px;width:24px;height:24px;background:#1F3864;color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.prod-qtd-badge{position:absolute;top:5px;right:5px;background:#1F3864;color:#fff;border-radius:10px;padding:1px 6px;font-size:9px;font-weight:700}
+.orc-item{background:#fff;border-radius:8px;border:1px solid #e2e8f0;padding:9px 11px;margin-bottom:7px;display:grid;grid-template-columns:1fr auto;gap:8px}
+.qtd-ctrl{display:flex;align-items:center;gap:5px;margin-top:4px}
+.qtd-btn{width:24px;height:24px;border:1px solid #e2e8f0;border-radius:5px;background:#f8fafc;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.qtd-num{font-size:13px;font-weight:700;min-width:20px;text-align:center}
+.btn-remove{background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:16px;padding:2px 4px}
+.btn-remove:hover{color:#dc2626}
+.totalizador{background:#1F3864;color:#fff;border-radius:10px;padding:14px;margin-top:10px}
+.tot-linha{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.1)}
+.tot-linha:last-child{border:none;font-size:17px;font-weight:700;padding-top:7px}
+.vazio{text-align:center;padding:40px 20px;color:#94a3b8}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid #e2e8f0;border-top-color:#1F3864;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media print{
+  .sidebar,.tabs,.header .btn-hd,.pgto-grid,.field,.btn-acao,.busca-wrap,.filtro-select,.cat-header,.prod-grid,.qtd-ctrl,.btn-remove{display:none!important}
+  .layout{display:block}.main{padding:0}body{background:#fff}
+  .totalizador{background:#1F3864!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <span style="font-size:22px">🏪</span>
-  <h1>Fava Ecom — Atendimento Balcão</h1>
-  <span class="status" id="hd-status">Carregando catálogo...</span>
-  <button class="btn-hd btn-print" onclick="imprimirOrcamento()">🖨️ Imprimir</button>
-  <button class="btn-hd btn-new" onclick="novoAtendimento()">+ Novo</button>
+  <span style="font-size:18px">&#127978;</span>
+  <h1>Fava Ecom &mdash; Atendimento Balc&atilde;o</h1>
+  <span id="hd-status" style="font-size:11px;color:#93c5fd;flex:1"></span>
+  <button class="btn-hd branco" onclick="imprimirOrcamento()">&#128424; Imprimir</button>
+  <button class="btn-hd verde" onclick="novoAtendimento()">+ Novo</button>
+</div>
+
+<div class="tabs">
+  <div class="tab ativo" id="tab-cat" onclick="setTab('catalogo')">&#128230; Cat&aacute;logo</div>
+  <div class="tab" id="tab-orc" onclick="setTab('orcamento')">&#128722; Or&ccedil;amento
+    <span id="orc-badge" style="background:#1F3864;color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px;display:none">0</span>
+  </div>
 </div>
 
 <div class="layout">
-  <!-- ── ESQUERDA ── -->
-  <div class="left">
-
-    <!-- Busca -->
+  <div class="sidebar">
     <div>
-      <div class="sec-title" style="margin-bottom:8px">Buscar produto</div>
+      <div class="sec-label">Buscar produto</div>
       <div class="busca-wrap">
-        <input type="text" id="busca-inp" class="busca-input" placeholder="SKU ou nome do produto..."
-          onkeydown="if(event.key==='Enter')buscar()">
-        <button class="btn-buscar" onclick="buscar()">🔍</button>
+        <input type="text" id="busca-inp" class="busca-input" placeholder="SKU ou nome..." oninput="filtrar()">
+        <button class="btn-buscar" onclick="filtrar()">&#128269;</button>
       </div>
-      <div class="busca-status" id="busca-st"></div>
+      <div class="busca-st" id="busca-st"></div>
     </div>
-
-    <!-- Forma de pagamento -->
     <div>
-      <div class="sec-title" style="margin-bottom:8px">Forma de pagamento</div>
+      <div class="sec-label">Fam&iacute;lia</div>
+      <select class="filtro-select" id="filt-familia" onchange="filtrar()">
+        <option value="">Todas as fam&iacute;lias</option>
+        <option>ACESSÓRIOS PARA FERRAMENTAS</option>
+        <option>AUTOMOTIVO</option>
+        <option>BRINQUEDOS E RECREAÇÃO</option>
+        <option>CAMPING PRAIA E LAZER</option>
+        <option>ELETRODOMÉSTICOS E CLIMATIZAÇÃO</option>
+        <option>ELETRONICOS ELETRICA E CABOS</option>
+        <option>FERRAMENTAS</option>
+        <option>FIXAÇÃO PNEUMÁTICA</option>
+        <option>PEÇAS E MANUTENÇÃO GERAL</option>
+        <option>PEÇAS MLP 750 LED</option>
+        <option>PEÇAS MMA PRO 1000</option>
+        <option>PEÇAS PARA BETONEIRAS</option>
+        <option>PEÇAS PARA GUINCHOS E TALHAS</option>
+        <option>PISCINAS E VERÃO</option>
+        <option>UTILIDADES DOMÉSTICAS</option>
+      </select>
+    </div>
+    <div>
+      <div class="sec-label">Pagamento</div>
       <div class="pgto-grid">
         <button class="pgto-btn" id="btn-pix" onclick="setPgto('pix')">
-          <span class="icon">💚</span>PIX
-          <div class="desc">10% desconto</div>
+          <span class="icon">&#128154;</span>PIX<div style="font-size:9px;color:#64748b">-10%</div>
         </button>
         <button class="pgto-btn ativo" id="btn-vista" onclick="setPgto('vista')">
-          <span class="icon">💵</span>À vista
-          <div class="desc">Preço normal</div>
+          <span class="icon">&#128181;</span>Vista<div style="font-size:9px;color:#64748b">Normal</div>
         </button>
         <button class="pgto-btn" id="btn-cartao" onclick="setPgto('cartao')">
-          <span class="icon">💳</span>Cartão
-          <div class="desc">3x sem juros</div>
+          <span class="icon">&#128179;</span>Cart&atilde;o<div style="font-size:9px;color:#64748b">3x s/j</div>
         </button>
       </div>
-      <div class="pgto-info" id="pgto-info" style="margin-top:8px">
-        <b>💵 À vista</b> — Preço cheio. Sem desconto.
-      </div>
+      <div class="pgto-info" id="pgto-info" style="margin-top:6px">Pre&ccedil;o cheio. Sem desconto.</div>
     </div>
-
-    <!-- Cliente -->
     <div>
-      <div class="sec-title" style="margin-bottom:8px">Dados do cliente (opcional)</div>
-      <div class="field"><label>Nome / Empresa</label><input type="text" id="cli-nome" placeholder="Ex: João Silva"></div>
+      <div class="sec-label">Cliente (opcional)</div>
+      <div class="field"><label>Nome</label><input type="text" id="cli-nome" placeholder="Jo&atilde;o Silva"></div>
       <div class="field"><label>Telefone</label><input type="text" id="cli-fone" placeholder="(41) 9 9999-9999"></div>
-      <div class="field"><label>Observações</label>
-        <textarea id="cli-obs" rows="2" placeholder="Prazo de entrega, condições..."></textarea>
-      </div>
+      <div class="field"><label>Obs.</label><textarea id="cli-obs" rows="2" placeholder="Prazo, condi&ccedil;&otilde;es..."></textarea></div>
     </div>
-
-    <!-- Ações -->
     <div>
-      <button class="btn-acao btn-imprimir" onclick="imprimirOrcamento()">🖨️ Imprimir / Salvar PDF</button>
-      <button class="btn-acao btn-limpar" onclick="novoAtendimento()">🗑️ Limpar tudo</button>
+      <button class="btn-acao btn-print" onclick="imprimirOrcamento()">&#128424; Imprimir / Salvar PDF</button>
+      <button class="btn-acao btn-clear" onclick="novoAtendimento()">&#128465; Limpar tudo</button>
     </div>
-
   </div>
 
-  <!-- ── DIREITA ── -->
-  <div class="right">
-    <div class="lista-header">
-      <h2 id="lista-titulo">Lista de produtos</h2>
-      <span id="lista-count" style="font-size:12px;color:#64748b"></span>
-    </div>
-
-    <div id="lista-wrap">
-      <div class="vazio">
-        <div class="icon">🛒</div>
-        <p>Busque um produto pelo SKU ou nome<br>e ele aparecerá aqui</p>
+  <div class="main">
+    <div id="view-catalogo">
+      <div class="cat-header">
+        <div>
+          <span id="cat-titulo" style="font-size:14px;font-weight:700;color:#1F3864">Todos os produtos</span>
+          <span id="cat-count" style="font-size:12px;color:#64748b;margin-left:8px"></span>
+        </div>
+      </div>
+      <div id="prod-grid-wrap">
+        <div class="vazio"><div class="spin"></div><p>Carregando cat&aacute;logo...</p></div>
       </div>
     </div>
-
-    <div id="totalizador-wrap"></div>
+    <div id="view-orcamento" style="display:none">
+      <div id="orc-lista-wrap">
+        <div class="vazio"><p>Adicione produtos pelo cat&aacute;logo</p></div>
+      </div>
+      <div id="totalizador-wrap"></div>
+    </div>
   </div>
 </div>
 
 <script>
-// ══════════════════════════════════════════════════════════════
-// CONSTANTES
-// ══════════════════════════════════════════════════════════════
-const RAILWAY   = 'https://web-production-5aa0f.up.railway.app';
-const MARGEM    = 0.40;   // 40% — FIXO, funcionário não altera
-const DESC_PIX  = 0.10;   // 10% desconto PIX
-const PARC_MAX  = 3;      // 3x sem juros
-const PARC_MIN  = 100;    // parcela mínima R$100
-// Impostos saída balcão (venda local PR)
-const PIS_S     = 0.0165;
-const COF_S     = 0.076;
-const ICMS_S    = 0.195;  // 19,5% PR interno
+const RAILWAY = 'https://web-production-5aa0f.up.railway.app';
+const MARGEM  = 0.40;
+const PIS_S   = 0.0165;
+const COF_S   = 0.076;
+const ICMS_PR = 0.195;
+const DESC_PIX= 0.10;
+const PARC_MAX= 3;
+const PARC_MIN= 100;
 
-// ══════════════════════════════════════════════════════════════
-// ESTADO
-// ══════════════════════════════════════════════════════════════
-let catalogo  = {};   // sku → {nome, cmv}
-let lista     = [];   // [{sku, nome, cmv, qtd}]
-let pgto      = 'vista'; // pix | vista | cartao
+let catalogo = [];
+let filtrado = [];
+let lista    = [];
+let pgto     = 'vista';
+let tabAtual = 'catalogo';
 
-// ══════════════════════════════════════════════════════════════
-// INIT — carrega catálogo do Railway
-// ══════════════════════════════════════════════════════════════
 async function init(){
   const st = document.getElementById('hd-status');
   try{
-    const r = await fetch(RAILWAY+'/api/db/produtos');
-    if(!r.ok) throw new Error('Erro '+r.status);
+    const r = await fetch(RAILWAY + '/api/db/produtos');
+    if(!r.ok) throw new Error(r.status);
     const prods = await r.json();
-    prods.forEach(p=>{
-      if(p.sku && (p.custo_br||p.custo_pr)){
-        const k = norm(String(p.sku));
-        catalogo[k] = {sku:p.sku, nome:p.nome||p.sku, cmv:p.custo_pr||p.custo_br||0};
-      }
-    });
-    const n = Object.keys(catalogo).length;
-    st.textContent = `✅ ${n} produtos carregados`;
+    catalogo = prods
+      .filter(function(p){ return p.sku && p.nome && (p.custo_pr || p.custo_br) > 0; })
+      .map(function(p){
+        return {
+          sku:     String(p.sku).trim(),
+          nome:    p.nome || '',
+          familia: (p.familia || '').toUpperCase().trim(),
+          cmv:     p.custo_pr || p.custo_br || 0,
+        };
+      });
+    filtrado = catalogo.slice();
+    st.textContent = catalogo.length + ' produtos carregados';
+    filtrar();
     document.getElementById('busca-inp').focus();
-  }catch(e){
-    st.textContent = '❌ Erro ao carregar catálogo';
-    st.style.color='#fca5a5';
+  } catch(e) {
+    st.textContent = 'Erro: ' + e.message;
+    document.getElementById('prod-grid-wrap').innerHTML =
+      '<div class="vazio"><p>Erro ao carregar: ' + e.message + '</p></div>';
   }
 }
 
-function norm(s){ return String(s||'').trim().replace(/^0+(?=\d)/,''); }
+function setTab(t){
+  tabAtual = t;
+  document.getElementById('view-catalogo').style.display  = t === 'catalogo'  ? 'block' : 'none';
+  document.getElementById('view-orcamento').style.display = t === 'orcamento' ? 'block' : 'none';
+  document.getElementById('tab-cat').className = 'tab' + (t === 'catalogo'  ? ' ativo' : '');
+  document.getElementById('tab-orc').className = 'tab' + (t === 'orcamento' ? ' ativo' : '');
+  if(t === 'orcamento') renderOrcamento();
+}
 
-// ══════════════════════════════════════════════════════════════
-// PAGAMENTO
-// ══════════════════════════════════════════════════════════════
-const PGTO_INFO = {
-  pix:    '<b>💚 PIX</b> — Desconto de <b>10%</b> no preço. À vista.',
-  vista:  '<b>💵 À vista</b> — Preço cheio. Dinheiro, débito ou TED.',
-  cartao: '<b>💳 Cartão</b> — Preço cheio parcelado em até <b>3x sem juros</b> (parcela mín. R$ 100).'
+function filtrar(){
+  var q   = (document.getElementById('busca-inp').value || '').toLowerCase().trim();
+  var fam = (document.getElementById('filt-familia').value || '').toUpperCase().trim();
+  filtrado = catalogo.filter(function(p){
+    if(fam && p.familia !== fam) return false;
+    if(q && p.sku.toLowerCase().indexOf(q) < 0 && p.nome.toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  });
+  document.getElementById('cat-titulo').textContent = document.getElementById('filt-familia').value || 'Todos os produtos';
+  document.getElementById('cat-count').textContent  = filtrado.length + ' produto(s)';
+  renderCatalogo();
+}
+
+function fmt(v){
+  return (v || 0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function calcPreco(cmv){
+  var d = Math.max(1 - PIS_S - COF_S - ICMS_PR - MARGEM, 0.05);
+  return cmv / d;
+}
+
+function precoFinal(pb){
+  return pgto === 'pix' ? pb * (1 - DESC_PIX) : pb;
+}
+
+function calcParc(preco){
+  var n = Math.min(PARC_MAX, Math.floor(preco / PARC_MIN));
+  if(n < 2) return null;
+  return {n: n, valor: preco / n};
+}
+
+function renderCatalogo(){
+  var wrap = document.getElementById('prod-grid-wrap');
+  if(!filtrado.length){
+    wrap.innerHTML = '<div class="vazio"><p>Nenhum produto encontrado</p></div>';
+    return;
+  }
+  var mostrar = filtrado.slice(0, 120);
+  var html = '<div class="prod-grid">';
+  for(var i = 0; i < mostrar.length; i++){
+    var p = mostrar[i];
+    var pb = calcPreco(p.cmv);
+    var pf = precoFinal(pb);
+    var noOrc = lista.filter(function(x){ return x.sku === p.sku; })[0];
+    var temDesc = pgto === 'pix';
+    html += '<div class="prod-card' + (noOrc ? ' no-orc' : '') + '" data-sku="' + p.sku + '">';
+    if(noOrc) html += '<span class="prod-qtd-badge">' + noOrc.qtd + '</span>';
+    html += '<div class="prod-sku">SKU ' + p.sku + '</div>';
+    html += '<div class="prod-nome">' + p.nome.slice(0, 55) + (p.nome.length > 55 ? '...' : '') + '</div>';
+    html += '<div class="prod-cat">' + p.familia + '</div>';
+    if(temDesc) html += '<div class="prod-preco-orig">R$ ' + fmt(pb) + '</div>';
+    html += '<div class="prod-preco' + (temDesc ? ' pix' : '') + '">R$ ' + fmt(pf) + '</div>';
+    html += '<button class="prod-add" data-sku="' + p.sku + '">+</button>';
+    html += '</div>';
+  }
+  html += '</div>';
+  if(filtrado.length > 120){
+    html += '<div style="text-align:center;padding:14px;color:#64748b;font-size:12px">Mostrando 120 de ' + filtrado.length + '. Use filtros para refinar.</div>';
+  }
+  wrap.innerHTML = html;
+}
+
+// Event delegation para cliques no catálogo
+document.addEventListener('click', function(e){
+  var card = e.target.closest('.prod-card');
+  var btn  = e.target.closest('.prod-add');
+  if(btn){
+    e.stopPropagation();
+    adicionarAoOrc(btn.dataset.sku);
+    return;
+  }
+  if(card) adicionarAoOrc(card.dataset.sku);
+});
+
+document.addEventListener('click', function(e){
+  var btnMenos = e.target.closest('.btn-menos');
+  var btnMais  = e.target.closest('.btn-mais');
+  var btnRem   = e.target.closest('.btn-remove');
+  if(btnMenos){ alterarQtd(btnMenos.dataset.sku, -1); return; }
+  if(btnMais){  alterarQtd(btnMais.dataset.sku,  +1); return; }
+  if(btnRem){   removerItem(btnRem.dataset.sku);       return; }
+});
+
+function adicionarAoOrc(sku){
+  var p = null;
+  for(var i = 0; i < catalogo.length; i++){
+    if(catalogo[i].sku === sku){ p = catalogo[i]; break; }
+  }
+  if(!p) return;
+  var idx = -1;
+  for(var j = 0; j < lista.length; j++){
+    if(lista[j].sku === sku){ idx = j; break; }
+  }
+  if(idx >= 0){ lista[idx].qtd++; }
+  else { lista.push({sku:p.sku, nome:p.nome, familia:p.familia, cmv:p.cmv, qtd:1}); }
+  atualizarBadge();
+  renderCatalogo();
+  var st = document.getElementById('busca-st');
+  st.textContent = 'Adicionado: ' + p.nome.slice(0, 30);
+  st.className = 'busca-st ok';
+  setTimeout(function(){ st.textContent = ''; }, 2000);
+}
+
+function alterarQtd(sku, delta){
+  for(var i = 0; i < lista.length; i++){
+    if(lista[i].sku === sku){
+      lista[i].qtd = Math.max(1, lista[i].qtd + delta);
+      break;
+    }
+  }
+  renderOrcamento();
+  renderCatalogo();
+}
+
+function removerItem(sku){
+  lista = lista.filter(function(x){ return x.sku !== sku; });
+  atualizarBadge();
+  renderOrcamento();
+  renderCatalogo();
+}
+
+function atualizarBadge(){
+  var b = document.getElementById('orc-badge');
+  if(lista.length){ b.textContent = lista.length; b.style.display = 'inline'; }
+  else { b.style.display = 'none'; }
+}
+
+function renderOrcamento(){
+  var wrap  = document.getElementById('orc-lista-wrap');
+  var totWr = document.getElementById('totalizador-wrap');
+  if(!lista.length){
+    wrap.innerHTML  = '<div class="vazio"><p>Adicione produtos pelo cat&aacute;logo</p></div>';
+    totWr.innerHTML = '';
+    return;
+  }
+  var tot = 0;
+  var html = '';
+  for(var i = 0; i < lista.length; i++){
+    var it = lista[i];
+    var pb = calcPreco(it.cmv);
+    var pf = precoFinal(pb);
+    var total = pf * it.qtd;
+    tot += total;
+    var parc = pgto === 'cartao' ? calcParc(pf) : null;
+    var temDesc = pgto === 'pix';
+    html += '<div class="orc-item">';
+    html += '<div>';
+    html += '<div style="font-size:10px;font-weight:700;color:#1F3864">SKU ' + it.sku + '</div>';
+    html += '<div style="font-size:12px;font-weight:600;color:#1e293b">' + it.nome.slice(0, 50) + '</div>';
+    html += '<div class="qtd-ctrl">';
+    html += '<button class="qtd-btn btn-menos" data-sku="' + it.sku + '">-</button>';
+    html += '<span class="qtd-num">' + it.qtd + '</span>';
+    html += '<button class="qtd-btn btn-mais" data-sku="' + it.sku + '">+</button>';
+    html += '<button class="btn-remove" data-sku="' + it.sku + '">x</button>';
+    html += '</div></div>';
+    html += '<div style="text-align:right;min-width:90px">';
+    if(temDesc) html += '<div style="font-size:10px;color:#94a3b8;text-decoration:line-through">R$ ' + fmt(pb) + '</div>';
+    html += '<div style="font-size:15px;font-weight:700;color:' + (temDesc ? '#16a34a' : '#1F3864') + '">R$ ' + fmt(pf) + '</div>';
+    html += '<div style="font-size:11px;color:#64748b">' + it.qtd + 'x R$ ' + fmt(pf) + '</div>';
+    html += '<div style="font-size:13px;font-weight:700;color:#1F3864">R$ ' + fmt(total) + '</div>';
+    if(parc) html += '<div style="font-size:10px;color:#64748b">' + parc.n + 'x R$ ' + fmt(parc.valor) + '</div>';
+    html += '</div></div>';
+  }
+  wrap.innerHTML = html;
+
+  var descTot = pgto === 'pix' ? tot / (1 - DESC_PIX) * DESC_PIX : 0;
+  var parcG   = pgto === 'cartao' ? calcParc(tot) : null;
+  var th = '<div class="totalizador">';
+  if(pgto === 'pix'){
+    th += '<div class="tot-linha"><span style="color:#93c5fd">Subtotal</span><span>R$ ' + fmt(tot / (1 - DESC_PIX)) + '</span></div>';
+    th += '<div class="tot-linha"><span style="color:#86efac">PIX -10%</span><span style="color:#86efac">- R$ ' + fmt(descTot) + '</span></div>';
+  }
+  th += '<div class="tot-linha"><span style="font-size:15px">TOTAL ' + (pgto==='pix'?'PIX':pgto==='cartao'?'CART&Atilde;O':'&Agrave; VISTA') + '</span>';
+  th += '<span style="font-size:18px;font-weight:700">R$ ' + fmt(tot) + '</span></div>';
+  if(parcG) th += '<div style="text-align:center;font-size:10px;color:#93c5fd;background:rgba(255,255,255,.1);padding:5px;border-radius:5px;margin-top:7px">' + parcG.n + 'x de R$ ' + fmt(parcG.valor) + ' sem juros</div>';
+  th += '</div>';
+  totWr.innerHTML = th;
+}
+
+var PGTO_INFO = {
+  pix:    'PIX &mdash; Desconto de <b>10%</b> autom&aacute;tico',
+  vista:  'Pre&ccedil;o cheio. Dinheiro, d&eacute;bito.',
+  cartao: 'Cart&atilde;o &mdash; <b>3x sem juros</b> (m&iacute;n. R$ 100/parcela)'
 };
 function setPgto(p){
   pgto = p;
-  ['pix','vista','cartao'].forEach(k=>{
-    document.getElementById('btn-'+k).classList.toggle('ativo', k===p);
+  ['pix','vista','cartao'].forEach(function(k){
+    document.getElementById('btn-' + k).classList.toggle('ativo', k === p);
   });
   document.getElementById('pgto-info').innerHTML = PGTO_INFO[p];
-  render();
+  renderCatalogo();
+  if(tabAtual === 'orcamento') renderOrcamento();
 }
 
-// ══════════════════════════════════════════════════════════════
-// CÁLCULO DE PREÇO
-// ══════════════════════════════════════════════════════════════
-function calcPreco(cmv){
-  // Preço balcão PR: sem DIFAL, sem taxa marketplace
-  const denom = Math.max(1 - PIS_S - COF_S - ICMS_S - MARGEM, 0.05);
-  const precoBase = cmv / denom;
-  return precoBase;
-}
-
-function precoComPgto(precoBase){
-  if(pgto === 'pix')    return precoBase * (1 - DESC_PIX);
-  return precoBase;
-}
-
-function parcelas(precoFinal){
-  if(pgto !== 'cartao') return null;
-  // Calcula max parcelas com mínimo de R$100
-  const maxParc = Math.min(PARC_MAX, Math.floor(precoFinal / PARC_MIN));
-  if(maxParc < 2) return null;
-  return {n: maxParc, valor: precoFinal / maxParc};
-}
-
-// ══════════════════════════════════════════════════════════════
-// BUSCA
-// ══════════════════════════════════════════════════════════════
-async function buscar(){
-  const inp = document.getElementById('busca-inp');
-  const st  = document.getElementById('busca-st');
-  const q   = inp.value.trim();
-  if(!q) return;
-
-  st.innerHTML = '<span class="spin"></span> Buscando...';
-  st.className = 'busca-status';
-
-  const qn = norm(q);
-  let found = catalogo[qn] || catalogo[q] || null;
-
-  // Busca por nome parcial
-  if(!found){
-    const match = Object.values(catalogo).find(v=>
-      (v.nome||'').toLowerCase().includes(q.toLowerCase())
-    );
-    if(match) found = match;
-  }
-
-  // Se não achou localmente, tenta o banco de novo
-  if(!found){
-    try{
-      const r = await fetch(RAILWAY+'/api/db/produtos');
-      if(r.ok){
-        const prods = await r.json();
-        const p = prods.find(p=>
-          norm(String(p.sku||''))===qn ||
-          (p.nome||'').toLowerCase().includes(q.toLowerCase())
-        );
-        if(p && (p.custo_br||p.custo_pr)){
-          found = {sku:p.sku, nome:p.nome||p.sku, cmv:p.custo_pr||p.custo_br||0};
-          catalogo[norm(String(p.sku))] = found;
-        }
-      }
-    }catch(e){}
-  }
-
-  if(!found || !found.cmv){
-    st.textContent = `❌ "${q}" não encontrado`;
-    st.className = 'busca-status err';
-    return;
-  }
-
-  const skuN = norm(String(found.sku));
-  const idx  = lista.findIndex(x=>norm(String(x.sku))===skuN);
-  if(idx >= 0){
-    lista[idx].qtd++;
-    st.textContent = `✅ ${found.nome} — quantidade +1`;
-  } else {
-    lista.push({sku:found.sku, nome:found.nome, cmv:found.cmv, qtd:1});
-    st.textContent = `✅ ${found.nome} adicionado`;
-  }
-  st.className = 'busca-status ok';
-  inp.value = '';
-  inp.focus();
-  render();
-}
-
-// ══════════════════════════════════════════════════════════════
-// QUANTIDADE
-// ══════════════════════════════════════════════════════════════
-function alterarQtd(i, delta){
-  lista[i].qtd = Math.max(1, lista[i].qtd + delta);
-  render();
-}
-function remover(i){
-  lista.splice(i, 1);
-  render();
-}
-
-// ══════════════════════════════════════════════════════════════
-// RENDER
-// ══════════════════════════════════════════════════════════════
-function fmt(v){ return (v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-
-function render(){
-  const wrap  = document.getElementById('lista-wrap');
-  const totWr = document.getElementById('totalizador-wrap');
-  const count = document.getElementById('lista-count');
-
-  if(!lista.length){
-    wrap.innerHTML = `<div class="vazio"><div class="icon">🛒</div><p>Busque um produto pelo SKU ou nome<br>e ele aparecerá aqui</p></div>`;
-    totWr.innerHTML = '';
-    count.textContent = '';
-    return;
-  }
-
-  count.textContent = lista.length + ' produto(s)';
-  let totalGeral = 0;
-
-  wrap.innerHTML = lista.map((it, i)=>{
-    const precoBase  = calcPreco(it.cmv);
-    const precoFinal = precoComPgto(precoBase);
-    const total      = precoFinal * it.qtd;
-    const parc       = parcelas(precoFinal);
-    totalGeral += total;
-
-    const temDesc = pgto === 'pix';
-    const precoStr = `R$ ${fmt(precoFinal)}`;
-    const parcStr  = parc ? `${parc.n}x de R$ ${fmt(parc.valor)}` : '';
-
-    return `<div class="item-card">
-      <div>
-        <div class="item-sku">SKU ${it.sku}</div>
-        <div class="item-nome">${it.nome}</div>
-        <div style="display:flex;align-items:baseline;gap:8px;margin-top:6px">
-          ${temDesc ? `<div class="item-preco-orig">R$ ${fmt(precoBase)}</div>` : ''}
-          <div class="item-preco ${temDesc?'desconto':''}">${precoStr}</div>
-        </div>
-        ${parcStr ? `<div class="item-parcelas">💳 ${parcStr} sem juros</div>` : ''}
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
-        <div class="qtd-ctrl">
-          <button class="qtd-btn" onclick="alterarQtd(${i},-1)">−</button>
-          <span class="qtd-num">${it.qtd}</span>
-          <button class="qtd-btn" onclick="alterarQtd(${i},+1)">+</button>
-        </div>
-        <div style="text-align:right">
-          <div class="item-total">R$ ${fmt(total)}</div>
-          <div class="item-total-sub">${it.qtd} × R$ ${fmt(precoFinal)}</div>
-        </div>
-        <button class="item-remove" onclick="remover(${i})" title="Remover">×</button>
-      </div>
-    </div>`;
-  }).join('');
-
-  // Totalizador
-  const descTotal = pgto==='pix' ? totalGeral / (1-DESC_PIX) * DESC_PIX : 0;
-  const parcGeral = pgto==='cartao' ? parcelas(totalGeral) : null;
-
-  totWr.innerHTML = `<div class="totalizador">
-    ${pgto==='pix' ? `<div class="tot-linha"><span class="tot-desc">Subtotal</span><span>R$ ${fmt(totalGeral/(1-DESC_PIX))}</span></div>
-    <div class="tot-linha"><span class="tot-desc">💚 Desconto PIX (10%)</span><span style="color:#86efac">− R$ ${fmt(descTotal)}</span></div>` : ''}
-    <div class="tot-linha">
-      <span style="font-size:16px">TOTAL ${pgto==='pix'?'NO PIX':pgto==='cartao'?'NO CARTÃO':'À VISTA'}</span>
-      <span class="tot-val">R$ ${fmt(totalGeral)}</span>
-    </div>
-    ${parcGeral ? `<div class="tot-parcelas">💳 Em até ${parcGeral.n}x de R$ ${fmt(parcGeral.valor)} sem juros no cartão</div>` : ''}
-    ${pgto==='cartao' && !parcGeral ? `<div class="tot-parcelas" style="color:#fca5a5">💳 Valor mínimo por parcela: R$ ${fmt(PARC_MIN)} — pagar em 1x</div>` : ''}
-  </div>`;
-}
-
-// ══════════════════════════════════════════════════════════════
-// IMPRIMIR
-// ══════════════════════════════════════════════════════════════
 function imprimirOrcamento(){
-  if(!lista.length){ alert('Adicione pelo menos um produto antes de imprimir.'); return; }
-
-  const cliente = document.getElementById('cli-nome').value.trim();
-  const fone    = document.getElementById('cli-fone').value.trim();
-  const obs     = document.getElementById('cli-obs').value.trim();
-  const data    = new Date().toLocaleDateString('pt-BR');
-  const hora    = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-
-  let totalGeral = 0;
-  const linhas = lista.map(it=>{
-    const precoBase  = calcPreco(it.cmv);
-    const precoFinal = precoComPgto(precoBase);
-    const total      = precoFinal * it.qtd;
-    totalGeral      += total;
-    const parc       = parcelas(precoFinal);
-    return `<tr>
-      <td>${it.sku}</td>
-      <td>${it.nome}</td>
-      <td style="text-align:center">${it.qtd}</td>
-      <td style="text-align:right">R$ ${fmt(precoFinal)}</td>
-      <td style="text-align:right"><b>R$ ${fmt(total)}</b></td>
-      ${parc?`<td style="text-align:center">${parc.n}x R$ ${fmt(parc.valor)}</td>`:'<td>—</td>'}
-    </tr>`;
-  }).join('');
-
-  const descTotal = pgto==='pix' ? totalGeral/(1-DESC_PIX)*DESC_PIX : 0;
-  const parcGeral = pgto==='cartao' ? parcelas(totalGeral) : null;
-  const pgtoLabel = pgto==='pix'?'PIX (10% desconto)':pgto==='cartao'?'Cartão (3x sem juros)':'À vista';
-
-  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-  <title>Orçamento Fava Ecom</title>
-  <style>
-    body{font-family:Arial,sans-serif;padding:20px;font-size:12px;color:#1e293b}
-    .logo{display:flex;align-items:center;gap:10px;margin-bottom:4px}
-    .logo h1{font-size:18px;color:#1F3864;margin:0}
-    .info{display:flex;justify-content:space-between;margin-bottom:14px;border-bottom:2px solid #1F3864;padding-bottom:8px}
-    .info-bloco{font-size:11px;color:#64748b}
-    .info-bloco b{color:#1e293b;display:block;font-size:13px}
-    table{width:100%;border-collapse:collapse;margin-bottom:14px}
-    th{background:#1F3864;color:#fff;padding:7px 10px;text-align:left;font-size:10px;text-transform:uppercase}
-    td{padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:12px}
-    tr:nth-child(even) td{background:#f8fafc}
-    .totais{background:#f0f4f8;border-radius:8px;padding:12px;max-width:320px;margin-left:auto}
-    .tot-lin{display:flex;justify-content:space-between;padding:3px 0;font-size:12px}
-    .tot-lin.grande{font-size:16px;font-weight:700;border-top:2px solid #1F3864;margin-top:6px;padding-top:6px;color:#1F3864}
-    .pgto-badge{display:inline-block;background:#1F3864;color:#fff;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-bottom:10px}
-    .obs{font-size:11px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:8px}
-    .rodape{text-align:center;font-size:10px;color:#94a3b8;margin-top:20px;border-top:1px solid #e2e8f0;padding-top:8px}
-  </style>
-  </head><body>
-  <div class="logo"><span style="font-size:28px">🏪</span><h1>Fava Ecom</h1></div>
-  <div class="info">
-    <div class="info-bloco">
-      ${cliente?`<b>${cliente}</b>`:'<b>Cliente não informado</b>'}
-      ${fone?fone:''}
-    </div>
-    <div class="info-bloco" style="text-align:right">
-      <b>Orçamento</b>
-      ${data} às ${hora}
-    </div>
-  </div>
-  <span class="pgto-badge">${pgtoLabel}</span>
-  <table>
-    <thead><tr>
-      <th>SKU</th><th>Produto</th><th style="text-align:center">Qtd</th>
-      <th style="text-align:right">Preço Unit</th><th style="text-align:right">Total</th>
-      <th style="text-align:center">Parcelas</th>
-    </tr></thead>
-    <tbody>${linhas}</tbody>
-  </table>
-  <div class="totais">
-    ${pgto==='pix'?`<div class="tot-lin"><span>Subtotal</span><span>R$ ${fmt(totalGeral/(1-DESC_PIX))}</span></div>
-    <div class="tot-lin" style="color:#16a34a"><span>💚 Desconto PIX (10%)</span><span>− R$ ${fmt(descTotal)}</span></div>`:'' }
-    <div class="tot-lin grande"><span>TOTAL</span><span>R$ ${fmt(totalGeral)}</span></div>
-    ${parcGeral?`<div class="tot-lin" style="color:#1d4ed8"><span>💳 Parcelamento</span><span>${parcGeral.n}x R$ ${fmt(parcGeral.valor)}</span></div>`:''}
-  </div>
-  ${obs?`<div class="obs">📝 ${obs}</div>`:''}
-  <div class="rodape">FV Comércio e Serviços Ltda — favecom.com.br — Válido por 5 dias úteis</div>
-  <script>window.onload=()=>window.print()<\/script>
-  </body></html>`;
-
-  const w = window.open('','_blank');
-  w.document.write(html);
+  if(!lista.length){ alert('Adicione produtos primeiro.'); return; }
+  var cliente = document.getElementById('cli-nome').value.trim();
+  var fone    = document.getElementById('cli-fone').value.trim();
+  var obs     = document.getElementById('cli-obs').value.trim();
+  var data    = new Date().toLocaleDateString('pt-BR');
+  var hora    = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+  var tot = 0;
+  var linhas = '';
+  for(var i = 0; i < lista.length; i++){
+    var it = lista[i];
+    var pb = calcPreco(it.cmv);
+    var pf = precoFinal(pb);
+    var total = pf * it.qtd;
+    tot += total;
+    var parc = pgto === 'cartao' ? calcParc(pf) : null;
+    linhas += '<tr><td>' + it.sku + '</td><td>' + it.nome + '</td>';
+    linhas += '<td style="text-align:center">' + it.qtd + '</td>';
+    linhas += '<td style="text-align:right">R$ ' + fmt(pf) + '</td>';
+    linhas += '<td style="text-align:right"><b>R$ ' + fmt(total) + '</b></td>';
+    linhas += '<td style="text-align:center">' + (parc ? parc.n + 'x R$ ' + fmt(parc.valor) : '--') + '</td></tr>';
+  }
+  var descTot = pgto === 'pix' ? tot / (1 - DESC_PIX) * DESC_PIX : 0;
+  var parcG   = pgto === 'cartao' ? calcParc(tot) : null;
+  var pgtoLabel = pgto==='pix' ? 'PIX (10% desconto)' : pgto==='cartao' ? 'Cartao (3x sem juros)' : 'A vista';
+  var w = window.open('', '_blank');
+  w.document.write('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Orcamento Fava Ecom</title>');
+  w.document.write('<style>body{font-family:Arial,sans-serif;padding:20px;font-size:12px;color:#1e293b}');
+  w.document.write('h1{font-size:18px;color:#1F3864;margin-bottom:4px}.info{display:flex;justify-content:space-between;border-bottom:2px solid #1F3864;padding-bottom:8px;margin-bottom:14px}');
+  w.document.write('.badge{display:inline-block;background:#1F3864;color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-bottom:10px}');
+  w.document.write('table{width:100%;border-collapse:collapse;margin-bottom:14px}th{background:#1F3864;color:#fff;padding:7px 10px;text-align:left;font-size:10px;text-transform:uppercase}');
+  w.document.write('td{padding:6px 10px;border-bottom:1px solid #e2e8f0}tr:nth-child(even) td{background:#f8fafc}');
+  w.document.write('.totais{background:#f0f4f8;border-radius:8px;padding:12px;max-width:300px;margin-left:auto}');
+  w.document.write('.tlin{display:flex;justify-content:space-between;padding:3px 0;font-size:12px}.tlin.grande{font-size:16px;font-weight:700;border-top:2px solid #1F3864;margin-top:6px;padding-top:6px;color:#1F3864}');
+  w.document.write('.rodape{text-align:center;font-size:10px;color:#94a3b8;margin-top:20px;border-top:1px solid #e2e8f0;padding-top:8px}</style></head><body>');
+  w.document.write('<h1>Fava Ecom</h1>');
+  w.document.write('<div class="info"><div>' + (cliente ? '<b>' + cliente + '</b>' + (fone ? '<br>' + fone : '') : '') + '</div>');
+  w.document.write('<div style="text-align:right"><b>Orcamento</b><br>' + data + ' ' + hora + '</div></div>');
+  w.document.write('<span class="badge">' + pgtoLabel + '</span>');
+  w.document.write('<table><thead><tr><th>SKU</th><th>Produto</th><th>Qtd</th><th>Preco</th><th>Total</th><th>Parcelas</th></tr></thead>');
+  w.document.write('<tbody>' + linhas + '</tbody></table>');
+  w.document.write('<div class="totais">');
+  if(pgto === 'pix'){
+    w.document.write('<div class="tlin"><span>Subtotal</span><span>R$ ' + fmt(tot/(1-DESC_PIX)) + '</span></div>');
+    w.document.write('<div class="tlin" style="color:#16a34a"><span>PIX -10%</span><span>- R$ ' + fmt(descTot) + '</span></div>');
+  }
+  w.document.write('<div class="tlin grande"><span>TOTAL</span><span>R$ ' + fmt(tot) + '</span></div>');
+  if(parcG) w.document.write('<div class="tlin" style="color:#1d4ed8"><span>Parcelamento</span><span>' + parcG.n + 'x R$ ' + fmt(parcG.valor) + '</span></div>');
+  w.document.write('</div>');
+  if(obs) w.document.write('<div style="font-size:11px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:8px">' + obs + '</div>');
+  w.document.write('<div class="rodape">FV Comercio e Servicos Ltda - Valido por 5 dias uteis</div>');
+  w.document.write('<scr' + 'ipt>window.onload=function(){window.print();}</' + 'script>');
+  w.document.write('</body></html>');
   w.document.close();
 }
 
-// ══════════════════════════════════════════════════════════════
-// NOVO ATENDIMENTO
-// ══════════════════════════════════════════════════════════════
 function novoAtendimento(){
   if(lista.length && !confirm('Limpar atendimento atual?')) return;
-  lista = [];
-  pgto  = 'vista';
-  setPgto('vista');
-  ['cli-nome','cli-fone','cli-obs'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.value = '';
+  lista = []; pgto = 'vista';
+  ['cli-nome','cli-fone','cli-obs'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.value = '';
   });
   document.getElementById('busca-inp').value = '';
-  document.getElementById('busca-st').textContent = '';
-  render();
-  document.getElementById('busca-inp').focus();
+  setPgto('vista');
+  atualizarBadge();
+  renderCatalogo();
+  setTab('catalogo');
 }
 
-// ══════════════════════════════════════════════════════════════
-// START
-// ══════════════════════════════════════════════════════════════
 init();
 </script>
 </body>
