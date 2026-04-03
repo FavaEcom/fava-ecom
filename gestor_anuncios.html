@@ -255,19 +255,19 @@ function buscar(){
   const q = document.getElementById('busca-input').value.trim();
   if(!q) return;
 
-  // Busca por SKU exato primeiro
+  // Busca por SKU EXATO primeiro
   const sku = q.replace(/^0+/, '');
   let prod = todosProdutos.find(p => String(p.sku).trim() === sku);
 
-  // Busca por nome parcial
-  if(!prod){
+  // Só busca por nome se não encontrou por SKU exato
+  if(!prod && isNaN(parseInt(q))){
     prod = todosProdutos.find(p =>
       (p.nome||'').toLowerCase().includes(q.toLowerCase())
     );
   }
 
   if(!prod){
-    // Tenta pelos anúncios
+    // Tenta nos anúncios por SKU exato
     const anSkuMatch = todosAnuncios.find(a => String(a.sku||'').trim() === sku);
     if(anSkuMatch){
       prod = {sku: anSkuMatch.sku, nome: anSkuMatch.titulo||anSkuMatch.sku,
@@ -283,12 +283,13 @@ function buscar(){
   prodAtual = prod;
   mostrarStatus('st-main','','');
 
-  // Filtra anúncios do produto
+  // Filtra anúncios do produto — SKU EXATO apenas
+  // Kits que contêm este produto aparecem no alerta de kits (verificarKits)
   const skuProd = String(prod.sku).trim();
-  anunciosProd = todosAnuncios.filter(a =>
-    String(a.sku||'').trim() === skuProd ||
-    (a.titulo||'').toLowerCase() === (prod.nome||'').toLowerCase()
-  );
+  anunciosProd = todosAnuncios.filter(a => {
+    const skuA = String(a.sku||'').trim();
+    return skuA === skuProd;
+  });
 
   renderProdHeader();
   renderCanais();
