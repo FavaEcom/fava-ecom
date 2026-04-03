@@ -27,6 +27,10 @@ BLING_SECRET  = os.environ.get('BLING_SECRET', '590eed8f0b2fb1998e3f60335cef2a17
 ML_ACCESS     = os.environ.get('ML_ACCESS', '')
 ML_REFRESH    = os.environ.get('ML_REFRESH', '')
 
+YAMPI_ALIAS   = os.environ.get('YAMPI_ALIAS',  'fava-ecom')
+YAMPI_TOKEN   = os.environ.get('YAMPI_TOKEN',  'pMMopJjv6qB1d9ccwargjmOJQeJcHHsWrdnTw477')
+YAMPI_SECRET  = os.environ.get('YAMPI_SECRET', 'sk_pjOvgahJ0QysIhv6i7RXhs3oynRRI5O1WaQXB')
+
 PROXY = {
     '/api/bling/': 'https://www.bling.com.br/Api/v3/',
     '/api/ml/':    'https://api.mercadolibre.com/',
@@ -618,6 +622,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/bling/trocar':         self._bling_trocar,
         }
         if clean in routes: routes[clean]()
+        elif clean.startswith('/api/yampi/'): self._yampi_proxy('GET')
         elif clean.startswith('/api/'): self._proxy('GET')
         else: super().do_GET()
 
@@ -642,7 +647,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         else: self.send_error(405)
 
     def do_PUT(self):
-        if self.path.startswith('/api/'): self._proxy('PUT')
+        if self.path.startswith('/api/yampi/'): self._yampi_proxy('PUT')
+        elif self.path.startswith('/api/'): self._proxy('PUT')
         else: self.send_error(405)
 
     def _body(self):
@@ -817,6 +823,35 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def _sync_now(self):
         threading.Thread(target=sync_all, daemon=True).start()
         self._ok({'ok':True,'msg':'Sync iniciado'})
+
+
+    def _yampi_proxy(self, method):
+        """Proxy para Yampi API com auth automática."""
+        subpath = self.path[len('/api/yampi'):]  # ex: /catalog/skus/292926764
+        url = f'https://api.dooki.com.br/v2/{YAMPI_ALIAS}{subpath}'
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Token': YAMPI_TOKEN,
+            'User-Secret-Key': YAMPI_SECRET,
+        }
+        body = None
+        if method in ('POST', 'PUT', 'PATCH'):
+            n = int(self.headers.get('Content-Length', 0))
+            if n: body = self.rfile.read(n)
+        try:
+            req = urllib.request.Request(url, data=body, headers=headers, method=method)
+            with urllib.request.urlopen(req, timeout=20) as r:
+                data = r.read()
+                self.send_response(r.status); self._cors()
+                self.send_header('Content-Type', 'application/json'); self.end_headers()
+                self.wfile.write(data)
+        except urllib.error.HTTPError as e:
+            self.send_response(e.code); self._cors()
+            self.send_header('Content-Type', 'application/json'); self.end_headers()
+            self.wfile.write(e.read())
+        except Exception as e:
+            self._err(500, str(e))
 
     def _get_pedrinho(self):
         from urllib.parse import urlparse, parse_qs

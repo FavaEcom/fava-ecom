@@ -456,7 +456,11 @@ function renderCardAnuncio(a, idx, cmvBr){
         </div>
       </div>
 
-      <!-- Ações -->
+
+      <!-- ── Yampi: dados ao vivo + edição ── -->
+      ${canal === 'yampi' ? renderYampiExtra(idx, a.id) : ''}
+
+            <!-- Ações -->
       <div class="canal-acoes">
         ${canal==='ml'?`<a href="https://www.mercadolivre.com.br/anuncios/${a.id}" target="_blank" class="btn-sm btn-sm-azul">🔗 Abrir ML</a>`:''}
         <button class="btn-sm btn-sm-verde" onclick="salvarDesconto('${a.id}', '${idx}')">💾 Salvar desconto</button>
@@ -622,6 +626,172 @@ document.addEventListener('DOMContentLoaded', ()=>{
         SKU ${p.sku} — ${(p.nome||'').slice(0,30)}</button>`).join('')+'</div>';
   });
 });
+
+
+// ══ YAMPI — dados ao vivo + edição ══
+
+function renderYampiExtra(idx, yampiId){
+  const skuId = String(yampiId||'').replace('YMP','');
+  return `
+    <div class="yampi-box" id="yampi-box-${idx}" style="background:#f0fdf4;border:1px solid #bbf7d0;
+      border-radius:8px;padding:10px 12px;margin-top:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:10px;font-weight:700;color:#166534;text-transform:uppercase">🌐 Yampi — Dados reais</span>
+        <button onclick="carregarYampi('${skuId}','${idx}')"
+          style="padding:2px 8px;background:#dcfce7;color:#166534;border:1px solid #86efac;
+          border-radius:4px;font-size:10px;font-weight:700;cursor:pointer">🔄 Carregar</button>
+        <span id="yampi-status-${idx}" style="font-size:10px;color:#64748b"></span>
+      </div>
+      <div id="yampi-dados-${idx}" style="font-size:11px;color:#475569">
+        Clique em Carregar para buscar dados da Yampi
+      </div>
+    </div>`;
+}
+
+async function carregarYampi(skuId, idx){
+  const elStatus = document.getElementById(`yampi-status-${idx}`);
+  const elDados  = document.getElementById(`yampi-dados-${idx}`);
+  if(!elStatus || !elDados) return;
+  elStatus.textContent = '⏳ Buscando...';
+  try{
+    // Busca SKU
+    const rSku = await fetch(`${RAILWAY}/api/yampi/catalog/skus/${skuId}?skipCache=true`);
+    if(!rSku.ok) throw new Error('SKU ' + rSku.status);
+    const dSku = await rSku.json();
+    const s = dSku.data;
+    if(!s){ elStatus.textContent = '❌ SKU não encontrado'; return; }
+
+    // Busca produto (para frete customizado)
+    const rProd = await fetch(`${RAILWAY}/api/yampi/catalog/products/${s.product_id}?skipCache=true`);
+    const dProd = rProd.ok ? await rProd.json() : {};
+    const p = dProd.data || {};
+
+    elStatus.textContent = '✅ Atualizado';
+    const hasCustShip = p.has_custom_shipping;
+    const shipVal     = p.shipping_value || 0;
+
+    elDados.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
+        <div style="background:#fff;border-radius:6px;padding:6px 8px;border:1px solid #e2e8f0">
+          <div style="font-size:9px;color:#94a3b8;text-transform:uppercase">Preço venda</div>
+          <div style="font-size:14px;font-weight:700;color:#1F3864">R$ ${fmtBR(s.price_sale)}</div>
+        </div>
+        <div style="background:#fff;border-radius:6px;padding:6px 8px;border:1px solid #e2e8f0">
+          <div style="font-size:9px;color:#94a3b8;text-transform:uppercase">Preço promo</div>
+          <div style="font-size:14px;font-weight:700;color:${s.price_discount>0?'#16a34a':'#94a3b8'}">
+            ${s.price_discount>0?'R$ '+fmtBR(s.price_discount):'—'}
+          </div>
+        </div>
+        <div style="background:#fff;border-radius:6px;padding:6px 8px;border:1px solid #e2e8f0">
+          <div style="font-size:9px;color:#94a3b8;text-transform:uppercase">Estoque</div>
+          <div style="font-size:14px;font-weight:700;color:${s.total_in_stock>5?'#16a34a':s.total_in_stock>0?'#d97706':'#dc2626'}">
+            ${s.total_in_stock} un
+          </div>
+        </div>
+      </div>
+
+      <!-- Editar preço -->
+      <div style="background:#fff;border-radius:6px;padding:8px 10px;border:1px solid #e2e8f0;margin-bottom:6px">
+        <div style="font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:6px">✏️ Editar preço</div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <div>
+            <div style="font-size:9px;color:#94a3b8">Preço venda (R$)</div>
+            <input type="number" id="yampi-preco-${idx}" step="0.01"
+              value="${s.price_sale}"
+              style="width:90px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px">
+          </div>
+          <div>
+            <div style="font-size:9px;color:#94a3b8">Promo (R$, 0=sem)</div>
+            <input type="number" id="yampi-promo-${idx}" step="0.01"
+              value="${s.price_discount||0}"
+              style="width:90px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px">
+          </div>
+          <button onclick="salvarPrecoYampi('${skuId}','${s.product_id}','${idx}')"
+            style="padding:5px 12px;background:#16a34a;color:#fff;border:none;border-radius:6px;
+            font-size:11px;font-weight:700;cursor:pointer;margin-top:10px">💾 Salvar preço</button>
+        </div>
+      </div>
+
+      <!-- Frete customizado -->
+      <div style="background:#fff;border-radius:6px;padding:8px 10px;border:1px solid #e2e8f0">
+        <div style="font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:6px">
+          🚚 Frete customizado — ${hasCustShip?'Ativo (R$ '+fmtBR(shipVal)+')':'Desativado (usa frete padrão)'}
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <select id="yampi-frete-tipo-${idx}"
+            style="padding:4px 6px;border:1px solid #e2e8f0;border-radius:4px;font-size:11px">
+            <option value="none" ${!hasCustShip?'selected':''}>Frete padrão (sem customizar)</option>
+            <option value="fixed" ${hasCustShip&&shipVal>0?'selected':''}>Frete fixo (R$)</option>
+            <option value="free" ${hasCustShip&&shipVal===0?'selected':''}>Frete grátis</option>
+          </select>
+          <input type="number" id="yampi-frete-val-${idx}" step="0.01"
+            value="${shipVal}" placeholder="Valor R$"
+            style="width:80px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:4px;font-size:11px">
+          <button onclick="salvarFreteYampi('${s.product_id}','${idx}')"
+            style="padding:5px 12px;background:#1F3864;color:#fff;border:none;border-radius:6px;
+            font-size:11px;font-weight:700;cursor:pointer">💾 Salvar frete</button>
+        </div>
+      </div>
+    `;
+  } catch(e){
+    elStatus.textContent = '❌ Erro: ' + e.message;
+  }
+}
+
+async function salvarPrecoYampi(skuId, productId, idx){
+  const novoPreco = parseFloat(document.getElementById(`yampi-preco-${idx}`)?.value||0);
+  const novoPromo = parseFloat(document.getElementById(`yampi-promo-${idx}`)?.value||0);
+  if(!novoPreco){ alert('Preço inválido'); return; }
+  const elStatus = document.getElementById(`yampi-status-${idx}`);
+  if(elStatus) elStatus.textContent = '💾 Salvando...';
+  try{
+    const payload = {price_sale: novoPreco};
+    if(novoPromo > 0) payload.price_discount = novoPromo;
+    const r = await fetch(`${RAILWAY}/api/yampi/catalog/skus/${skuId}`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if(!r.ok){ const e=await r.json(); throw new Error(JSON.stringify(e)); }
+    if(elStatus) elStatus.textContent = `✅ Preço R$ ${novoPreco.toFixed(2)} salvo!`;
+    mostrarStatus('st-main', `✅ Yampi: preço R$ ${novoPreco.toFixed(2)} atualizado`, 'ok');
+  } catch(e){
+    if(elStatus) elStatus.textContent = '❌ Erro';
+    mostrarStatus('st-main', '❌ Yampi erro: ' + e.message, 'err');
+  }
+}
+
+async function salvarFreteYampi(productId, idx){
+  const tipo = document.getElementById(`yampi-frete-tipo-${idx}`)?.value;
+  const val  = parseFloat(document.getElementById(`yampi-frete-val-${idx}`)?.value||0);
+  const elStatus = document.getElementById(`yampi-status-${idx}`);
+  if(elStatus) elStatus.textContent = '💾 Salvando frete...';
+
+  let payload = {};
+  if(tipo === 'none'){
+    payload = {has_custom_shipping: false};
+  } else if(tipo === 'free'){
+    payload = {has_custom_shipping: true, shipping_value: 0};
+  } else {
+    payload = {has_custom_shipping: true, shipping_value: val};
+  }
+
+  try{
+    const r = await fetch(`${RAILWAY}/api/yampi/catalog/products/${productId}`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if(!r.ok){ const e=await r.json(); throw new Error(JSON.stringify(e)); }
+    if(elStatus) elStatus.textContent = `✅ Frete salvo!`;
+    mostrarStatus('st-main', '✅ Yampi: frete atualizado', 'ok');
+  } catch(e){
+    if(elStatus) elStatus.textContent = '❌ Erro frete';
+    mostrarStatus('st-main', '❌ Yampi frete erro: ' + e.message, 'err');
+  }
+}
+
+function fmtBR(v){ return (v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
 init();
 </script>
