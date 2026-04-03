@@ -228,6 +228,9 @@ header h1{font-size:14px;font-weight:700;flex:1}
   header,.tabs,.orc-left,#btn-print,#btn-export-orc{display:none!important}
   .orc-layout{grid-template-columns:1fr;height:auto}
   .orc-right{padding:5px}
+  .no-print{display:none!important}
+  /* Mostra código do fornecedor na impressão */
+  .orc-cod-forn{display:table-cell!important}
 }
 </style>
 </head>
@@ -2409,8 +2412,9 @@ function getParamsFiscaisOrc(){
 
 function calcItemOrc(cmvUnit, mc, icmsSaida, difal, temST){
   if(cmvUnit<=0) return null;
-  // Produto com ST vendido no PR: sem ICMS na saída (já pago na entrada)
-  const icmsEfetivo = (temST && icmsSaida === 0.195) ? 0 : icmsSaida;
+  // Produto com ST vendido no PR: sem ICMS na saída (já pago na entrada via ST)
+  // Fava Ecom: no balcão PR, produto com ST não paga ICMS de saída
+  const icmsEfetivo = (temST && icmsSaida >= 0.19) ? 0 : icmsSaida;
   const denom = Math.max(1 - PIS - COFINS - icmsEfetivo - difal - mc, 0.05);
   const preco  = cmvUnit / denom;
   const pisR   = preco * PIS;
@@ -2527,9 +2531,8 @@ function calcOrc(){
     // Qtd e MC
     if(inpQtd) orcItems[i].qtd = parseFloat(inpQtd.value)||1;
     orcItems[i].mc = inpMc ? (parseFloat(inpMc.value)||30)/100 : mcPad;
-    // Nome: corrige se elemento mostra SKU ou traço
-    if(elNome && orcItems[i].nome && orcItems[i].nome !== orcItems[i].sku &&
-       (elNome.textContent==='—'||elNome.textContent===orcItems[i].sku||!elNome.textContent)){
+    // Nome: sempre sincroniza se orcItem tem nome real
+    if(elNome && orcItems[i].nome && orcItems[i].nome.length > 1){
       elNome.textContent = orcItems[i].nome;
     }
   });
@@ -2611,10 +2614,10 @@ function renderOrcTabela(){
   <table class="orc-table">
     <thead><tr>
       <th>#</th>
-      <th style="min-width:130px">SKU</th>
+      <th style="min-width:130px">SKU / Código</th>
       <th style="min-width:180px">Produto</th>
       <th>QTD</th>
-      <th>CMV Unit (R$)</th>
+      <th class="no-print">CMV Unit (R$)</th>
       <th>MC%</th>
       <th class="num">CMV Total</th>
       <th class="num">PIS 1,65%</th>
@@ -2638,7 +2641,7 @@ function renderOrcTabela(){
           </td>
           <td><span id="orc-nome-${i+1}" style="font-size:11px;color:#374151">${it.nome||'—'}</span></td>
           <td><input type="number" id="orc-qtd-${i+1}" value="${it.qtd}" min="0.01" step="1" style="width:55px" oninput="calcOrc()"></td>
-          <td><input type="number" id="orc-cmv-${i+1}" value="${it.cmvUnit>0?it.cmvUnit.toFixed(4):''}" min="0" step="0.0001" placeholder="0,0000" style="width:90px" oninput="calcOrc()"></td>
+          <td class="no-print"><input type="number" id="orc-cmv-${i+1}" value="${it.cmvUnit>0?it.cmvUnit.toFixed(4):''}" min="0" step="0.0001" placeholder="0,0000" style="width:90px" oninput="calcOrc()"></td>
           <td><input type="number" id="orc-mc-${i+1}" value="${Math.round(it.mc*100)}" min="1" max="80" step="1" style="width:50px" oninput="calcOrc()"></td>
           <td class="num" id="orc-cmvtot-${i+1}" style="color:#6b7280">—</td>
           <td class="num" id="orc-pis-${i+1}" style="color:#6b7280">—</td>
