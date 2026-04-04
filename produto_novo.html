@@ -106,7 +106,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
   <div class="card">
     <div class="card-h">
       <span>&#128203;</span><h2>Revis&atilde;o de Produtos</h2>
-      <input type="number" id="sku-inicial" placeholder="SKU base (preenche vazios)" min="1001" step="1" style="width:160px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;padding:4px 8px;border-radius:6px;font-size:12px" title="SKU de partida para os produtos novos desta NF" oninput="resequenciarSkus()">
+      <input type="number" id="sku-inicial" placeholder="SKU base (preenche vazios)" min="1001" step="1" style="width:160px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;padding:4px 8px;border-radius:6px;font-size:12px" title="SKU de partida para os produtos novos desta NF" >
       <span id="badge-novos" style="background:#dbeafe;color:#1d4ed8;border-radius:16px;padding:2px 10px;font-size:10px;font-weight:700"></span>
       <span style="font-size:11px;color:#64748b;margin-left:8px">Edite inline &mdash; clique em qualquer campo</span>
       <button onclick="resequenciarSkus()" title="Preenche SKUs vazios em sequência a partir do número digitado" style="background:#1d4ed8;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">🔢 Gerar Seq.</button>
@@ -130,7 +130,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
           <th>Status</th><th>C&oacute;d.Forn</th><th style="min-width:70px">SKU</th>
           <th style="min-width:220px">Nome</th><th>NCM</th><th>CST</th><th>ST</th>
           <th style="min-width:130px">Fam&iacute;lia</th>
-          <th>Custo NF</th><th>CMV BR</th><th>CMV PR</th><th>Peso</th><th>IPI%</th><th>ST</th><th>Mono</th><th>Lucro BR</th><th>Margem</th>
+          <th>Custo NF</th><th>CMV BR</th><th>CMV PR</th><th>Peso</th><th>IPI%</th><th>v.IPI</th><th>ST</th><th>v.ST</th><th>Orig</th><th>ST</th><th>Mono</th><th>Lucro BR</th><th>Margem</th>
           <th>ML Cl.</th><th>Shopee</th><th>Balc&atilde;o</th>
           <th style="min-width:80px">EAN</th><th style="min-width:160px">Título ML <small style="color:#94a3b8">(60)</small></th><th style="min-width:200px">Título Shopee <small style="color:#94a3b8">(120)</small></th>
         </tr></thead>
@@ -303,6 +303,13 @@ function lerXML(file){
         var temST=stVal>0;
         var cmvBr=Math.max(custoNF*(1-PIS_S-COF_S-icmsPct),custoNF*0.35);
         var cmvPr=temST?Math.max(custoNF*(1-PIS_S-COF_S),custoNF*0.30):cmvBr;
+                var origVal = icms&&icms.querySelector('orig')?icms.querySelector('orig').textContent:'';
+        var pIpiPct = ipiPct;
+        var vIpiTotal = parseFloat(ipiEl&&ipiEl.querySelector('vIPI')?ipiEl.querySelector('vIPI').textContent:0);
+        var pStPct = parseFloat(stEl&&stEl.querySelector('pMVAST')?stEl.querySelector('pMVAST').textContent:(stEl&&stEl.querySelector('pST')?stEl.querySelector('pST').textContent:0));
+        var vStTotal = stVal;
+        var unid = prod&&prod.querySelector('uCom')?prod.querySelector('uCom').textContent:'UN';
+        var cfop2 = prod&&prod.querySelector('CFOP')?prod.querySelector('CFOP').textContent:'';
         itensNF.push({
           codigo:prod&&prod.querySelector('cProd')?prod.querySelector('cProd').textContent:'',
           nome:prod&&prod.querySelector('xProd')?prod.querySelector('xProd').textContent:'',
@@ -311,7 +318,8 @@ function lerXML(file){
           cst:icms&&icms.querySelector('CST')?icms.querySelector('CST').textContent:(icms&&icms.querySelector('CSOSN')?icms.querySelector('CSOSN').textContent:''),
           ean:prod&&prod.querySelector('cEAN')?prod.querySelector('cEAN').textContent:'',
           qtd:parseFloat(prod&&prod.querySelector('qCom')?prod.querySelector('qCom').textContent:1),
-          custo:custo,custoNF:custoNF,ipiPct:ipiPct,icmsPct:icmsPct,cmvBr:cmvBr,cmvPr:cmvPr,temST:temST
+          custo:custo,custoNF:custoNF,ipiPct:ipiPct,icmsPct:icmsPct,cmvBr:cmvBr,cmvPr:cmvPr,temST:temST,
+          origem:origVal,vIpi:vIpiTotal,pSt:pStPct,vSt:vStTotal,unid:unid
         });
       });
       document.getElementById('nf-forn').textContent=forn.nome;
@@ -363,10 +371,22 @@ function gerarEAN(idx){
 }
 function gerarTodosEAN(){fichas.forEach(function(f,i){if(!f.ean)gerarEAN(i);});}
 
+function salvarRascunho() {
+  try {
+    localStorage.setItem('pn_fichas', JSON.stringify(fichas));
+    localStorage.setItem('pn_nf', JSON.stringify(dadosNF||{}));
+    localStorage.setItem('pn_ts', String(Date.now()));
+  } catch(e){}
+}
+function limparRascunho() {
+  ['pn_fichas','pn_nf','pn_ts'].forEach(function(k){localStorage.removeItem(k);});
+}
+
 function renderTabela(){
   var mg=(parseFloat(document.getElementById('margem-sel').value)||40)/100;
   var novos=fichas.filter(function(f){return !f.existe;}).length;
   document.getElementById('badge-novos').textContent=novos+' novos';
+  salvarRascunho();
   var html='';
   fichas.forEach(function(f,i){
     var pML=calcPreco(f.cmvBr,mg,TAXA_ML_CL,FRETE_ML,DIFAL+IBS,ICMS_SAIDA);
@@ -377,7 +397,7 @@ function renderTabela(){
     html+='<td><input type="checkbox"'+(f.sel?' checked':'')+' onchange="fichas['+i+'].sel=this.checked" style="accent-color:#1F3864"></td>';
     html+='<td>'+(f.existe?'<span class="pill pill-exist">Existe</span>':'<span class="pill pill-novo">Novo</span>')+'</td>';
     html+='<td><span style="font-size:10px;color:#64748b">'+f.codigo+'</span></td>';
-    html+='<td><input class="rev-input" value="'+f.sku+'" onchange="fichas['+i+'].sku=this.value" style="width:70px"></td>';
+    html+='<td><input class="rev-input" data-sku-idx="'+i+'" value="'+f.sku+'" oninput="fichas['+i+'].sku=this.value.trim()" style="width:70px"></td>';
     html+='<td><input class="rev-input" value="'+f.nome.replace(/"/g,'&#39;')+'" onchange="fichas['+i+'].nome=this.value" style="width:220px"></td>';
     html+='<td><input class="rev-input" value="'+f.ncm+'" readonly style="background:#f8fafc;width:80px"></td>';
     html+='<td><input class="rev-input" value="'+f.cst+'" readonly style="background:#f8fafc;width:40px"></td>';
@@ -601,28 +621,34 @@ function novaFamilia() {
 }
 
 function resequenciarSkus() {
-  const base = parseInt(document.getElementById('sku-inicial')?.value)||0;
-  if(!base) { alert('Digite o SKU inicial antes de gerar a sequência.'); return; }
-  let seq = base;
-  let count = 0;
+  // Flush: ler TODOS os campos SKU visíveis para fichas[] antes de processar
+  document.querySelectorAll('input[data-sku-idx]').forEach(function(inp) {
+    var i = parseInt(inp.getAttribute('data-sku-idx'));
+    var v = inp.value.trim();
+    if(v && fichas[i]) fichas[i].sku = v;
+  });
+
+  var baseEl = document.getElementById('sku-inicial');
+  var base = parseInt(baseEl ? baseEl.value : 0) || 0;
+  if(!base || base < 100) {
+    alert('Digite o SKU inicial (ex: 2861) no campo antes de gerar.');
+    if(baseEl) baseEl.focus();
+    return;
+  }
+  var seq = base;
+  var count = 0;
   fichas.forEach(function(f) {
-    // REGRA: só preenche se o campo SKU estiver VAZIO e não for auto-vinculado
-    const val = String(f.sku||'').trim();
-    if(!val && !f._auto) {
+    if(!String(f.sku||'').trim()) {   // só preenche VAZIOS
       f.sku = String(seq++);
-      f._vazio = false;
       f._gerado = true;
       count++;
     }
-    // Campos com valor (manual ou auto) → NUNCA são tocados
   });
-  if(count === 0) {
-    alert('Nenhum campo vazio para preencher. Campos com SKU existente não são alterados.');
-    return;
-  }
+  if(!count) { alert('Nenhum campo vazio. Campos com SKU não são alterados.'); return; }
+  if(baseEl) baseEl.value = String(seq);  // atualiza para próxima NF
+  salvarRascunho();
   renderTabela();
-  document.getElementById('sku-inicial').value = seq;
-  console.log('[SKU] ' + count + ' SKUs gerados: ' + base + ' a ' + (seq-1));
+  console.log('[SKU] '+count+' gerados a partir de '+base);
 }
 
 
@@ -668,6 +694,26 @@ async function gerarTitulosIA() {
   }
   if(btn) { btn.textContent = 'Gerar Titulos'; btn.disabled = false; }
 }
+
+
+// Recuperar rascunho salvo (proteção contra perda de dados)
+(function(){
+  try {
+    var ts = parseInt(localStorage.getItem('pn_ts')||'0');
+    if(Date.now()-ts < 4*3600*1000) {
+      var f = localStorage.getItem('pn_fichas');
+      if(f) {
+        var arr = JSON.parse(f);
+        if(arr && arr.length > 0 && confirm('Rascunho salvo com '+arr.length+' produtos. Restaurar?')) {
+          fichas = arr;
+          dadosNF = JSON.parse(localStorage.getItem('pn_nf')||'{}');
+          irStep(2);
+          renderTabela();
+        }
+      }
+    }
+  } catch(e){}
+})();
 
 </script>
 </body>
