@@ -275,8 +275,6 @@ def criar_tabelas():
         exe("ALTER TABLE listings ADD COLUMN IF NOT EXISTS margem_real REAL DEFAULT 0")
     except: pass
     try:
-    except: pass
-    try:
         exe("""CREATE TABLE IF NOT EXISTS pedidos_pc (
             id TEXT PRIMARY KEY, numero TEXT, data TEXT, canal TEXT, uf TEXT,
             total REAL DEFAULT 0, lucro REAL, margem REAL, frete REAL DEFAULT 0,
