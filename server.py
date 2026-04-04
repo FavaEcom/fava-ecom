@@ -259,13 +259,15 @@ def criar_tabelas():
     try:
         exe("ALTER TABLE ml_listings ADD COLUMN desconto REAL DEFAULT 0")
     except: pass
-    exe("""CREATE TABLE IF NOT EXISTS campanha_historico (
-        id SERIAL PRIMARY KEY, mlb_id TEXT, sku TEXT, titulo TEXT, campanha TEXT,
-        desconto REAL DEFAULT 0, preco_original REAL DEFAULT 0,
-        preco_final REAL DEFAULT 0, lucro_estimado REAL DEFAULT 0,
-        margem_estimada REAL DEFAULT 0, status TEXT,
-        data_aplicacao TIMESTAMP DEFAULT NOW()
-    )""")
+    try:
+        exe("""CREATE TABLE IF NOT EXISTS campanha_historico (
+            id SERIAL PRIMARY KEY, mlb_id TEXT, sku TEXT, titulo TEXT, campanha TEXT,
+            desconto REAL DEFAULT 0, preco_original REAL DEFAULT 0,
+            preco_final REAL DEFAULT 0, lucro_estimado REAL DEFAULT 0,
+            margem_estimada REAL DEFAULT 0, status TEXT,
+            data_aplicacao TIMESTAMP DEFAULT NOW()
+        )""")
+    except: pass
     try:
         exe("CREATE INDEX IF NOT EXISTS idx_ch_mlb ON campanha_historico(mlb_id)")
     except: pass
