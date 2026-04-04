@@ -1396,8 +1396,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if self.path.startswith(prefix):
                 url = base + self.path[len(prefix):]; break
         if not url: self.send_error(404); return
-        headers = {h: self.headers.get(h) for h in ['Authorization','Content-Type','Accept'] if self.headers.get(h)}
+        headers = {h: self.headers.get(h) for h in ['Content-Type','Accept'] if self.headers.get(h)}
         if 'Accept' not in headers: headers['Accept'] = 'application/json'
+        # Injetar token correto automaticamente
+        if self.path.startswith('/api/bling/'):
+            tk = _bling_token.get('access','')
+            if tk: headers['Authorization'] = f'Bearer {tk}'
+        elif self.path.startswith('/api/ml/') or self.path.startswith('/api/mp/'):
+            tk = _ml_token.get('access','')
+            if tk: headers['Authorization'] = f'Bearer {tk}'
         body = None
         if method in ('POST','PUT'):
             n = int(self.headers.get('Content-Length',0))
