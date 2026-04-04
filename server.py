@@ -706,6 +706,21 @@ def _ml_renovar():
         return False
 
 
+# ── MERCADO PAGO ─────────────────────────────────────────────────
+MP_ACCESS_TOKEN = os.environ.get('MP_ACCESS_TOKEN', '')
+
+def mp_get(endpoint):
+    """Chamar API Mercado Pago autenticado"""
+    token = MP_ACCESS_TOKEN or _ml_token.get('access','')  # MP usa mesmo token
+    url = f'https://api.mercadopago.com/v1/{endpoint}'
+    req = urllib.request.Request(url, headers={
+        'Authorization': f'Bearer {token}',
+        'Accept': 'application/json'
+    })
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return json.loads(r.read())
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, fmt, *args):
         if '/api/' in self.path:
@@ -802,6 +817,74 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._ok({"ok":True,"msg":"Token Bling salvo"})
         except Exception as e: self._ok({"ok":False,"error":str(e)},500)
 
+
+    def _get_mp_payments(self):
+        """GET /api/mp/payments?dias=7&status=approved"""
+        from urllib.parse import parse_qs
+        qs = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        dias = int(qs.get('dias',['30'])[0])
+        status = qs.get('status',['approved'])[0]
+        desde = (datetime.now()-timedelta(days=dias)).strftime('%Y-%m-%dT%H:%M:%S')
+        try:
+            # Buscar pagamentos recebidos
+            data = mp_get(f'payments/search?sort=date_created&criteria=desc&range=date_created&begin_date={desde}-03:00&status={status}&limit=100')
+            results = data.get('results',[])
+            payments = []
+            for p in results:
+                payments.append({
+                    'id': str(p.get('id','')),
+                    'data': (p.get('date_created') or '')[:10],
+                    'descricao': p.get('description',''),
+                    'status': p.get('status',''),
+                    'status_detalhe': p.get('status_detail',''),
+                    'valor': float(p.get('transaction_amount',0) or 0),
+                    'liquido': float(p.get('net_amount') or p.get('transaction_amount',0) or 0),
+                    'taxa': float((p.get('transaction_amount',0) or 0) - (p.get('net_amount',0) or 0)),
+                    'meio': p.get('payment_method_id',''),
+                    'tipo': p.get('payment_type_id',''),
+                    'parcelas': p.get('installments',1),
+                    'pedido_id': str((p.get('order') or {}).get('id','') or ''),
+                    'pagador': (p.get('payer') or {}).get('email',''),
+                })
+            self._ok(payments)
+        except Exception as e: self._ok({'ok':False,'error':str(e)})
+
+    def _get_mp_saldo(self):
+        """GET /api/mp/saldo — saldo atual da conta MP"""
+        try:
+            data = mp_get('account/settlement_report/config')
+            # Tentar via merchant_accounts
+            try:
+                acc = mp_get('users/me')
+                uid = acc.get('id','')
+                bal = mp_get(f'users/{uid}/mercadopago_account/balance')
+                self._ok({'available': bal.get('available_balance',0), 'total': bal.get('total_amount',0)})
+            except:
+                self._ok({'ok':True,'msg':'Ver MP dashboard para saldo'})
+        except Exception as e: self._ok({'ok':False,'error':str(e)})
+
+    def _get_mp_movimentos(self):
+        """GET /api/mp/movimentos?dias=30 — extrato de movimentações"""
+        from urllib.parse import parse_qs
+        qs = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        dias = int(qs.get('dias',['30'])[0])
+        desde = (datetime.now()-timedelta(days=dias)).strftime('%Y-%m-%dT%H:%M:%S')
+        try:
+            data = mp_get(f'account/movements/search?limit=100&date_created_from={desde}-03:00')
+            movs = data.get('results',[])
+            result = []
+            for m in movs:
+                result.append({
+                    'id': str(m.get('id','')),
+                    'data': (m.get('date_created') or '')[:10],
+                    'tipo': m.get('type',''),
+                    'descricao': m.get('action_id',''),
+                    'valor': float(m.get('amount',0) or 0),
+                    'saldo': float(m.get('balance',0) or 0),
+                    'referencia': str(m.get('reference_id','') or ''),
+                })
+            self._ok(result)
+        except Exception as e: self._ok({'ok':False,'error':str(e)})
 
     def _ml_refresh(self):
         """GET /api/ml/refresh — renova access_token ML usando refresh_token do banco"""
