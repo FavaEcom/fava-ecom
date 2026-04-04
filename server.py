@@ -681,6 +681,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/historico':          self._post_historico,
             '/api/db/nf':                 self._post_nf,
             '/api/db/listing':            self._post_listing,
+            '/api/db/produtos/update-fiscal': self._post_update_fiscal,
             '/api/sync/lucro':            self._sync_lucro,
             '/api/db/campanha':           self._post_campanha,
             '/api/db/cprod-map':          self._post_cprod_map,
@@ -718,6 +719,24 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if not access: self._json({"ok":False,"error":"access_token obrigatorio"},400); return
             salvar_tokens_db("bling", access, refresh or None)
             self._json({"ok":True,"msg":"Token Bling salvo"})
+        except Exception as e: self._json({"ok":False,"error":str(e)},500)
+
+    def _post_update_fiscal(self):
+        try:
+            body=json.loads(self.rfile.read(int(self.headers.get("Content-Length",0))))
+            prods=body.get("produtos",[])
+            updated=0
+            with get_db() as db:
+                for p in prods:
+                    sku=p.get("sku")
+                    if not sku: continue
+                    db.execute("""UPDATE produtos SET st=%s,st_imposto=%s,cmv_br=%s,cmv_pr=%s,ncm=%s,cest=%s,origem=%s,cst=%s,ipi=%s,monofasico=%s,base_icms=%s,aliq_icms=%s,aliq_eff=%s WHERE sku=%s""",
+                        (p.get("st",0),p.get("st_imposto",0),p.get("cmv_br"),p.get("cmv_pr"),
+                         p.get("ncm"),p.get("cest"),p.get("origem"),p.get("cst"),
+                         p.get("ipi",0),p.get("monofasico",0),
+                         p.get("base_icms",0),p.get("aliq_icms",0),p.get("aliq_eff",0),sku))
+                    updated+=1
+            self._json({"ok":True,"updated":updated})
         except Exception as e: self._json({"ok":False,"error":str(e)},500)
 
     def _bling_autorizar(self):
@@ -1334,15 +1353,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if self.path.startswith(prefix):
                 url = base + self.path[len(prefix):]; break
         if not url: self.send_error(404); return
-        headers = {h: self.headers.get(h) for h in ['Content-Type','Accept'] if self.headers.get(h)}
+        headers = {h: self.headers.get(h) for h in ['Authorization','Content-Type','Accept'] if self.headers.get(h)}
         if 'Accept' not in headers: headers['Accept'] = 'application/json'
-        # Injetar token correto automaticamente
-        if self.path.startswith('/api/bling/'):
-            tk = _bling_token.get('access','')
-            if tk: headers['Authorization'] = f'Bearer {tk}'
-        elif self.path.startswith('/api/ml/') or self.path.startswith('/api/mp/'):
-            tk = _ml_token.get('access','')
-            if tk: headers['Authorization'] = f'Bearer {tk}'
         body = None
         if method in ('POST','PUT'):
             n = int(self.headers.get('Content-Length',0))
