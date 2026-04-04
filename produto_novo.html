@@ -212,54 +212,58 @@ function irStep(n){
     if(s) s.className='step'+(i===n?' ativo':i<n?' done':'');
   });
   if(n===2) 
-// AUTO-SKU: buscar SKU pelo código do fornecedor
+// AUTO-SKU: buscar SKU no cprod_map (não preenche novos automaticamente)
 (async function autoPreencherSku(){
   var codigos = fichas.map(function(f){return f.codigo;}).filter(Boolean).join(',');
   if(!codigos) return;
-  
-  // Normalizar código: remover pontos, traços, zeros à esquerda para comparação
+
+  // Normalizar código: remove pontos/traços/espaços e zeros à esquerda
   function norm(c){ return String(c||'').replace(/[.\-\s]/g,'').replace(/^0+(?=\d)/,''); }
-  
+
   try{
     var resp = await fetch('https://web-production-5aa0f.up.railway.app/api/db/cprod-lookup?cprods='+encodeURIComponent(codigos));
     var mapa = await resp.json();
-    
-    // Criar mapa normalizado para comparação flexível
+
+    // Índice normalizado para match flexível
     var mapaNorm = {};
-    Object.keys(mapa).forEach(function(k){
-      mapaNorm[norm(k)] = mapa[k];
-    });
-    
+    Object.keys(mapa).forEach(function(k){ mapaNorm[norm(k)] = mapa[k]; });
+
     fichas.forEach(function(f){
-      var r = mapa[String(f.codigo)] || mapaNorm[norm(f.codigo)] || null;
-      
+      var r = mapa[String(f.codigo)] || mapaNorm[norm(String(f.codigo))] || null;
       if(r && r.sku){
-        // PRODUTO ENCONTRADO — preencher com SKU conhecido
+        // PRODUTO ENCONTRADO → preencher SKU automaticamente
         f.sku = r.sku;
         f.existe = true;
-        f._auto = true;  // verde = auto-vinculado
+        f._auto = true;
         if(!f.peso && r.peso) f.peso = r.peso;
         if(r.cmv_br > 0 && f.cmvBr === 0){ f.cmvBr = r.cmv_br; f.cmvPr = r.cmv_pr || r.cmv_br; }
         if(r.familia) f.familia = r.familia;
       } else {
-        // NÃO ENCONTRADO — deixar SKU VAZIO para o usuário preencher
+        // NÃO ENCONTRADO → SKU vazio, usuário preenche
         f.sku = '';
-        f._vazio = true;  // amarelo = aguardando preenchimento
+        f._vazio = true;
       }
     });
-    
-    // Buscar peso do Bling para produtos sem peso
-    fichas.filter(function(f){ return !f.peso && f.codigo; }).forEach(async function(f){
+
+    // Buscar peso no Bling para todos sem peso (em background)
+    fichas.filter(function(f){ return !f.peso; }).forEach(async function(f){
       try{
-        var rp = await fetch('https://web-production-5aa0f.up.railway.app/api/db/bling-peso?cprod='+encodeURIComponent(f.codigo)).then(function(r){return r.json();});
-        if(rp && rp.peso > 0){ f.peso = rp.peso; }
+        var rp = await fetch('https://web-production-5aa0f.up.railway.app/api/db/bling-buscar-produto', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({cprod: f.codigo, nome: f.nome})
+        }).then(function(r){return r.json();});
+        if(rp && rp.found && rp.peso > 0){
+          f.peso = rp.peso;
+          if(rp.largura) f.largura = rp.largura;
+          if(rp.altura) f.altura = rp.altura;
+          if(rp.profundidade) f.profundidade = rp.profundidade;
+        }
       }catch(e){}
     });
-    
-    setTimeout(renderTabela, 1500);
+    setTimeout(renderTabela, 2000);
     renderTabela();
-    
-  }catch(e){ console.warn('Auto-SKU erro:', e.message); }
+
+  }catch(e){ console.warn('Auto-SKU erro:', e.message); renderTabela(); }
 })();
 renderTabela();
   if(n===3) renderResumoSalvar();
@@ -589,7 +593,28 @@ function novaFamilia() {
 
 function resequenciarSkus() {
   const base = parseInt(document.getElementById('sku-inicial')?.value)||0;
-  if(!base) { alert('Digite o SKU inicial no campo antes de gerar.'); return; }
+  if(!base) { alert('Digite o SKU inicial antes de gerar a sequência.'); return; }
+  let seq = base;
+  let count = 0;
+  fichas.forEach(function(f) {
+    // REGRA: só preenche se o campo SKU estiver VAZIO e não for auto-vinculado
+    const val = String(f.sku||'').trim();
+    if(!val && !f._auto) {
+      f.sku = String(seq++);
+      f._vazio = false;
+      f._gerado = true;
+      count++;
+    }
+    // Campos com valor (manual ou auto) → NUNCA são tocados
+  });
+  if(count === 0) {
+    alert('Nenhum campo vazio para preencher. Campos com SKU existente não são alterados.');
+    return;
+  }
+  renderTabela();
+  document.getElementById('sku-inicial').value = seq;
+  console.log('[SKU] ' + count + ' SKUs gerados: ' + base + ' a ' + (seq-1));
+}
   let seq = base;
   let count = 0;
   fichas.forEach(function(f) {

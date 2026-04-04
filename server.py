@@ -857,6 +857,42 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         try: self._ok(exe("SELECT * FROM produtos ORDER BY sku", fetchall=True))
         except Exception as e: self._err(500, str(e))
 
+    def _post_bling_buscar_produto(self):
+        """POST /api/db/bling-buscar-produto — busca produto no Bling por nome e retorna peso/dimensões"""
+        try:
+            d=json.loads(self.rfile.read(int(self.headers.get("Content-Length",0))))
+            nome=str(d.get("nome","")).strip()[:60]
+            cprod=str(d.get("cprod","")).strip()
+            if not nome: self._ok({"found":False}); return
+            # Buscar por código primeiro
+            url=f"https://www.bling.com.br/Api/v3/produtos?codigo={cprod}&limite=5"
+            tk=_bling_token.get("access","")
+            req=urllib.request.Request(url,headers={"Authorization":f"Bearer {tk}","Accept":"application/json"})
+            with urllib.request.urlopen(req,timeout=10) as r: data=json.loads(r.read())
+            prods=data.get("data",[])
+            # Se não achou por código, buscar por nome
+            if not prods:
+                url2=f"https://www.bling.com.br/Api/v3/produtos?pesquisa={urllib.request.quote(nome[:40])}&limite=5"
+                req2=urllib.request.Request(url2,headers={"Authorization":f"Bearer {tk}","Accept":"application/json"})
+                with urllib.request.urlopen(req2,timeout=10) as r2: data2=json.loads(r2.read())
+                prods=data2.get("data",[])
+            if not prods: self._ok({"found":False}); return
+            p=prods[0]
+            # Buscar detalhes completos do produto
+            pid=p.get("id","")
+            if pid:
+                url3=f"https://www.bling.com.br/Api/v3/produtos/{pid}"
+                req3=urllib.request.Request(url3,headers={"Authorization":f"Bearer {tk}","Accept":"application/json"})
+                with urllib.request.urlopen(req3,timeout=10) as r3: det=json.loads(r3.read())
+                pd=det.get("data",p)
+            else: pd=p
+            self._ok({"found":True,"id":str(pid),"nome":pd.get("nome",""),"codigo":pd.get("codigo",""),
+                "peso":float(pd.get("pesoLiquido",0) or pd.get("pesoBruto",0) or 0),
+                "largura":float(pd.get("largura",0) or 0),
+                "altura":float(pd.get("altura",0) or 0),
+                "profundidade":float(pd.get("profundidade",0) or 0)})
+        except Exception as e: self._ok({"found":False,"error":str(e)})
+
     def _get_bling_peso(self):
         from urllib.parse import parse_qs
         qs=parse_qs(self.path.split("?")[1] if "?" in self.path else "")
@@ -1319,6 +1355,22 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 upsert_produto(sku, titulo, custo=cmv, custo_br=cmv)
             self._ok({'ok':True,'id':mlb})
         except Exception as e: self._err(500, str(e))
+
+    def _post_cprod_map_import(self):
+        """POST /api/db/cprod-map-import — importar mapeamento código→SKU em lote"""
+        try:
+            body=json.loads(self.rfile.read(int(self.headers.get("Content-Length",0))))
+            mapeamentos=body.get("mapeamentos",[])
+            saved=0
+            for m in mapeamentos:
+                cprod=str(m.get("cprod","")).strip()
+                sku=str(m.get("sku","")).strip()
+                nome=str(m.get("nome","")).strip()[:200]
+                if not cprod or not sku: continue
+                exe("INSERT INTO cprod_map(cprod,sku,nome) VALUES(%s,%s,%s) ON CONFLICT(cprod) DO UPDATE SET sku=%s,nome=COALESCE(NULLIF(%s,''),cprod_map.nome)",(cprod,sku,nome,sku,nome))
+                saved+=1
+            self._ok({"ok":True,"saved":saved})
+        except Exception as e: self._ok({"ok":False,"error":str(e)})
 
     def _post_cprod_map(self):
         try:
