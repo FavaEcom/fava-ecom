@@ -1165,12 +1165,14 @@ async function renovarTokenBling(){
   try{
     const r=await fetch("https://web-production-5aa0f.up.railway.app/api/bling/renovar").then(r=>r.json());
     if(r.ok){
-      if(r.access_token) tokenStore.bling.access=r.access_token;
-      tokenStore.bling.expires=Date.now()+6*3600*1000;
-      salvarTokenStore(); return true;
+      // Token renovado no servidor — atualizar tokenStore local
+      if(r.access_token) tokenStore.bling.access = r.access_token;
+      tokenStore.bling.expires = Date.now() + 6*3600*1000; // 6h
+      salvarTokenStore();
+      return true;
     }
     return false;
-  }catch(e){ console.warn("[Bling]",e.message); return false; }
+  }catch(e){ console.warn("[Bling renovar erro]", e.message); return false; }
 }
 
 async function forcarRenovacaoML(){
@@ -1182,10 +1184,11 @@ async function forcarRenovacaoML(){
 
 async function forcarRenovacaoBling(){
   setDot('bling','wait','Renovando...');
-  const ok=await renovarTokenBling();
+  const ok = await renovarTokenBling();
   if(ok){ setDot('bling','ok','Bling ✓'); testar(); }
-  else{ setDot('bling','err','Expirado');
-    if(confirm('Token Bling expirado. Abrir autorização?')) window.open('https://web-production-5aa0f.up.railway.app/api/bling/autorizar','_blank');
+  else{
+    setDot('bling','err','Expirado');
+    if(confirm('Token Bling expirado. Abrir autorização? (10 segundos)')) window.open('https://web-production-5aa0f.up.railway.app/api/bling/autorizar','_blank');
   }
 }
 
@@ -1209,8 +1212,8 @@ window.onload=async ()=>{
   carregarTokenStore();
   // Tenta renovar tokens expirados no startup
   if(tokenStore.ml.refresh && tokenStore.ml.expires && Date.now() > tokenStore.ml.expires) await renovarTokenML();
-  // Renovar Bling em background (não bloqueia)
-  renovarTokenBling().then(ok=>{ if(ok) setDot('bling','ok','Bling ✓'); }).catch(()=>{});
+  // Renovar Bling via servidor (não depende de token local)
+  await renovarTokenBling();
   // Carrega chave Claude
   const ck=localStorage.getItem('fava_claude_key')||'';
   const elCk=document.getElementById('tk-claude');
@@ -2386,7 +2389,9 @@ function getParamsFiscaisOrc(){
   // ICMS saída:
   // PR interno → 19,5%
   // Interestadual → 12% (alíquota inter)
-  const icmsSaida = uf==='PR' ? 0.195 : dest.inter;
+  // PR: 12% para B2B/atacado, 19.5% só se for PF consumidor final
+  const icmsPR_rate = (tipo==='PF') ? 0.195 : 0.12;
+  const icmsSaida = uf==='PR' ? icmsPR_rate : dest.inter;
 
   // DIFAL: só para interestadual e PF ou PJ sem IE
   const geraDir = tipo==='PF' || (tipo==='PJ' && !ie);
@@ -2403,7 +2408,8 @@ function calcItemOrc(cmvUnit, mc, icmsSaida, difal, temST){
   if(cmvUnit<=0) return null;
   // Produto com ST vendido no PR: sem ICMS na saída (já pago na entrada via ST)
   // Fava Ecom: no balcão PR, produto com ST não paga ICMS de saída
-  const icmsEfetivo = (temST && icmsSaida >= 0.19) ? 0 : icmsSaida;
+  // ST: ICMS saída = 0 para vendas no PR (substituição tributária já paga na entrada)
+  const icmsEfetivo = temST ? 0 : icmsSaida;
   const denom = Math.max(1 - PIS - COFINS - icmsEfetivo - difal - mc, 0.05);
   const preco  = cmvUnit / denom;
   const pisR   = preco * PIS;
@@ -2425,7 +2431,7 @@ async function buscarSkuOrc(idx){
     // 1. Tenta banco local (cmvBanco) primeiro — mais rápido
     const local = cmvBanco[sku] || cmvBanco[String(parseInt(sku))] || null;
     if(local && local.cmvPr>0){
-      orcItems[idx-1]={...orcItems[idx-1], sku, nome:local.nome||sku, cmvUnit:local.cmvPr, manual:false};
+      orcItems[idx-1]={...orcItems[idx-1], sku, nome:local.nome||sku, cmvUnit:local.cmvPr, temST:!!(local.st||0), manual:false};
       const elNome1=document.getElementById(`orc-nome-${idx}`);
       const elCmv1=document.getElementById(`orc-cmv-${idx}`);
       if(elNome1) elNome1.textContent=local.nome||sku;
@@ -2443,8 +2449,8 @@ async function buscarSkuOrc(idx){
         const prod = prods.find(p=>String(p.sku).trim()===sku||String(p.sku).trim()===String(parseInt(sku)));
         if(prod && (prod.custo_pr||prod.custo_br)>0){
           const cmvPr = prod.custo_pr||prod.custo_br||0;
-          cmvBanco[sku] = {nome:prod.nome||sku, cmvBr:prod.custo_br||0, cmvPr, custo:prod.custo||0, dt:new Date().toISOString().slice(0,10)};
-          orcItems[idx-1]={...orcItems[idx-1], sku, nome:prod.nome||sku, cmvUnit:cmvPr, manual:false};
+          cmvBanco[sku] = {nome:prod.nome||sku, cmvBr:prod.cmv_br||prod.custo_br||0, cmvPr:prod.cmv_pr||prod.custo_pr||cmvPr, st:parseInt(prod.st||0), stImposto:parseFloat(prod.st_imposto||0), custo:prod.custo||0, dt:new Date().toISOString().slice(0,10)};
+          orcItems[idx-1]={...orcItems[idx-1], sku, nome:prod.nome||sku, cmvUnit:cmvPr, temST:!!(parseInt(prod.st||0)), manual:false};
           const elNome2=document.getElementById(`orc-nome-${idx}`);
           const elCmv2=document.getElementById(`orc-cmv-${idx}`);
           if(elNome2) elNome2.textContent=prod.nome||sku;
@@ -2505,7 +2511,7 @@ function calcOrc(){
     `Tipo: <strong>${tipo}</strong> | IE: <strong>${ie?'Sim':'Não'}</strong> | `+
     `DIFAL? <strong>${geraDifal?'✅ Sim':'❌ Não'}</strong> | `+
     `<strong style="color:#1d4ed8">${cmvOrigem}</strong><br>`+
-    (uf!=='PR'?`ICMS inter: ${(dest.inter*100).toFixed(0)}% | ICMS destino: ${(dest.icms_int*100).toFixed(1)}%`:'Operação interna PR — ICMS 19,5%');
+    (uf!=='PR'?`ICMS inter: ${(dest.inter*100).toFixed(0)}% | ICMS destino: ${(dest.icms_int*100).toFixed(1)}%`:`Operação interna PR — ICMS ${icmsSaida*100}% | Produtos c/ST: sem ICMS saída`);
 
   // Sincroniza inputs → orcItems E orcItems → inputs
   orcItems.forEach((it,i)=>{
@@ -2521,8 +2527,8 @@ function calcOrc(){
     if(inpQtd) orcItems[i].qtd = parseFloat(inpQtd.value)||1;
     orcItems[i].mc = inpMc ? (parseFloat(inpMc.value)||30)/100 : mcPad;
     // Nome: sempre sincroniza se orcItem tem nome real
-    if(elNome && orcItems[i].nome && orcItems[i].nome.length > 1){
-      elNome.textContent = orcItems[i].nome;
+    if(elNome){
+      elNome.textContent = (orcItems[i].nome && orcItems[i].nome !== orcItems[i].sku) ? orcItems[i].nome : (elNome.textContent||orcItems[i].sku||'—');
     }
   });
 
@@ -2710,7 +2716,7 @@ async function balcaoInit(){
         prods.forEach(p=>{
           if(p.sku){
             const k = String(p.sku).trim();
-            cmvBanco[k] = {nome:p.nome||k, cmvBr:p.cmv_br||p.custo_br||0, cmvPr:p.cmv_pr||p.custo_pr||p.cmv_br||p.custo_br||0, st:parseInt(p.st||0), stImposto:parseFloat(p.st_imposto||0), custo:p.custo||0};
+            cmvBanco[k] = {nome:p.nome||k, cmvBr:p.custo_br||0, cmvPr:p.custo_pr||p.custo_br||0, custo:p.custo||0};
           }
         });
       }
@@ -2753,7 +2759,7 @@ async function buscarBalcao(){
           (p.nome||'').toLowerCase().includes(q.toLowerCase())
         );
         if(prod){
-          found = {nome:prod.nome||q, cmvBr:prod.cmv_br||prod.custo_br||0, cmvPr:prod.cmv_pr||prod.custo_pr||prod.cmv_br||prod.custo_br||0, st:parseInt(prod.st||0), stImposto:parseFloat(prod.st_imposto||0), sku:prod.sku};
+          found = {nome:prod.nome||q, cmvBr:prod.custo_br||0, cmvPr:prod.custo_pr||prod.custo_br||0, sku:prod.sku};
           cmvBanco[norm(String(prod.sku))] = found;
         }
       }
@@ -2773,7 +2779,7 @@ async function buscarBalcao(){
     balcaoLista[existIdx].qtd++;
     if(st) st.textContent = `✅ ${found.nome} — qtd atualizada`;
   } else {
-    balcaoLista.push({sku, nome:found.nome||sku, cmv:found.cmvPr, cmvBr:found.cmvBr||0, st:found.st||0, stImposto:found.stImposto||0, qtd:1});
+    balcaoLista.push({sku, nome:found.nome||sku, cmv:found.cmvPr, qtd:1});
     if(st) st.textContent = `✅ ${found.nome} adicionado`;
   }
 
@@ -2782,20 +2788,16 @@ async function buscarBalcao(){
   renderBalcaoLista();
 }
 
-function calcPrecoBalcao(cmv, mg, desc, st=false){
-  // Balcão PR — sem DIFAL, sem marketplace
-  const PIS_S=0.0165, COF_S=0.076;
-  // ST: ICMS já pago na entrada → saída = 0%
-  const ICMS_S = st ? 0 : 0.12;
-  const cred = st ? 0 : cmv*(PIS_S+COF_S);
-  const m=mg/100;
-  const denom=Math.max(1-PIS_S-COF_S-ICMS_S-m, 0.05);
-  const precoBase=cmv/denom;
-  const precoDesc=precoBase*(1-desc/100);
-  const trib=precoDesc*(PIS_S+COF_S+ICMS_S);
-  const lucro=precoDesc-trib-cmv+cred;
-  const mc=precoDesc>0?lucro/precoDesc:0;
-  return {precoBase, precoDesc, mc, ICMS_S};
+function calcPrecoBalcao(cmv, mg, desc){
+  // Preço balcão: venda local PR — sem DIFAL, sem taxa marketplace, sem frete
+  const PIS_S = 0.0165, COF_S = 0.076, ICMS_S = 0.195; // 19,5% PR interno
+  const m = mg/100;
+  const denom = Math.max(1 - PIS_S - COF_S - ICMS_S - m, 0.05);
+  const precoBase = cmv / denom;
+  const precoDesc = precoBase * (1 - desc/100);
+  const lucro = precoDesc - cmv - precoDesc*(PIS_S+COF_S+ICMS_S);
+  const mc = precoDesc>0 ? lucro/precoDesc : 0;
+  return {precoBase, precoDesc, mc};
 }
 
 function renderBalcaoLista(){
@@ -2812,7 +2814,7 @@ function renderBalcaoLista(){
 
   let totalBruto = 0;
   const rows = balcaoLista.map((item, i)=>{
-    const {precoDesc, mc} = calcPrecoBalcao(item.cmv,mg,desc,!!(item.st||0));
+    const {precoDesc, mc} = calcPrecoBalcao(item.cmv, mg, desc);
     const total = precoDesc * item.qtd;
     totalBruto += total;
     const mcCor = mc>=0.30?'#059669':mc>=0.15?'#d97706':'#dc2626';
@@ -2885,7 +2887,7 @@ function balcaoImprimir(){
 
   let totalBruto = 0;
   const linhas = balcaoLista.map(item=>{
-    const {precoDesc} = calcPrecoBalcao(item.cmv,mg,desc,!!(item.st||0));
+    const {precoDesc} = calcPrecoBalcao(item.cmv, mg, desc);
     const total = precoDesc * item.qtd;
     totalBruto += total;
     return `<tr>
