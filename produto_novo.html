@@ -111,6 +111,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
       <span style="font-size:11px;color:#64748b;margin-left:8px">Edite inline &mdash; clique em qualquer campo</span>
       <button onclick="resequenciarSkus()" title="Preenche SKUs vazios em sequência a partir do número digitado" style="background:#1d4ed8;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">🔢 Gerar Seq.</button>
       <button onclick="gerarTodosEAN()" style="background:#7c3aed;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">🔢 Gerar EAN</button>
+      <button onclick="gerarTitulosIA()" title="Gerar títulos ML e Shopee com IA para produtos sem título" style="background:#0891b2;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">✨ Gerar Títulos</button>
       <button onclick="novaFamilia()" title="Adicionar nova família" style="background:#7c3aed;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">+ Família</button>
       <select id="margem-sel" onchange="recalcularTodos()" style="border:1px solid #e2e8f0;border-radius:5px;padding:4px 8px;font-size:11px;outline:none;margin-left:auto">
         <option value="30">Margem 30%</option>
@@ -128,9 +129,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
           <th>Status</th><th>C&oacute;d.Forn</th><th style="min-width:70px">SKU</th>
           <th style="min-width:220px">Nome</th><th>NCM</th><th>CST</th><th>ST</th>
           <th style="min-width:130px">Fam&iacute;lia</th>
-          <th>Custo NF</th><th>CMV BR</th><th>CMV PR</th><th>Peso</th>
+          <th>Custo NF</th><th>CMV BR</th><th>CMV PR</th><th>Peso</th><th>IPI%</th><th>ST</th><th>Mono</th><th>Lucro BR</th><th>Margem</th>
           <th>ML Cl.</th><th>Shopee</th><th>Balc&atilde;o</th>
-          <th style="min-width:80px">EAN</th><th style="min-width:160px">T&iacute;tulo ML</th>
+          <th style="min-width:80px">EAN</th><th style="min-width:160px">Título ML <small style="color:#94a3b8">(60)</small></th><th style="min-width:200px">Título Shopee <small style="color:#94a3b8">(120)</small></th>
         </tr></thead>
         <tbody id="rev-tbody"></tbody>
       </table>
@@ -385,11 +386,18 @@ function renderTabela(){
     html+='<td><input class="rev-input" type="number" value="'+f.cmvBr.toFixed(4)+'" onchange="fichas['+i+'].cmvBr=parseFloat(this.value)||0;atualizarPrecos('+i+')" style="width:80px;text-align:right"></td>';
     html+='<td><input class="rev-input" type="number" value="'+f.cmvPr.toFixed(4)+'" onchange="fichas['+i+'].cmvPr=parseFloat(this.value)||0;atualizarPrecos('+i+')" style="width:80px;text-align:right"></td>';
     html+='<td><input class="rev-input" type="number" value="'+(f.peso||'')+'" placeholder="0.000" onchange="fichas['+i+'].peso=parseFloat(this.value)||0" style="width:65px"></td>';
+    html+='<td style="text-align:right;font-size:11px">'+(f.ipi>0?(f.ipi*100).toFixed(1)+'%':'—')+'</td>';
+    html+='<td style="text-align:center">'+(f.temST?'<span style="color:#f59e0b;font-weight:700;font-size:11px">ST</span>':'<span style="color:#ccc;font-size:11px">—</span>')+'</td>';
+    html+='<td style="text-align:center">'+(f.monofasico?'<span style="color:#60a5fa;font-weight:700;font-size:11px">M</span>':'<span style="color:#ccc;font-size:11px">—</span>')+'</td>';
+    var _pbl=calcPrecoBalcao(f.cmvBr,mg,0,f.temST,0);var _lBr=_pbl.precoDesc-f.cmvBr;var _mBr=_pbl.precoDesc>0?_lBr/_pbl.precoDesc*100:0;
+    html+='<td style="text-align:right;font-size:11px;color:'+(_lBr>=0?'#10b981':'#ef4444')+'">R$ '+_lBr.toFixed(2)+'</td>';
+    html+='<td style="text-align:right;font-size:11px;color:'+(_mBr>=15?'#10b981':_mBr>=8?'#f59e0b':'#ef4444')+';font-weight:700">'+_mBr.toFixed(1)+'%</td>';
     html+='<td id="p-ml-'+i+'" style="font-size:10px;white-space:nowrap"><b>R$ '+fmt(pML)+'</b></td>';
     html+='<td id="p-sh-'+i+'" style="font-size:10px;white-space:nowrap"><b>R$ '+fmt(pSH)+'</b></td>';
     html+='<td id="p-bl-'+i+'" style="font-size:10px;white-space:nowrap"><b>R$ '+fmt(pBL)+'</b></td>';
     html+='<td><div style="display:flex;gap:2px"><input class="rev-input" id="ean-'+i+'" value="'+(f.ean||'')+'" onchange="fichas['+i+'].ean=this.value" style="width:88px;font-size:11px" placeholder="EAN"><button onclick="gerarEAN('+i+')" title="Gerar EAN" style="background:#2563eb;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:10px;padding:1px 4px">🔢</button></div></td>';
     html+='<td><input class="rev-input" value="'+(f.titulo_ml||'').replace(/"/g,'&#39;')+'" onchange="fichas['+i+'].titulo_ml=this.value" style="width:160px" placeholder="Titulo ML..."></td>';
+    html+='<td><input class="rev-input" value="'+(f.titulo_shopee||'').replace(/"/g,'&#39;')+'" onchange="fichas['+i+'].titulo_shopee=this.value" style="width:200px" placeholder="Titulo Shopee..."></td>';
     html+='</tr>';
   });
   document.getElementById('rev-tbody').innerHTML=html;
@@ -632,6 +640,59 @@ function resequenciarSkus() {
     document.getElementById('sku-inicial').value = seq; // atualizar para próxima vez
     console.log('[SKU] ' + count + ' SKUs gerados a partir de ' + base);
   }
+}
+
+
+async function gerarTitulosIA() {
+  const semTitulo = fichas.filter(f => !f.titulo_ml || !f.titulo_shopee);
+  if(!semTitulo.length) { alert('Todos os produtos já têm título.'); return; }
+  if(!confirm('Gerar títulos para ' + semTitulo.length + ' produto(s) sem título? Usa IA (pode demorar).')) return;
+  
+  const btn = event?.target;
+  if(btn) { btn.textContent = '⏳ Gerando...'; btn.disabled = true; }
+  
+  for(let i = 0; i < fichas.length; i++) {
+    const f = fichas[i];
+    if(f.titulo_ml && f.titulo_shopee) continue;
+    
+    const prompt = `Você é especialista em e-commerce brasileiro.
+Produto: "${f.nome}"
+NCM: ${f.ncm||''}
+Família: ${f.familia||''}
+
+Gere dois títulos para marketplaces:
+1. TITULO_ML (máximo 60 caracteres, palavras-chave relevantes, sem marca se não souber)
+2. TITULO_SHOPEE (máximo 120 caracteres, mais descritivo com benefícios e compatibilidade)
+
+Responda APENAS no formato JSON:
+{"ml": "título aqui", "shopee": "título aqui"}`;
+
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 200,
+          messages: [{role: 'user', content: prompt}]
+        })
+      });
+      const data = await resp.json();
+      const txt = (data.content?.[0]?.text || '').trim();
+      const clean = txt.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+      
+      if(!f.titulo_ml)     f.titulo_ml     = (parsed.ml     || '').substring(0, 60);
+      if(!f.titulo_shopee) f.titulo_shopee = (parsed.shopee || '').substring(0, 120);
+      renderTabela();
+    } catch(e) {
+      console.warn('Erro título', f.nome, e.message);
+    }
+    // Pausa para não sobrecarregar a API
+    await new Promise(r => setTimeout(r, 500));
+  }
+  
+  if(btn) { btn.textContent = '✨ Gerar Títulos'; btn.disabled = false; }
 }
 
 </script>
