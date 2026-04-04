@@ -272,10 +272,10 @@ def criar_tabelas():
         exe("CREATE INDEX IF NOT EXISTS idx_ch_mlb ON campanha_historico(mlb_id)")
     except: pass
     try:
-        exe("ALTER TABLE listings ADD COLUMN IF NOT EXISTS lucro_estimado REAL DEFAULT 0")
+        exe("ALTER TABLE ml_listings ADD COLUMN IF NOT EXISTS lucro_estimado REAL DEFAULT 0")
     except: pass
     try:
-        exe("ALTER TABLE listings ADD COLUMN IF NOT EXISTS margem_real REAL DEFAULT 0")
+        exe("ALTER TABLE ml_listings ADD COLUMN IF NOT EXISTS margem_real REAL DEFAULT 0")
     except: pass
     try:
         exe("""CREATE TABLE IF NOT EXISTS pedidos_pc (
@@ -691,6 +691,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/cadastro':           self._post_cadastro,
             '/api/db/pedidos-pc':         self._post_pedidos_pc,
             '/api/auth/tokens':           self._post_tokens,
+            '/api/bling/set-token':         self._bling_set_token,
             '/api/cmv-cache':             self._post_cmv,
         }
         if clean in routes: routes[clean]()
@@ -709,6 +710,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     # ────────────────────────────────────────────────────────────
     # BLING OAUTH — NOVO
     # ────────────────────────────────────────────────────────────
+    def _bling_set_token(self):
+        try:
+            body=json.loads(self.rfile.read(int(self.headers.get("Content-Length",0))))
+            access=body.get("access_token","").strip()
+            refresh=body.get("refresh_token","").strip()
+            if not access: self._json({"ok":False,"error":"access_token obrigatorio"},400); return
+            salvar_tokens_db("bling", access, refresh or None)
+            self._json({"ok":True,"msg":"Token Bling salvo"})
+        except Exception as e: self._json({"ok":False,"error":str(e)},500)
+
     def _bling_autorizar(self):
         """GET /api/bling/autorizar — redireciona para autorização Bling"""
         redirect_uri = 'https://web-production-5aa0f.up.railway.app/api/bling/callback'
@@ -868,50 +879,50 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception as e: self._err(500, str(e))
 
     def _get_listings_performance(self):
-        with get_db() as db:
-            rows=db.fetchall("SELECT id,sku,titulo,preco,cmv,frete_medio,lucro_estimado,margem_real,desconto,status FROM listings WHERE cmv>0 AND lucro_estimado IS NOT NULL ORDER BY margem_real DESC LIMIT 500")
-        self._json([dict(r) for r in rows])
+        try:
+            rows = exe("SELECT id,sku,titulo,preco,frete_medio,lucro_estimado,margem_real,desconto,status FROM ml_listings WHERE lucro_estimado IS NOT NULL ORDER BY margem_real DESC LIMIT 500", fetchall=True)
+            self._ok(rows)
+        except Exception as e: self._err(500, str(e))
 
     def _get_campanha(self):
-        p=parse_qs(self.path.split("?")[1] if "?" in self.path else "")
-        mlb=p.get("mlb_id",[""])[0];camp=p.get("campanha",[""])[0]
-        with get_db() as db:
+        try:
+            p = parse_qs(self.path.split("?")[1] if "?" in self.path else "")
+            mlb = p.get("mlb_id",[""])[0]; camp = p.get("campanha",[""])[0]
             if mlb:
-                rows=db.fetchall("SELECT * FROM campanha_historico WHERE mlb_id=%s ORDER BY data_aplicacao DESC LIMIT 50",(mlb,))
+                rows = exe("SELECT * FROM campanha_historico WHERE mlb_id=%s ORDER BY data_aplicacao DESC LIMIT 50",(mlb,),fetchall=True)
             elif camp:
-                rows=db.fetchall("SELECT * FROM campanha_historico WHERE campanha=%s ORDER BY mlb_id,data_aplicacao DESC",(camp,))
+                rows = exe("SELECT * FROM campanha_historico WHERE campanha=%s ORDER BY mlb_id,data_aplicacao DESC",(camp,),fetchall=True)
             else:
-                rows=db.fetchall("SELECT mlb_id,sku,titulo,campanha,desconto,preco_original,preco_final,lucro_estimado,margem_estimada,status,MAX(data_aplicacao) as data_aplicacao FROM campanha_historico GROUP BY mlb_id,sku,titulo,campanha,desconto,preco_original,preco_final,lucro_estimado,margem_estimada,status ORDER BY mlb_id LIMIT 2000")
-        self._json([dict(r) for r in rows])
+                rows = exe("SELECT mlb_id,sku,titulo,campanha,desconto,preco_original,preco_final,lucro_estimado,margem_estimada,status,MAX(data_aplicacao) as data_aplicacao FROM campanha_historico GROUP BY mlb_id,sku,titulo,campanha,desconto,preco_original,preco_final,lucro_estimado,margem_estimada,status ORDER BY mlb_id LIMIT 2000",fetchall=True)
+            self._ok(rows)
+        except Exception as e: self._err(500, str(e))
 
     def _post_campanha(self):
         try:
-            body=json.loads(self.rfile.read(int(self.headers.get("Content-Length",0))))
-            rows=body.get("rows",[]);camp=body.get("campanha","fava_crescendo")
-            saved=0
-            with get_db() as db:
-                for r in rows:
-                    db.execute("INSERT INTO campanha_historico(mlb_id,sku,titulo,campanha,desconto,preco_original,preco_final,lucro_estimado,margem_estimada,status) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                        (str(r.get("mlb_id","")),str(r.get("sku","")),str(r.get("titulo",""))[:200],camp,
-                         float(r.get("desconto",0)),float(r.get("preco_original",0)),float(r.get("preco_final",0)),
-                         float(r.get("lucro_estimado",0)),float(r.get("margem_estimada",0)),str(r.get("status",""))))
-                    saved+=1
-            self._json({"ok":True,"saved":saved})
-        except Exception as e: self._json({"ok":False,"error":str(e)},500)
+            body = json.loads(self.rfile.read(int(self.headers.get("Content-Length",0))))
+            rows = body.get("rows",[]); camp = body.get("campanha","fava_crescendo")
+            saved = 0
+            for r in rows:
+                exe("INSERT INTO campanha_historico(mlb_id,sku,titulo,campanha,desconto,preco_original,preco_final,lucro_estimado,margem_estimada,status) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                    (str(r.get("mlb_id","")),str(r.get("sku","")),str(r.get("titulo",""))[:200],camp,
+                     float(r.get("desconto",0)),float(r.get("preco_original",0)),float(r.get("preco_final",0)),
+                     float(r.get("lucro_estimado",0)),float(r.get("margem_estimada",0)),str(r.get("status",""))))
+                saved += 1
+            self._ok({"ok":True,"saved":saved})
+        except Exception as e: self._err(500, str(e))
 
     def _sync_lucro(self):
         try:
-            TAXAS=0.0165+0.076+0.12+0.0381+0.02
-            with get_db() as db:
-                rows=db.fetchall("SELECT id,preco,sale_fee,cmv,frete_medio,desconto FROM listings WHERE cmv>0 AND preco>0")
-                for r in rows:
-                    pf=float(r["preco"])*(1-float(r["desconto"]or 0)/100)
-                    rec=pf*(1-float(r["sale_fee"]or 0.17)-TAXAS)
-                    lucro=rec-float(r["cmv"]or 0)-float(r["frete_medio"]or 13)
-                    marg=(lucro/pf*100)if pf>0 else 0
-                    db.execute("UPDATE listings SET lucro_estimado=%s,margem_real=%s WHERE id=%s",(round(lucro,2),round(marg,2),r["id"]))
-            self._json({"ok":True,"updated":len(rows)})
-        except Exception as e: self._json({"ok":False,"error":str(e)},500)
+            TAXAS = 0.0165+0.076+0.12+0.0381+0.02
+            rows = exe("SELECT id,preco,sale_fee,frete_medio,desconto FROM ml_listings WHERE preco>0", fetchall=True)
+            for r in rows:
+                pf = float(r["preco"])*(1-float(r["desconto"] or 0)/100)
+                rec = pf*(1-float(r["sale_fee"] or 0.17)-TAXAS)
+                lucro = rec-float(r["frete_medio"] or 13)
+                marg = (lucro/pf*100) if pf>0 else 0
+                exe("UPDATE ml_listings SET lucro_estimado=%s,margem_real=%s WHERE id=%s",(round(lucro,2),round(marg,2),r["id"]))
+            self._ok({"ok":True,"updated":len(rows)})
+        except Exception as e: self._err(500, str(e))
 
     def _sync_bling_anuncios(self):
         threading.Thread(target=sync_bling_anuncios, daemon=True).start()
