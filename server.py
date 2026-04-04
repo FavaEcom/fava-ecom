@@ -632,6 +632,27 @@ def agendar_sync():
     threading.Thread(target=loop, daemon=True).start()
     print('[SYNC] Agendador 1h iniciado')
 
+    # ── Renovação automática do Bling a cada 5h50min ──
+    def loop_bling():
+        time.sleep(60)  # aguarda 1min para servidor inicializar
+        # Primeiro: tentar carregar tokens salvos
+        carregar_tokens_salvos()
+        if _bling_token.get('access'):
+            print('[BLING] Tokens carregados do banco')
+        while True:
+            try:
+                rt = _bling_token.get('refresh', '')
+                if rt:
+                    ok = renovar_bling()
+                    print(f'[BLING] Auto-renovação: {"OK" if ok else "FALHOU"} | access={str(_bling_token.get("access",""))[:15]}...')
+                else:
+                    print('[BLING] Sem refresh_token — aguardando OAuth manual')
+            except Exception as e:
+                print(f'[BLING] Erro na renovação: {e}')
+            time.sleep(21000)  # 5h50min = 21000s
+    threading.Thread(target=loop_bling, daemon=True).start()
+    print('[BLING] Auto-renovação a cada 5h50min iniciada')
+
 # ────────────────────────────────────────────────────────────────
 # HTTP SERVER
 # ────────────────────────────────────────────────────────────────
