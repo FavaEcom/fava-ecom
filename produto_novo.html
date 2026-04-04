@@ -623,76 +623,47 @@ function resequenciarSkus() {
   document.getElementById('sku-inicial').value = seq;
   console.log('[SKU] ' + count + ' SKUs gerados: ' + base + ' a ' + (seq-1));
 }
-  let seq = base;
-  let count = 0;
-  fichas.forEach(function(f) {
-    // Só preenche se o campo SKU estiver vazio
-    const skuAtual = String(f.sku||'').trim();
-    if(!skuAtual || f._vazio) {
-      f.sku = String(seq++);
-      f._vazio = false;
-      f._gerado = true; // azul = gerado pela sequência
-      count++;
-    }
-  });
-  renderTabela();
-  if(count > 0) {
-    document.getElementById('sku-inicial').value = seq; // atualizar para próxima vez
-    console.log('[SKU] ' + count + ' SKUs gerados a partir de ' + base);
-  }
-}
 
 
 async function gerarTitulosIA() {
-  const semTitulo = fichas.filter(f => !f.titulo_ml || !f.titulo_shopee);
-  if(!semTitulo.length) { alert('Todos os produtos já têm título.'); return; }
-  if(!confirm('Gerar títulos para ' + semTitulo.length + ' produto(s) sem título? Usa IA (pode demorar).')) return;
-  
-  const btn = event?.target;
-  if(btn) { btn.textContent = '⏳ Gerando...'; btn.disabled = true; }
-  
-  for(let i = 0; i < fichas.length; i++) {
-    const f = fichas[i];
+  var semTitulo = fichas.filter(function(f){ return !f.titulo_ml || !f.titulo_shopee; });
+  if(!semTitulo.length) { alert('Todos os produtos ja tem titulo.'); return; }
+  if(!confirm('Gerar titulos para ' + semTitulo.length + ' produto(s)? Usa IA.')) return;
+
+  var btn = document.querySelector('[onclick="gerarTitulosIA()"]');
+  if(btn) { btn.textContent = 'Gerando...'; btn.disabled = true; }
+
+  for(var i = 0; i < fichas.length; i++) {
+    var f = fichas[i];
     if(f.titulo_ml && f.titulo_shopee) continue;
-    
-    const prompt = `Você é especialista em e-commerce brasileiro.
-Produto: "${f.nome}"
-NCM: ${f.ncm||''}
-Família: ${f.familia||''}
 
-Gere dois títulos para marketplaces:
-1. TITULO_ML (máximo 60 caracteres, palavras-chave relevantes, sem marca se não souber)
-2. TITULO_SHOPEE (máximo 120 caracteres, mais descritivo com benefícios e compatibilidade)
-
-Responda APENAS no formato JSON:
-{"ml": "título aqui", "shopee": "título aqui"}`;
+    var promptTxt = 'Produto: "' + f.nome + '". NCM: ' + (f.ncm||'') + '. Familia: ' + (f.familia||'') + '.'
+      + ' Gere dois titulos: 1) ML maximo 60 chars, 2) Shopee maximo 120 chars.'
+      + ' Responda APENAS em JSON: {"ml":"titulo","shopee":"titulo"}';
 
     try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      var resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 200,
-          messages: [{role: 'user', content: prompt}]
+          messages: [{role: 'user', content: promptTxt}]
         })
       });
-      const data = await resp.json();
-      const txt = (data.content?.[0]?.text || '').trim();
-      const clean = txt.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(clean);
-      
+      var data = await resp.json();
+      var txt = (data.content && data.content[0] ? data.content[0].text : '').trim();
+      var clean = txt.replace(/```json|```/g, '').trim();
+      var parsed = JSON.parse(clean);
       if(!f.titulo_ml)     f.titulo_ml     = (parsed.ml     || '').substring(0, 60);
       if(!f.titulo_shopee) f.titulo_shopee = (parsed.shopee || '').substring(0, 120);
       renderTabela();
     } catch(e) {
-      console.warn('Erro título', f.nome, e.message);
+      console.warn('Erro titulo', f.nome, e.message);
     }
-    // Pausa para não sobrecarregar a API
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(function(r){ setTimeout(r, 600); });
   }
-  
-  if(btn) { btn.textContent = '✨ Gerar Títulos'; btn.disabled = false; }
+  if(btn) { btn.textContent = 'Gerar Titulos'; btn.disabled = false; }
 }
 
 </script>
