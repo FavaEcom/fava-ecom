@@ -357,19 +357,18 @@ function nomeKit(sku){
   return 'Kit: '+nomes.slice(0,3).join(' + ')+(nomes.length>3?'...':'');
 }
 
-// ── FUNÇÕES DE CÁLCULO (tabelas março 2026) ─────────────────────
 
-// Shopee: taxa % + valor fixo por faixa de preço (CNPJ)
+// Shopee: taxa CNPJ marco 2026 (pct + fixo por faixa de preco)
 function calcTaxaShopee(preco) {
-  if(preco <= 0)   return {pct:0.20, fixo:0};
-  if(preco < 80)   return {pct:0.20, fixo:4.00};
-  if(preco < 100)  return {pct:0.14, fixo:16.00};
-  if(preco < 200)  return {pct:0.14, fixo:20.00};
-  if(preco < 500)  return {pct:0.14, fixo:26.00};
-                   return {pct:0.14, fixo:28.00};
+  if(preco <= 0)  return {pct:0.20, fixo:0};
+  if(preco < 80)  return {pct:0.20, fixo:4.00};
+  if(preco < 100) return {pct:0.14, fixo:16.00};
+  if(preco < 200) return {pct:0.14, fixo:20.00};
+  if(preco < 500) return {pct:0.14, fixo:26.00};
+                  return {pct:0.14, fixo:28.00};
 }
 
-// Shopee: frete estimado (Shopee subsidia, custo real ~R$0-8)
+// Shopee: frete estimado por peso
 function calcFreteShopee(peso) {
   if(!peso || peso <= 0) return 0;
   if(peso <= 1)  return 4;
@@ -378,44 +377,44 @@ function calcFreteShopee(peso) {
   return 15;
 }
 
-// Peso volumétrico e final (maior entre real e vol)
+// Peso final: maior entre real e volumetrico (L x A x P / 6000)
 function calcPesoFinal(peso, larg, alt, prof) {
   const vol = (parseFloat(larg||0) * parseFloat(alt||0) * parseFloat(prof||0)) / 6000;
   const real = parseFloat(peso||0);
   return Math.max(real, vol) || 0;
 }
 
-// ML Full Super (MercadoLíder Verde) — tabela por faixa de preço × peso
+// ML Full Super - tabela de frete por peso e preco
+const FRETE_FS = [
+  [0.3,[1.25,1.50,2.00,3.00,4.00,6.00,20.95]],
+  [0.5,[1.25,1.50,2.00,3.00,4.00,6.00,22.55]],
+  [1.0,[1.25,1.50,2.00,3.00,4.00,6.00,23.65]],
+  [2.0,[1.75,2.00,2.50,3.50,4.50,6.50,24.65]],
+  [3.0,[2.00,2.50,3.00,4.00,5.00,7.00,26.25]],
+  [4.0,[2.00,2.50,3.00,4.00,5.00,7.00,28.35]],
+  [5.0,[2.50,3.50,4.00,5.00,6.00,7.50,30.75]],
+  [6.0,[2.50,3.50,4.00,5.00,6.00,7.50,39.75]],
+  [7.0,[4.00,5.00,5.50,6.50,7.00,7.50,44.05]],
+  [8.0,[4.00,5.00,5.50,6.50,7.00,7.50,48.05]],
+  [9.0,[5.00,6.00,6.50,7.00,7.50,8.00,49.35]],
+  [11.0,[5.00,6.00,6.50,7.00,7.50,8.00,68.65]],
+  [13.0,[5.00,6.00,6.50,7.00,7.50,8.00,70.25]],
+  [15.0,[5.00,6.00,6.50,7.00,7.50,8.00,74.95]],
+  [17.0,[5.00,6.00,6.50,7.00,7.50,8.00,78.65]],
+  [20.0,[5.00,6.00,6.50,7.00,7.50,8.00,91.15]],
+  [25.0,[5.00,6.00,6.50,7.00,7.50,8.00,105.95]],
+  [30.0,[5.00,6.00,6.50,7.00,7.50,8.00,106.95]],
+  [40.0,[5.00,6.00,6.50,7.00,7.50,8.00,107.05]],
+  [50.0,[5.00,6.00,6.50,7.00,7.50,8.00,110.75]],
+  [9999,[5.00,6.00,6.50,7.00,7.50,8.00,261.95]]
+];
+
 function calcFreteML(peso, preco) {
-  if(!peso || peso <= 0) return 6.5; // fallback
-  // Tabela FRETE_FS: [peso_max, [preco_ate_19, preco_19-99, ...]]
-  const FRETE_FS = [
-    [0.3, [1.25,1.50,2.00,3.00,4.00,6.00,20.95]],
-    [0.5, [1.25,1.50,2.00,3.00,4.00,6.00,22.55]],
-    [1.0, [1.25,1.50,2.00,3.00,4.00,6.00,23.65]],
-    [2.0, [1.75,2.00,2.50,3.50,4.50,6.50,24.65]],
-    [3.0, [2.00,2.50,3.00,4.00,5.00,7.00,26.25]],
-    [4.0, [2.00,2.50,3.00,4.00,5.00,7.00,28.35]],
-    [5.0, [2.50,3.50,4.00,5.00,6.00,7.50,30.75]],
-    [6.0, [2.50,3.50,4.00,5.00,6.00,7.50,39.75]],
-    [7.0, [4.00,5.00,5.50,6.50,7.00,7.50,44.05]],
-    [8.0, [4.00,5.00,5.50,6.50,7.00,7.50,48.05]],
-    [9.0, [5.00,6.00,6.50,7.00,7.50,8.00,49.35]],
-    [11.0,[5.00,6.00,6.50,7.00,7.50,8.00,68.65]],
-    [13.0,[5.00,6.00,6.50,7.00,7.50,8.00,70.25]],
-    [15.0,[5.00,6.00,6.50,7.00,7.50,8.00,74.95]],
-    [17.0,[5.00,6.00,6.50,7.00,7.50,8.00,78.65]],
-    [20.0,[5.00,6.00,6.50,7.00,7.50,8.00,91.15]],
-    [25.0,[5.00,6.00,6.50,7.00,7.50,8.00,105.95]],
-    [30.0,[5.00,6.00,6.50,7.00,7.50,8.00,106.95]],
-    [40.0,[5.00,6.00,6.50,7.00,7.50,8.00,107.05]],
-    [50.0,[5.00,6.00,6.50,7.00,7.50,8.00,110.75]],
-    [9999,[5.00,6.00,6.50,7.00,7.50,8.00,261.95]]
-  ];
-  const col = preco>=199?6:preco>=99?5:preco>=79?4:preco>=49?3:preco>=29?2:preco>=19?1:0;
+  if(!peso || peso <= 0) return null;
+  const fi = preco>=199?6:preco>=99?5:preco>=79?4:preco>=49?3:preco>=29?2:preco>=19?1:0;
   for(const [pm,v] of FRETE_FS) {
     if(peso <= pm) {
-      let f = v[col];
+      let f = v[fi];
       if(preco < 19) f = Math.min(f, preco*0.5);
       else if(preco < 29) f = Math.min(f, preco*0.25);
       return parseFloat(f.toFixed(2));
@@ -423,7 +422,6 @@ function calcFreteML(peso, preco) {
   }
   return 8.00;
 }
-
 
 function C(r){
   const preco=parseFloat(r.preco||0), desc=parseFloat(r.desconto||0);
@@ -717,28 +715,20 @@ function exportCSV(){
 document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)fechar();});
 
 async function carregar(){
-  document.getElementById('v-cards').innerHTML='<div class="loading">Carregando ML...</div>';
+  document.getElementById('v-cards').innerHTML='<div class="loading">Carregando...</div>';
   try{
-    // 1. Carregar ML primeiro (rápido, vem do banco)
-    const mlData = await fetch(SRV+'/api/db/listings').then(r=>r.json()).catch(()=>[]);
-    const mlItems = (Array.isArray(mlData)?mlData:[]).map(r=>({...r,canal:'ml'}));
-    _all = mlItems;
+    const [mlData, yampiData] = await Promise.all([
+    fetch(SRV+'/api/db/listings').then(r=>r.json()).catch(()=>[]),
+    fetch(SRV+'/api/db/yampi-listings').then(r=>r.json()).catch(()=>[])
+  ]);
+  const mlItems = (Array.isArray(mlData)?mlData:[]).map(r=>({...r,canal:'ml'}));
+  // Yampi já vem normalizado do server com CMV BR do banco
+  const yampiItems = (Array.isArray(yampiData)?yampiData:[]).map(r=>({...r,canal:r.canal||'yampi'}));
+const data = [...mlItems, ...yampiItems];
+    _all=Array.isArray(data)?data:[];
     calcAll();stats();filtrar();
-    document.getElementById('lbl-s').textContent=mlItems.length+' ML carregados | Carregando Yampi...';
-
-    // 2. Carregar Yampi em background (pode ser lento — chama API externa)
-    const yampiData = await fetch(SRV+'/api/db/yampi-listings').then(r=>r.json()).catch(()=>[]);
-    const yampiItems = (Array.isArray(yampiData)?yampiData:[]).map(r=>({...r,canal:r.canal||'yampi'}));
-    if(yampiItems.length>0){
-      _all = [...mlItems, ...yampiItems];
-      calcAll();stats();filtrar();
-    }
-    document.getElementById('lbl-s').textContent=
-      mlItems.length+' ML + '+yampiItems.length+' Yampi = '+_all.length+' total';
-  }catch(e){
-    document.getElementById('v-cards').innerHTML=
-      `<div class="loading" style="color:#ef4444">Erro: ${e.message}</div>`;
-  }
+    document.getElementById('lbl-s').textContent=_all.length+' anúncios carregados';
+  }catch(e){document.getElementById('v-cards').innerHTML=`<div class="loading" style="color:#ef4444">Erro: ${e.message}</div>`;}
 }
 
 function rcNovo(){
