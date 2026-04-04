@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cotação / Atacado — Fava Ecom</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --verde: #00B712;
+  --preto: #181818;
+  --branco: #FFFFFF;
+  --cinza: #F4F4F4;
+  --cinza2: #E8E8E8;
+  --cinza3: #999;
+  --roxo: #5B21B6;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #EFEFEF; color: var(--preto); }
+
+/* ── NAV ── */
+nav { background: var(--preto); padding: 0 20px; display: flex; gap: 2px; border-bottom: 3px solid var(--verde); }
+nav a { padding: 8px 14px; color: #888; font-size: 12px; font-weight: 700; text-decoration: none; border-bottom: 3px solid transparent; margin-bottom: -3px; transition: color .15s; }
+nav a:hover { color: #fff; }
+nav a.ativo { color: var(--verde); border-bottom-color: var(--verde); }
+
+/* ── HEADER EDITOR ── */
+.editor-header {
+  background: var(--preto);
+  padding: 14px 24px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  border-bottom: 2px solid #2a2a2a;
+}
+.editor-header h1 { font-size: 15px; font-weight: 900; color: #fff; letter-spacing: -.3px; }
+.editor-header .badge { background: var(--verde); color: #000; font-size: 10px; font-weight: 900; padding: 2px 8px; border-radius: 20px; letter-spacing: .5px; }
+.btn { padding: 7px 16px; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; transition: all .15s; }
+.btn-verde { background: var(--verde); color: #000; }
+.btn-verde:hover { background: #00d415; }
+.btn-dark { background: #333; color: #fff; }
+.btn-dark:hover { background: #444; }
+.btn-print { background: #fff; color: var(--preto); }
+.btn-print:hover { background: #f0f0f0; }
+.btn-red { background: #dc2626; color: #fff; }
+.btn-red:hover { background: #b91c1c; }
+
+/* ── LAYOUT EDITOR ── */
+.editor-body { display: grid; grid-template-columns: 340px 1fr; min-height: calc(100vh - 90px); }
+.sidebar { background: #fff; border-right: 1px solid var(--cinza2); padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; max-height: calc(100vh - 90px); }
+.main-area { padding: 20px; overflow-y: auto; max-height: calc(100vh - 90px); }
+
+/* ── SIDEBAR ── */
+.sid-section { }
+.sid-title { font-size: 10px; font-weight: 900; color: var(--cinza3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+.form-field { margin-bottom: 8px; }
+.form-field label { display: block; font-size: 11px; font-weight: 600; color: #555; margin-bottom: 3px; }
+.form-field input, .form-field select, .form-field textarea {
+  width: 100%; border: 1px solid var(--cinza2); border-radius: 6px;
+  padding: 7px 10px; font-size: 12px; font-family: 'Inter', sans-serif;
+  outline: none; transition: border .15s;
+}
+.form-field input:focus, .form-field select:focus { border-color: var(--verde); }
+.form-field textarea { resize: vertical; min-height: 60px; }
+.search-prod { position: relative; }
+.search-prod input { width: 100%; border: 2px solid var(--cinza2); border-radius: 8px; padding: 9px 12px; font-size: 12px; outline: none; }
+.search-prod input:focus { border-color: var(--verde); }
+.search-results { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid var(--cinza2); border-radius: 8px; box-shadow: 0 8px 24px #0002; z-index: 50; max-height: 200px; overflow-y: auto; }
+.search-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--cinza); font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
+.search-item:hover { background: var(--verde); color: #000; }
+.search-item:hover .si-preco { color: #000; }
+.si-nome { font-weight: 600; }
+.si-sku { font-size: 10px; color: #999; }
+.si-preco { font-size: 11px; color: var(--verde); font-weight: 700; }
+.search-item:hover .si-sku { color: #333; }
+
+/* ── RESUMO SIDEBAR ── */
+.resumo-box { background: var(--preto); border-radius: 8px; padding: 14px; color: #fff; }
+.resumo-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; }
+.resumo-total { border-top: 1px solid #333; margin-top: 8px; padding-top: 8px; font-weight: 900; font-size: 15px; color: var(--verde); }
+
+/* ── PREVIEW DA COTAÇÃO ── */
+.cotacao-preview {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px #0001;
+  overflow: hidden;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+/* ── HEADER DA COTAÇÃO IMPRESSA ── */
+.cot-header {
+  background: var(--preto);
+  padding: 28px 36px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.cot-logo-area { display: flex; align-items: center; gap: 16px; }
+.cot-logo-circle {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: #f0f0f0; border: 3px solid var(--verde);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 900; color: var(--preto); letter-spacing: -.5px;
+  flex-shrink: 0;
+}
+.cot-empresa-nome { font-size: 22px; font-weight: 900; color: #fff; letter-spacing: -1px; }
+.cot-empresa-nome span { color: var(--verde); }
+.cot-empresa-sub { font-size: 10px; color: #666; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+.cot-doc-info { text-align: right; }
+.cot-doc-num { font-size: 24px; font-weight: 900; color: var(--verde); }
+.cot-doc-tipo { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+.cot-doc-data { font-size: 11px; color: #666; margin-top: 4px; }
+
+/* ── BARRA VERDE ── */
+.cot-barra { background: var(--verde); height: 5px; }
+
+/* ── DADOS CLIENTE/VENDEDOR ── */
+.cot-meta { display: grid; grid-template-columns: 1fr 1fr; padding: 20px 36px; gap: 20px; border-bottom: 1px solid var(--cinza2); background: var(--cinza); }
+.cot-meta-box { }
+.cot-meta-label { font-size: 9px; font-weight: 900; color: var(--verde); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+.cot-meta-value { font-size: 13px; font-weight: 600; color: var(--preto); }
+.cot-meta-sub { font-size: 11px; color: #666; margin-top: 2px; }
+
+/* ── TABELA DE PRODUTOS ── */
+.cot-tabela-wrap { padding: 0 36px; }
+.cot-tabela { width: 100%; border-collapse: collapse; margin: 20px 0; }
+.cot-tabela thead th {
+  background: var(--preto); color: #fff;
+  padding: 10px 12px; text-align: left;
+  font-size: 10px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase;
+}
+.cot-tabela thead th:last-child { text-align: right; }
+.cot-tabela thead th.num { text-align: right; }
+.cot-tabela tbody tr { border-bottom: 1px solid var(--cinza2); transition: background .1s; }
+.cot-tabela tbody tr:hover { background: #f9fff9; }
+.cot-tabela tbody td { padding: 10px 12px; font-size: 12px; vertical-align: middle; }
+.cot-tabela tbody td.num { text-align: right; font-weight: 600; }
+.cot-tabela tbody td.total { text-align: right; font-weight: 900; color: var(--preto); }
+.prod-nome { font-weight: 700; color: var(--preto); }
+.prod-sku { font-size: 10px; color: #999; margin-top: 1px; }
+.qty-ctrl { display: flex; align-items: center; gap: 4px; }
+.qty-btn { width: 22px; height: 22px; border: 1px solid var(--cinza2); border-radius: 4px; background: #fff; cursor: pointer; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.qty-btn:hover { background: var(--verde); border-color: var(--verde); }
+.qty-val { font-weight: 700; min-width: 28px; text-align: center; }
+.preco-edit { border: 1px solid var(--cinza2); border-radius: 4px; padding: 3px 6px; font-size: 12px; font-family: 'Inter', sans-serif; width: 80px; text-align: right; font-weight: 700; outline: none; }
+.preco-edit:focus { border-color: var(--verde); }
+.del-btn { background: none; border: none; cursor: pointer; color: #ccc; font-size: 16px; padding: 4px; border-radius: 4px; }
+.del-btn:hover { color: #dc2626; background: #fee2e2; }
+
+/* ── TOTAIS ── */
+.cot-totais { background: var(--cinza); border-top: 2px solid var(--cinza2); padding: 20px 36px; display: flex; justify-content: flex-end; }
+.totais-box { min-width: 280px; }
+.total-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; border-bottom: 1px solid var(--cinza2); }
+.total-final { display: flex; justify-content: space-between; padding: 12px 0 0; font-size: 18px; font-weight: 900; color: var(--preto); }
+.total-final span:last-child { color: var(--verde); }
+
+/* ── CONDIÇÕES/OBS ── */
+.cot-obs { padding: 16px 36px; border-top: 1px solid var(--cinza2); }
+.obs-label { font-size: 10px; font-weight: 900; color: var(--verde); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; }
+.obs-text { font-size: 12px; color: #555; line-height: 1.6; white-space: pre-wrap; }
+.cot-tags { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 36px 0; }
+.tag { background: var(--cinza); border: 1px solid var(--cinza2); border-radius: 20px; padding: 4px 12px; font-size: 11px; font-weight: 600; color: #666; }
+.tag.pag { border-color: var(--verde); color: var(--verde); background: #f0fff0; }
+
+/* ── FOOTER COTAÇÃO ── */
+.cot-footer { background: var(--preto); padding: 20px 36px; display: flex; justify-content: space-between; align-items: center; }
+.cot-footer-msg { font-size: 11px; color: #666; }
+.cot-footer-msg b { color: var(--verde); }
+.cot-assinatura { text-align: right; }
+.ass-linha { border-top: 1px solid #444; width: 180px; padding-top: 6px; font-size: 10px; color: #666; text-align: center; }
+
+/* ── VAZIO ── */
+.vazio-msg { text-align: center; padding: 48px; color: #ccc; }
+.vazio-msg .icon { font-size: 48px; margin-bottom: 12px; }
+.vazio-msg p { font-size: 14px; font-weight: 600; }
+
+/* ── PRINT ── */
+@media print {
+  body { background: #fff; }
+  nav, .editor-header, .sidebar, .del-btn, .qty-btn, .preco-edit { display: none !important; }
+  .editor-body { grid-template-columns: 1fr; }
+  .main-area { padding: 0; max-height: unset; overflow: visible; }
+  .cotacao-preview { box-shadow: none; border-radius: 0; max-width: 100%; }
+  .cot-tabela tbody tr:hover { background: transparent; }
+  .qty-val { font-weight: 700; }
+  @page { margin: 12mm; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="https://web-production-5aa0f.up.railway.app/painel_fava.html">🏠 Painel</a>
+  <a href="https://web-production-5aa0f.up.railway.app/balcao_fava.html">🏪 Balcão</a>
+  <a href="https://web-production-5aa0f.up.railway.app/produto_novo.html">📦 Produto Novo</a>
+  <a href="https://web-production-5aa0f.up.railway.app/gestor_anuncios.html">📢 Gestor</a>
+  <a href="https://web-production-5aa0f.up.railway.app/cotacao_fava.html" class="ativo">📋 Cotação</a>
+  <a href="https://web-production-5aa0f.up.railway.app/calculadora_fava.html">🧮 Calculadora</a>
+</nav>
+
+<div class="editor-header">
+  <h1>📋 Cotação / Atacado</h1>
+  <span class="badge">FAVA ECOM</span>
+  <div style="margin-left:auto;display:flex;gap:8px">
+    <button class="btn btn-dark" onclick="novaCotacao()">🗑 Limpar</button>
+    <button class="btn btn-dark" onclick="salvarRascunho()">💾 Salvar</button>
+    <button class="btn btn-print" onclick="window.print()">🖨 Imprimir</button>
+    <button class="btn btn-verde" onclick="gerarPDF()">📄 PDF</button>
+  </div>
+</div>
+
+<div class="editor-body">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <!-- Nº Cotação + Tipo -->
+    <div class="sid-section">
+      <div class="sid-title">Documento</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="form-field">
+          <label>Número</label>
+          <input type="text" id="doc-num" value="001" oninput="render()">
+        </div>
+        <div class="form-field">
+          <label>Tipo</label>
+          <select id="doc-tipo" onchange="render()">
+            <option value="COTAÇÃO">Cotação</option>
+            <option value="ORÇAMENTO">Orçamento</option>
+            <option value="PEDIDO">Pedido</option>
+            <option value="PROPOSTA">Proposta</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Data</label>
+        <input type="date" id="doc-data" oninput="render()">
+      </div>
+      <div class="form-field">
+        <label>Validade (dias)</label>
+        <input type="number" id="doc-validade" value="7" oninput="render()">
+      </div>
+    </div>
+
+    <!-- Cliente -->
+    <div class="sid-section">
+      <div class="sid-title">Cliente / Destinatário</div>
+      <div class="form-field">
+        <label>Nome / Razão Social</label>
+        <input type="text" id="cli-nome" placeholder="Nome do cliente" oninput="render()">
+      </div>
+      <div class="form-field">
+        <label>CNPJ / CPF</label>
+        <input type="text" id="cli-doc" placeholder="00.000.000/0000-00" oninput="render()">
+      </div>
+      <div class="form-field">
+        <label>Telefone / WhatsApp</label>
+        <input type="text" id="cli-tel" placeholder="(41) 9 0000-0000" oninput="render()">
+      </div>
+      <div class="form-field">
+        <label>Cidade / Estado</label>
+        <input type="text" id="cli-cidade" placeholder="Curitiba / PR" oninput="render()">
+      </div>
+    </div>
+
+    <!-- Busca de produtos -->
+    <div class="sid-section">
+      <div class="sid-title">Adicionar Produto</div>
+      <div class="search-prod">
+        <input type="text" id="busca" placeholder="🔍 Buscar SKU ou nome..." oninput="buscarProduto(this.value)" autocomplete="off">
+        <div class="search-results" id="resultados" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- Condições -->
+    <div class="sid-section">
+      <div class="sid-title">Pagamento</div>
+      <div class="form-field">
+        <label>Condição</label>
+        <select id="pag-cond" onchange="render()">
+          <option>À Vista</option>
+          <option>30 dias</option>
+          <option>30/60 dias</option>
+          <option>30/60/90 dias</option>
+          <option>PIX</option>
+          <option>Boleto</option>
+          <option>Cartão</option>
+          <option>Personalizado</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Frete</label>
+        <select id="frete-tipo" onchange="render()">
+          <option value="A COMBINAR">A combinar</option>
+          <option value="CIF (por nossa conta)">CIF — por nossa conta</option>
+          <option value="FOB (por conta do cliente)">FOB — por conta do cliente</option>
+          <option value="GRÁTIS">Grátis</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Desconto geral (%)</label>
+        <input type="number" id="desc-geral" value="0" min="0" max="80" step="0.5" oninput="render()">
+      </div>
+    </div>
+
+    <!-- Observações -->
+    <div class="sid-section">
+      <div class="sid-title">Observações</div>
+      <div class="form-field">
+        <textarea id="obs" placeholder="Ex: Preços válidos para a data de emissão. Sujeito a alteração sem aviso prévio." oninput="render()"></textarea>
+      </div>
+    </div>
+
+    <!-- Resumo -->
+    <div class="resumo-box" id="resumo-box">
+      <div class="resumo-row"><span>Subtotal</span><span id="r-sub">R$ 0,00</span></div>
+      <div class="resumo-row"><span id="r-desc-lbl">Desconto</span><span id="r-desc">—</span></div>
+      <div class="resumo-row total resumo-total"><span>TOTAL</span><span id="r-total">R$ 0,00</span></div>
+    </div>
+
+  </div>
+
+  <!-- MAIN: Preview da cotação -->
+  <div class="main-area">
+    <div class="cotacao-preview" id="cotacao">
+
+      <!-- Header -->
+      <div class="cot-header">
+        <div class="cot-logo-area">
+          <div class="cot-logo-circle">
+            <svg width="36" height="36" viewBox="0 0 100 100" fill="none">
+              <circle cx="50" cy="50" r="48" stroke="#00B712" stroke-width="4"/>
+              <rect x="18" y="18" width="22" height="22" rx="3" fill="#181818"/>
+              <rect x="22" y="22" width="14" height="14" rx="2" fill="#f0f0f0"/>
+              <text x="25" y="33" font-family="Inter" font-weight="900" font-size="10" fill="#181818">F</text>
+              <rect x="60" y="18" width="22" height="22" rx="3" fill="#181818"/>
+              <rect x="64" y="22" width="14" height="14" rx="2" fill="#f0f0f0"/>
+              <text x="67" y="33" font-family="Inter" font-weight="900" font-size="10" fill="#181818">V</text>
+              <rect x="18" y="60" width="22" height="22" rx="3" fill="#181818"/>
+              <rect x="22" y="64" width="14" height="14" rx="2" fill="#f0f0f0"/>
+              <text x="25" y="75" font-family="Inter" font-weight="900" font-size="10" fill="#181818">E</text>
+              <circle cx="75" cy="28" r="7" fill="#7c3aed"/>
+              <circle cx="72" cy="25" r="4" fill="#00B712" opacity=".7"/>
+            </svg>
+          </div>
+          <div>
+            <div class="cot-empresa-nome">FAVA<span>ECOM</span></div>
+            <div class="cot-empresa-sub">Loja Online · Since 2023</div>
+            <div style="font-size:10px;color:#555;margin-top:4px">CNPJ: 00.000.000/0001-00 · Curitiba, PR</div>
+          </div>
+        </div>
+        <div class="cot-doc-info">
+          <div class="cot-doc-tipo" id="cot-tipo">COTAÇÃO</div>
+          <div class="cot-doc-num" id="cot-num">Nº 001</div>
+          <div class="cot-doc-data" id="cot-data"></div>
+        </div>
+      </div>
+
+      <div class="cot-barra"></div>
+
+      <!-- Meta -->
+      <div class="cot-meta">
+        <div class="cot-meta-box">
+          <div class="cot-meta-label">Para</div>
+          <div class="cot-meta-value" id="cot-cli-nome">—</div>
+          <div class="cot-meta-sub" id="cot-cli-doc"></div>
+          <div class="cot-meta-sub" id="cot-cli-tel"></div>
+          <div class="cot-meta-sub" id="cot-cli-cidade"></div>
+        </div>
+        <div class="cot-meta-box">
+          <div class="cot-meta-label">Condições</div>
+          <div class="cot-meta-value" id="cot-pag"></div>
+          <div class="cot-meta-sub" id="cot-frete"></div>
+          <div class="cot-meta-sub" id="cot-validade"></div>
+        </div>
+      </div>
+
+      <!-- Tabela de itens -->
+      <div class="cot-tabela-wrap">
+        <table class="cot-tabela">
+          <thead>
+            <tr>
+              <th style="width:40px">#</th>
+              <th>Produto</th>
+              <th class="num" style="width:100px">Qtd</th>
+              <th class="num" style="width:100px">Preço Unit.</th>
+              <th class="num" style="width:90px">Total</th>
+              <th style="width:36px"></th>
+            </tr>
+          </thead>
+          <tbody id="tabela-itens"></tbody>
+        </table>
+        <div class="vazio-msg" id="vazio-msg">
+          <div class="icon">📦</div>
+          <p>Busque e adicione produtos na barra lateral</p>
+        </div>
+      </div>
+
+      <!-- Totais -->
+      <div class="cot-totais" id="cot-totais" style="display:none">
+        <div class="totais-box">
+          <div class="total-row"><span>Subtotal</span><span id="cot-sub">R$ 0,00</span></div>
+          <div class="total-row" id="row-desc" style="display:none"><span id="lbl-desc">Desconto</span><span id="cot-desc" style="color:#dc2626"></span></div>
+          <div class="total-final"><span>TOTAL</span><span id="cot-total">R$ 0,00</span></div>
+        </div>
+      </div>
+
+      <!-- Tags -->
+      <div class="cot-tags" id="cot-tags" style="display:none">
+        <span class="tag pag" id="tag-pag"></span>
+        <span class="tag" id="tag-frete"></span>
+        <span class="tag" id="tag-validade"></span>
+        <span class="tag">Fava Ecom</span>
+      </div>
+
+      <!-- Observações -->
+      <div class="cot-obs" id="cot-obs" style="display:none">
+        <div class="obs-label">Observações</div>
+        <div class="obs-text" id="obs-text"></div>
+      </div>
+
+      <!-- Footer -->
+      <div class="cot-footer">
+        <div class="cot-footer-msg">
+          <b>Fava Ecom</b> — favaecom.com.br<br>
+          <span>Obrigado pela sua confiança!</span>
+        </div>
+        <div class="cot-assinatura">
+          <div class="ass-linha">Assinatura / Aprovação</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const SRV = 'https://web-production-5aa0f.up.railway.app';
+
+let itens = [];
+let produtos = [];
+
+// ── Carregar produtos do banco ──────────────────────────────────
+async function carregarProdutos() {
+  try {
+    const data = await fetch(SRV+'/api/db/produtos').then(r=>r.json());
+    produtos = Array.isArray(data) ? data.filter(p=>parseFloat(p.cmv_br||p.custo_br||0)>0) : [];
+    console.log('[Cotação] Produtos carregados:', produtos.length);
+  } catch(e) { console.warn('[Cotação] Erro ao carregar produtos:', e.message); }
+}
+
+// ── Data padrão ─────────────────────────────────────────────────
+function initData() {
+  const hoje = new Date().toISOString().split('T')[0];
+  document.getElementById('doc-data').value = hoje;
+  render();
+}
+
+// ── Buscar produto ──────────────────────────────────────────────
+let _busca_timer = null;
+function buscarProduto(q) {
+  clearTimeout(_busca_timer);
+  const el = document.getElementById('resultados');
+  if(!q.trim()) { el.style.display='none'; return; }
+  _busca_timer = setTimeout(() => {
+    const q2 = q.toLowerCase();
+    const res = produtos.filter(p =>
+      String(p.sku||'').includes(q2) ||
+      (p.nome||'').toLowerCase().includes(q2)
+    ).slice(0, 12);
+    if(!res.length) { el.style.display='none'; return; }
+    el.innerHTML = res.map(p => {
+      const cmv = parseFloat(p.cmv_br||p.custo_br||0);
+      const preco = calcPrecoVenda(cmv);
+      return `<div class="search-item" onclick="adicionarItem(${p.sku||0})">
+        <div>
+          <div class="si-nome">${(p.nome||'').substring(0,40)}</div>
+          <div class="si-sku">SKU: ${p.sku}</div>
+        </div>
+        <div class="si-preco">${fmtR(preco)}</div>
+      </div>`;
+    }).join('');
+    el.style.display = 'block';
+  }, 200);
+}
+
+// Fechar busca ao clicar fora
+document.addEventListener('click', e => {
+  if(!e.target.closest('.search-prod')) {
+    document.getElementById('resultados').style.display = 'none';
+  }
+});
+
+// ── Calcular preço sugerido (margem 30% sobre CMV PR) ──────────
+function calcPrecoVenda(cmvBr, margem=0.30) {
+  if(!cmvBr) return 0;
+  return cmvBr / (1 - margem);
+}
+
+// ── Adicionar item ──────────────────────────────────────────────
+function adicionarItem(sku) {
+  const prod = produtos.find(p => String(p.sku) === String(sku));
+  if(!prod) return;
+  // Verificar se já está na lista
+  const existente = itens.find(i => i.sku === String(sku));
+  if(existente) { existente.qtd++; render(); return; }
+  const cmv = parseFloat(prod.cmv_br||prod.custo_br||0);
+  itens.push({
+    sku: String(sku),
+    nome: prod.nome || '',
+    qtd: 1,
+    preco: parseFloat(calcPrecoVenda(cmv).toFixed(2)),
+    cmv_br: cmv,
+  });
+  document.getElementById('busca').value = '';
+  document.getElementById('resultados').style.display = 'none';
+  render();
+}
+
+// ── Remover item ────────────────────────────────────────────────
+function removerItem(idx) {
+  itens.splice(idx, 1);
+  render();
+}
+
+// ── Alterar qtd ─────────────────────────────────────────────────
+function alterarQtd(idx, delta) {
+  itens[idx].qtd = Math.max(1, itens[idx].qtd + delta);
+  render();
+}
+
+function setQtd(idx, val) {
+  itens[idx].qtd = Math.max(1, parseInt(val)||1);
+  render();
+}
+
+function setPreco(idx, val) {
+  itens[idx].preco = parseFloat(val)||0;
+  render();
+}
+
+// ── Formatar ─────────────────────────────────────────────────────
+function fmtR(v) { return 'R$ '+(parseFloat(v)||0).toFixed(2).replace('.',','); }
+function fmtN(v) { return (parseFloat(v)||0).toFixed(2).replace('.',','); }
+
+// ── Render principal ─────────────────────────────────────────────
+function render() {
+  const desc = parseFloat(document.getElementById('desc-geral').value)||0;
+
+  // Calcular totais
+  const sub = itens.reduce((s,i) => s + i.qtd * i.preco, 0);
+  const descValor = sub * desc / 100;
+  const total = sub - descValor;
+
+  // Atualizar sidebar resumo
+  document.getElementById('r-sub').textContent = fmtR(sub);
+  document.getElementById('r-desc').textContent = desc > 0 ? `- ${fmtR(descValor)}` : '—';
+  document.getElementById('r-desc-lbl').textContent = `Desconto (${desc}%)`;
+  document.getElementById('r-total').textContent = fmtR(total);
+
+  // Cabeçalho da cotação
+  const tipo = document.getElementById('doc-tipo').value;
+  const num = document.getElementById('doc-num').value;
+  const data = document.getElementById('doc-data').value;
+  const validade = document.getElementById('doc-validade').value;
+  document.getElementById('cot-tipo').textContent = tipo;
+  document.getElementById('cot-num').textContent = `Nº ${num.padStart(3,'0')}`;
+  if(data) {
+    const [y,m,d] = data.split('-');
+    document.getElementById('cot-data').textContent = `${d}/${m}/${y}`;
+  }
+
+  // Cliente
+  const cliNome = document.getElementById('cli-nome').value || '—';
+  const cliDoc = document.getElementById('cli-doc').value;
+  const cliTel = document.getElementById('cli-tel').value;
+  const cliCidade = document.getElementById('cli-cidade').value;
+  document.getElementById('cot-cli-nome').textContent = cliNome;
+  document.getElementById('cot-cli-doc').textContent = cliDoc;
+  document.getElementById('cot-cli-tel').textContent = cliTel;
+  document.getElementById('cot-cli-cidade').textContent = cliCidade;
+
+  // Condições
+  const pagCond = document.getElementById('pag-cond').value;
+  const freteTipo = document.getElementById('frete-tipo').value;
+  document.getElementById('cot-pag').textContent = pagCond;
+  document.getElementById('cot-frete').textContent = 'Frete: ' + freteTipo;
+  document.getElementById('cot-validade').textContent = validade ? `Válido por ${validade} dias` : '';
+
+  // Tags
+  document.getElementById('tag-pag').textContent = pagCond;
+  document.getElementById('tag-frete').textContent = freteTipo;
+  document.getElementById('tag-validade').textContent = `Válido ${validade}d`;
+
+  // Observações
+  const obs = document.getElementById('obs').value;
+  const obsEl = document.getElementById('cot-obs');
+  document.getElementById('obs-text').textContent = obs;
+  obsEl.style.display = obs ? '' : 'none';
+
+  // Tabela de itens
+  const tbEl = document.getElementById('tabela-itens');
+  const vazioEl = document.getElementById('vazio-msg');
+  const totaisEl = document.getElementById('cot-totais');
+  const tagsEl = document.getElementById('cot-tags');
+
+  if(!itens.length) {
+    tbEl.innerHTML = '';
+    vazioEl.style.display = '';
+    totaisEl.style.display = 'none';
+    tagsEl.style.display = 'none';
+  } else {
+    vazioEl.style.display = 'none';
+    totaisEl.style.display = '';
+    tagsEl.style.display = '';
+    tbEl.innerHTML = itens.map((item, idx) => {
+      const itemTotal = item.qtd * item.preco;
+      return `<tr>
+        <td style="color:#aaa;font-size:11px;font-weight:700">${idx+1}</td>
+        <td>
+          <div class="prod-nome">${item.nome.substring(0,50)}</div>
+          <div class="prod-sku">SKU: ${item.sku}</div>
+        </td>
+        <td class="num">
+          <div class="qty-ctrl" style="justify-content:flex-end">
+            <button class="qty-btn" onclick="alterarQtd(${idx},-1)">−</button>
+            <span class="qty-val">${item.qtd}</span>
+            <button class="qty-btn" onclick="alterarQtd(${idx},+1)">+</button>
+          </div>
+        </td>
+        <td class="num">
+          <input class="preco-edit" type="number" value="${item.preco.toFixed(2)}"
+            step="0.01" onchange="setPreco(${idx},this.value)">
+        </td>
+        <td class="total">${fmtR(itemTotal)}</td>
+        <td><button class="del-btn" onclick="removerItem(${idx})" title="Remover">✕</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Totais na cotação
+  document.getElementById('cot-sub').textContent = fmtR(sub);
+  document.getElementById('cot-total').textContent = fmtR(total);
+  const rowDesc = document.getElementById('row-desc');
+  if(desc > 0) {
+    rowDesc.style.display = '';
+    document.getElementById('lbl-desc').textContent = `Desconto (${desc}%)`;
+    document.getElementById('cot-desc').textContent = `- ${fmtR(descValor)}`;
+  } else {
+    rowDesc.style.display = 'none';
+  }
+}
+
+// ── Nova cotação ──────────────────────────────────────────────────
+function novaCotacao() {
+  if(itens.length && !confirm('Limpar todos os itens?')) return;
+  itens = [];
+  document.getElementById('cli-nome').value = '';
+  document.getElementById('cli-doc').value = '';
+  document.getElementById('cli-tel').value = '';
+  document.getElementById('cli-cidade').value = '';
+  document.getElementById('obs').value = '';
+  document.getElementById('desc-geral').value = '0';
+  // Incrementar número
+  const num = parseInt(document.getElementById('doc-num').value||'0') + 1;
+  document.getElementById('doc-num').value = String(num).padStart(3,'0');
+  render();
+}
+
+// ── Salvar rascunho (localStorage) ───────────────────────────────
+function salvarRascunho() {
+  const dados = {
+    itens, num: document.getElementById('doc-num').value,
+    tipo: document.getElementById('doc-tipo').value,
+    data: document.getElementById('doc-data').value,
+    validade: document.getElementById('doc-validade').value,
+    cliNome: document.getElementById('cli-nome').value,
+    cliDoc: document.getElementById('cli-doc').value,
+    cliTel: document.getElementById('cli-tel').value,
+    cliCidade: document.getElementById('cli-cidade').value,
+    pag: document.getElementById('pag-cond').value,
+    frete: document.getElementById('frete-tipo').value,
+    desc: document.getElementById('desc-geral').value,
+    obs: document.getElementById('obs').value,
+    saved: new Date().toLocaleString('pt-BR')
+  };
+  localStorage.setItem('cotacao_rascunho', JSON.stringify(dados));
+  alert(`✅ Rascunho salvo (${dados.saved})`);
+}
+
+function carregarRascunho() {
+  try {
+    const d = JSON.parse(localStorage.getItem('cotacao_rascunho')||'null');
+    if(!d) return;
+    itens = d.itens || [];
+    document.getElementById('doc-num').value = d.num || '001';
+    document.getElementById('doc-tipo').value = d.tipo || 'COTAÇÃO';
+    document.getElementById('doc-data').value = d.data || '';
+    document.getElementById('doc-validade').value = d.validade || '7';
+    document.getElementById('cli-nome').value = d.cliNome || '';
+    document.getElementById('cli-doc').value = d.cliDoc || '';
+    document.getElementById('cli-tel').value = d.cliTel || '';
+    document.getElementById('cli-cidade').value = d.cliCidade || '';
+    document.getElementById('pag-cond').value = d.pag || 'À Vista';
+    document.getElementById('frete-tipo').value = d.frete || 'A COMBINAR';
+    document.getElementById('desc-geral').value = d.desc || '0';
+    document.getElementById('obs').value = d.obs || '';
+    render();
+  } catch(e) {}
+}
+
+// ── PDF (via impressão do browser) ───────────────────────────────
+function gerarPDF() {
+  window.print();
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+initData();
+carregarProdutos().then(() => {
+  carregarRascunho();
+});
+</script>
+</body>
+</html>
