@@ -666,6 +666,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/sync/now':             self._sync_now,
             '/api/sync/bling-anuncios':  self._sync_bling_anuncios,
             # ── NOVO: Bling OAuth ──────────────────────────────
+            '/api/bling/renovar':        self._bling_renovar,
             '/api/bling/autorizar':      self._bling_autorizar,
             '/api/bling/callback':       self._bling_callback,
             '/api/bling/trocar':         self._bling_trocar,
@@ -720,6 +721,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             salvar_tokens_db("bling", access, refresh or None)
             self._json({"ok":True,"msg":"Token Bling salvo"})
         except Exception as e: self._json({"ok":False,"error":str(e)},500)
+
+    def _bling_renovar(self):
+        """GET /api/bling/renovar — usa refresh_token para obter novo access_token"""
+        rt = _bling_token.get("refresh","")
+        if not rt:
+            self._json({"ok":False,"error":"refresh_token nao disponivel. Faca OAuth manual via /api/bling/autorizar"}); return
+        ok = renovar_bling()
+        if ok:
+            self._json({"ok":True,"access_token": _bling_token.get("access","")[:20]+"...","msg":"Token renovado com sucesso"})
+        else:
+            self._json({"ok":False,"error":"Falha ao renovar. refresh_token pode ter expirado. Acesse /api/bling/autorizar"})
 
     def _bling_autorizar(self):
         """GET /api/bling/autorizar — redireciona para autorização Bling"""
@@ -872,7 +884,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def _get_listings(self):
         try:
             rows = exe("""
-                SELECT l.id, l.sku, l.titulo, l.preco,
+                SELECT l.id, l.sku, COALESCE(NULLIF(l.titulo,''), p.nome, l.sku) as titulo, l.preco,
                        l.sale_fee, l.listing_type, l.free_shipping, l.status,
                        l.margem_minima, l.frete_medio, l.desconto,
                        COALESCE(p.custo_br, cm.cmv_br, 0) as cmv,

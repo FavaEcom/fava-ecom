@@ -218,7 +218,7 @@ header h1{font-size:15px;font-weight:700;flex:1}
 .difal-kpi .dv{font-size:18px;font-weight:700}
 .uf-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 
-/* GESTÍO PREÇOS */
+/* GESTÃO PREÇOS */
 .gp-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fff;border-radius:9px;border:1px solid var(--borda);padding:10px 14px;margin-bottom:10px}
 .gp-toolbar label{font-size:11px;font-weight:700;color:var(--muted)}
 .gp-toolbar input[type=range]{width:120px}
@@ -254,7 +254,7 @@ header h1{font-size:15px;font-weight:700;flex:1}
 .apply-btn.applying{background:#fef9c3;border-color:#d97706;color:#92400e}
 .apply-btn.done{background:#dcfce7;border-color:#16a34a;color:#166534}
 
-/* CONCILIAÇÍO MP */
+/* CONCILIAÇÃO MP */
 .mp-saldo-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:9px;margin-bottom:12px}
 .mp-saldo{background:#fff;border-radius:9px;border:1px solid var(--borda);padding:11px 13px}
 .mp-saldo .sl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
@@ -533,7 +533,7 @@ function salvarCfg(){
   <a href="https://web-production-5aa0f.up.railway.app/calculadora_fava.html" style="padding:7px 14px;color:#9ca3af;font-size:12px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#9ca3af'">🧮 Calculadora</a>
 </nav>
 
-<!-- ABAS DE NAVEGAÇÍO -->
+<!-- ABAS DE NAVEGAÇÃO -->
 <div class="view-tabs" id="view-tabs">
   <div class="vtab a" id="vtab-dash" onclick="setView('dashboard')">Dashboard</div>
   <div class="vtab" id="vtab-anunc" onclick="setView('anuncios')">Anúncios</div>
@@ -816,7 +816,7 @@ function salvarCfg(){
 </div>
 
 
-<!-- ═══════════ VIEW: CONCILIAÇÍO ═══════════ -->
+<!-- ═══════════ VIEW: CONCILIAÇÃO ═══════════ -->
 <div id="view-conciliacao" style="display:none;flex-direction:column">
   <div class="main">
     <div class="mp-saldo-row" id="mp-saldos"></div>
@@ -1541,7 +1541,7 @@ window.onload=async ()=>{
 };
 
 // ══════════════════════════════════════════════════════════════════════
-// AUTO-RENOVAÇÍO DE TOKENS
+// AUTO-RENOVAÇÃO DE TOKENS
 // ══════════════════════════════════════════════════════════════════════
 
 // Estrutura completa de tokens com refresh
@@ -1630,19 +1630,25 @@ async function sincBlingAnuncios(el){
 }
 
 async function forcarRenovacaoBling() {
-  const btn = document.getElementById('btn-renovar-bling');
-  if(btn) { btn.textContent = 'Renovando...'; btn.disabled = true; }
+  const btn = document.getElementById("btn-renovar-bling");
+  if(btn) { btn.textContent = "Renovando..."; btn.disabled = true; }
   try {
-    const r = await fetch('https://web-production-5aa0f.up.railway.app/api/bling/trocar').then(res => res.json());
-    if(r.access || r.access_token) {
-      document.getElementById('lbl-bling').textContent = 'Bling OK';
+    // Tenta usar o refresh_token salvo no servidor
+    const r = await fetch("https://web-production-5aa0f.up.railway.app/api/bling/renovar").then(res => res.json());
+    if(r.ok) {
+      document.getElementById("lbl-bling").textContent = "Bling OK";
+      document.getElementById("dot-bling").className = "dot ok";
+      console.log("Bling renovado via refresh_token");
+      setTimeout(() => recarregar(), 1000);
     } else {
-      if(confirm('Token Bling expirado. Abrir autorizacao?')) window.open('https://web-production-5aa0f.up.railway.app/api/bling/autorizar','_blank');
+      // refresh_token expirou — precisa OAuth manual
+      const confirma = confirm("Token Bling expirado. Abrir autorizacao? (leva 10 segundos)");
+      if(confirma) window.open("https://web-production-5aa0f.up.railway.app/api/bling/autorizar", "_blank");
     }
   } catch(e) {
-    if(confirm('Erro. Abrir autorizacao Bling?')) window.open('https://web-production-5aa0f.up.railway.app/api/bling/autorizar','_blank');
+    if(confirm("Erro ao renovar Bling. Abrir autorizacao?")) window.open("https://web-production-5aa0f.up.railway.app/api/bling/autorizar", "_blank");
   }
-  if(btn) { btn.textContent = 'Renovar Bling'; btn.disabled = false; }
+  if(btn) { btn.textContent = "Renovar Bling"; btn.disabled = false; }
 }
 
 async function forcarRenovacaoML(){
@@ -1730,27 +1736,26 @@ async function renovarTokenBling(){
 }
 
 // Verifica e renova tokens expirados
-async function verificarRenovarTokens(){
-  const agora = Date.now();
-  let renovou = false;
-  
-  // ML
-  if(tokenStore.ml.refresh && tokenStore.ml.expires && agora > tokenStore.ml.expires){
-    console.log('ML token expirado — renovando...');
-    setDot('ml','wait','ML renovando...');
-    await renovarTokenML();
-    renovou = true;
-  }
-  
-  // Bling
-  if(tokenStore.bling.refresh && tokenStore.bling.expires && agora > tokenStore.bling.expires){
-    console.log('Bling token expirado — renovando...');
-    setDot('bling','wait','Bling renovando...');
-    await renovarTokenBling();
-    renovou = true;
-  }
-  
-  return renovou;
+async function verificarRenovarTokens() {
+  // Bling: usa refresh_token via /api/bling/renovar
+  try {
+    const rb = await fetch("https://web-production-5aa0f.up.railway.app/api/bling/renovar").then(r => r.json());
+    if(rb.ok) {
+      document.getElementById("lbl-bling").textContent = "Bling OK";
+      document.getElementById("dot-bling").className = "dot ok";
+    } else {
+      console.warn("Bling refresh falhou:", rb.error);
+    }
+  } catch(e) { console.warn("Bling renovar erro:", e.message); }
+  // ML: renovar normalmente
+  try {
+    const rm = await fetch("https://web-production-5aa0f.up.railway.app/api/ml/refresh").then(r => r.json());
+    if(rm.access_token) {
+      console.log("ML token renovado");
+      document.getElementById("lbl-ml").textContent = "ML OK";
+      document.getElementById("dot-ml").className = "dot ok";
+    }
+  } catch(e) { console.warn("ML renovar erro:", e.message); }
 }
 
 // Salva refresh tokens quando configurados manualmente
@@ -2336,7 +2341,7 @@ function renderPromoTabela(lista){
 
     const mgMinSalva = (p.mgMin||0)*100;
     const descMaxCalc = calcDescMaximo(p.preco, p.cmv, p.mgMin||0, taxa_item, frete_item);
-    // NÍO auto-preenche desconto — usuário define manualmente
+    // NÃO auto-preenche desconto — usuário define manualmente
     return `<tr style="${p.selecionado?'background:#eff6ff':''}" id="prom-tr-${i}">
       <td style="padding:5px 8px;text-align:center"><input type="checkbox" ${p.selecionado?'checked':''} onchange="togglePromo(${i},this.checked)"></td>
       <td style="padding:5px 8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.titulo}">${p.titulo}</td>
@@ -2448,7 +2453,7 @@ function exportarPlanilhaML(){
   const semCmvComDesc = promoData.filter(p=>!p.cmv && p.descEditado>=5);
   if(semCmvComDesc.length){
     const ok = confirm(
-      `ATENÇÍO: ${semCmvComDesc.length} produtos têm desconto definido mas SEM CMV carregado.\n` +
+      `ATENÇÃO: ${semCmvComDesc.length} produtos têm desconto definido mas SEM CMV carregado.\n` +
       `Esses produtos podem ter margem negativa.\n\n` +
       `Exemplos: ${semCmvComDesc.slice(0,3).map(p=>p.sku+' ('+p.descEditado+'%)').join(', ')}\n\n` +
       `Deseja exportar mesmo assim?\n(Recomendado: carregue o CMV primeiro)`
@@ -2810,7 +2815,7 @@ function calcMargemReal(preco, sku, uf, listing_type, frete, qtd){
   const ufData=ICMS_TB[uf]||ICMS_TB['SP'];
   const taxa=taxaML(listing_type);
   const cmvInfo=cmvLookup(sku);
-  // CMV: usa cache (HISTORICO ou Bling) — NÍO estima se não tiver
+  // CMV: usa cache (HISTORICO ou Bling) — NÃO estima se não tiver
   const cmv = cmvInfo?.cmv || 0;
   const temCMV = cmv > 0;
 
@@ -3602,7 +3607,7 @@ Responda de forma:
 - Se for sobre compatibilidade, oriente a verificar o modelo/código do equipamento
 - Mencione que vendemos peças originais com nota fiscal
 - Finalize com "Qualquer dúvida estamos à disposição!"
-- NÍO mencione preços
+- NÃO mencione preços
 
 Responda apenas a mensagem, sem aspas ou introdução.`}]
       })
@@ -4253,7 +4258,7 @@ function exportarPedidos(){
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// GESTÍO DE PREÇOS E DESCONTOS
+// GESTÃO DE PREÇOS E DESCONTOS
 // ══════════════════════════════════════════════════════════════════════
 const PIS_GP=.0165, COF_GP=.076, ICMS_INT_GP=.12;
 let gpData = [];
@@ -5107,7 +5112,7 @@ function renderEstadosTabela(){
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// MERCADO PAGO — CONCILIAÇÍO
+// MERCADO PAGO — CONCILIAÇÃO
 // ══════════════════════════════════════════════════════════════════════
 let tkMP = localStorage.getItem('fava_tk_mp') || '';
 let mpMovs = [];
@@ -7760,78 +7765,6 @@ async function syncPC(full){
     }while(offset<(total||Infinity));
     bar.style.width='100%';bar.style.background='#2196f3';st.textContent='OK - '+saved+' pedidos salvos';
   }catch(e){bar.style.background='#f44336';st.textContent='Erro: '+e.message;}
-}
-</script>
-<div id="secao-historico-nf" style="margin:16px 0;background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden"><div style="background:#1F3864;color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px"><span style="font-size:14px;font-weight:700">Historico Compras - NF Entrada</span><div style="margin-left:auto;display:flex;gap:8px"><input id="hist-filtro" placeholder="SKU/fornecedor..." style="font-size:12px;padding:4px 8px;border-radius:6px;border:none;width:150px"><button onclick="carregarHistorico()" style="background:#3B82F6;color:#fff;border:none;padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer">Buscar</button><button onclick="carregarHistorico(true)" style="background:#6B7280;color:#fff;border:none;padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer">Ultimas</button></div></div><div style="padding:6px 16px;background:#f8fafc;border-bottom:1px solid #e5e7eb;font-size:12px;color:#6b7280;display:flex;gap:12px"><span>Registros: <b id="hist-total">-</b></span><span>CMV medio: <b id="hist-cmv-med">-</b></span><span>Fornecedor: <b id="hist-forn">-</b></span></div><div style="overflow-x:auto;max-height:380px;overflow-y:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead style="position:sticky;top:0;background:#f1f5f9"><tr><th style="padding:6px 8px;text-align:left;border-bottom:1px solid #e2e8f0">NF</th><th style="padding:6px 8px;text-align:left;border-bottom:1px solid #e2e8f0">Data</th><th style="padding:6px 8px;text-align:left;border-bottom:1px solid #e2e8f0">Fornecedor</th><th style="padding:6px 8px;text-align:left;border-bottom:1px solid #e2e8f0">SKU</th><th style="padding:6px 8px;text-align:left;border-bottom:1px solid #e2e8f0">Produto</th><th style="padding:6px 8px;text-align:center;border-bottom:1px solid #e2e8f0">Qtd</th><th style="padding:6px 8px;text-align:center;border-bottom:1px solid #e2e8f0">VUnit</th><th style="padding:6px 8px;text-align:center;border-bottom:1px solid #e2e8f0">CMV BR</th><th style="padding:6px 8px;text-align:center;border-bottom:1px solid #e2e8f0">IPI%</th><th style="padding:6px 8px;text-align:center;border-bottom:1px solid #e2e8f0">ICMS%</th></tr></thead><tbody id="hist-tbody"><tr><td colspan="10" style="padding:20px;text-align:center;color:#9ca3af">Clique em Buscar</td></tr></tbody></table></div></div>
-<div id="secao-campanhas" style="margin:16px 0;background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden"><div style="background:#1F3864;color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px"><span style="font-size:14px;font-weight:700">Historico Campanhas - Desconto por MLB</span><div style="margin-left:auto;display:flex;gap:8px"><input id="camp-mlb" placeholder="MLB..." style="font-size:12px;padding:4px 8px;border-radius:6px;border:none;width:120px"><button onclick="carregarCampanha()" style="background:#3B82F6;color:#fff;border:none;padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer">Carregar</button><button onclick="exportarCampCSV()" style="background:#10B981;color:#fff;border:none;padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer">CSV</button></div></div><div style="padding:6px 16px;background:#f8fafc;border-bottom:1px solid #e5e7eb;font-size:12px;color:#6b7280;display:flex;gap:12px"><span>Total: <b id="camp-tot">-</b></span><span>Desc medio: <b id="camp-desc-med">-</b></span><span>Margem: <b id="camp-marg-med">-</b></span></div><div style="overflow-x:auto;max-height:320px;overflow-y:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead style="position:sticky;top:0;background:#f1f5f9"><tr><th style="padding:6px 8px;text-align:left;border-bottom:1px solid #e2e8f0">MLB</th><th style="padding:6px 8px;text-align:left;border-bottom:1px solid #e2e8f0">SKU</th><th style="padding:6px 8px;text-align:left;border-bottom:1px solid #e2e8f0">Titulo</th><th style="padding:6px 8px;text-align:center;border-bottom:1px solid #e2e8f0">Campanha</th><th style="padding:6px 8px;text-align:center;border-bottom:1px solid #e2e8f0">Preco</th><th style="padding:6px 8px;text-align:center;border-bottom:1px solid #e2e8f0">Desc%</th><th style="padding:6px 8px;text-align:center;border-bottom:1px solid #e2e8f0">Final</th><th style="padding:6px 8px;text-align:center;border-bottom:1px solid #e2e8f0">Margem</th><th style="padding:6px 8px;text-align:center;border-bottom:1px solid #e2e8f0">Data</th></tr></thead><tbody id="camp-tbody"><tr><td colspan="9" style="padding:16px;text-align:center;color:#9ca3af">Clique em Carregar</td></tr></tbody></table></div></div>
-<script>
-var _SRV3="https://web-production-5aa0f.up.railway.app";
-var _campRows=[];
-async function carregarHistorico(u){
-  var f=document.getElementById("hist-filtro").value.trim();
-  var url=_SRV3+"/api/db/historico?limit=300"+((!u&&f)?"&q="+encodeURIComponent(f):"");
-  var tb=document.getElementById("hist-tbody");
-  tb.innerHTML="<tr><td colspan=10 style='padding:16px;text-align:center'>Carregando...</td></tr>";
-  try{
-    var a=await fetch(url).then(function(r){return r.json();});
-    if(!Array.isArray(a))a=[];
-    document.getElementById("hist-total").textContent=a.length;
-    if(a.length){
-      var c=a.filter(function(r){return r.cmv_br>0;}).map(function(r){return r.cmv_br;});
-      document.getElementById("hist-cmv-med").textContent=c.length?"R$ "+(c.reduce(function(x,y){return x+y;},0)/c.length).toFixed(2):"-";
-      document.getElementById("hist-forn").textContent=(a[0].fornecedor||"").substring(0,20);
-    }
-    if(!a.length){tb.innerHTML="<tr><td colspan=10 style='padding:16px;text-align:center;color:#9ca3af'>Sem resultados</td></tr>";return;}
-    tb.innerHTML=a.map(function(r,i){
-      var bg=i%2?"background:#f8fafc":"",cc=r.cmv_br>0?"#059669":"#9ca3af";
-      return "<tr style='"+bg+"'><td style='padding:5px 8px;font-family:monospace'>"+(r.nf||"")+"</td>"
-        +"<td style='padding:5px 8px'>"+(r.data_emissao||"").substring(0,10)+"</td>"
-        +"<td style='padding:5px 8px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>"+(r.fornecedor||"").substring(0,22)+"</td>"
-        +"<td style='padding:5px 8px;font-weight:700'>"+(r.sku||"-")+"</td>"
-        +"<td style='padding:5px 8px'>"+(r.nome||"").substring(0,30)+"</td>"
-        +"<td style='padding:5px 8px;text-align:center'>"+(r.qtd||0)+"</td>"
-        +"<td style='padding:5px 8px;text-align:center'>R$ "+(r.vunit||0).toFixed(2)+"</td>"
-        +"<td style='padding:5px 8px;text-align:center;font-weight:700;color:"+cc+"'>R$ "+(r.cmv_br||0).toFixed(2)+"</td>"
-        +"<td style='padding:5px 8px;text-align:center'>"+(r.ipi_p||0).toFixed(1)+"%</td>"
-        +"<td style='padding:5px 8px;text-align:center'>"+(r.icms_p||0).toFixed(1)+"%</td></tr>";
-    }).join("");
-  }catch(e){tb.innerHTML="<tr><td colspan=10 style='color:#ef4444;padding:16px;text-align:center'>Erro: "+e.message+"</td></tr>";}
-}
-async function carregarCampanha(){
-  var mlb=document.getElementById("camp-mlb").value.trim();
-  var url=_SRV3+"/api/db/campanha?"+(mlb?"mlb_id="+encodeURIComponent(mlb):"");
-  var tb=document.getElementById("camp-tbody");
-  tb.innerHTML="<tr><td colspan=9 style='padding:16px;text-align:center'>Carregando...</td></tr>";
-  try{
-    _campRows=await fetch(url).then(function(r){return r.json();});
-    if(!Array.isArray(_campRows))_campRows=[];
-    document.getElementById("camp-tot").textContent=_campRows.length;
-    if(_campRows.length){
-      document.getElementById("camp-desc-med").textContent=(_campRows.reduce(function(s,r){return s+(r.desconto||0);},0)/_campRows.length).toFixed(1)+"%";
-      document.getElementById("camp-marg-med").textContent=(_campRows.reduce(function(s,r){return s+(r.margem_estimada||0);},0)/_campRows.length).toFixed(1)+"%";
-    }
-    if(!_campRows.length){tb.innerHTML="<tr><td colspan=9 style='padding:16px;text-align:center;color:#9ca3af'>Sem dados.</td></tr>";return;}
-    tb.innerHTML=_campRows.map(function(r,i){
-      var d=r.desconto||0,m=r.margem_estimada||0;
-      var dc=d>25?"#ef4444":d>15?"#f59e0b":"#10b981";
-      var mc=m>20?"#10b981":m>12?"#f59e0b":"#ef4444";
-      return "<tr style='"+(i%2?"background:#f8fafc":"")+"'><td style='padding:5px 8px;font-family:monospace;font-size:11px'>"+r.mlb_id+"</td>"
-        +"<td style='padding:5px 8px'>"+(r.sku||"-")+"</td>"
-        +"<td style='padding:5px 8px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>"+(r.titulo||"").substring(0,35)+"</td>"
-        +"<td style='padding:5px 8px;text-align:center;font-size:11px'>"+(r.campanha||"")+"</td>"
-        +"<td style='padding:5px 8px;text-align:center'>R$ "+(r.preco_original||0).toFixed(2)+"</td>"
-        +"<td style='padding:5px 8px;text-align:center;font-weight:700;color:"+dc+"'>"+d+"%</td>"
-        +"<td style='padding:5px 8px;text-align:center'>R$ "+(r.preco_final||0).toFixed(2)+"</td>"
-        +"<td style='padding:5px 8px;text-align:center;font-weight:700;color:"+mc+"'>"+m.toFixed(1)+"%</td>"
-        +"<td style='padding:5px 8px;text-align:center;font-size:11px'>"+(r.data_aplicacao||"").substring(0,10)+"</td></tr>";
-    }).join("");
-  }catch(e){tb.innerHTML="<tr><td colspan=9 style='color:#ef4444;padding:16px;text-align:center'>Erro: "+e.message+"</td></tr>";}
-}
-function exportarCampCSV(){
-  if(!_campRows.length)return;
-  var cols=["mlb_id","sku","titulo","campanha","desconto","preco_original","preco_final","margem_estimada","data_aplicacao"];
-  var csv=[cols.join(",")].concat(_campRows.map(function(r){return cols.map(function(c){return JSON.stringify(r[c]||"");}).join(",");})).join("\n");
-  var a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);a.download="campanha.csv";a.click();
 }
 </script>
 </body>
