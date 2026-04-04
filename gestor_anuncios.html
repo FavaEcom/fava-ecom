@@ -79,7 +79,7 @@ td.ec input{width:100%;background:#0f172a;border:1px solid #3b82f6;color:#fff;pa
   <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
     <button class="btn-toggle ativo" id="btn-vis" onclick="setModo('vis')">👁 Visualização</button>
     <button class="btn-toggle" id="btn-gest" onclick="setModo('gest')">✏️ Gestão</button>
-    <button class="btn btn-roxo" onclick="window.open('https://web-production-5aa0f.up.railway.app/produto_novo.html','_blank')">📦 Novo</button>
+    <button class="btn btn-roxo" onclick="document.getElementById('modal-novo').classList.add('open');rcNovo()">📦 Novo</button>
     <button class="btn btn-cinza" onclick="syncML()">🔄 Sync ML</button>
     <button class="btn btn-verde" onclick="exportCSV()">📥 CSV</button>
   </div>
@@ -95,6 +95,7 @@ td.ec input{width:100%;background:#0f172a;border:1px solid #3b82f6;color:#fff;pa
 
 <div class="toolbar">
   <input type="text" id="fi" placeholder="SKU, título, MLB..." oninput="filtrar()">
+  <select id="fcanal" onchange="filtrar()" style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:5px 8px;border-radius:6px;font-size:12px"><option value="">Canal: Todos</option><option value="ml">Mercado Livre</option><option value="yampi">Yampi / Site</option><option value="shopee">Shopee</option><option value="balcao">Balcao</option></select>
   <select id="fst" onchange="filtrar()"><option value="">ST: Todos</option><option value="1">Com ST</option><option value="0">Sem ST</option></select>
   <select id="fm" onchange="filtrar()"><option value="">Margem: Todas</option><option value="ok">OK (≥15%)</option><option value="warn">Atenção 5-15%</option><option value="bad">Ruim &lt;5%</option></select>
   <select id="fs" onchange="filtrar()"><option value="">Status: Todos</option><option value="active">Ativo</option><option value="paused">Pausado</option></select>
@@ -168,6 +169,51 @@ td.ec input{width:100%;background:#0f172a;border:1px solid #3b82f6;color:#fff;pa
   </div>
 </div>
 
+
+<!-- Modal Novo Anúncio -->
+<div class="modal" id="modal-novo">
+  <div class="mbox" style="width:520px">
+    <h2>📦 Novo Anúncio Manual</h2>
+    <div class="msub">Adiciona um anúncio avulso para calcular precificação</div>
+    <div class="mgrid">
+      <div class="mf"><label>MLB ID (opcional)</label><input type="text" id="nn-id" placeholder="MLB1234567..."></div>
+      <div class="mf"><label>SKU Fava</label><input type="text" id="nn-sku" placeholder="Ex: 1582"></div>
+      <div class="mf" style="grid-column:span 2"><label>Título / Nome do produto</label><input type="text" id="nn-titulo" placeholder="Nome do anúncio"></div>
+      <div class="mf"><label>Preço de venda (R$)</label><input type="number" id="nn-preco" step="0.01" value="0" oninput="rcNovo()"></div>
+      <div class="mf"><label>CMV Brasil (R$)</label><input type="number" id="nn-cmv" step="0.01" value="0" oninput="rcNovo()"></div>
+      <div class="mf"><label>Frete médio (R$)</label><input type="number" id="nn-frete" step="0.01" value="13" oninput="rcNovo()"></div>
+      <div class="mf"><label>Taxa marketplace (%)</label><input type="number" id="nn-taxa" step="0.01" value="17" oninput="rcNovo()"></div>
+      <div class="mf"><label>Canal</label>
+        <select id="nn-canal"><option value="ml">Mercado Livre</option><option value="shopee">Shopee</option><option value="yampi">Yampi/Site</option><option value="balcao">Balcão</option></select>
+      </div>
+      <div class="mf"><label>ST</label>
+        <select id="nn-st" onchange="rcNovo()"><option value="0">Não</option><option value="1">Sim</option></select>
+      </div>
+    </div>
+    <div class="calc" style="margin-top:12px">
+      <div class="ctitle">RESULTADO IMEDIATO</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">
+        <div style="text-align:center;padding:8px;background:#0f172a;border-radius:6px">
+          <div style="font-size:10px;color:#64748b">Preço Final</div>
+          <div id="nn-res-preco" style="font-size:16px;font-weight:700;color:#e2e8f0">—</div>
+        </div>
+        <div style="text-align:center;padding:8px;background:#0f172a;border-radius:6px">
+          <div style="font-size:10px;color:#64748b">Lucro Est.</div>
+          <div id="nn-res-lucro" style="font-size:16px;font-weight:700">—</div>
+        </div>
+        <div style="text-align:center;padding:8px;background:#0f172a;border-radius:6px">
+          <div style="font-size:10px;color:#64748b">Margem</div>
+          <div id="nn-res-marg" style="font-size:18px;font-weight:700">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="ma">
+      <button class="btn btn-cinza" onclick="document.getElementById('modal-novo').classList.remove('open')">Cancelar</button>
+      <button class="btn btn-verde" onclick="salvarNovo()">💾 Adicionar à lista</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SRV='https://web-production-5aa0f.up.railway.app';
 const TP=0.0925,TC=0.12,TD=0.0381,TI=0.02;
@@ -219,10 +265,12 @@ function stats(){
 
 function filtrar(){
   const q=document.getElementById('fi').value.toLowerCase();
+  const fcanal=document.getElementById('fcanal').value;
   const fst=document.getElementById('fst').value,fm=document.getElementById('fm').value;
   const fs=document.getElementById('fs').value,ft=document.getElementById('ft').value;
   _fil=_all.filter(r=>{
     if(q&&![(r.id||''),(r.titulo||''),(String(r.sku||''))].join(' ').toLowerCase().includes(q))return false;
+    if(fcanal&&(r.canal||'ml')!==fcanal)return false;
     if(fst&&String(r.st||0)!==fst)return false;
     if(fs&&(r.status||'')!==fs)return false;
     if(ft&&psku(r.sku)!==ft)return false;
@@ -414,11 +462,50 @@ document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.cu
 async function carregar(){
   document.getElementById('v-cards').innerHTML='<div class="loading">Carregando...</div>';
   try{
-    const data=await fetch(SRV+'/api/db/listings').then(r=>r.json());
+    const [mlData, yampiData] = await Promise.all([
+    fetch(SRV+'/api/db/listings').then(r=>r.json()).catch(()=>[]),
+    fetch(SRV+'/api/db/yampi-listings').then(r=>r.json()).catch(()=>[])
+  ]);
+  const mlItems = (Array.isArray(mlData)?mlData:[]).map(r=>({...r,canal:'ml'}));
+  const yampiItems = (Array.isArray(yampiData)?yampiData:[]).map(r=>({...r,canal:'yampi',id:r.id||r.yampi_id,titulo:r.titulo||r.nome,preco:r.preco||r.price,sale_fee:0.12,status:r.situacao||'active'}));
+  const data = [...mlItems, ...yampiItems];
     _all=Array.isArray(data)?data:[];
     calcAll();stats();filtrar();
     document.getElementById('lbl-s').textContent=_all.length+' anúncios carregados';
   }catch(e){document.getElementById('v-cards').innerHTML=`<div class="loading" style="color:#ef4444">Erro: ${e.message}</div>`;}
+}
+
+function rcNovo(){
+  const p=parseFloat(document.getElementById('nn-preco').value)||0;
+  const cv=parseFloat(document.getElementById('nn-cmv').value)||0;
+  const fr=parseFloat(document.getElementById('nn-frete').value)||0;
+  const tx=(parseFloat(document.getElementById('nn-taxa').value)||17)/100;
+  const st=parseInt(document.getElementById('nn-st').value);
+  const pf=p,ded=pf*(tx+TP+TC+TD+TI);
+  const cp=cv*(TP+TI),ci=st?0:cv*TC;
+  const rec=pf-ded+cp+ci,luc=rec-cv-fr,mar=pf>0?luc/pf*100:0;
+  document.getElementById('nn-res-preco').textContent='R$ '+p.toFixed(2);
+  const el=document.getElementById('nn-res-lucro');
+  el.textContent='R$ '+luc.toFixed(2);el.style.color=luc>=0?'#10b981':'#ef4444';
+  const em=document.getElementById('nn-res-marg');
+  em.textContent=mar.toFixed(1)+'%';em.style.color=mar>=15?'#10b981':mar>=5?'#f59e0b':'#ef4444';
+}
+
+function salvarNovo(){
+  const novo={
+    id:document.getElementById('nn-id').value||('MANUAL-'+Date.now()),
+    sku:document.getElementById('nn-sku').value||'?',
+    titulo:document.getElementById('nn-titulo').value||'Novo anúncio',
+    preco:parseFloat(document.getElementById('nn-preco').value)||0,
+    desconto:0, cmv:parseFloat(document.getElementById('nn-cmv').value)||0,
+    frete_medio:parseFloat(document.getElementById('nn-frete').value)||13,
+    sale_fee:(parseFloat(document.getElementById('nn-taxa').value)||17)/100,
+    st:parseInt(document.getElementById('nn-st').value),st_imposto:0,monofasico:0,
+    status:'manual'
+  };
+  const c=C(novo);novo.pf=c.pf;novo.recebe=c.rec;novo.lucro=c.luc;novo.margem=c.mar;
+  _all.unshift(novo);calcAll();filtrar();
+  document.getElementById('modal-novo').classList.remove('open');
 }
 
 carregar();

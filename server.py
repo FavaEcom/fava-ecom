@@ -657,6 +657,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/kits-mapa':         self._get_kits_mapa,
             '/api/db/cprod-map':         self._get_cprod_map,
             '/api/db/cprod-lookup':      self._get_cprod_lookup,
+            '/api/db/proximo-sku':       self._get_proximo_sku,
             '/api/db/pedrinho':          self._get_pedrinho,
             '/api/db/kits':              self._get_kits,
             '/api/db/cadastros':         self._get_cadastros,
