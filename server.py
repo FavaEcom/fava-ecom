@@ -726,12 +726,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         """GET /api/bling/renovar — usa refresh_token para obter novo access_token"""
         rt = _bling_token.get("refresh","")
         if not rt:
-            self._json({"ok":False,"error":"refresh_token nao disponivel. Faca OAuth manual via /api/bling/autorizar"}); return
+            self._ok({"ok":False,"error":"refresh_token nao disponivel. Faca OAuth manual via /api/bling/autorizar"}); return
         ok = renovar_bling()
         if ok:
-            self._json({"ok":True,"access_token": _bling_token.get("access","")[:20]+"...","msg":"Token renovado com sucesso"})
+            self._ok({"ok":True,"access_token": _bling_token.get("access","")[:20]+"...","msg":"Token renovado com sucesso"})
         else:
-            self._json({"ok":False,"error":"Falha ao renovar. refresh_token pode ter expirado. Acesse /api/bling/autorizar"})
+            self._ok({"ok":False,"error":"Falha ao renovar. refresh_token pode ter expirado. Acesse /api/bling/autorizar"})
 
     def _bling_autorizar(self):
         """GET /api/bling/autorizar — redireciona para autorização Bling"""
