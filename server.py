@@ -661,6 +661,51 @@ def agendar_sync():
 # ────────────────────────────────────────────────────────────────
 # HTTP SERVER
 # ────────────────────────────────────────────────────────────────
+
+def _ml_renovar():
+    """Tenta renovar access_token ML via refresh_token"""
+    global _ml_token
+    rt = _ml_token.get('refresh','')
+    if not rt:
+        # Tentar buscar do banco
+        try:
+            row = exe("SELECT valor FROM tokens WHERE chave='ml_refresh'", fetchone=True)
+            if row: rt = row.get('valor','')
+        except: pass
+    if not rt:
+        print('[ML] Sem refresh_token para renovar')
+        return False
+    ML_APP_ID = os.environ.get('ML_CLIENT_ID','')
+    ML_SECRET  = os.environ.get('ML_CLIENT_SECRET','')
+    if not ML_APP_ID:
+        print('[ML] ML_CLIENT_ID não configurado')
+        return False
+    try:
+        body = urllib.parse.urlencode({
+            'grant_type': 'refresh_token',
+            'client_id': ML_APP_ID,
+            'client_secret': ML_SECRET,
+            'refresh_token': rt
+        }).encode()
+        req = urllib.request.Request(
+            'https://api.mercadolibre.com/oauth/token', data=body,
+            headers={'Content-Type':'application/x-www-form-urlencoded',
+                     'Accept':'application/json'}, method='POST')
+        with urllib.request.urlopen(req, timeout=15) as r:
+            d = json.loads(r.read())
+        if d.get('access_token'):
+            _ml_token['access']  = d['access_token']
+            _ml_token['refresh'] = d.get('refresh_token', rt)
+            salvar_tokens_db('ml', d['access_token'], d.get('refresh_token', rt))
+            print('[ML] Token renovado com sucesso')
+            return True
+        print('[ML] Renovação falhou:', d)
+        return False
+    except Exception as e:
+        print(f'[ML] Erro ao renovar: {e}')
+        return False
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, fmt, *args):
         if '/api/' in self.path:
@@ -751,6 +796,62 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             salvar_tokens_db("bling", access, refresh or None)
             self._ok({"ok":True,"msg":"Token Bling salvo"})
         except Exception as e: self._ok({"ok":False,"error":str(e)},500)
+
+
+    def _ml_refresh(self):
+        """GET /api/ml/refresh — renova access_token ML usando refresh_token do banco"""
+        global _ml_token
+        ok = _ml_renovar()
+        self._ok({'ok': ok, 'has_token': bool(_ml_token.get('access'))})
+
+    def _ml_autorizar(self):
+        """GET /api/ml/autorizar — redireciona para OAuth ML"""
+        ML_APP_ID = os.environ.get('ML_CLIENT_ID', '')
+        REDIRECT  = os.environ.get('ML_REDIRECT', f'https://web-production-5aa0f.up.railway.app/api/ml/callback')
+        if not ML_APP_ID:
+            self._html_resp('<h2>Configure ML_CLIENT_ID no Railway</h2>')
+            return
+        url = f'https://auth.mercadolivre.com.br/authorization?response_type=code&client_id={ML_APP_ID}&redirect_uri={REDIRECT}'
+        self.send_response(302)
+        self.send_header('Location', url)
+        self._cors()
+        self.end_headers()
+
+    def _ml_callback(self):
+        """GET /api/ml/callback — recebe code OAuth ML e troca por tokens"""
+        global _ml_token
+        from urllib.parse import parse_qs
+        qs = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        code = qs.get('code', [''])[0]
+        if not code:
+            self._html_resp('<h2>Código OAuth ML ausente</h2>')
+            return
+        ML_APP_ID = os.environ.get('ML_CLIENT_ID', '')
+        ML_SECRET = os.environ.get('ML_CLIENT_SECRET', '')
+        REDIRECT  = os.environ.get('ML_REDIRECT', f'https://web-production-5aa0f.up.railway.app/api/ml/callback')
+        body = urllib.parse.urlencode({
+            'grant_type': 'authorization_code',
+            'client_id': ML_APP_ID,
+            'client_secret': ML_SECRET,
+            'code': code,
+            'redirect_uri': REDIRECT
+        }).encode()
+        try:
+            req = urllib.request.Request(
+                'https://api.mercadolibre.com/oauth/token', data=body,
+                headers={'Content-Type': 'application/x-www-form-urlencoded',
+                         'Accept': 'application/json'}, method='POST')
+            with urllib.request.urlopen(req, timeout=15) as r:
+                d = json.loads(r.read())
+            if d.get('access_token'):
+                _ml_token['access']  = d['access_token']
+                _ml_token['refresh'] = d.get('refresh_token', '')
+                salvar_tokens_db('ml', d['access_token'], d.get('refresh_token',''))
+                self._html_resp('<h2 style="color:green">✅ ML conectado! Pode fechar esta aba.</h2><script>setTimeout(()=>window.close(),3000)</script>')
+            else:
+                self._html_resp(f'<h2>Erro ML: {d}</h2>')
+        except Exception as e:
+            self._html_resp(f'<h2>Erro: {e}</h2>')
 
     def _bling_renovar(self):
         """GET /api/bling/renovar — usa refresh_token para obter novo access_token"""
