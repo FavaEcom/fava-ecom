@@ -70,6 +70,7 @@ td.edit input{width:100%;background:#1e3a5f;border:1px solid #3b82f6;color:#fff;
   <h1>📢 Fava Ecom — Gestor de Anúncios</h1>
   <span id="lbl-status" style="font-size:12px;color:#94a3b8">Carregando...</span>
   <div style="margin-left:auto;display:flex;gap:6px">
+    <button class="btn" onclick="novoAnuncio()" style="background:#7c3aed">+ Novo Anúncio</button>
     <button class="btn btn-cinza" onclick="syncAnuncios()">🔄 Sync ML</button>
     <button class="btn btn-verde" onclick="exportarCSV()">📥 CSV</button>
   </div>
@@ -78,7 +79,7 @@ td.edit input{width:100%;background:#1e3a5f;border:1px solid #3b82f6;color:#fff;
 <nav>
   <a href="https://web-production-5aa0f.up.railway.app/painel_fava.html">🏠 Painel</a>
   <a href="https://web-production-5aa0f.up.railway.app/balcao_fava.html">🏪 Balcão</a>
-  <a href="https://web-production-5aa0f.up.railway.app/produto_novo.html">➕ Produto Novo</a>
+  <a href="https://web-production-5aa0f.up.railway.app/produto_novo.html">📦 Produto Novo</a>
   <a href="https://web-production-5aa0f.up.railway.app/gestor_anuncios.html" class="ativo">📢 Gestor</a>
   <a href="https://web-production-5aa0f.up.railway.app/calculadora_fava.html">🧮 Calculadora</a>
 </nav>
@@ -88,6 +89,9 @@ td.edit input{width:100%;background:#1e3a5f;border:1px solid #3b82f6;color:#fff;
   <select id="filtro-canal" onchange="filtrar()">
     <option value="">Todos os canais</option>
     <option value="ml">Mercado Livre</option>
+    <option value="shopee" disabled>Shopee (em breve)</option>
+    <option value="yampi" disabled>Yampi (em breve)</option>
+    <option value="balcao" disabled>Balcão (em breve)</option>
   </select>
   <select id="filtro-st" onchange="filtrar()">
     <option value="">ST: Todos</option>
@@ -123,7 +127,7 @@ td.edit input{width:100%;background:#1e3a5f;border:1px solid #3b82f6;color:#fff;
       <tr>
         <th>MLB / Canal</th>
         <th>SKU</th>
-        <th style="min-width:220px">Título</th>
+        <th style="min-width:260px">Título / Produto</th>
         <th class="num">Preço</th>
         <th class="num">Desconto</th>
         <th class="num">Preço Final</th>
@@ -300,6 +304,10 @@ function atualizarStats() {
   document.getElementById('st-total').textContent = total;
   document.getElementById('st-cmv').textContent = comCmv;
   document.getElementById('st-marg-med').textContent = margMed.toFixed(1) + '%';
+  if(comCmv < total * 0.5) {
+    document.getElementById('st-marg-med').style.color = '#ef4444';
+    document.getElementById('st-marg-med').title = 'Muitos produtos sem CMV — rode importar_base_dados.py';
+  }
   document.getElementById('st-st').textContent = comST;
   document.getElementById('st-sem-cmv').textContent = semCmv;
 }
@@ -351,7 +359,7 @@ function renderTabela() {
     return `<tr style="${bg}" ondblclick="abrirModal(${i})">
       <td style="font-family:monospace;font-size:11px">${r.id || '—'}</td>
       <td class="sku" onclick="abrirModal(${i})">${r.sku || '—'}</td>
-      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.titulo || ''}">${(r.titulo || '').substring(0,45)}</td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.titulo || ''}">${(r.titulo || r.sku || '').substring(0,45)}</td>
       <td class="num">R$ ${fmt(r.preco)}</td>
       <td class="edit num" onclick="editarCampo(this, ${i}, 'desconto')">${fmt(r.desconto, 1)}%</td>
       <td class="num">R$ ${fmt(r._pf)}</td>
@@ -528,6 +536,10 @@ async function syncAnuncios() {
     document.getElementById('lbl-status').textContent = 'Sync concluído: ' + JSON.stringify(r);
     await carregarDados();
   } catch(e) { alert('Erro sync: ' + e.message); }
+}
+
+function novoAnuncio() {
+  window.open('https://web-production-5aa0f.up.railway.app/produto_novo.html', '_blank');
 }
 
 function exportarCSV() {
