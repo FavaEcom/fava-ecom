@@ -111,6 +111,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
       <span style="font-size:11px;color:#64748b;margin-left:8px">Edite inline &mdash; clique em qualquer campo</span>
       <button onclick="resequenciarSkus()" title="Preenche SKUs vazios em sequência a partir do número digitado" style="background:#1d4ed8;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">🔢 Gerar Seq.</button>
       <button onclick="gerarTodosEAN()" style="background:#7c3aed;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">🔢 Gerar EAN</button>
+      <input type="password" id="claude-key" placeholder="🔑 API Key Claude" style="width:180px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;padding:4px 8px;border-radius:6px;font-size:11px" title="Cole sua API Key da Anthropic (claude.ai/account)" onchange="localStorage.setItem('claude_api_key',this.value)">
       <button onclick="gerarTitulosIA()" title="Gerar títulos ML e Shopee com IA para produtos sem título" style="background:#0891b2;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">✨ Gerar Títulos</button>
       <button onclick="novaFamilia()" title="Adicionar nova família" style="background:#7c3aed;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">+ Família</button>
       <select id="margem-sel" onchange="recalcularTodos()" style="border:1px solid #e2e8f0;border-radius:5px;padding:4px 8px;font-size:11px;outline:none;margin-left:auto">
@@ -642,9 +643,11 @@ async function gerarTitulosIA() {
       + ' Responda APENAS em JSON: {"ml":"titulo","shopee":"titulo"}';
 
     try {
+      var apiKey = localStorage.getItem('claude_api_key') || document.getElementById('claude-key')?.value || '';
+      if(!apiKey) { alert('Cole sua API Key do Claude no campo 🔑 antes de gerar títulos.'); if(btn){btn.textContent='✨ Gerar Títulos';btn.disabled=false;} return; }
       var resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true'},
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 200,

@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Base de Produtos — Fava Ecom</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;font-size:13px}
+header{background:#1e3a5f;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:2px solid #0f1f3a}
+header h1{font-size:14px;font-weight:700;color:#fff}
+nav{background:#162040;padding:0 18px;display:flex;gap:2px;border-bottom:2px solid #0f1f3a;flex-wrap:wrap}
+nav a{padding:7px 13px;color:#9ca3af;font-size:12px;font-weight:700;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px}
+nav a.ativo{color:#93c5fd;border-bottom-color:#60a5fa}
+.toolbar{background:#1e293b;padding:8px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid #334155}
+.toolbar input,.toolbar select{background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:5px 8px;border-radius:6px;font-size:12px}
+.toolbar input[type=text]{width:180px}
+.btn{background:#2563eb;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600}
+.btn:hover{opacity:.85}
+.btn-verde{background:#059669}.btn-cinza{background:#475569}.btn-roxo{background:#7c3aed}
+.stats{display:flex;gap:16px;padding:6px 16px;background:#1e293b;border-bottom:1px solid #334155;font-size:12px;color:#94a3b8;flex-wrap:wrap}
+.stats span b{color:#e2e8f0}
+
+/* Tabela */
+.wrap{overflow:auto;max-height:calc(100vh - 175px)}
+table{width:100%;border-collapse:collapse;min-width:1400px}
+thead th{background:#1e293b;padding:7px 8px;text-align:left;white-space:nowrap;font-size:11px;color:#94a3b8;font-weight:700;border-bottom:2px solid #334155;position:sticky;top:0;z-index:10;cursor:pointer;user-select:none}
+thead th:hover{color:#e2e8f0}
+thead th.n{text-align:right}
+tbody tr:nth-child(even){background:#0f1f35}
+tbody tr:hover{background:#1e3a5f55}
+td{padding:5px 8px;font-size:12px;border-bottom:1px solid #1e293b;vertical-align:middle}
+td.n{text-align:right;font-family:monospace}
+
+/* Células editáveis */
+td.ec{cursor:pointer}
+td.ec:hover{background:#1e3a5f88}
+td.ec input,td.ec select{width:100%;background:#0f172a;border:1px solid #3b82f6;color:#fff;padding:2px 6px;border-radius:4px;font-size:12px;outline:none;font-family:monospace}
+
+/* Tags */
+.tag-st{background:#451a03;color:#f59e0b;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px}
+.tag-m{background:#1e3a5f;color:#60a5fa;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px}
+.tag-fam{background:#1e293b;color:#94a3b8;font-size:10px;padding:1px 6px;border-radius:10px}
+
+/* Modal */
+.modal{display:none;position:fixed;inset:0;background:#00000099;z-index:100;align-items:center;justify-content:center}
+.modal.open{display:flex}
+.mbox{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:22px;width:700px;max-height:90vh;overflow-y:auto}
+.mbox h2{font-size:15px;font-weight:700;margin-bottom:16px;color:#93c5fd}
+.mgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.mf label{display:block;font-size:11px;color:#94a3b8;margin-bottom:3px}
+.mf input,.mf select{width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:7px 10px;border-radius:6px;font-size:12px}
+.mf input:focus,.mf select:focus{border-color:#3b82f6;outline:none}
+.mf.full{grid-column:span 3}
+.mf.w2{grid-column:span 2}
+.sep{grid-column:span 3;font-size:10px;font-weight:900;color:#00B712;letter-spacing:1.5px;text-transform:uppercase;padding:8px 0 4px;border-bottom:1px solid #334155;margin-bottom:4px}
+.ma{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.loading{text-align:center;padding:40px;color:#64748b}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📦 Base de Produtos — Fava Ecom</h1>
+  <span id="lbl-s" style="font-size:12px;color:#94a3b8">Carregando...</span>
+  <div style="margin-left:auto;display:flex;gap:6px">
+    <button class="btn btn-cinza" onclick="exportCSV()">📥 CSV</button>
+    <button class="btn btn-verde" onclick="salvarTodos()">💾 Salvar alterações</button>
+  </div>
+</header>
+
+<nav>
+  <a href="https://web-production-5aa0f.up.railway.app/painel_fava.html">🏠 Painel</a>
+  <a href="https://web-production-5aa0f.up.railway.app/base_produtos.html" class="ativo">📦 Base</a>
+  <a href="https://web-production-5aa0f.up.railway.app/produto_novo.html">➕ Novo</a>
+  <a href="https://web-production-5aa0f.up.railway.app/gestor_anuncios.html">📢 Gestor</a>
+  <a href="https://web-production-5aa0f.up.railway.app/balcao_fava.html">🏪 Balcão</a>
+  <a href="https://web-production-5aa0f.up.railway.app/calculadora_fava.html">🧮 Calculadora</a>
+</nav>
+
+<div class="toolbar">
+  <input type="text" id="fi" placeholder="🔍 SKU, nome, NCM..." oninput="filtrar()">
+  <select id="ff" onchange="filtrar()">
+    <option value="">Família: Todas</option>
+  </select>
+  <select id="fst" onchange="filtrar()">
+    <option value="">ST: Todos</option>
+    <option value="1">Com ST</option>
+    <option value="0">Sem ST</option>
+  </select>
+  <select id="fmono" onchange="filtrar()">
+    <option value="">Monofásico: Todos</option>
+    <option value="1">Monofásico</option>
+    <option value="0">Normal</option>
+  </select>
+  <select id="fpeso" onchange="filtrar()">
+    <option value="">Peso: Todos</option>
+    <option value="0">Sem peso</option>
+    <option value="1">Com peso</option>
+  </select>
+  <button class="btn" onclick="carregar()">🔄 Atualizar</button>
+  <button class="btn btn-roxo" onclick="abrirNovoProduto()">+ Produto</button>
+</div>
+
+<div class="stats">
+  <span>Total: <b id="s-tot">—</b></span>
+  <span>Com CMV: <b id="s-cmv">—</b></span>
+  <span>Com ST: <b id="s-st">—</b></span>
+  <span>Monofásico: <b id="s-mono">—</b></span>
+  <span>Sem peso: <b id="s-sp" style="color:#f59e0b">—</b></span>
+  <span>Alterados: <b id="s-alt" style="color:#10b981">0</b></span>
+</div>
+
+<div class="wrap">
+  <table>
+    <thead><tr>
+      <th onclick="ord('sku')">SKU ↕</th>
+      <th style="min-width:220px">Nome</th>
+      <th>Família</th>
+      <th class="n" onclick="ord('cmv_br')">CMV BR ↕</th>
+      <th class="n" onclick="ord('cmv_pr')">CMV PR ↕</th>
+      <th class="n" onclick="ord('peso')">Peso ↕</th>
+      <th class="n">Larg</th>
+      <th class="n">Alt</th>
+      <th class="n">Prof</th>
+      <th class="n">IPI%</th>
+      <th>ST</th>
+      <th class="n">ST%</th>
+      <th>Mono</th>
+      <th>NCM</th>
+      <th>Origem</th>
+      <th>Ação</th>
+    </tr></thead>
+    <tbody id="tb"></tbody>
+  </table>
+</div>
+
+<!-- Modal edição completa -->
+<div class="modal" id="modal">
+  <div class="mbox">
+    <h2 id="mt">Editar Produto</h2>
+    <input type="hidden" id="e-sku">
+    <div class="mgrid">
+      <div class="sep">Identificação</div>
+      <div class="mf"><label>SKU</label><input type="text" id="e-sku-show" readonly style="color:#94a3b8"></div>
+      <div class="mf w2"><label>Nome</label><input type="text" id="e-nome"></div>
+      <div class="mf"><label>Família</label><select id="e-fam"></select></div>
+      <div class="mf"><label>NCM</label><input type="text" id="e-ncm"></div>
+      <div class="mf"><label>CEST</label><input type="text" id="e-cest"></div>
+
+      <div class="sep">Custo / CMV</div>
+      <div class="mf"><label>CMV Brasil (R$)</label><input type="number" id="e-cmvbr" step="0.0001"></div>
+      <div class="mf"><label>CMV Paraná (R$)</label><input type="number" id="e-cmvpr" step="0.0001"></div>
+      <div class="mf"><label>Origem</label><select id="e-orig">
+        <option value="">—</option>
+        <option value="0">0 - Nacional</option>
+        <option value="1">1 - Estrangeira importação direta</option>
+        <option value="2">2 - Estrangeira adq. mercado interno</option>
+        <option value="3">3 - Nacional c/ import. superior 40%</option>
+        <option value="4">4 - Nacional PPB/Suframa</option>
+        <option value="5">5 - Nacional c/ import. inferior 40%</option>
+        <option value="6">6 - Estrangeira importação direta s/similar</option>
+        <option value="7">7 - Estrangeira mercado interno s/similar</option>
+        <option value="8">8 - Nacional c/ import. superior 70%</option>
+      </select></div>
+
+      <div class="sep">Fiscal</div>
+      <div class="mf"><label>ST (Substituição Tributária)</label>
+        <select id="e-st"><option value="0">Não</option><option value="1">Sim</option></select>
+      </div>
+      <div class="mf"><label>ST Imposto (%)</label><input type="number" id="e-stpct" step="0.001" placeholder="0.195"></div>
+      <div class="mf"><label>IPI (%)</label><input type="number" id="e-ipi" step="0.01"></div>
+      <div class="mf"><label>Monofásico PIS/COFINS</label>
+        <select id="e-mono"><option value="0">Não</option><option value="1">Sim</option></select>
+      </div>
+      <div class="mf"><label>Alíq. ICMS (%)</label><input type="number" id="e-icms" step="0.01"></div>
+      <div class="mf"><label>CST</label><input type="text" id="e-cst"></div>
+
+      <div class="sep">Logística</div>
+      <div class="mf"><label>Peso real (kg)</label><input type="number" id="e-peso" step="0.001"></div>
+      <div class="mf"><label>Largura (cm)</label><input type="number" id="e-larg" step="0.1"></div>
+      <div class="mf"><label>Altura (cm)</label><input type="number" id="e-alt" step="0.1"></div>
+      <div class="mf"><label>Profundidade (cm)</label><input type="number" id="e-prof" step="0.1"></div>
+      <div class="mf"><label>Peso volumétrico</label>
+        <input type="text" id="e-pvol" readonly style="color:#94a3b8" placeholder="L×A×P/6000">
+      </div>
+      <div class="mf"><label>Peso final (maior)</label>
+        <input type="text" id="e-pfinal" readonly style="color:#10b981;font-weight:700">
+      </div>
+    </div>
+    <div class="ma">
+      <button class="btn btn-cinza" onclick="fechar()">Cancelar</button>
+      <button class="btn btn-verde" onclick="salvarModal()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SRV='https://web-production-5aa0f.up.railway.app';
+let _all=[], _fil=[], _familias=[], _alterados={}, _ord={c:'sku',a:true};
+
+// ── Carregar dados ─────────────────────────────────────────────────
+async function carregar(){
+  document.getElementById('tb').innerHTML='<tr><td colspan="16" class="loading">Carregando produtos...</td></tr>';
+  try{
+    const [prods, fams] = await Promise.all([
+      fetch(SRV+'/api/db/produtos').then(r=>r.json()),
+      fetch(SRV+'/api/db/familias').then(r=>r.json()).catch(()=>[])
+    ]);
+    _all = Array.isArray(prods)?prods:[];
+    _familias = (Array.isArray(fams)?fams:[]).map(f=>f.nome||f);
+    
+    // Preencher select de família no toolbar
+    const ff = document.getElementById('ff');
+    ff.innerHTML = '<option value="">Família: Todas</option>';
+    [...new Set(_all.map(p=>p.familia||'').filter(Boolean))].sort().forEach(f=>{
+      ff.innerHTML += `<option value="${f}">${f}</option>`;
+    });
+    
+    // Select família no modal
+    const ef = document.getElementById('e-fam');
+    ef.innerHTML = '<option value="">— selecione —</option>';
+    (_familias.length ? _familias : [...new Set(_all.map(p=>p.familia||'').filter(Boolean))].sort())
+      .forEach(f=>{ ef.innerHTML += `<option value="${f}">${f}</option>`; });
+    
+    atualizarStats();
+    filtrar();
+    document.getElementById('lbl-s').textContent = _all.length+' produtos carregados';
+  }catch(e){
+    document.getElementById('tb').innerHTML = `<tr><td colspan="16" class="loading" style="color:#ef4444">Erro: ${e.message}</td></tr>`;
+  }
+}
+
+function atualizarStats(){
+  const tot=_all.length;
+  const comCmv=_all.filter(p=>parseFloat(p.cmv_br||p.custo_br||0)>0).length;
+  const comST=_all.filter(p=>parseInt(p.st||0)).length;
+  const mono=_all.filter(p=>parseInt(p.monofasico||0)).length;
+  const semPeso=_all.filter(p=>!(parseFloat(p.peso||0)>0)).length;
+  document.getElementById('s-tot').textContent=tot;
+  document.getElementById('s-cmv').textContent=comCmv;
+  document.getElementById('s-st').textContent=comST;
+  document.getElementById('s-mono').textContent=mono;
+  document.getElementById('s-sp').textContent=semPeso;
+  document.getElementById('s-alt').textContent=Object.keys(_alterados).length;
+}
+
+// ── Filtrar ───────────────────────────────────────────────────────
+function filtrar(){
+  const q=document.getElementById('fi').value.toLowerCase();
+  const ff=document.getElementById('ff').value;
+  const fst=document.getElementById('fst').value;
+  const fmono=document.getElementById('fmono').value;
+  const fpeso=document.getElementById('fpeso').value;
+
+  _fil=_all.filter(p=>{
+    if(q&&![(p.sku||''),(p.nome||''),(p.ncm||'')].join(' ').toLowerCase().includes(q))return false;
+    if(ff&&(p.familia||'')!==ff)return false;
+    if(fst&&String(parseInt(p.st||0))!==fst)return false;
+    if(fmono&&String(parseInt(p.monofasico||0))!==fmono)return false;
+    if(fpeso==='0'&&parseFloat(p.peso||0)>0)return false;
+    if(fpeso==='1'&&!(parseFloat(p.peso||0)>0))return false;
+    return true;
+  });
+
+  let sorted=[..._fil];
+  if(_ord.c) sorted.sort((a,b)=>{
+    const va=parseFloat(a[_ord.c]||a['custo_br']||0)||String(a[_ord.c]||'');
+    const vb=parseFloat(b[_ord.c]||b['custo_br']||0)||String(b[_ord.c]||'');
+    const v=_ord.a?1:-1;
+    return typeof va==='number'?(va-vb)*v:va>vb?v:-v;
+  });
+
+  renderTabela(sorted);
+}
+
+function ord(c){if(_ord.c===c)_ord.a=!_ord.a;else{_ord.c=c;_ord.a=false;}filtrar();}
+
+// ── Render ────────────────────────────────────────────────────────
+function renderTabela(rows){
+  const tb=document.getElementById('tb');
+  if(!rows.length){tb.innerHTML='<tr><td colspan="16" class="loading">Nenhum produto</td></tr>';return;}
+  const R=v=>parseFloat(v||0)>0?'R$ '+parseFloat(v).toFixed(2):'—';
+  const F=v=>parseFloat(v||0)>0?parseFloat(v).toFixed(3):'—';
+  const alt=_alterados;
+
+  tb.innerHTML=rows.slice(0,500).map(p=>{
+    const sku=p.sku, cmvbr=parseFloat(p.cmv_br||p.custo_br||0);
+    const peso=parseFloat(p.peso||0), st=parseInt(p.st||0);
+    const mono=parseInt(p.monofasico||0), ipi=parseFloat(p.ipi||0);
+    const bg=alt[sku]?'background:#0c2a1a':'';
+    const pvol=(parseFloat(p.largura||0)*parseFloat(p.altura||0)*parseFloat(p.profundidade||0)/6000);
+    const pfinal=Math.max(peso,pvol);
+    return `<tr style="${bg}">
+      <td style="font-weight:700;color:${alt[sku]?'#10b981':'#60a5fa'}">${sku}</td>
+      <td class="ec" onclick="ei(this,'${sku}','nome')" title="${p.nome||''}">${(p.nome||'').substring(0,35)}</td>
+      <td class="ec" onclick="ei(this,'${sku}','familia')"><span class="tag-fam">${p.familia||'—'}</span></td>
+      <td class="n ec" onclick="ei(this,'${sku}','cmv_br')">${cmvbr>0?'R$ '+cmvbr.toFixed(4):'—'}</td>
+      <td class="n ec" onclick="ei(this,'${sku}','cmv_pr')">${parseFloat(p.cmv_pr||p.custo_pr||0)>0?'R$ '+parseFloat(p.cmv_pr||p.custo_pr||0).toFixed(4):'—'}</td>
+      <td class="n ec" onclick="ei(this,'${sku}','peso')" style="color:${peso>0?'#e2e8f0':'#ef4444'}">${peso>0?peso.toFixed(3)+'kg':'⚠'}</td>
+      <td class="n ec" onclick="ei(this,'${sku}','largura')">${parseFloat(p.largura||0)>0?parseFloat(p.largura).toFixed(1):'—'}</td>
+      <td class="n ec" onclick="ei(this,'${sku}','altura')">${parseFloat(p.altura||0)>0?parseFloat(p.altura).toFixed(1):'—'}</td>
+      <td class="n ec" onclick="ei(this,'${sku}','profundidade')">${parseFloat(p.profundidade||0)>0?parseFloat(p.profundidade).toFixed(1):'—'}</td>
+      <td class="n ec" onclick="ei(this,'${sku}','ipi')">${ipi>0?(ipi*100).toFixed(1)+'%':'—'}</td>
+      <td style="text-align:center">${st?'<span class="tag-st">ST</span>':'<span style="color:#334155">—</span>'}</td>
+      <td class="n ec" onclick="ei(this,'${sku}','st_imposto')">${parseFloat(p.st_imposto||0)>0?(parseFloat(p.st_imposto)*100).toFixed(1)+'%':'—'}</td>
+      <td style="text-align:center">${mono?'<span class="tag-m">M</span>':'<span style="color:#334155">—</span>'}</td>
+      <td class="ec" onclick="ei(this,'${sku}','ncm')" style="font-family:monospace;font-size:11px">${p.ncm||'—'}</td>
+      <td style="font-size:11px;color:#64748b">${p.origem||'—'}</td>
+      <td><button class="btn" style="padding:3px 8px;font-size:11px" onclick="abrirModal('${sku}')">✏</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Edição inline ─────────────────────────────────────────────────
+function ei(td, sku, campo){
+  const prod=_all.find(p=>String(p.sku)===String(sku));
+  if(!prod)return;
+  let val=prod[campo]||'';
+  
+  // Para família, usar select
+  if(campo==='familia'){
+    const opts=_familias.map(f=>`<option value="${f}"${f===val?' selected':''}>${f}</option>`).join('');
+    td.innerHTML=`<select onblur="salvarInline(this,'${sku}','${campo}')" onchange="this.blur()" autofocus>${opts}</select>`;
+    td.querySelector('select').focus();return;
+  }
+  
+  const tipo=(['cmv_br','cmv_pr','peso','largura','altura','profundidade','ipi','st_imposto'].includes(campo))?'number':'text';
+  td.innerHTML=`<input type="${tipo}" step="0.0001" value="${val}"
+    onblur="salvarInline(this,'${sku}','${campo}')"
+    onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape')filtrar();" autofocus>`;
+  td.querySelector('input').focus();
+}
+
+function salvarInline(inp,sku,campo){
+  const prod=_all.find(p=>String(p.sku)===String(sku));
+  if(!prod)return;
+  const val=['cmv_br','cmv_pr','peso','largura','altura','profundidade','ipi','st_imposto'].includes(campo)
+    ?parseFloat(inp.value)||0 : inp.value;
+  prod[campo]=val;
+  if(campo==='cmv_br')prod.custo_br=val;
+  if(campo==='cmv_pr')prod.custo_pr=val;
+  _alterados[sku]=true;
+  atualizarStats();filtrar();
+}
+
+// ── Modal ─────────────────────────────────────────────────────────
+function abrirModal(sku){
+  const p=_all.find(x=>String(x.sku)===String(sku));
+  if(!p)return;
+  document.getElementById('mt').textContent=(p.nome||sku).substring(0,60);
+  document.getElementById('e-sku').value=sku;
+  document.getElementById('e-sku-show').value=sku;
+  document.getElementById('e-nome').value=p.nome||'';
+  document.getElementById('e-fam').value=p.familia||'';
+  document.getElementById('e-ncm').value=p.ncm||'';
+  document.getElementById('e-cest').value=p.cest||'';
+  document.getElementById('e-cmvbr').value=parseFloat(p.cmv_br||p.custo_br||0).toFixed(4);
+  document.getElementById('e-cmvpr').value=parseFloat(p.cmv_pr||p.custo_pr||0).toFixed(4);
+  document.getElementById('e-orig').value=p.origem||'';
+  document.getElementById('e-st').value=String(parseInt(p.st||0));
+  document.getElementById('e-stpct').value=parseFloat(p.st_imposto||0).toFixed(3);
+  document.getElementById('e-ipi').value=parseFloat(p.ipi||0).toFixed(2);
+  document.getElementById('e-mono').value=String(parseInt(p.monofasico||0));
+  document.getElementById('e-icms').value=parseFloat(p.aliq_icms||0).toFixed(2);
+  document.getElementById('e-cst').value=p.cst||'';
+  document.getElementById('e-peso').value=parseFloat(p.peso||0).toFixed(3);
+  document.getElementById('e-larg').value=parseFloat(p.largura||0).toFixed(1);
+  document.getElementById('e-alt').value=parseFloat(p.altura||0).toFixed(1);
+  document.getElementById('e-prof').value=parseFloat(p.profundidade||0).toFixed(1);
+  calcVolModal();
+  document.getElementById('modal').classList.add('open');
+  ['e-larg','e-alt','e-prof','e-peso'].forEach(id=>{
+    document.getElementById(id).addEventListener('input',calcVolModal,{once:false});
+  });
+}
+
+function calcVolModal(){
+  const l=parseFloat(document.getElementById('e-larg').value)||0;
+  const a=parseFloat(document.getElementById('e-alt').value)||0;
+  const pr=parseFloat(document.getElementById('e-prof').value)||0;
+  const pe=parseFloat(document.getElementById('e-peso').value)||0;
+  const vol=l*a*pr/6000;
+  document.getElementById('e-pvol').value=vol>0?vol.toFixed(3)+'kg':'—';
+  const final=Math.max(pe,vol);
+  document.getElementById('e-pfinal').value=final>0?final.toFixed(3)+'kg':'—';
+}
+
+function fechar(){document.getElementById('modal').classList.remove('open');}
+
+function salvarModal(){
+  const sku=document.getElementById('e-sku').value;
+  const prod=_all.find(p=>String(p.sku)===String(sku));
+  if(!prod)return;
+  const cmvbr=parseFloat(document.getElementById('e-cmvbr').value)||0;
+  const cmvpr=parseFloat(document.getElementById('e-cmvpr').value)||cmvbr;
+  Object.assign(prod,{
+    nome:document.getElementById('e-nome').value,
+    familia:document.getElementById('e-fam').value,
+    ncm:document.getElementById('e-ncm').value,
+    cest:document.getElementById('e-cest').value,
+    cmv_br:cmvbr, custo_br:cmvbr,
+    cmv_pr:cmvpr, custo_pr:cmvpr,
+    origem:document.getElementById('e-orig').value,
+    st:parseInt(document.getElementById('e-st').value),
+    st_imposto:parseFloat(document.getElementById('e-stpct').value)||0,
+    ipi:parseFloat(document.getElementById('e-ipi').value)||0,
+    monofasico:parseInt(document.getElementById('e-mono').value),
+    aliq_icms:parseFloat(document.getElementById('e-icms').value)||0,
+    cst:document.getElementById('e-cst').value,
+    peso:parseFloat(document.getElementById('e-peso').value)||0,
+    largura:parseFloat(document.getElementById('e-larg').value)||0,
+    altura:parseFloat(document.getElementById('e-alt').value)||0,
+    profundidade:parseFloat(document.getElementById('e-prof').value)||0,
+  });
+  _alterados[sku]=true;
+  atualizarStats();filtrar();fechar();
+}
+
+// ── Salvar tudo no servidor ───────────────────────────────────────
+async function salvarTodos(){
+  const skus=Object.keys(_alterados);
+  if(!skus.length){alert('Nenhuma alteração para salvar.');return;}
+  const prods=_all.filter(p=>_alterados[String(p.sku)]);
+  document.getElementById('lbl-s').textContent='Salvando '+prods.length+' produtos...';
+  try{
+    const r=await fetch(SRV+'/api/db/produtos/update-fiscal',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({produtos:prods.map(p=>({
+        sku:p.sku, cmv_br:parseFloat(p.cmv_br||p.custo_br||0),
+        cmv_pr:parseFloat(p.cmv_pr||p.custo_pr||0),
+        st:parseInt(p.st||0), st_imposto:parseFloat(p.st_imposto||0),
+        ipi:parseFloat(p.ipi||0), monofasico:parseInt(p.monofasico||0),
+        ncm:p.ncm||'', cest:p.cest||'', origem:p.origem||'', cst:p.cst||'',
+        base_icms:parseFloat(p.base_icms||0), aliq_icms:parseFloat(p.aliq_icms||0),
+        aliq_eff:parseFloat(p.aliq_eff||0),
+        peso:parseFloat(p.peso||0), largura:parseFloat(p.largura||0),
+        altura:parseFloat(p.altura||0), profundidade:parseFloat(p.profundidade||0),
+        familia:p.familia||'', nome:p.nome||''
+      }))}),
+    }).then(r=>r.json());
+    const ok=r.updated||r.saved||0;
+    _alterados={};
+    atualizarStats();
+    document.getElementById('lbl-s').textContent='✅ '+ok+' produtos salvos!';
+    setTimeout(()=>document.getElementById('lbl-s').textContent=_all.length+' produtos',3000);
+  }catch(e){
+    document.getElementById('lbl-s').textContent='Erro: '+e.message;
+  }
+}
+
+// ── Exportar CSV ─────────────────────────────────────────────────
+function exportCSV(){
+  const cols=['sku','nome','familia','cmv_br','cmv_pr','peso','largura','altura','profundidade','ipi','st','st_imposto','monofasico','ncm','origem','cst'];
+  const csv=[cols.join(',')].concat(_fil.map(p=>cols.map(c=>JSON.stringify(p[c]!==undefined?p[c]:'')).join(','))).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='base_produtos.csv';a.click();
+}
+
+function abrirNovoProduto(){window.open(SRV+'/produto_novo.html','_blank');}
+
+// Atualizar nome no servidor também
+const _origUpdate = salvarTodos;
+
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)fechar();});
+carregar();
+</script>
+</body>
+</html>

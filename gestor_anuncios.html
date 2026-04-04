@@ -155,6 +155,8 @@ td.ec input{width:100%;background:#0f172a;border:1px solid #3b82f6;color:#fff;pa
       <div class="cr" style="font-weight:700;border-bottom:1px solid #334155;padding-bottom:6px"><span>= Preço final ao cliente</span><span id="cf"></span></div>
       <div class="cr"><span id="lbl-taxa-canal">(-) Taxa marketplace</span><span id="ctx"></span></div>
       <div class="cr" id="cr-taxa-fixa" style="display:none"><span>(-) Taxa fixa Shopee</span><span id="ctx-fixo"></span></div>
+      <div class="cr" id="cr-icms-inter"><span id="lbl-icms-inter">(-) ICMS interestadual médio (10,67%)</span><span id="ctx-icms-inter"></span></div>
+      <div class="cr" id="cr-difal"><span id="lbl-difal">(-) DIFAL médio (7,68%)</span><span id="ctx-difal"></span></div>
       <div class="cr"><span>(-) PIS+COFINS+IBS saída (11,25%)</span><span id="cpi"></span></div>
       <div class="cr"><span>(-) ICMS saída (12%)</span><span id="cic"></span></div>
       <div class="cr"><span>(-) DIFAL médio (3,81%)</span><span id="cdi"></span></div>
@@ -291,7 +293,26 @@ function calcFreteML(peso, preco) {
 // ─────────────────────────────────────────────────────────────────
 <script>
 const SRV='https://web-production-5aa0f.up.railway.app';
-const TP=0.0925,TC=0.12,TD=0.0381,TI=0.02;
+// Taxas Lucro Real — Origem PR
+const TP=0.0925;  // PIS+COFINS saída (1.65%+7.6%)
+const TC=0.1067; // ICMS interestadual médio ponderado (Sul 12%, Norte/NE 7%)
+const TD=0.0768; // DIFAL médio ponderado por estado
+const TI=0.02;   // IBS
+const TC_PR=0.12;// ICMS interno PR (para vendas locais)
+// Tabela real por UF (para cálculos precisos)
+const DIFAL_UF={
+  SP:{inter:0.12,difal:0.06},RJ:{inter:0.12,difal:0.08},MG:{inter:0.12,difal:0.06},
+  SC:{inter:0.12,difal:0.05},RS:{inter:0.12,difal:0.05},ES:{inter:0.07,difal:0.10},
+  GO:{inter:0.07,difal:0.12},DF:{inter:0.07,difal:0.11},MT:{inter:0.07,difal:0.12},
+  MS:{inter:0.07,difal:0.10},BA:{inter:0.07,difal:0.135},PE:{inter:0.07,difal:0.135},
+  CE:{inter:0.07,difal:0.13},RN:{inter:0.07,difal:0.11},PB:{inter:0.07,difal:0.11},
+  AL:{inter:0.07,difal:0.12},SE:{inter:0.07,difal:0.12},MA:{inter:0.07,difal:0.11},
+  PI:{inter:0.07,difal:0.11},PA:{inter:0.07,difal:0.12},AM:{inter:0.07,difal:0.13},
+  AC:{inter:0.07,difal:0.10},RO:{inter:0.07,difal:0.105},RR:{inter:0.07,difal:0.10},
+  AP:{inter:0.07,difal:0.11},TO:{inter:0.07,difal:0.11},
+  PR:{inter:0,difal:0} // vendas locais: sem interestadual, sem DIFAL
+};
+
 let _all=[],_fil=[],_modo='vis',_ei=null,_ord={c:'',a:true};
 
 function mudarCanal(){
@@ -359,12 +380,19 @@ function C(r){
   const st=parseInt(r.st||0), si=parseFloat(r.st_imposto||0), mn=parseInt(r.monofasico||0);
 
   // Deduções sobre o preço final
-  const usaDifal = canal!=='yampi' && canal!=='balcao'; // DIFAL só marketplace interestadual
-  const ded = pf*(tx + TP + (usaDifal ? TC+TD+TI : TC)) + fixo;
+  // ICMS + DIFAL por canal:
+  let ded;
+  if(canal==='yampi'||canal==='balcao'){
+    // PR local: sem DIFAL, ICMS 0 se ST, 12% se não
+    ded = pf*(tx + TP + (st?0:TC_PR) + TI) + fixo;
+  } else {
+    // Marketplace nacional: médias ponderadas TC(10.67%)+TD(7.68%)
+    ded = pf*(tx + TP + TC + TD + TI) + fixo;
+  }
 
   // Créditos fiscais (entrada)
-  const cp = mn ? 0 : cmv*(TP+TI);   // crédito PIS/COFINS
-  const ci = st ? 0 : cmv*TC;         // crédito ICMS PR
+  const cp = mn ? 0 : cmv*(TP+TI);   // crédito PIS/COFINS entrada
+  const ci = st ? 0 : cmv*TC_PR;     // crédito ICMS PR entrada (sempre 12% independente de canal)
 
   // Resultado
   const rec=pf-ded+cp+ci;
