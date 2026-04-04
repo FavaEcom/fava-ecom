@@ -780,7 +780,7 @@ carregarProdutos().then(() => {
             <div style="font-size:9px;font-weight:900;color:#00B712;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Contato</div>
             <table style="font-size:12px;width:100%;border-collapse:collapse">
               <tr><td style="color:#888;padding:3px 0;width:110px">WhatsApp</td><td style="font-weight:700">(41) 99674-2592</td></tr>
-              <tr><td style="color:#888;padding:3px 0">E-mail</td><td style="font-weight:700">favaecom@gmail.com</td></tr>
+              <tr><td style="color:#888;padding:3px 0">E-mail</td><td style="font-weight:700"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="07616671666264686a47606a666e6b2964686a">[email&#160;protected]</a></td></tr>
               <tr><td style="color:#888;padding:3px 0">Site</td><td style="font-weight:700">www.favaecom.com.br</td></tr>
               <tr><td style="color:#888;padding:3px 0">Responsável</td><td style="font-weight:700">Fabiano Machado</td></tr>
             </table>
@@ -837,7 +837,7 @@ carregarProdutos().then(() => {
   </div>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 function abrirFicha(){
   document.getElementById('fdata').textContent = new Date().toLocaleDateString('pt-BR');
   document.getElementById('modal-ficha').style.display='flex';
@@ -855,13 +855,4 @@ function imprimirFicha(){
     <style>body{font-family:'Inter',sans-serif;margin:0;padding:0}@media print{@page{margin:0}}</style>
   </head><body>${conteudo}</body></html>`);
   janela.document.close();
-  setTimeout(()=>{ janela.focus(); janela.print(); }, 800);
-}
-// Fechar clicando fora
-document.getElementById('modal-ficha').addEventListener('click', function(e){
-  if(e.target===this) fecharFicha();
-});
-</script>
-
-</body>
-</html>
+  s

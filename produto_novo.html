@@ -126,32 +126,14 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
       <div class="st" id="st-2" style="margin:10px"></div>
       <table class="rev-table" id="rev-table">
         <thead><tr>
-    <th style="width:28px"></th>
-    <th style="width:50px">Status</th>
-    <th style="min-width:80px">Cód.Forn</th>
-    <th style="min-width:65px">SKU</th>
-    <th style="min-width:210px">Produto</th>
-    <th style="min-width:75px">NCM</th>
-    <th style="min-width:45px">CFOP</th>
-    <th style="min-width:40px">CST</th>
-    <th class="n" style="min-width:68px" title="Custo unitário NF bruto">Custo NF</th>
-    <th class="n" style="min-width:50px">IPI%</th>
-    <th class="n" style="min-width:65px">v.IPI R$</th>
-    <th class="n" style="min-width:50px">ICMS%</th>
-    <th style="min-width:45px" title="Substituição Tributária">ST?</th>
-    <th class="n" style="min-width:65px">v.ST R$</th>
-    <th style="min-width:130px">Família</th>
-    <th class="n" style="min-width:78px">CMV BR</th>
-    <th class="n" style="min-width:78px">CMV PR</th>
-    <th class="n" style="min-width:60px">Peso</th>
-    <th class="n" style="min-width:68px">ML cl.</th>
-    <th class="n" style="min-width:68px">Shopee</th>
-    <th class="n" style="min-width:68px">Balcão</th>
-    <th class="n" style="min-width:55px">Margem</th>
-    <th style="min-width:98px">EAN</th>
-    <th style="min-width:160px">Título ML <small style="color:#64748b">(60)</small></th>
-    <th style="min-width:200px">Título Shopee <small style="color:#64748b">(120)</small></th>
-  </tr></thead>
+          <th style="width:30px"><input type="checkbox" id="sel-all" onchange="selAll(this.checked)" style="accent-color:#fff"></th>
+          <th>Status</th><th>C&oacute;d.Forn</th><th style="min-width:70px">SKU</th>
+          <th style="min-width:220px">Nome</th><th>NCM</th><th>CST</th><th>ST</th>
+          <th style="min-width:130px">Fam&iacute;lia</th>
+          <th>Custo NF</th><th>CMV BR</th><th>CMV PR</th><th>Peso</th><th>IPI%</th><th>ST</th><th>Mono</th><th>Lucro BR</th><th>Margem</th>
+          <th>ML Cl.</th><th>Shopee</th><th>Balc&atilde;o</th>
+          <th style="min-width:80px">EAN</th><th style="min-width:160px">Título ML <small style="color:#94a3b8">(60)</small></th><th style="min-width:200px">Título Shopee <small style="color:#94a3b8">(120)</small></th>
+        </tr></thead>
         <tbody id="rev-tbody"></tbody>
       </table>
     </div>
@@ -305,47 +287,199 @@ function lerXML(file){
         nf:ide&&ide.querySelector('nNF')?ide.querySelector('nNF').textContent:'',
         data:ide&&ide.querySelector('dhEmi')?ide.querySelector('dhEmi').textContent.slice(0,10):'',
         valor:parseFloat(total?total.textContent:0)};
+
       itensNF=[];
       var dets=xml.querySelectorAll('det');
       dets.forEach(function(det){
         var prod=det.querySelector('prod');
         var imp=det.querySelector('imposto');
-        var icms=imp?imp.querySelector('ICMS')||imp.querySelector('ICMSSN'):null;
-        var ipiEl=imp?imp.querySelector('IPI'):null;
-        var stEl=imp?imp.querySelector('ICMSST')||imp.querySelector('ICMSUFDest'):null;
-        var custo=parseFloat(prod&&prod.querySelector('vUnCom')?prod.querySelector('vUnCom').textContent:0);
-        var ipiPct=parseFloat(ipiEl&&ipiEl.querySelector('pIPI')?ipiEl.querySelector('pIPI').textContent:0)/100;
-        var icmsPct=parseFloat(icms&&icms.querySelector('pICMS')?icms.querySelector('pICMS').textContent:0)/100;
-        var custoNF=custo/(1+ipiPct);
-        var stVal=stEl?parseFloat(stEl.querySelector('vICMSST')?stEl.querySelector('vICMSST').textContent:(stEl.querySelector('vICMSUFDest')?stEl.querySelector('vICMSUFDest').textContent:0)):0;
-        var temST=stVal>0;
-        var cmvBr=Math.max(custoNF*(1-PIS_S-COF_S-icmsPct),custoNF*0.35);
-        var cmvPr=temST?Math.max(custoNF*(1-PIS_S-COF_S),custoNF*0.30):cmvBr;
+
+        // ── ICMS: suporta normal, SN, CSOSN ──────────────────────
+        var icmsEl = imp ? (
+          imp.querySelector('ICMS00')||imp.querySelector('ICMS10')||
+          imp.querySelector('ICMS20')||imp.querySelector('ICMS30')||
+          imp.querySelector('ICMS40')||imp.querySelector('ICMS51')||
+          imp.querySelector('ICMS60')||imp.querySelector('ICMS70')||
+          imp.querySelector('ICMS90')||imp.querySelector('ICMSSN')||
+          imp.querySelector('ICMSSN101')||imp.querySelector('ICMSSN102')||
+          imp.querySelector('ICMSSN201')||imp.querySelector('ICMSSN202')||
+          imp.querySelector('ICMSSN500')||imp.querySelector('ICMSSN900')
+        ) : null;
+        // Fallback: pegar qualquer filho do ICMS
+        if(!icmsEl && imp){
+          var icmsGroup = imp.querySelector('ICMS');
+          if(icmsGroup && icmsGroup.children.length>0) icmsEl=icmsGroup.children[0];
+        }
+
+        // CST/CSOSN
+        var cstRaw = icmsEl ? (
+          icmsEl.querySelector('CST')||icmsEl.querySelector('CSOSN')
+        ) : null;
+        var cst = cstRaw ? cstRaw.textContent.trim() : '';
+        var cstNum = parseInt(cst||'0');
+
+        // CFOP
+        var cfop = prod&&prod.querySelector('CFOP') ? prod.querySelector('CFOP').textContent : '';
+
+        // ── ICMS efetivo (crédito real) ───────────────────────────
+        // vICMS = valor ICMS realmente pago (considera diferimento, redução de base)
+        var vICMS_real = parseFloat(icmsEl&&icmsEl.querySelector('vICMS')?icmsEl.querySelector('vICMS').textContent:0);
+        // pICMS = alíquota nominal da nota
+        var pICMSnominal = parseFloat(icmsEl&&icmsEl.querySelector('pICMS')?icmsEl.querySelector('pICMS').textContent:0)/100;
+        // vICMSDif = valor diferido (CST 51)
+        var vICMSDif = parseFloat(icmsEl&&icmsEl.querySelector('vICMSDif')?icmsEl.querySelector('vICMSDif').textContent:0);
+
+        // ── IPI ───────────────────────────────────────────────────
+        var ipiEl = imp ? imp.querySelector('IPI') : null;
+        var ipiPct = parseFloat(ipiEl&&ipiEl.querySelector('pIPI')?ipiEl.querySelector('pIPI').textContent:0)/100;
+        var vIpiTotal = parseFloat(ipiEl&&ipiEl.querySelector('vIPI')?ipiEl.querySelector('vIPI').textContent:0);
+
+        // ── ST (Substituição Tributária) ──────────────────────────
+        var stEl = imp ? (
+          imp.querySelector('ICMSST')||imp.querySelector('ICMSUFDest')||
+          // ST pode estar dentro do icmsEl também (CST 10, 70)
+          (icmsEl&&icmsEl.querySelector('vICMSST') ? icmsEl : null)
+        ) : null;
+        var vStTotal = 0;
+        var pStPct = 0;
+        if(stEl){
+          vStTotal = parseFloat(stEl.querySelector('vICMSST')?.textContent||0);
+          pStPct   = parseFloat(stEl.querySelector('pICMSST')?.textContent||0)/100;
+        }
+        // Também verificar dentro do icmsEl para CST 10/70
+        if(!vStTotal && icmsEl){
+          var vST2 = icmsEl.querySelector('vICMSST');
+          if(vST2) vStTotal = parseFloat(vST2.textContent||0);
+        }
+
+        // ── DETERMINAR SE TEM ST ──────────────────────────────────
+        // Método 1: vICMSST > 0
+        // Método 2: CFOP indica ST (5403, 5405, 5401, 5402, 6403, 6405)
+        // Método 3: CST indica ST (10, 30, 70, 90 com ST, 201, 202, 203)
+        var cfopST = ['5401','5402','5403','5404','5405','6401','6402','6403','6404','6405'].includes(cfop);
+        var cstST  = [10, 30, 70, 90, 201, 202, 203].includes(cstNum);
+        var cstSTretido = [60, 400, 500].includes(cstNum); // ST já retido anteriormente
+        var temST = vStTotal > 0 || cfopST || cstST;
+
+        // ── CUSTO ────────────────────────────────────────────────
+        var custo = parseFloat(prod&&prod.querySelector('vUnCom')?prod.querySelector('vUnCom').textContent:0);
+        var qtd   = parseFloat(prod&&prod.querySelector('qCom')?prod.querySelector('qCom').textContent:1);
+        // Custo sem IPI (base NF)
+        var custoNF = ipiPct > 0 ? custo / (1 + ipiPct) : custo;
+
+        // ── CRÉDITO ICMS REAL ────────────────────────────────────
+        // CST 51 (diferimento): crédito = vICMS (parcial, não cheio)
+        // CST 10/70 (ST): crédito = ICMS próprio (não o ST)
+        // CST 60/400/500 (ST retido): SEM crédito ICMS
+        // CST 20 (base reduzida): crédito proporcional (vICMS real)
+        var creditoICMS_pct = 0; // como % do custo NF
+        var vNF_unit = custo * qtd; // valor total do item com IPI
+        var vNF_s_ipi = custoNF * qtd;
+        if(vStTotal > 0 || cstSTretido){
+          // Com ST ou ST retido: sem crédito ICMS de entrada
+          creditoICMS_pct = 0;
+        } else if(vICMS_real > 0 && vNF_s_ipi > 0){
+          // Crédito real = vICMS da nota / valor do item (base s/ IPI)
+          creditoICMS_pct = vICMS_real / vNF_s_ipi;
+        } else if(pICMSnominal > 0){
+          creditoICMS_pct = pICMSnominal;
+        }
+
+        // ── MONOFÁSICO PIS/COFINS ────────────────────────────────
+        var pisEl   = imp ? imp.querySelector('PIS')   : null;
+        var cofEl   = imp ? imp.querySelector('COFINS') : null;
+        var pisCst  = pisEl ? (pisEl.querySelector('CST')||pisEl.querySelector('pPIS') ? parseInt(pisEl.querySelector('CST')?.textContent||'0') : 0) : 0;
+        // CST PIS/COFINS 70/71/72/73/74/75 = monofásico
+        var monofasico = [70,71,72,73,74,75].includes(pisCst);
+        var vPIS   = parseFloat(pisEl&&pisEl.querySelector('vPIS')?pisEl.querySelector('vPIS').textContent:0);
+        var pPIS   = parseFloat(pisEl&&pisEl.querySelector('pPIS')?pisEl.querySelector('pPIS').textContent:0)/100;
+        var vCOF   = parseFloat(cofEl&&cofEl.querySelector('vCOFINS')?cofEl.querySelector('vCOFINS').textContent:0);
+        var pCOF   = parseFloat(cofEl&&cofEl.querySelector('pCOFINS')?cofEl.querySelector('pCOFINS').textContent:0)/100;
+
+        // Crédito PIS/COFINS (Lucro Real, não monofásico, não ST retido)
+        var credPisCof = (!monofasico && !cstSTretido) ? (pPIS+pCOF > 0 ? pPIS+pCOF : 0.0925) : 0;
+
+        // ── CMV BRASIL ───────────────────────────────────────────
+        // CMV BR = custo NF líquido - crédito ICMS - crédito PIS/COFINS + ST (custo)
+        // Simplificado: custo sem IPI, descontando créditos fiscais
+        var credTotal = creditoICMS_pct + credPisCof;
+        var cmvBr = custoNF * (1 - credTotal);
+        // ST entra como custo no CMV BR (já está no custo da nota)
+        if(temST && vStTotal > 0){
+          // ST por unidade = vST total / qtd
+          cmvBr += vStTotal / qtd;
+        }
+        cmvBr = Math.max(cmvBr, custoNF * 0.30); // mínimo 30% do custo
+
+        // ── CMV PARANÁ ───────────────────────────────────────────
+        // Venda local PR: sem DIFAL
+        // Com ST: ICMS saída = 0, crédito ICMS = 0
+        // Sem ST: ICMS saída PR (crédito entra no cálculo)
+        var cmvPr = cmvBr; // base igual, diferença é no cálculo de venda
+
+        // ── ORIGEM DO PRODUTO ─────────────────────────────────────
+        var origEl = icmsEl ? icmsEl.querySelector('orig') : null;
+        var origVal = origEl ? origEl.textContent : '';
+
+        var unid = prod&&prod.querySelector('uCom') ? prod.querySelector('uCom').textContent : 'UN';
+
         itensNF.push({
-          codigo:prod&&prod.querySelector('cProd')?prod.querySelector('cProd').textContent:'',
-          nome:prod&&prod.querySelector('xProd')?prod.querySelector('xProd').textContent:'',
-          ncm:prod&&prod.querySelector('NCM')?prod.querySelector('NCM').textContent:'',
-          cfop:prod&&prod.querySelector('CFOP')?prod.querySelector('CFOP').textContent:'',
-          cst:icms&&icms.querySelector('CST')?icms.querySelector('CST').textContent:(icms&&icms.querySelector('CSOSN')?icms.querySelector('CSOSN').textContent:''),
-          ean:prod&&prod.querySelector('cEAN')?prod.querySelector('cEAN').textContent:'',
-          qtd:parseFloat(prod&&prod.querySelector('qCom')?prod.querySelector('qCom').textContent:1),
-          custo:custo,custoNF:custoNF,ipiPct:ipiPct,ipi:ipiPct,icmsPct:icmsPct,cmvBr:cmvBr,cmvPr:cmvPr,temST:temST,
-          icmsPctNF:icmsPct,custoUnit:custo
+          codigo:  prod&&prod.querySelector('cProd') ? prod.querySelector('cProd').textContent : '',
+          nome:    prod&&prod.querySelector('xProd') ? prod.querySelector('xProd').textContent : '',
+          ncm:     prod&&prod.querySelector('NCM')   ? prod.querySelector('NCM').textContent   : '',
+          cfop:    cfop,
+          cst:     cst,
+          ean:     prod&&prod.querySelector('cEAN')  ? prod.querySelector('cEAN').textContent  : '',
+          qtd:     qtd,
+          unid:    unid,
+          // Custos
+          custo:      custo,
+          custoUnit:  custo,
+          custoNF:    custoNF,
+          custoNFunit:custoNF,
+          // IPI
+          ipiPct:   ipiPct,
+          ipi:      ipiPct,
+          vIpi:     vIpiTotal,
+          // ICMS
+          icmsPct:    pICMSnominal,
+          icmsPctNF:  pICMSnominal,
+          vICMS_real: vICMS_real,
+          vICMSDif:   vICMSDif,
+          creditoICMS_pct: creditoICMS_pct,
+          // ST
+          temST:    temST,
+          pSt:      pStPct,
+          vSt:      vStTotal,
+          cstSTretido: cstSTretido,
+          // PIS/COFINS
+          monofasico: monofasico,
+          vPIS:     vPIS,
+          pPIS:     pPIS,
+          vCOF:     vCOF,
+          pCOF:     pCOF,
+          credPisCof: credPisCof,
+          // CMV calculado
+          cmvBr:    parseFloat(cmvBr.toFixed(6)),
+          cmvPr:    parseFloat(cmvPr.toFixed(6)),
+          // Outros
+          origem:   origVal,
         });
       });
+
       document.getElementById('nf-forn').textContent=forn.nome;
       document.getElementById('nf-num').textContent='NF '+dadosNF.nf;
       document.getElementById('nf-data').textContent=dadosNF.data;
-      document.getElementById('nf-cnpj').textContent=cnpjRaw;
-      document.getElementById('nf-total').textContent='R$ '+fmt(dadosNF.valor);
-      document.getElementById('nf-badge').innerHTML='<span class="forn-badge forn-'+forn.tipo+'">'+forn.nome+'</span>';
-      document.getElementById('nf-resumo').textContent=itensNF.length+' produtos na NF';
-      document.getElementById('card-nf').style.display='block';
-      mostrarSt('st-1','NF '+dadosNF.nf+' lida - '+itensNF.length+' produtos','ok');
-      carregarBanco();
-    }catch(err){ mostrarSt('st-1','Erro: '+err.message,'err'); }
+      document.getElementById('nf-valor').textContent='R$ '+(dadosNF.valor||0).toFixed(2);
+      fichas=itensNF.map(function(it,i){return Object.assign({sel:true,sku:'',familia:'',peso:0,titulo_ml:'',titulo_shopee:'',existe:false,_vazio:true},it);});
+      irStep(2);
+      renderTabela();
+    }catch(err){
+      alert('Erro ao ler XML: '+err.message);
+      console.error(err);
+    }
   };
-  r.readAsText(file);
+  r.readAsText(file,'utf-8');
 }
 
 function carregarBanco(){
@@ -383,113 +517,44 @@ function gerarEAN(idx){
 function gerarTodosEAN(){fichas.forEach(function(f,i){if(!f.ean)gerarEAN(i);});}
 
 function renderTabela(){
-  var mg=(parseFloat(document.getElementById('margem-sel').value)||30)/100;
-  var novos=fichas.filter(function(f){return !f.sku;}).length;
-  document.getElementById('badge-novos').textContent=novos+' sem SKU';
+  var mg=(parseFloat(document.getElementById('margem-sel').value)||40)/100;
+  var novos=fichas.filter(function(f){return !f.existe;}).length;
+  document.getElementById('badge-novos').textContent=novos+' novos';
   var html='';
   fichas.forEach(function(f,i){
-    // ── Cálculos fiscais da NF ──────────────────────────────────
-    var ipiPct = f.ipiPct||f.ipi||0;
-    var vIpi   = f.vIpi||0;
-    var vSt    = f.vSt||0;
-    var icmsPctNF = f.icmsPct||f.icmsPctNF||0;
-    var custo  = f.custoUnit||f.custo||f.custoNF||0;
-
-    // ── Preços de venda calculados ──────────────────────────────
-    var pML = calcPreco(f.cmvBr, mg, TAXA_ML_CL, FRETE_ML, DIFAL+IBS, ICMS_SAIDA);
-    var pSH = calcPreco(f.cmvBr, mg, TAXA_SHOPEE, FRETE_SHOPEE, DIFAL+IBS, ICMS_SAIDA);
-    var pBL = calcPreco(f.cmvPr||f.cmvBr, mg, 0, 0, 0, f.temST?0:ICMS_PR);
-
-    // ── Margem real = (preço - CMV - impostos) / preço ─────────
-    // Impostos ML: taxa + PIS + COFINS + ICMS inter + DIFAL + IBS
-    var totalImpostML = pML*(TAXA_ML_CL+PIS_S+COF_S+ICMS_SAIDA+DIFAL+IBS)+FRETE_ML;
-    var lucroML  = pML - totalImpostML - f.cmvBr;
-    var margReal = pML>0 ? lucroML/pML*100 : 0;
-    var margCol  = margReal>=20?'#10b981':margReal>=10?'#f59e0b':'#ef4444';
-
-    // ── Família options ─────────────────────────────────────────
-    var famOpts='<option value="">— família —</option>'+
-      FAMILIAS.map(function(fm){
-        return '<option value="'+fm+'"'+(f.familia===fm?' selected':'')+'>'+fm+'</option>';
-      }).join('');
-
-    // ── SKU background ──────────────────────────────────────────
-    var skuBg = f._auto?'background:#0d3321':f._gerado?'background:#0d1f3a':'';
-
+    var pML=calcPreco(f.cmvBr,mg,TAXA_ML_CL,FRETE_ML,DIFAL+IBS,ICMS_SAIDA);
+    var pSH=calcPreco(f.cmvBr,mg,TAXA_SHOPEE,FRETE_SHOPEE,DIFAL+IBS,ICMS_SAIDA);
+    var pBL=calcPreco(f.cmvPr,mg,0,0,0,f.temST?0:ICMS_PR);
+    var famOpts='<option value="">-- familia --</option>'+FAMILIAS.map(function(fm){return '<option'+(f.familia===fm?' selected':'')+'>'+fm+'</option>';}).join('');
     html+='<tr class="'+(f.existe?'exist':'novo')+'" id="tr-'+i+'">';
-    // Checkbox + status
-    html+='<td><input type="checkbox"'+(f.sel?' checked':'')+
-          ' onchange="fichas['+i+'].sel=this.checked" style="accent-color:#1F3864"></td>';
-    html+='<td>'+(f.existe?'<span class="pill pill-exist">Existe</span>':
-          '<span class="pill pill-novo">Novo</span>')+'</td>';
-    // Código fornecedor
+    html+='<td><input type="checkbox"'+(f.sel?' checked':'')+' onchange="fichas['+i+'].sel=this.checked" style="accent-color:#1F3864"></td>';
+    html+='<td>'+(f.existe?'<span class="pill pill-exist">Existe</span>':'<span class="pill pill-novo">Novo</span>')+'</td>';
     html+='<td><span style="font-size:10px;color:#64748b">'+f.codigo+'</span></td>';
-    // SKU
-    html+='<td><input class="rev-input" data-sku-idx="'+i+'" value="'+(f.sku||'')+'"'+
-          ' oninput="fichas['+i+'].sku=this.value.trim()"'+
-          ' style="width:65px;'+skuBg+'" placeholder="SKU"></td>';
-    // Nome
-    html+='<td><input class="rev-input" value="'+f.nome.replace(/"/g,'&#39;')+'"'+
-          ' oninput="fichas['+i+'].nome=this.value" style="width:210px"></td>';
-    // NCM + CST (da NF, read-only)
-    html+='<td style="font-size:11px;color:#94a3b8;font-family:monospace">'+(f.ncm||'—')+'</td>';
-    html+='<td style="font-size:11px;color:#94a3b8">'+(f.cfop||'—')+'</td>';
-    html+='<td style="font-size:11px;color:#94a3b8">'+(f.cst||'—')+'</td>';
-    // Custo unitário NF (bruto, com IPI)
-    html+='<td style="text-align:right;font-size:11px;color:#cbd5e1">'+
-          (custo>0?'R$ '+custo.toFixed(2):'—')+'</td>';
-    // IPI% e valor
-    html+='<td style="text-align:right;font-size:11px;color:'+(ipiPct>0?'#fbbf24':'#475569')+'">'+
-          (ipiPct>0?(ipiPct*100).toFixed(1)+'%':'—')+'</td>';
-    html+='<td style="text-align:right;font-size:11px;color:'+(vIpi>0?'#fbbf24':'#475569')+'">'+
-          (vIpi>0?'R$ '+vIpi.toFixed(2):'—')+'</td>';
-    // ICMS% da NF
-    html+='<td style="text-align:right;font-size:11px;color:#94a3b8">'+
-          (icmsPctNF>0?(icmsPctNF*100).toFixed(1)+'%':'—')+'</td>';
-    // ST Sim/Não + valor ST
-    html+='<td style="text-align:center">'+
-          (f.temST?'<span class="pill pill-st">SIM</span>':
-          '<span style="color:#475569;font-size:11px">NÃO</span>')+'</td>';
-    html+='<td style="text-align:right;font-size:11px;color:'+(vSt>0?'#f59e0b':'#475569')+'">'+
-          (vSt>0?'R$ '+vSt.toFixed(2):'—')+'</td>';
-    // Família
-    html+='<td><select class="rev-select" onchange="fichas['+i+'].familia=this.value"'+
-          ' style="width:130px">'+famOpts+'</select></td>';
-    // CMV BR e CMV PR (editáveis)
-    html+='<td><input class="rev-input" type="number" value="'+f.cmvBr.toFixed(4)+'"'+
-          ' oninput="fichas['+i+'].cmvBr=parseFloat(this.value)||0;atualizarPrecos('+i+')"'+
-          ' style="width:78px;text-align:right"></td>';
-    html+='<td><input class="rev-input" type="number" value="'+(f.cmvPr||f.cmvBr).toFixed(4)+'"'+
-          ' oninput="fichas['+i+'].cmvPr=parseFloat(this.value)||0;atualizarPrecos('+i+')"'+
-          ' style="width:78px;text-align:right"></td>';
-    // Peso
-    html+='<td><input class="rev-input" type="number" value="'+(f.peso||'')+'"'+
-          ' placeholder="0.000" oninput="fichas['+i+'].peso=parseFloat(this.value)||0"'+
-          ' style="width:60px;text-align:right"></td>';
-    // Preços calculados
-    html+='<td id="p-ml-'+i+'" style="text-align:right;font-size:11px"><b>R$ '+fmt(pML)+'</b></td>';
-    html+='<td id="p-sh-'+i+'" style="text-align:right;font-size:11px"><b>R$ '+fmt(pSH)+'</b></td>';
-    html+='<td id="p-bl-'+i+'" style="text-align:right;font-size:11px"><b>R$ '+fmt(pBL)+'</b></td>';
-    // Margem REAL sobre preço ML
-    html+='<td style="text-align:right;font-size:11px;font-weight:700;color:'+margCol+'">'+
-          margReal.toFixed(1)+'%</td>';
-    // EAN
-    html+='<td><div style="display:flex;gap:2px">'+
-          '<input class="rev-input" id="ean-'+i+'" value="'+(f.ean||'')+'"'+
-          ' oninput="fichas['+i+'].ean=this.value"'+
-          ' style="width:88px;font-size:11px" placeholder="EAN">'+
-          '<button onclick="gerarEAN('+i+')" title="Gerar EAN"'+
-          ' style="background:#2563eb;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:10px;padding:1px 4px">🔢</button>'+
-          '</div></td>';
-    // Títulos ML e Shopee
-    html+='<td><input class="rev-input" value="'+(f.titulo_ml||'').replace(/"/g,'&#39;')+'"'+
-          ' oninput="fichas['+i+'].titulo_ml=this.value" style="width:155px" placeholder="Titulo ML (60)..."></td>';
-    html+='<td><input class="rev-input" value="'+(f.titulo_shopee||'').replace(/"/g,'&#39;')+'"'+
-          ' oninput="fichas['+i+'].titulo_shopee=this.value" style="width:195px" placeholder="Titulo Shopee (120)..."></td>';
+    html+='<td><input class="rev-input" value="'+f.sku+'" onchange="fichas['+i+'].sku=this.value" style="width:70px"></td>';
+    html+='<td><input class="rev-input" value="'+f.nome.replace(/"/g,'&#39;')+'" onchange="fichas['+i+'].nome=this.value" style="width:220px"></td>';
+    html+='<td><input class="rev-input" value="'+f.ncm+'" readonly style="background:#f8fafc;width:80px"></td>';
+    html+='<td><input class="rev-input" value="'+f.cst+'" readonly style="background:#f8fafc;width:40px"></td>';
+    html+='<td style="text-align:center">'+(f.temST?'<span class="pill pill-st">ST</span>':'—')+'</td>';
+    html+='<td><select class="rev-select" onchange="fichas['+i+'].familia=this.value" style="width:130px">'+famOpts+'</select></td>';
+    html+='<td style="text-align:right"><b>R$ '+fmt(f.custoNF)+'</b></td>';
+    html+='<td><input class="rev-input" type="number" value="'+f.cmvBr.toFixed(4)+'" onchange="fichas['+i+'].cmvBr=parseFloat(this.value)||0;atualizarPrecos('+i+')" style="width:80px;text-align:right"></td>';
+    html+='<td><input class="rev-input" type="number" value="'+f.cmvPr.toFixed(4)+'" onchange="fichas['+i+'].cmvPr=parseFloat(this.value)||0;atualizarPrecos('+i+')" style="width:80px;text-align:right"></td>';
+    html+='<td><input class="rev-input" type="number" value="'+(f.peso||'')+'" placeholder="0.000" onchange="fichas['+i+'].peso=parseFloat(this.value)||0" style="width:65px"></td>';
+    html+='<td style="text-align:right;font-size:11px">'+(f.ipi>0?(f.ipi*100).toFixed(1)+'%':'—')+'</td>';
+    html+='<td style="text-align:center">'+(f.temST?'<span style="color:#f59e0b;font-weight:700;font-size:11px">ST</span>':'<span style="color:#ccc;font-size:11px">—</span>')+'</td>';
+    html+='<td style="text-align:center">'+(f.monofasico?'<span style="color:#60a5fa;font-weight:700;font-size:11px">M</span>':'<span style="color:#ccc;font-size:11px">—</span>')+'</td>';
+    var _icms=f.temST?0:0.12;var _pis=0.0165,_cof=0.076;var _denom=Math.max(1-_pis-_cof-_icms-(mg/100),0.05);var _pDesc=f.cmvBr/_denom;var _trib=_pDesc*(_pis+_cof+_icms);var _cred=f.temST?0:f.cmvBr*(_pis+_cof);var _lBr=_pDesc-_trib-f.cmvBr+_cred;var _mBr=_pDesc>0?_lBr/_pDesc*100:0;
+    html+='<td style="text-align:right;font-size:11px;color:'+(_lBr>=0?'#10b981':'#ef4444')+'">R$ '+_lBr.toFixed(2)+'</td>';
+    html+='<td style="text-align:right;font-size:11px;color:'+(_mBr>=15?'#10b981':_mBr>=8?'#f59e0b':'#ef4444')+';font-weight:700">'+_mBr.toFixed(1)+'%</td>';
+    html+='<td id="p-ml-'+i+'" style="font-size:10px;white-space:nowrap"><b>R$ '+fmt(pML)+'</b></td>';
+    html+='<td id="p-sh-'+i+'" style="font-size:10px;white-space:nowrap"><b>R$ '+fmt(pSH)+'</b></td>';
+    html+='<td id="p-bl-'+i+'" style="font-size:10px;white-space:nowrap"><b>R$ '+fmt(pBL)+'</b></td>';
+    html+='<td><div style="display:flex;gap:2px"><input class="rev-input" id="ean-'+i+'" value="'+(f.ean||'')+'" onchange="fichas['+i+'].ean=this.value" style="width:88px;font-size:11px" placeholder="EAN"><button onclick="gerarEAN('+i+')" title="Gerar EAN" style="background:#2563eb;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:10px;padding:1px 4px">🔢</button></div></td>';
+    html+='<td><input class="rev-input" value="'+(f.titulo_ml||'').replace(/"/g,'&#39;')+'" onchange="fichas['+i+'].titulo_ml=this.value" style="width:160px" placeholder="Titulo ML..."></td>';
+    html+='<td><input class="rev-input" value="'+(f.titulo_shopee||'').replace(/"/g,'&#39;')+'" onchange="fichas['+i+'].titulo_shopee=this.value" style="width:200px" placeholder="Titulo Shopee..."></td>';
     html+='</tr>';
   });
   document.getElementById('rev-tbody').innerHTML=html;
-  salvarRascunho();
 }
 
 function atualizarPrecos(i){

@@ -741,6 +741,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/sync/now':             self._sync_now,
             '/api/sync/bling-anuncios':  self._sync_bling_anuncios,
             # ── NOVO: Bling OAuth ──────────────────────────────
+            '/api/ml/refresh':            self._ml_refresh,
+            '/api/ml/renovar':            self._ml_refresh,
+            '/api/ml/autorizar':           self._ml_autorizar,
+            '/api/ml/callback':            self._ml_callback,
             '/api/bling/renovar':        self._bling_renovar,
             '/api/bling/autorizar':      self._bling_autorizar,
             '/api/bling/callback':       self._bling_callback,
