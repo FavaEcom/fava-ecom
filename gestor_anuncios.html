@@ -133,12 +133,16 @@ td.ec input{width:100%;background:#0f172a;border:1px solid #3b82f6;color:#fff;pa
 <div class="modal" id="modal">
   <div class="mbox">
     <h2 id="mt">—</h2><div class="msub" id="ms">—</div>
-    <input type="hidden" id="eid"><input type="hidden" id="esku">
+    <input type="hidden" id="eid"><input type="hidden" id="esku"><input type="hidden" id="ecanal">
     <div class="mgrid">
       <div class="mf"><label>Preço (R$)</label><input type="number" id="ep" step="0.01" oninput="rc()"></div>
       <div class="mf"><label>Desconto (%)</label><input type="number" id="ed" step="0.5" min="0" max="80" oninput="rc()"></div>
       <div class="mf"><label>CMV Brasil (R$)</label><input type="number" id="ec" step="0.01" oninput="rc()"></div>
-      <div class="mf"><label>Frete médio (R$)</label><input type="number" id="ef" step="0.01" oninput="rc()"></div>
+      <div class="mf">
+        <label>Frete médio (R$) <span id="lbl-frete-calc" style="font-size:10px;color:#10b981"></span></label>
+        <input type="number" id="ef" step="0.01" oninput="rc()">
+        <div style="font-size:10px;color:#64748b;margin-top:2px">Se peso cadastrado, calculado automaticamente pela tabela Full Super</div>
+      </div>
       <div class="mf"><label>Taxa ML (%)</label><input type="number" id="et" step="0.01" oninput="rc()"></div>
       <div class="mf"><label>ST</label><select id="est" onchange="rc()"><option value="0">Não</option><option value="1">Sim</option></select></div>
       <div class="mf"><label>ST Imposto (%)</label><input type="number" id="esi" step="0.001" oninput="rc()"></div>
@@ -149,7 +153,8 @@ td.ec input{width:100%;background:#0f172a;border:1px solid #3b82f6;color:#fff;pa
       <div class="cr"><span>Preço de venda</span><span id="cp"></span></div>
       <div class="cr"><span>(-) Desconto</span><span id="cde"></span></div>
       <div class="cr" style="font-weight:700;border-bottom:1px solid #334155;padding-bottom:6px"><span>= Preço final ao cliente</span><span id="cf"></span></div>
-      <div class="cr"><span>(-) Taxa ML / marketplace</span><span id="ctx"></span></div>
+      <div class="cr"><span id="lbl-taxa-canal">(-) Taxa marketplace</span><span id="ctx"></span></div>
+      <div class="cr" id="cr-taxa-fixa" style="display:none"><span>(-) Taxa fixa Shopee</span><span id="ctx-fixo"></span></div>
       <div class="cr"><span>(-) PIS+COFINS+IBS saída (11,25%)</span><span id="cpi"></span></div>
       <div class="cr"><span>(-) ICMS saída (12%)</span><span id="cic"></span></div>
       <div class="cr"><span>(-) DIFAL médio (3,81%)</span><span id="cdi"></span></div>
@@ -214,6 +219,76 @@ td.ec input{width:100%;background:#0f172a;border:1px solid #3b82f6;color:#fff;pa
   </div>
 </div>
 
+
+
+// ── SHOPEE: Nova tabela de taxas CNPJ março 2026 ─────────────────
+function calcTaxaShopee(preco) {
+  // Retorna {pct, fixo} — taxa % + valor fixo por pedido
+  if(preco <= 79.99)  return {pct:0.20, fixo:4.00};
+  if(preco <= 99.99)  return {pct:0.14, fixo:16.00};
+  if(preco <= 199.99) return {pct:0.14, fixo:20.00};
+  if(preco <= 499.99) return {pct:0.14, fixo:26.00};
+  return {pct:0.14, fixo:28.00}; // acima de R$500
+}
+// Frete Shopee: estimativa baseada em peso (sem tabela oficial pública)
+// Shopee subsidia frete grátis — custo real ao vendedor ~R$0 a R$8
+// Usar R$0 como padrão (Shopee absorve) salvo produto muito pesado
+function calcFreteShopee(peso) {
+  if(!peso || peso <= 0) return 0;
+  if(peso <= 1)  return 0;    // Shopee cobre
+  if(peso <= 3)  return 4;    // participação parcial
+  if(peso <= 10) return 8;    // participação
+  return 12;                  // produtos pesados
+}
+// ─────────────────────────────────────────────────────────────────
+
+// ── PESO VOLUMÉTRICO ─────────────────────────────────────────────
+function calcPesoFinal(peso, larg, alt, prof) {
+  const vol = (parseFloat(larg||0) * parseFloat(alt||0) * parseFloat(prof||0)) / 6000;
+  const real = parseFloat(peso||0);
+  return Math.max(real, vol) || 0;
+}
+// ─────────────────────────────────────────────────────────────────
+
+// ── TABELA FRETE FULL SUPER — ML Líderes Verde ───────────────────
+const FRETE_FS = [
+  [0.3,  [1.25,1.50,2.00,3.00,4.00,6.00,20.95]],
+  [0.5,  [1.25,1.50,2.00,3.00,4.00,6.00,22.55]],
+  [1.0,  [1.25,1.50,2.00,3.00,4.00,6.00,23.65]],
+  [2.0,  [1.75,2.00,2.50,3.50,4.50,6.50,24.65]],
+  [3.0,  [2.00,2.50,3.00,4.00,5.00,7.00,26.25]],
+  [4.0,  [2.00,2.50,3.00,4.00,5.00,7.00,28.35]],
+  [5.0,  [2.50,3.50,4.00,5.00,6.00,7.50,30.75]],
+  [6.0,  [2.50,3.50,4.00,5.00,6.00,7.50,39.75]],
+  [7.0,  [4.00,5.00,5.50,6.50,7.00,7.50,44.05]],
+  [8.0,  [4.00,5.00,5.50,6.50,7.00,7.50,48.05]],
+  [9.0,  [5.00,6.00,6.50,7.00,7.50,8.00,49.35]],
+  [11.0, [5.00,6.00,6.50,7.00,7.50,8.00,68.65]],
+  [13.0, [5.00,6.00,6.50,7.00,7.50,8.00,70.25]],
+  [15.0, [5.00,6.00,6.50,7.00,7.50,8.00,74.95]],
+  [17.0, [5.00,6.00,6.50,7.00,7.50,8.00,78.65]],
+  [20.0, [5.00,6.00,6.50,7.00,7.50,8.00,91.15]],
+  [25.0, [5.00,6.00,6.50,7.00,7.50,8.00,105.95]],
+  [30.0, [5.00,6.00,6.50,7.00,7.50,8.00,106.95]],
+  [40.0, [5.00,6.00,6.50,7.00,7.50,8.00,107.05]],
+  [50.0, [5.00,6.00,6.50,7.00,7.50,8.00,110.75]],
+  [9999, [5.00,6.00,6.50,7.00,7.50,8.00,261.95]],
+];
+
+function calcFreteML(peso, preco) {
+  if(!peso || peso <= 0) return null;
+  let fi = preco>=199?6:preco>=99?5:preco>=79?4:preco>=49?3:preco>=29?2:preco>=19?1:0;
+  for(const [pm, v] of FRETE_FS) {
+    if(peso <= pm) {
+      let f = v[fi];
+      if(preco < 19) f = Math.min(f, preco * 0.5);
+      else if(preco < 29) f = Math.min(f, preco * 0.25);
+      return parseFloat(f.toFixed(2));
+    }
+  }
+  return 8.00;
+}
+// ─────────────────────────────────────────────────────────────────
 <script>
 const SRV='https://web-production-5aa0f.up.railway.app';
 const TP=0.0925,TC=0.12,TD=0.0381,TI=0.02;
@@ -241,17 +316,35 @@ function C(r){
   const canal=r.canal||'ml';
   const pf=preco*(1-desc/100);
   // Taxa por canal
-  const tx=parseFloat(r.sale_fee||(canal==='yampi'?0.05:canal==='shopee'?0.20:0.17));
+  // Taxa por canal — Shopee usa tabela escalonada
+  let tx, fixoCanal=0;
+  if(canal==='shopee') {
+    const sh = calcTaxaShopee(parseFloat(r.preco||0));
+    tx = sh.pct; fixoCanal = sh.fixo;
+  } else if(canal==='yampi') {
+    tx = 0.05;
+  } else {
+    tx = parseFloat(r.sale_fee||0.17);
+  }
+  // Frete calculado pela tabela Full Super se peso disponível e canal ML
+  // Peso volumétrico: maior entre real e L×A×P/6000
+  const pesoFinal = calcPesoFinal(r.peso, r.largura, r.altura, r.profundidade);
+  // Para kits: peso pode ser somado dos componentes (já calculado externamente)
+  const freteCalc = canal==='ml' && pesoFinal > 0
+    ? calcFreteML(pesoFinal, parseFloat(r.preco||0))
+    : canal==='shopee'
+    ? calcFreteShopee(pesoFinal)
+    : null;
   const cmv=parseFloat(r.cmv||0),fr=parseFloat(r.frete_medio||13);
   const st=parseInt(r.st||0),si=parseFloat(r.st_imposto||0),mn=parseInt(r.monofasico||0);
   const ded=pf*(tx+TP+TC+TD+TI);
   const cp=mn?0:cmv*(TP+TI),ci=st?0:cmv*TC;
   const rec=pf-ded+cp+ci,stv=st?pf*si:0;
   const luc=rec-cmv-fr-stv,mar=pf>0?luc/pf*100:0;
-  return{pf,rec,luc,mar,cp,ci,stv};
+  return{pf,rec,luc,mar,cp,ci,stv,fr,freteCalc};
 }
 
-function calcAll(){_all.forEach(r=>{const c=C(r);r.pf=c.pf;r.recebe=c.rec;r.lucro=c.luc;r.margem=c.mar;});}
+function calcAll(){_all.forEach(r=>{const c=C(r);r.pf=c.pf;r.recebe=c.rec;r.lucro=c.luc;r.margem=c.mar;r.frete_calc=c.freteCalc;r.frete_usado=c.fr;});}
 
 function stats(){
   const tot=_all.length,cmv=_all.filter(r=>parseFloat(r.cmv||0)>0).length;
@@ -319,6 +412,7 @@ function renderCards(){
       <div class="card-grid">
         <div class="cv"><label>Preço final</label><b>${R(r.pf||r.preco)}</b></div>
         <div class="cv"><label>CMV BR</label><b style="color:${cmv>0?'#e2e8f0':'#ef4444'}">${cmv>0?R(cmv):'⚠ s/CMV'}</b></div>
+        <div class="cv"><label>Frete ${r.frete_calc!==null?'📦calc':'✏man'}</label><b style="color:${r.frete_calc!==null?'#10b981':'#f59e0b'}">${R(r.frete_usado||r.frete_medio||0)}</b></div>
         <div class="cv"><label>Lucro</label><b style="color:${(r.lucro||0)>=0?'#10b981':'#ef4444'}">${R(r.lucro)}</b></div>
       </div>
       <div class="card-margem ${mc}">${f(m)}% margem</div>
@@ -345,7 +439,7 @@ function renderTabela(){
       <td class="n ec" onclick="ei(this,${i},'desconto')">${f(r.desconto)}%</td>
       <td class="n">${R(r.pf||r.preco)}</td>
       <td class="n" style="color:${cmv>0?'#e2e8f0':'#ef4444'}">${cmv>0?R(cmv):'⚠'}</td>
-      <td class="n ec" onclick="ei(this,${i},'frete_medio')">${R(r.frete_medio)}</td>
+      <td class="n ec" onclick="ei(this,${i},'frete_medio')" title="${r.frete_calc!==null?'Calculado pela tabela Full Super: R$'+r.frete_calc.toFixed(2):'Frete manual'}">${R(r.frete_usado||r.frete_medio)}<span style="font-size:9px;margin-left:2px;color:${r.frete_calc!==null?'#10b981':'#f59e0b'}">${r.frete_calc!==null?'▲calc':'▲man'}</span></td>
       <td class="n">${f(parseFloat(r.sale_fee||0.17)*100)}%</td>
       <td class="n">${R(r.recebe)}</td>
       <td class="n" style="color:${(r.lucro||0)>=0?'#10b981':'#ef4444'}">${R(r.lucro)}</td>
@@ -368,7 +462,7 @@ function ei(td,i,campo){
 }
 
 async function si(inp,i,campo){
-  const r=_fil[i];r[campo]=parseFloat(inp.value);const c=C(r);r.pf=c.pf;r.recebe=c.rec;r.lucro=c.luc;r.margem=c.mar;
+  const r=_fil[i];r[campo]=parseFloat(inp.value);const c=C(r);r.pf=c.pf;r.recebe=c.rec;r.lucro=c.luc;r.margem=c.mar;r.frete_calc=c.freteCalc;r.frete_usado=c.fr;
   filtrar();
   await fetch(SRV+'/api/db/listing',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({id:r.id,sku:r.sku,[campo]:r[campo]})});
@@ -378,12 +472,16 @@ function abrir(i){
   _ei=i;const r=_fil[i];
   const tipo=psku(r.sku),titulo=tipo==='kit'?nomeKit(r.sku):(r.titulo||r.sku||'');
   document.getElementById('mt').textContent=titulo.substring(0,60);
-  document.getElementById('ms').textContent=`${r.id||''} | SKU: ${r.sku||''} | Tipo: ${tipo}`;
-  document.getElementById('eid').value=r.id||'';document.getElementById('esku').value=r.sku||'';
+  document.getElementById('ms').textContent=`${r.id||''} | SKU: ${r.sku||''} | Canal: ${(r.canal||'ml').toUpperCase()} | Tipo: ${tipo}`;
+  document.getElementById('eid').value=r.id||'';
+  const _elCanal=document.getElementById('ecanal');if(_elCanal)_elCanal.value=r.canal||'ml';document.getElementById('esku').value=r.sku||'';
   document.getElementById('ep').value=parseFloat(r.preco||0).toFixed(2);
   document.getElementById('ed').value=parseFloat(r.desconto||0).toFixed(1);
   document.getElementById('ec').value=parseFloat(r.cmv||0).toFixed(4);
-  document.getElementById('ef').value=parseFloat(r.frete_medio||13).toFixed(2);
+  const _fc = (r.canal==='ml'&&parseFloat(r.peso||0)>0) ? calcFreteML(parseFloat(r.peso),parseFloat(r.preco||0)) : null;
+  document.getElementById('ef').value = _fc !== null ? _fc.toFixed(2) : parseFloat(r.frete_medio||0).toFixed(2);
+  const _lfc = document.getElementById('lbl-frete-calc');
+  if(_lfc) _lfc.textContent = _fc!==null ? `📦 calculado (${r.peso||0}kg × R$${parseFloat(r.preco||0).toFixed(0)})` : '✏ manual';
   document.getElementById('et').value=parseFloat((r.sale_fee||0.17)*100).toFixed(2);
   document.getElementById('est').value=String(r.st||0);
   document.getElementById('esi').value=parseFloat(r.st_imposto||0).toFixed(3);
@@ -398,7 +496,21 @@ function rc(){
   const de=parseFloat(document.getElementById('ed').value)||0;
   const cv=parseFloat(document.getElementById('ec').value)||0;
   const fr=parseFloat(document.getElementById('ef').value)||0;
-  const tx=(parseFloat(document.getElementById('et').value)||17)/100;
+  const canal_m = document.getElementById('ecanal')?.value || 'ml';
+  let tx, fixo_m=0;
+  if(canal_m==='shopee') {
+    const _sh=calcTaxaShopee(p); tx=_sh.pct; fixo_m=_sh.fixo;
+    const rowFixo=document.getElementById('cr-taxa-fixa');
+    if(rowFixo) rowFixo.style.display='';
+    const lbl=document.getElementById('lbl-taxa-canal');
+    if(lbl) lbl.textContent='(-) Taxa Shopee '+(_sh.pct*100).toFixed(0)+'%';
+    const el=document.getElementById('ctx-fixo');
+    if(el) el.textContent='(R$ '+fixo_m.toFixed(2)+') fixo por pedido';
+  } else {
+    tx=(parseFloat(document.getElementById('et').value)||17)/100;
+    const rowFixo=document.getElementById('cr-taxa-fixa');
+    if(rowFixo) rowFixo.style.display='none';
+  }
   const st=parseInt(document.getElementById('est').value);
   const si=parseFloat(document.getElementById('esi').value)||0;
   const mn=parseInt(document.getElementById('emn').value);
