@@ -922,7 +922,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 req=urllib.request.Request(url,headers=headers)
                 with urllib.request.urlopen(req,timeout=20) as r:
                     data=json.loads(r.read())
-                items=data.get("data",{}).get("data",data.get("data",[]))
+                # Parser robusto: Yampi pode retornar data.data[] ou data[]
+                inner=data.get("data",[])
+                items=inner.get("data",[]) if isinstance(inner,dict) else inner
                 if not isinstance(items,list) or not items: break
                 skus=[str(p.get("sku","")) for p in items if p.get("sku")]
                 cmv_map={}
@@ -941,7 +943,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         "status":"active" if p.get("active") else "paused","canal":"yampi",
                         "st":int(db.get("st",0)),"st_imposto":float(db.get("st_imposto",0)),
                         "monofasico":0,"peso":float(sd.get("weight") or 0),"estoque":int(sd.get("total_in_stock") or 0)})
-                last=data.get("data",{}).get("last_page",1)
+                inner2=data.get("data",{})
+                last=inner2.get("last_page",1) if isinstance(inner2,dict) else 1
                 if page>=last or page>=10: break
                 page+=1
             self._ok(result)

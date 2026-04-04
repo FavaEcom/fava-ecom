@@ -95,7 +95,7 @@ td.ec input{width:100%;background:#0f172a;border:1px solid #3b82f6;color:#fff;pa
 
 <div class="toolbar">
   <input type="text" id="fi" placeholder="SKU, título, MLB..." oninput="filtrar()">
-  <select id="fcanal" onchange="filtrar()" style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:5px 8px;border-radius:6px;font-size:12px"><option value="">Canal: Todos</option><option value="ml">Mercado Livre</option><option value="yampi">Yampi / Site</option><option value="shopee">Shopee</option><option value="balcao">Balcao</option></select>
+  <select id="fcanal" onchange="mudarCanal()" style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:5px 8px;border-radius:6px;font-size:12px"><option value="">Canal: Todos</option><option value="ml">Mercado Livre</option><option value="yampi">Yampi / Site</option><option value="shopee">Shopee</option><option value="balcao">Balcao</option></select>
   <select id="fst" onchange="filtrar()"><option value="">ST: Todos</option><option value="1">Com ST</option><option value="0">Sem ST</option></select>
   <select id="fm" onchange="filtrar()"><option value="">Margem: Todas</option><option value="ok">OK (≥15%)</option><option value="warn">Atenção 5-15%</option><option value="bad">Ruim &lt;5%</option></select>
   <select id="fs" onchange="filtrar()"><option value="">Status: Todos</option><option value="active">Ativo</option><option value="paused">Pausado</option></select>
@@ -294,6 +294,31 @@ const SRV='https://web-production-5aa0f.up.railway.app';
 const TP=0.0925,TC=0.12,TD=0.0381,TI=0.02;
 let _all=[],_fil=[],_modo='vis',_ei=null,_ord={c:'',a:true};
 
+function mudarCanal(){
+  const c=document.getElementById('fcanal').value;
+  // Yampi: carregar se não tiver dados ainda
+  if(c==='yampi' && !_all.some(r=>r.canal==='yampi')){
+    carregarCanal('yampi');
+  } else if(c==='shopee' && !_all.some(r=>r.canal==='shopee')){
+    document.getElementById('lbl-s').textContent='Shopee: sem dados ainda';
+  }
+  stats(); filtrar();
+}
+async function carregarCanal(canal){
+  document.getElementById('lbl-s').textContent=`Carregando ${canal}...`;
+  try{
+    const ep = canal==='yampi' ? '/api/db/yampi-listings' : null;
+    if(!ep) return;
+    const data=await fetch(SRV+ep).then(r=>r.json());
+    const items=(Array.isArray(data)?data:[]).map(r=>({...r,canal}));
+    _all=[..._all.filter(r=>r.canal!==canal),...items];
+    calcAll(); stats(); filtrar();
+    document.getElementById('lbl-s').textContent=`${items.length} anúncios ${canal} carregados`;
+  }catch(e){
+    document.getElementById('lbl-s').textContent=`Erro ao carregar ${canal}: ${e.message}`;
+  }
+}
+
 function psku(s){
   const p=String(s).split('-');
   if(p.length===1)return 'simples';
@@ -347,11 +372,13 @@ function C(r){
 function calcAll(){_all.forEach(r=>{const c=C(r);r.pf=c.pf;r.recebe=c.rec;r.lucro=c.luc;r.margem=c.mar;r.frete_calc=c.freteCalc;r.frete_usado=c.fr;});}
 
 function stats(){
-  const tot=_all.length,cmv=_all.filter(r=>parseFloat(r.cmv||0)>0).length;
-  const st=_all.filter(r=>parseInt(r.st||0)).length,kits=_all.filter(r=>psku(r.sku)==='kit').length;
-  const ms=_all.filter(r=>parseFloat(r.cmv||0)>0);
+  const fcanal=document.getElementById('fcanal')?.value||'';
+  const base = fcanal ? _all.filter(r=>(r.canal||'ml')===fcanal) : _all;
+  const tot=base.length,cmv=_all.filter(r=>parseFloat(r.cmv||0)>0).length;
+  const st=base.filter(r=>parseInt(r.st||0)).length,kits=base.filter(r=>psku(r.sku)==='kit').length;
+  const ms=base.filter(r=>parseFloat(r.cmv||0)>0);
   const med=ms.length?ms.reduce((s,r)=>s+r.margem,0)/ms.length:0;
-  document.getElementById('s-tot').textContent=tot;
+  document.getElementById('s-tot').textContent=fcanal?`${tot} (${fcanal})`:tot;
   document.getElementById('s-cmv').textContent=cmv;
   document.getElementById('s-med').textContent=med.toFixed(1)+'%';
   document.getElementById('s-st').textContent=st;
@@ -422,7 +449,12 @@ function renderCards(){
 
 function renderTabela(){
   const tb=document.getElementById('tb');
-  if(!_fil.length){tb.innerHTML='<tr><td colspan="15" class="loading">Nenhum anúncio</td></tr>';return;}
+  if(!_fil.length){
+    const fcanal=document.getElementById('fcanal')?.value||'';
+    const msg = fcanal && fcanal!=='ml'
+      ? `Nenhum anúncio ${fcanal.toUpperCase()} — sincronize os dados primeiro`
+      : 'Nenhum anúncio encontrado';
+    tb.innerHTML=`<tr><td colspan="15" class="loading">${msg}</td></tr>`;return;}
   const R=v=>'R$ '+parseFloat(v||0).toFixed(2),f=(v,d=1)=>parseFloat(v||0).toFixed(d);
   let rows=[..._fil];
   if(_ord.c)rows.sort((a,b)=>{const v=_ord.a?1:-1;return(parseFloat(a[_ord.c]||0)-parseFloat(b[_ord.c]||0))*v;});
