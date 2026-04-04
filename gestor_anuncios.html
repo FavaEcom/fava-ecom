@@ -457,6 +457,12 @@ function setModo(m){
   filtrar();
 }
 
+function calcPesoFinal(peso, larg, alt, prof) {
+  const vol = (parseFloat(larg||0) * parseFloat(alt||0) * parseFloat(prof||0)) / 6000;
+  const real = parseFloat(peso||0);
+  return Math.max(real, vol) || 0;
+}
+
 function renderCards(){
   const w=document.getElementById('v-cards');
   if(!_fil.length){w.innerHTML='<div class="loading">Nenhum anúncio</div>';return;}
