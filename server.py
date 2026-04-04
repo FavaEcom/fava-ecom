@@ -10,6 +10,7 @@ FAVA ECOM — Servidor Railway v3
 import http.server
 import urllib.request
 import urllib.error
+from urllib.parse import parse_qs
 import urllib.parse
 import json
 import os
