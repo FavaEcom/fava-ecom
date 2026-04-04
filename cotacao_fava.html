@@ -202,6 +202,7 @@ nav a.ativo { color: var(--verde); border-bottom-color: var(--verde); }
   <div style="margin-left:auto;display:flex;gap:8px">
     <button class="btn btn-dark" onclick="novaCotacao()">🗑 Limpar</button>
     <button class="btn btn-dark" onclick="salvarRascunho()">💾 Salvar</button>
+    <button class="btn btn-dark" onclick="abrirFicha()">🪪 Ficha Cadastral</button>
     <button class="btn btn-print" onclick="window.print()">🖨 Imprimir</button>
     <button class="btn btn-verde" onclick="gerarPDF()">📄 PDF</button>
   </div>
@@ -717,5 +718,150 @@ carregarProdutos().then(() => {
   carregarRascunho();
 });
 </script>
+
+<!-- ══ MODAL FICHA CADASTRAL ══════════════════════════════════════ -->
+<div id="modal-ficha" style="display:none;position:fixed;inset:0;background:#00000088;z-index:200;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:680px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px #0005">
+
+    <!-- Preview da ficha -->
+    <div id="ficha-preview" style="font-family:'Inter',sans-serif">
+
+      <!-- Header -->
+      <div style="background:#181818;padding:28px 36px;display:flex;justify-content:space-between;align-items:center">
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="width:56px;height:56px;border-radius:50%;border:3px solid #00B712;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-weight:900;color:#181818;font-size:13px;flex-shrink:0">
+            <svg width="32" height="32" viewBox="0 0 100 100" fill="none">
+              <circle cx="50" cy="50" r="46" stroke="#00B712" stroke-width="5"/>
+              <text x="20" y="55" font-family="Inter" font-weight="900" font-size="28" fill="#181818">F</text>
+              <text x="55" y="55" font-family="Inter" font-weight="900" font-size="28" fill="#181818">V</text>
+            </svg>
+          </div>
+          <div>
+            <div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px">FAVA<span style="color:#00B712">ECOM</span></div>
+            <div style="font-size:9px;color:#666;letter-spacing:2px;text-transform:uppercase;margin-top:2px">Loja Online · Since 2023</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:9px;color:#666;letter-spacing:1px;text-transform:uppercase">Ficha Cadastral</div>
+          <div style="font-size:11px;color:#888;margin-top:4px" id="fdata"></div>
+        </div>
+      </div>
+
+      <!-- Barra verde -->
+      <div style="background:#00B712;height:4px"></div>
+
+      <!-- Dados cadastrais -->
+      <div style="padding:24px 36px;background:#F4F4F4">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+          <div>
+            <div style="font-size:9px;font-weight:900;color:#00B712;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Dados da Empresa</div>
+            <table style="font-size:12px;width:100%;border-collapse:collapse">
+              <tr><td style="color:#888;padding:3px 0;width:110px;vertical-align:top">Razão Social</td><td style="font-weight:700;color:#181818">FV COMERCIO E SERVICOS LTDA</td></tr>
+              <tr><td style="color:#888;padding:3px 0">Nome Fantasia</td><td style="font-weight:700">Fava Ecom</td></tr>
+              <tr><td style="color:#888;padding:3px 0">CNPJ</td><td style="font-weight:700">48.328.969/0001-12</td></tr>
+              <tr><td style="color:#888;padding:3px 0">Inscrição Est.</td><td style="font-weight:700">90974837-25</td></tr>
+              <tr><td style="color:#888;padding:3px 0">Porte</td><td style="font-weight:700">ME — Microempresa</td></tr>
+              <tr><td style="color:#888;padding:3px 0">Abertura</td><td style="font-weight:700">18/10/2022</td></tr>
+            </table>
+          </div>
+
+          <div>
+            <div style="font-size:9px;font-weight:900;color:#00B712;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Endereço</div>
+            <table style="font-size:12px;width:100%;border-collapse:collapse">
+              <tr><td style="color:#888;padding:3px 0;width:80px">Logradouro</td><td style="font-weight:700">Rua Darcy Ribeiro, 40</td></tr>
+              <tr><td style="color:#888;padding:3px 0">Bairro</td><td style="font-weight:700">Cajuru</td></tr>
+              <tr><td style="color:#888;padding:3px 0">Cidade/UF</td><td style="font-weight:700">Curitiba / PR</td></tr>
+              <tr><td style="color:#888;padding:3px 0">CEP</td><td style="font-weight:700">82.920-110</td></tr>
+            </table>
+          </div>
+
+          <div>
+            <div style="font-size:9px;font-weight:900;color:#00B712;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Contato</div>
+            <table style="font-size:12px;width:100%;border-collapse:collapse">
+              <tr><td style="color:#888;padding:3px 0;width:110px">WhatsApp</td><td style="font-weight:700">(41) 99674-2592</td></tr>
+              <tr><td style="color:#888;padding:3px 0">E-mail</td><td style="font-weight:700">favaecom@gmail.com</td></tr>
+              <tr><td style="color:#888;padding:3px 0">Site</td><td style="font-weight:700">www.favaecom.com.br</td></tr>
+              <tr><td style="color:#888;padding:3px 0">Responsável</td><td style="font-weight:700">Fabiano Machado</td></tr>
+            </table>
+          </div>
+
+          <div>
+            <div style="font-size:9px;font-weight:900;color:#00B712;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Informações Comerciais</div>
+            <table style="font-size:12px;width:100%;border-collapse:collapse">
+              <tr><td style="color:#888;padding:3px 0;width:110px">Pagamento</td><td style="font-weight:700">A combinar</td></tr>
+              <tr><td style="color:#888;padding:3px 0">Prazo envio</td><td style="font-weight:700">Imediato após confirmação</td></tr>
+              <tr><td style="color:#888;padding:3px 0">Validade</td><td style="font-weight:700">7 dias</td></tr>
+              <tr><td style="color:#888;padding:3px 0">Regime</td><td style="font-weight:700">Lucro Real</td></tr>
+            </table>
+          </div>
+
+        </div>
+
+        <!-- Mensagem -->
+        <div style="margin-top:16px;padding:12px 16px;background:#fff;border-left:3px solid #00B712;border-radius:4px;font-size:12px;color:#555;line-height:1.6">
+          Ficamos à disposição para envio da cotação formal conforme solicitado.<br>
+          <strong style="color:#181818">Atenciosamente, Fava Ecom</strong>
+        </div>
+      </div>
+
+      <!-- Atividades -->
+      <div style="padding:12px 36px;background:#fff;border-top:1px solid #E8E8E8">
+        <div style="font-size:9px;font-weight:900;color:#00B712;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Principais Atividades (CNAE)</div>
+        <div style="font-size:10px;color:#666;line-height:1.7">
+          47.13-0-02 — Lojas de variedades &nbsp;·&nbsp;
+          47.44-0-01 — Ferragens e ferramentas &nbsp;·&nbsp;
+          47.53-9-00 — Eletrodomésticos e equipamentos &nbsp;·&nbsp;
+          47.57-1-00 — Peças e acessórios eletrônicos &nbsp;·&nbsp;
+          47.63-6-02 — Artigos esportivos &nbsp;·&nbsp;
+          47.63-6-03 — Bicicletas e triciclos
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="background:#181818;padding:16px 36px;display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:10px;color:#555">
+          Situação Cadastral: <span style="color:#00B712;font-weight:700">ATIVA</span> &nbsp;·&nbsp; Desde 18/10/2022
+        </div>
+        <div style="font-size:10px;color:#555">favaecom.com.br</div>
+      </div>
+    </div>
+
+    <!-- Botões do modal -->
+    <div style="padding:14px 24px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid #E8E8E8;background:#fff">
+      <button onclick="fecharFicha()" style="padding:8px 18px;background:#475569;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">Fechar</button>
+      <button onclick="imprimirFicha()" style="padding:8px 18px;background:#181818;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🖨 Imprimir</button>
+      <button onclick="imprimirFicha()" style="padding:8px 18px;background:#00B712;color:#000;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">📄 Salvar PDF</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function abrirFicha(){
+  document.getElementById('fdata').textContent = new Date().toLocaleDateString('pt-BR');
+  document.getElementById('modal-ficha').style.display='flex';
+}
+function fecharFicha(){
+  document.getElementById('modal-ficha').style.display='none';
+}
+function imprimirFicha(){
+  const conteudo = document.getElementById('ficha-preview').innerHTML;
+  const janela = window.open('','_blank','width=800,height=700');
+  janela.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <title>Ficha Cadastral — Fava Ecom</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>body{font-family:'Inter',sans-serif;margin:0;padding:0}@media print{@page{margin:0}}</style>
+  </head><body>${conteudo}</body></html>`);
+  janela.document.close();
+  setTimeout(()=>{ janela.focus(); janela.print(); }, 800);
+}
+// Fechar clicando fora
+document.getElementById('modal-ficha').addEventListener('click', function(e){
+  if(e.target===this) fecharFicha();
+});
+</script>
+
 </body>
 </html>

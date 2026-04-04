@@ -1165,14 +1165,12 @@ async function renovarTokenBling(){
   try{
     const r=await fetch("https://web-production-5aa0f.up.railway.app/api/bling/renovar").then(r=>r.json());
     if(r.ok){
-      // Token renovado no servidor — atualizar tokenStore local
-      if(r.access_token) tokenStore.bling.access = r.access_token;
-      tokenStore.bling.expires = Date.now() + 6*3600*1000; // 6h
-      salvarTokenStore();
-      return true;
+      if(r.access_token) tokenStore.bling.access=r.access_token;
+      tokenStore.bling.expires=Date.now()+6*3600*1000;
+      salvarTokenStore(); return true;
     }
     return false;
-  }catch(e){ console.warn("[Bling renovar erro]", e.message); return false; }
+  }catch(e){ console.warn("[Bling]",e.message); return false; }
 }
 
 async function forcarRenovacaoML(){
@@ -1184,11 +1182,10 @@ async function forcarRenovacaoML(){
 
 async function forcarRenovacaoBling(){
   setDot('bling','wait','Renovando...');
-  const ok = await renovarTokenBling();
+  const ok=await renovarTokenBling();
   if(ok){ setDot('bling','ok','Bling ✓'); testar(); }
-  else{
-    setDot('bling','err','Expirado');
-    if(confirm('Token Bling expirado. Abrir autorização? (10 segundos)')) window.open('https://web-production-5aa0f.up.railway.app/api/bling/autorizar','_blank');
+  else{ setDot('bling','err','Expirado');
+    if(confirm('Token Bling expirado. Abrir autorização?')) window.open('https://web-production-5aa0f.up.railway.app/api/bling/autorizar','_blank');
   }
 }
 
@@ -1212,7 +1209,7 @@ window.onload=async ()=>{
   carregarTokenStore();
   // Tenta renovar tokens expirados no startup
   if(tokenStore.ml.refresh && tokenStore.ml.expires && Date.now() > tokenStore.ml.expires) await renovarTokenML();
-  // Renovar Bling via servidor em background (não bloqueia startup)
+  // Renovar Bling em background (não bloqueia)
   renovarTokenBling().then(ok=>{ if(ok) setDot('bling','ok','Bling ✓'); }).catch(()=>{});
   // Carrega chave Claude
   const ck=localStorage.getItem('fava_claude_key')||'';
@@ -2785,22 +2782,20 @@ async function buscarBalcao(){
   renderBalcaoLista();
 }
 
-function calcPrecoBalcao(cmv, mg, desc, st=false, stImposto=0){
-  // Preço balcão: venda local PR — sem DIFAL, sem taxa marketplace
-  const PIS_S  = 0.0165, COF_S = 0.076;
-  // ST: ICMS já foi pago na entrada (substituição tributária) → ICMS saída = 0
-  const ICMS_S = st ? 0 : 0.12; // 12% ICMS PR interno (sem ST)
-  // Crédito PIS/COFINS na entrada (Lucro Real)
-  const CRED_PIS_COF = st ? 0 : cmv * (PIS_S + COF_S); // monofásico não tem crédito, mas usamos normal aqui
-  const m = mg/100;
-  const denom = Math.max(1 - PIS_S - COF_S - ICMS_S - m, 0.05);
-  const precoBase = cmv / denom;
-  const precoDesc = precoBase * (1 - desc/100);
-  // Lucro real: recebe - CMV (já com créditos)
-  const tributos = precoDesc * (PIS_S + COF_S + ICMS_S);
-  const lucro = precoDesc - tributos - cmv + CRED_PIS_COF;
-  const mc = precoDesc>0 ? lucro/precoDesc : 0;
-  return {precoBase, precoDesc, mc, tributos, ICMS_S, CRED_PIS_COF};
+function calcPrecoBalcao(cmv, mg, desc, st=false){
+  // Balcão PR — sem DIFAL, sem marketplace
+  const PIS_S=0.0165, COF_S=0.076;
+  // ST: ICMS já pago na entrada → saída = 0%
+  const ICMS_S = st ? 0 : 0.12;
+  const cred = st ? 0 : cmv*(PIS_S+COF_S);
+  const m=mg/100;
+  const denom=Math.max(1-PIS_S-COF_S-ICMS_S-m, 0.05);
+  const precoBase=cmv/denom;
+  const precoDesc=precoBase*(1-desc/100);
+  const trib=precoDesc*(PIS_S+COF_S+ICMS_S);
+  const lucro=precoDesc-trib-cmv+cred;
+  const mc=precoDesc>0?lucro/precoDesc:0;
+  return {precoBase, precoDesc, mc, ICMS_S};
 }
 
 function renderBalcaoLista(){
@@ -2817,7 +2812,7 @@ function renderBalcaoLista(){
 
   let totalBruto = 0;
   const rows = balcaoLista.map((item, i)=>{
-    const {precoDesc, mc} = calcPrecoBalcao(item.cmv, mg, desc, !!(item.st||0), item.stImposto||0);
+    const {precoDesc, mc} = calcPrecoBalcao(item.cmv,mg,desc,!!(item.st||0));
     const total = precoDesc * item.qtd;
     totalBruto += total;
     const mcCor = mc>=0.30?'#059669':mc>=0.15?'#d97706':'#dc2626';
@@ -2890,7 +2885,7 @@ function balcaoImprimir(){
 
   let totalBruto = 0;
   const linhas = balcaoLista.map(item=>{
-    const {precoDesc} = calcPrecoBalcao(item.cmv, mg, desc, !!(item.st||0), item.stImposto||0);
+    const {precoDesc} = calcPrecoBalcao(item.cmv,mg,desc,!!(item.st||0));
     const total = precoDesc * item.qtd;
     totalBruto += total;
     return `<tr>
