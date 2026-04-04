@@ -1634,12 +1634,25 @@ async function forcarRenovacaoBling() {
   if(btn) { btn.textContent = 'Renovando...'; btn.disabled = true; }
   try {
     const r = await fetch('https://web-production-5aa0f.up.railway.app/api/bling/trocar').then(res => res.json());
-    if(r.access || r.access_token || r.ok !== false) {
+    if(r.access || r.access_token) {
       document.getElementById('lbl-bling').textContent = 'Bling OK';
       document.getElementById('dot-bling').className = 'dot ok';
-    } else { alert('Erro Bling: ' + (r.error || JSON.stringify(r).substring(0,100))); }
-  } catch(e) { alert('Erro: ' + e.message); }
+      alert('Token Bling renovado com sucesso!');
+    } else {
+      // Token expirado — precisa reautorizar
+      if(confirm('Token Bling expirado. Abrir pagina de autorizacao Bling?')) {
+        window.open('https://web-production-5aa0f.up.railway.app/api/bling/autorizar','_blank');
+      }
+    }
+  } catch(e) {
+    if(confirm('Erro ao renovar. Abrir autorizacao Bling?')) {
+      window.open('https://web-production-5aa0f.up.railway.app/api/bling/autorizar','_blank');
+    }
+  }
   if(btn) { btn.textContent = 'Renovar Bling'; btn.disabled = false; }
+}
+// VERSAO ANTIGA SUBSTITUIDA:
+function forcarRenovacaoBling_OLD() {
 }
 
 async function forcarRenovacaoML(){
@@ -7749,13 +7762,13 @@ async function syncPC(full){
       const d=await fetch(url).then(r=>r.json());total=d.total;const rows=d.rows||[];
       if(!rows.length)break;
       const res=await fetch(SRV+'/api/db/pedidos-pc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows})}).then(r=>r.json());
-      saved+=res.saved||0;offset+=rows.length;
+      saved+=res.ok||0;offset+=rows.length;
       bar.style.width=Math.min(99,Math.round(offset/total*100))+'%';
       st.textContent=offset+'/'+total+' - '+saved+' salvos';
       if(!d.next)break;
       await new Promise(r=>setTimeout(r,300));
     }while(offset<(total||Infinity));
-    bar.style.width='100%';bar.style.background='#2196f3';st.textContent='OK - '+saved+' pedidos salvos';
+    bar.style.width='100%';bar.style.background='#2196f3';st.textContent='OK - '+saved+' pedidos salvos (use Resync se mostrar 0)';
   }catch(e){bar.style.background='#f44336';st.textContent='Erro: '+e.message;}
 }
 </script>
