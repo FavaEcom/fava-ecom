@@ -719,6 +719,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         routes = {
             '/api/db/produtos':          self._get_produtos,
             '/api/db/historico':         self._get_historico,
+            '/api/db/pedidos-nf':        self._get_pedidos_nf,
             '/api/db/pedidos':           self._get_pedidos,
             '/api/db/boletos':           self._get_boletos,
             '/api/db/nfs':               self._get_nfs,
@@ -1085,6 +1086,89 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._ok({r['sku']:{'cmv':r['cmv'],'cmvPr':r['custo_pr'],'nome':r['nome']} for r in rows})
         except Exception as e: self._err(500, str(e))
 
+
+    def _get_pedidos_nf(self):
+        """GET /api/db/pedidos-nf?dias=30&uf=&tipo=
+        Retorna pedidos com NF emitida para análise fiscal.
+        tipo: PF / PJ
+        ie: sim / nao
+        """
+        from urllib.parse import parse_qs
+        qs = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        dias  = int(qs.get('dias', ['30'])[0])
+        uf    = qs.get('uf',   [''])[0].upper()
+        tipo  = qs.get('tipo', [''])[0].upper()
+        ie    = qs.get('ie',   [''])[0].lower() == 'sim'
+        try:
+            # Tabela DIFAL por UF (origem PR)
+            DIFAL_MAP = {
+                'SP':(0.12,0.06),'RJ':(0.12,0.08),'MG':(0.12,0.06),
+                'SC':(0.12,0.05),'RS':(0.12,0.05),'ES':(0.07,0.10),
+                'GO':(0.07,0.12),'DF':(0.07,0.11),'MT':(0.07,0.12),
+                'MS':(0.07,0.10),'BA':(0.07,0.135),'PE':(0.07,0.135),
+                'CE':(0.07,0.13),'RN':(0.07,0.11),'PB':(0.07,0.11),
+                'AL':(0.07,0.12),'SE':(0.07,0.12),'MA':(0.07,0.11),
+                'PI':(0.07,0.11),'PA':(0.07,0.12),'AM':(0.07,0.13),
+                'AC':(0.07,0.10),'RO':(0.07,0.105),'RR':(0.07,0.10),
+                'AP':(0.07,0.11),'TO':(0.07,0.11),'PR':(0,0),
+            }
+            PIS=0.0165; COF=0.076; IBS=0.02
+            desde = (datetime.now() - timedelta(days=dias)).strftime('%Y-%m-%d')
+            # Filtrar por status NF emitida (Bling: Atendido, NF Emitida, Faturado)
+            status_nf = ('Atendido','NF Emitida','Faturado','Enviado','Entregue',
+                         'Em andamento','Aguardando NF','Nota Fiscal Emitida')
+            ph = ','.join(['%s']*len(status_nf)) if IS_PG else ','.join(['?']*len(status_nf))
+            rows = exe(
+                f"SELECT * FROM pedidos WHERE data >= %s AND status IN ({ph}) ORDER BY data DESC LIMIT 1000",
+                (desde,) + status_nf, fetchall=True
+            ) or []
+            result = []
+            for p in rows:
+                total = float(p.get('total',0) or 0)
+                puf   = (p.get('uf','') or '').upper() or 'SP'
+                # DIFAL: só PF ou PJ sem IE; dentro de PR não tem
+                icms_inter, difal_rate = DIFAL_MAP.get(puf, (0.12, 0.06))
+                gera_difal = (puf != 'PR') and (tipo == 'PF' or (tipo == 'PJ' and not ie))
+                difal_val  = total * difal_rate if gera_difal else 0
+                icms_val   = total * icms_inter
+                pis_val    = total * PIS
+                cof_val    = total * COF
+                ibs_val    = total * IBS
+                impostos   = pis_val + cof_val + icms_val + difal_val + ibs_val
+                # Itens
+                itens_raw = p.get('itens') or '[]'
+                if isinstance(itens_raw, str):
+                    try: itens = json.loads(itens_raw)
+                    except: itens = []
+                else: itens = itens_raw or []
+                # CMV dos itens
+                skus = [str(i.get('sku','')) for i in itens if i.get('sku')]
+                cmv_total = 0
+                if skus:
+                    pr = exe("SELECT sku,cmv_br FROM produtos WHERE sku=ANY(%s)",(skus,),fetchall=True) or []
+                    cmv_m = {str(r['sku']): float(r.get('cmv_br',0) or 0) for r in pr}
+                    for it in itens:
+                        q = float(it.get('qtd',1) or 1)
+                        cmv_unit = cmv_m.get(str(it.get('sku','')), 0)
+                        cmv_total += cmv_unit * q
+                lucro = total - impostos - cmv_total - float(p.get('frete',0) or 0)
+                margem = lucro/total*100 if total > 0 else 0
+                r_dict = dict(p)
+                r_dict['pis']     = round(pis_val, 2)
+                r_dict['cofins']  = round(cof_val, 2)
+                r_dict['icms']    = round(icms_val, 2)
+                r_dict['difal']   = round(difal_val, 2)
+                r_dict['ibs']     = round(ibs_val, 2)
+                r_dict['impostos']= round(impostos, 2)
+                r_dict['cmv']     = round(cmv_total, 2)
+                r_dict['lucro']   = round(lucro, 2)
+                r_dict['margem']  = round(margem, 1)
+                r_dict['gera_difal'] = gera_difal
+                r_dict['itens']   = itens
+                result.append(r_dict)
+            self._ok(result)
+        except Exception as e: self._err(500, str(e))
+
     def _get_historico(self):
         try: self._ok(exe("SELECT * FROM historico_compras ORDER BY data_emissao DESC LIMIT 1000", fetchall=True))
         except Exception as e: self._err(500, str(e))
@@ -1124,7 +1208,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 skus=[str(p.get("sku","")) for p in items if p.get("sku")]
                 cmv_map={}
                 if skus:
-                    rows=exe("SELECT sku,cmv_br,st,st_imposto FROM produtos WHERE sku=ANY(%s)",(skus,),fetchall=True)
+                    rows=exe("SELECT sku,cmv_br,cmv_pr,custo_br,custo_pr,st,st_imposto,monofasico,peso,familia FROM produtos WHERE sku=ANY(%s)",(skus,),fetchall=True)
                     for row in (rows or []): cmv_map[str(row["sku"])]=row
                 for p in items:
                     sku=str(p.get("sku",""))
@@ -1133,11 +1217,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     preco=float(sd.get("price_sale") or 0)
                     db=cmv_map.get(sku,{})
                     result.append({"id":str(p.get("id","")),"sku":sku,"titulo":str(p.get("name",""))[:200],
-                        "preco":preco,"desconto":0,"cmv":float(db.get("cmv_br") or 0),
+                        "preco":preco,"desconto":0,"cmv":float(db.get("cmv_pr") or db.get("custo_pr") or db.get("cmv_br") or db.get("custo_br") or 0),"cmv_br":float(db.get("cmv_br") or db.get("custo_br") or 0),"cmv_pr":float(db.get("cmv_pr") or db.get("custo_pr") or db.get("cmv_br") or 0),
                         "frete_medio":0,"sale_fee":0.05,
                         "status":"active" if p.get("active") else "paused","canal":"yampi",
                         "st":int(db.get("st",0)),"st_imposto":float(db.get("st_imposto",0)),
-                        "monofasico":0,"peso":float(sd.get("weight") or 0),"estoque":int(sd.get("total_in_stock") or 0)})
+                        "monofasico":int(db.get("monofasico",0)),"familia":str(db.get("familia","")),"peso":float(sd.get("weight") or 0),"estoque":int(sd.get("total_in_stock") or 0)})
                 inner2=data.get("data",{})
                 last=inner2.get("last_page",1) if isinstance(inner2,dict) else 1
                 if page>=last or page>=10: break
