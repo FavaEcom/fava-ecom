@@ -656,6 +656,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/campanha':            self._get_campanha,
             '/api/db/kits-mapa':         self._get_kits_mapa,
             '/api/db/cprod-map':         self._get_cprod_map,
+            '/api/db/cprod-lookup':      self._get_cprod_lookup,
             '/api/db/pedrinho':          self._get_pedrinho,
             '/api/db/kits':              self._get_kits,
             '/api/db/cadastros':         self._get_cadastros,
@@ -681,8 +682,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/historico':          self._post_historico,
             '/api/db/nf':                 self._post_nf,
             '/api/db/listing':            self._post_listing,
-            '/api/db/listing/fiscal':      self._post_listing_fiscal,
-            '/api/db/produtos/update-fiscal': self._post_update_fiscal,
             '/api/sync/lucro':            self._sync_lucro,
             '/api/db/campanha':           self._post_campanha,
             '/api/db/cprod-map':          self._post_cprod_map,
@@ -720,25 +719,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if not access: self._json({"ok":False,"error":"access_token obrigatorio"},400); return
             salvar_tokens_db("bling", access, refresh or None)
             self._json({"ok":True,"msg":"Token Bling salvo"})
-        except Exception as e: self._json({"ok":False,"error":str(e)},500)
-
-    def _post_update_fiscal(self):
-        try:
-            body=json.loads(self.rfile.read(int(self.headers.get("Content-Length",0))))
-            prods=body.get("produtos",[])
-            updated=0
-            with get_db() as db:
-                for p in prods:
-                    sku=p.get("sku")
-                    if not sku: continue
-                    db.execute("""UPDATE produtos SET st=%s,st_imposto=%s,cmv_br=%s,cmv_pr=%s,custo_br=%s,custo_pr=%s,ncm=%s,cest=%s,origem=%s,cst=%s,ipi=%s,monofasico=%s,base_icms=%s,aliq_icms=%s,aliq_eff=%s WHERE sku=%s""",
-                        (p.get("st",0),p.get("st_imposto",0),p.get("cmv_br"),p.get("cmv_pr"),
-                         p.get("cmv_br"),p.get("cmv_pr"),
-                         p.get("ncm"),p.get("cest"),p.get("origem"),p.get("cst"),
-                         p.get("ipi",0),p.get("monofasico",0),
-                         p.get("base_icms",0),p.get("aliq_icms",0),p.get("aliq_eff",0),sku))
-                    updated+=1
-            self._json({"ok":True,"updated":updated})
         except Exception as e: self._json({"ok":False,"error":str(e)},500)
 
     def _bling_autorizar(self):
@@ -835,6 +815,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         try: self._ok(exe("SELECT * FROM produtos ORDER BY sku", fetchall=True))
         except Exception as e: self._err(500, str(e))
 
+    def _get_cprod_lookup(self):
+        p=parse_qs(self.path.split("?")[1] if "?" in self.path else "")
+        cprod=p.get("cprod",[""])[0]; cprods=p.get("cprods",[""])[0]
+        try:
+            with get_db() as db:
+                if cprods:
+                    lista=[c.strip() for c in cprods.split(",") if c.strip()]
+                    ph=",".join(["%s"]*len(lista))
+                    rows=db.fetchall(f"SELECT cprod,sku,nome,cmv_br FROM cprod_map WHERE cprod IN ({ph})",lista)
+                elif cprod:
+                    rows=db.fetchall("SELECT cprod,sku,nome,cmv_br FROM cprod_map WHERE cprod=%s",(cprod,))
+                else: self._json({"ok":False},400); return
+                result={}
+                for r in rows:
+                    prod=db.fetchone("SELECT cmv_br,cmv_pr,peso,st,st_imposto,ipi,ncm FROM produtos WHERE sku=%s",(str(r["sku"]),)) or {}
+                    result[str(r["cprod"])]={"sku":r["sku"],"nome":r["nome"],"cmv_br":prod.get("cmv_br") or r.get("cmv_br",0),"cmv_pr":prod.get("cmv_pr",0),"peso":prod.get("peso",0),"st":prod.get("st",0),"st_imposto":prod.get("st_imposto",0),"ipi":prod.get("ipi",0),"ncm":prod.get("ncm","")}
+            self._json(result)
+        except Exception as e: self._json({"ok":False,"error":str(e)},500)
+
     def _get_cprod_map(self):
         try:
             rows = exe("SELECT cprod, sku, nome, cmv_br, cmv_pr FROM cprod_map ORDER BY sku", fetchall=True)
@@ -876,11 +875,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 SELECT l.id, l.sku, l.titulo, l.preco,
                        l.sale_fee, l.listing_type, l.free_shipping, l.status,
                        l.margem_minima, l.frete_medio, l.desconto,
-                       COALESCE(p.cmv_br, p.custo_br, cm.cmv_br, 0) as cmv,
-                       COALESCE(p.cmv_pr, p.custo_pr, cm.cmv_pr, 0) as cmv_pr,
-                       p.st, p.st_imposto, p.ncm, p.cest, p.ipi,
-                       p.monofasico, p.base_icms, p.aliq_icms, p.origem,
-                       p.pis, p.cofins, p.cred_pis_cofins
+                       COALESCE(p.custo_br, cm.cmv_br, 0) as cmv,
+                       COALESCE(p.custo_pr, cm.cmv_pr, 0) as cmv_pr
                 FROM ml_listings l
                 LEFT JOIN produtos p ON p.sku = l.sku
                 LEFT JOIN cprod_map cm ON cm.sku = l.sku
