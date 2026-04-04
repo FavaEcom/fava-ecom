@@ -258,6 +258,24 @@ def criar_tabelas():
     try:
         exe("ALTER TABLE ml_listings ADD COLUMN desconto REAL DEFAULT 0")
     except: pass
+    exe("""CREATE TABLE IF NOT EXISTS campanha_historico (
+        id SERIAL PRIMARY KEY, mlb_id TEXT, sku TEXT, titulo TEXT, campanha TEXT,
+        desconto REAL DEFAULT 0, preco_original REAL DEFAULT 0,
+        preco_final REAL DEFAULT 0, lucro_estimado REAL DEFAULT 0,
+        margem_estimada REAL DEFAULT 0, status TEXT,
+        data_aplicacao TIMESTAMP DEFAULT NOW()
+    )""")
+    try:
+        exe("CREATE INDEX IF NOT EXISTS idx_ch_mlb ON campanha_historico(mlb_id)")
+    except: pass
+    try:
+        exe("ALTER TABLE listings ADD COLUMN IF NOT EXISTS lucro_estimado REAL DEFAULT 0")
+    except: pass
+    try:
+        exe("ALTER TABLE listings ADD COLUMN IF NOT EXISTS margem_real REAL DEFAULT 0")
+    except: pass
+    try:
+    except: pass
     try:
         exe("""CREATE TABLE IF NOT EXISTS pedidos_pc (
             id TEXT PRIMARY KEY, numero TEXT, data TEXT, canal TEXT, uf TEXT,
@@ -633,6 +651,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/boletos':           self._get_boletos,
             '/api/db/nfs':               self._get_nfs,
             '/api/db/listings':          self._get_listings,
+            '/api/db/listings-performance': self._get_listings_performance,
+            '/api/db/campanha':            self._get_campanha,
             '/api/db/kits-mapa':         self._get_kits_mapa,
             '/api/db/cprod-map':         self._get_cprod_map,
             '/api/db/pedrinho':          self._get_pedrinho,
@@ -660,6 +680,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/historico':          self._post_historico,
             '/api/db/nf':                 self._post_nf,
             '/api/db/listing':            self._post_listing,
+            '/api/sync/lucro':            self._sync_lucro,
+            '/api/db/campanha':           self._post_campanha,
             '/api/db/cprod-map':          self._post_cprod_map,
             '/api/db/listings-batch':     self._post_listings_batch,
             '/api/db/kits-mapa':          self._post_kits_mapa,
