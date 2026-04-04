@@ -1208,7 +1208,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 skus=[str(p.get("sku","")) for p in items if p.get("sku")]
                 cmv_map={}
                 if skus:
-                    rows=exe("SELECT sku,cmv_br,cmv_pr,custo_br,custo_pr,st,st_imposto,monofasico,peso,familia FROM produtos WHERE sku=ANY(%s)",(skus,),fetchall=True)
+                    rows=exe("SELECT sku,custo_br,custo_pr,st,st_imposto,monofasico,peso,familia FROM produtos WHERE sku=ANY(%s)",(skus,),fetchall=True)
                     for row in (rows or []): cmv_map[str(row["sku"])]=row
                 for p in items:
                     sku=str(p.get("sku",""))
@@ -1217,7 +1217,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     preco=float(sd.get("price_sale") or 0)
                     db=cmv_map.get(sku,{})
                     result.append({"id":str(p.get("id","")),"sku":sku,"titulo":str(p.get("name",""))[:200],
-                        "preco":preco,"desconto":0,"cmv":float(db.get("cmv_pr") or db.get("custo_pr") or db.get("cmv_br") or db.get("custo_br") or 0),"cmv_br":float(db.get("cmv_br") or db.get("custo_br") or 0),"cmv_pr":float(db.get("cmv_pr") or db.get("custo_pr") or db.get("cmv_br") or 0),
+                        "preco":preco,"desconto":0,"cmv":float(db.get("custo_pr") or db.get("custo_br") or 0),"cmv_br":float(db.get("custo_br") or 0),"cmv_pr":float(db.get("custo_pr") or db.get("custo_br") or 0),
                         "frete_medio":0,"sale_fee":0.05,
                         "status":"active" if p.get("active") else "paused","canal":"yampi",
                         "st":int(db.get("st",0)),"st_imposto":float(db.get("st_imposto",0)),

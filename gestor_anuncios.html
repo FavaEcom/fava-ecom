@@ -717,20 +717,28 @@ function exportCSV(){
 document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)fechar();});
 
 async function carregar(){
-  document.getElementById('v-cards').innerHTML='<div class="loading">Carregando...</div>';
+  document.getElementById('v-cards').innerHTML='<div class="loading">Carregando ML...</div>';
   try{
-    const [mlData, yampiData] = await Promise.all([
-    fetch(SRV+'/api/db/listings').then(r=>r.json()).catch(()=>[]),
-    fetch(SRV+'/api/db/yampi-listings').then(r=>r.json()).catch(()=>[])
-  ]);
-  const mlItems = (Array.isArray(mlData)?mlData:[]).map(r=>({...r,canal:'ml'}));
-  // Yampi já vem normalizado do server com CMV BR do banco
-  const yampiItems = (Array.isArray(yampiData)?yampiData:[]).map(r=>({...r,canal:r.canal||'yampi'}));
-const data = [...mlItems, ...yampiItems];
-    _all=Array.isArray(data)?data:[];
+    // 1. Carregar ML primeiro (rápido, vem do banco)
+    const mlData = await fetch(SRV+'/api/db/listings').then(r=>r.json()).catch(()=>[]);
+    const mlItems = (Array.isArray(mlData)?mlData:[]).map(r=>({...r,canal:'ml'}));
+    _all = mlItems;
     calcAll();stats();filtrar();
-    document.getElementById('lbl-s').textContent=_all.length+' anúncios carregados';
-  }catch(e){document.getElementById('v-cards').innerHTML=`<div class="loading" style="color:#ef4444">Erro: ${e.message}</div>`;}
+    document.getElementById('lbl-s').textContent=mlItems.length+' ML carregados | Carregando Yampi...';
+
+    // 2. Carregar Yampi em background (pode ser lento — chama API externa)
+    const yampiData = await fetch(SRV+'/api/db/yampi-listings').then(r=>r.json()).catch(()=>[]);
+    const yampiItems = (Array.isArray(yampiData)?yampiData:[]).map(r=>({...r,canal:r.canal||'yampi'}));
+    if(yampiItems.length>0){
+      _all = [...mlItems, ...yampiItems];
+      calcAll();stats();filtrar();
+    }
+    document.getElementById('lbl-s').textContent=
+      mlItems.length+' ML + '+yampiItems.length+' Yampi = '+_all.length+' total';
+  }catch(e){
+    document.getElementById('v-cards').innerHTML=
+      `<div class="loading" style="color:#ef4444">Erro: ${e.message}</div>`;
+  }
 }
 
 function rcNovo(){
