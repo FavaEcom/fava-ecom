@@ -389,7 +389,7 @@ function renderTabela(){
     html+='<td style="text-align:right;font-size:11px">'+(f.ipi>0?(f.ipi*100).toFixed(1)+'%':'—')+'</td>';
     html+='<td style="text-align:center">'+(f.temST?'<span style="color:#f59e0b;font-weight:700;font-size:11px">ST</span>':'<span style="color:#ccc;font-size:11px">—</span>')+'</td>';
     html+='<td style="text-align:center">'+(f.monofasico?'<span style="color:#60a5fa;font-weight:700;font-size:11px">M</span>':'<span style="color:#ccc;font-size:11px">—</span>')+'</td>';
-    var _pbl=calcPrecoBalcao(f.cmvBr,mg,0,f.temST,0);var _lBr=_pbl.precoDesc-f.cmvBr;var _mBr=_pbl.precoDesc>0?_lBr/_pbl.precoDesc*100:0;
+    var _icms=f.temST?0:0.12;var _pis=0.0165,_cof=0.076;var _denom=Math.max(1-_pis-_cof-_icms-(mg/100),0.05);var _pDesc=f.cmvBr/_denom;var _trib=_pDesc*(_pis+_cof+_icms);var _cred=f.temST?0:f.cmvBr*(_pis+_cof);var _lBr=_pDesc-_trib-f.cmvBr+_cred;var _mBr=_pDesc>0?_lBr/_pDesc*100:0;
     html+='<td style="text-align:right;font-size:11px;color:'+(_lBr>=0?'#10b981':'#ef4444')+'">R$ '+_lBr.toFixed(2)+'</td>';
     html+='<td style="text-align:right;font-size:11px;color:'+(_mBr>=15?'#10b981':_mBr>=8?'#f59e0b':'#ef4444')+';font-weight:700">'+_mBr.toFixed(1)+'%</td>';
     html+='<td id="p-ml-'+i+'" style="font-size:10px;white-space:nowrap"><b>R$ '+fmt(pML)+'</b></td>';
