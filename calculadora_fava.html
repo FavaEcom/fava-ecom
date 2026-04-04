@@ -1212,8 +1212,8 @@ window.onload=async ()=>{
   carregarTokenStore();
   // Tenta renovar tokens expirados no startup
   if(tokenStore.ml.refresh && tokenStore.ml.expires && Date.now() > tokenStore.ml.expires) await renovarTokenML();
-  // Renovar Bling via servidor (não depende de token local)
-  await renovarTokenBling();
+  // Renovar Bling via servidor em background (não bloqueia startup)
+  renovarTokenBling().then(ok=>{ if(ok) setDot('bling','ok','Bling ✓'); }).catch(()=>{});
   // Carrega chave Claude
   const ck=localStorage.getItem('fava_claude_key')||'';
   const elCk=document.getElementById('tk-claude');
@@ -2713,7 +2713,7 @@ async function balcaoInit(){
         prods.forEach(p=>{
           if(p.sku){
             const k = String(p.sku).trim();
-            cmvBanco[k] = {nome:p.nome||k, cmvBr:p.custo_br||0, cmvPr:p.custo_pr||p.custo_br||0, custo:p.custo||0};
+            cmvBanco[k] = {nome:p.nome||k, cmvBr:p.cmv_br||p.custo_br||0, cmvPr:p.cmv_pr||p.custo_pr||p.cmv_br||p.custo_br||0, st:parseInt(p.st||0), stImposto:parseFloat(p.st_imposto||0), custo:p.custo||0};
           }
         });
       }
@@ -2756,7 +2756,7 @@ async function buscarBalcao(){
           (p.nome||'').toLowerCase().includes(q.toLowerCase())
         );
         if(prod){
-          found = {nome:prod.nome||q, cmvBr:prod.custo_br||0, cmvPr:prod.custo_pr||prod.custo_br||0, sku:prod.sku};
+          found = {nome:prod.nome||q, cmvBr:prod.cmv_br||prod.custo_br||0, cmvPr:prod.cmv_pr||prod.custo_pr||prod.cmv_br||prod.custo_br||0, st:parseInt(prod.st||0), stImposto:parseFloat(prod.st_imposto||0), sku:prod.sku};
           cmvBanco[norm(String(prod.sku))] = found;
         }
       }
@@ -2776,7 +2776,7 @@ async function buscarBalcao(){
     balcaoLista[existIdx].qtd++;
     if(st) st.textContent = `✅ ${found.nome} — qtd atualizada`;
   } else {
-    balcaoLista.push({sku, nome:found.nome||sku, cmv:found.cmvPr, qtd:1});
+    balcaoLista.push({sku, nome:found.nome||sku, cmv:found.cmvPr, cmvBr:found.cmvBr||0, st:found.st||0, stImposto:found.stImposto||0, qtd:1});
     if(st) st.textContent = `✅ ${found.nome} adicionado`;
   }
 
@@ -2785,16 +2785,22 @@ async function buscarBalcao(){
   renderBalcaoLista();
 }
 
-function calcPrecoBalcao(cmv, mg, desc){
-  // Preço balcão: venda local PR — sem DIFAL, sem taxa marketplace, sem frete
-  const PIS_S = 0.0165, COF_S = 0.076, ICMS_S = 0.195; // 19,5% PR interno
+function calcPrecoBalcao(cmv, mg, desc, st=false, stImposto=0){
+  // Preço balcão: venda local PR — sem DIFAL, sem taxa marketplace
+  const PIS_S  = 0.0165, COF_S = 0.076;
+  // ST: ICMS já foi pago na entrada (substituição tributária) → ICMS saída = 0
+  const ICMS_S = st ? 0 : 0.12; // 12% ICMS PR interno (sem ST)
+  // Crédito PIS/COFINS na entrada (Lucro Real)
+  const CRED_PIS_COF = st ? 0 : cmv * (PIS_S + COF_S); // monofásico não tem crédito, mas usamos normal aqui
   const m = mg/100;
   const denom = Math.max(1 - PIS_S - COF_S - ICMS_S - m, 0.05);
   const precoBase = cmv / denom;
   const precoDesc = precoBase * (1 - desc/100);
-  const lucro = precoDesc - cmv - precoDesc*(PIS_S+COF_S+ICMS_S);
+  // Lucro real: recebe - CMV (já com créditos)
+  const tributos = precoDesc * (PIS_S + COF_S + ICMS_S);
+  const lucro = precoDesc - tributos - cmv + CRED_PIS_COF;
   const mc = precoDesc>0 ? lucro/precoDesc : 0;
-  return {precoBase, precoDesc, mc};
+  return {precoBase, precoDesc, mc, tributos, ICMS_S, CRED_PIS_COF};
 }
 
 function renderBalcaoLista(){
@@ -2811,7 +2817,7 @@ function renderBalcaoLista(){
 
   let totalBruto = 0;
   const rows = balcaoLista.map((item, i)=>{
-    const {precoDesc, mc} = calcPrecoBalcao(item.cmv, mg, desc);
+    const {precoDesc, mc} = calcPrecoBalcao(item.cmv, mg, desc, !!(item.st||0), item.stImposto||0);
     const total = precoDesc * item.qtd;
     totalBruto += total;
     const mcCor = mc>=0.30?'#059669':mc>=0.15?'#d97706':'#dc2626';
@@ -2884,7 +2890,7 @@ function balcaoImprimir(){
 
   let totalBruto = 0;
   const linhas = balcaoLista.map(item=>{
-    const {precoDesc} = calcPrecoBalcao(item.cmv, mg, desc);
+    const {precoDesc} = calcPrecoBalcao(item.cmv, mg, desc, !!(item.st||0), item.stImposto||0);
     const total = precoDesc * item.qtd;
     totalBruto += total;
     return `<tr>
