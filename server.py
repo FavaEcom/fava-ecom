@@ -8,6 +8,7 @@ FAVA ECOM — Servidor Railway v3
 """
 
 import http.server
+import re
 import urllib.request
 import urllib.error
 from urllib.parse import parse_qs
@@ -900,21 +901,35 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def _get_cprod_lookup(self):
         p=parse_qs(self.path.split("?")[1] if "?" in self.path else "")
         cprod=p.get("cprod",[""])[0]; cprods=p.get("cprods",[""])[0]
+        # Normalizar: remover pontos, traços, zeros à esquerda
+        def norm(c): return re.sub(r"[.\-\s]","",str(c or "")).lstrip("0") or "0"
         try:
-            with get_db() as db:
-                if cprods:
-                    lista=[c.strip() for c in cprods.split(",") if c.strip()]
-                    ph=",".join(["%s"]*len(lista))
-                    rows=db.fetchall(f"SELECT cprod,sku,nome,cmv_br FROM cprod_map WHERE cprod IN ({ph})",lista)
-                elif cprod:
-                    rows=db.fetchall("SELECT cprod,sku,nome,cmv_br FROM cprod_map WHERE cprod=%s",(cprod,))
-                else: self._ok({"ok":False},400); return
-                result={}
-                for r in rows:
-                    prod=db.fetchone("SELECT cmv_br,cmv_pr,peso,st,st_imposto,ipi,ncm FROM produtos WHERE sku=%s",(str(r["sku"]),)) or {}
-                    result[str(r["cprod"])]={"sku":r["sku"],"nome":r["nome"],"cmv_br":prod.get("cmv_br") or r.get("cmv_br",0),"cmv_pr":prod.get("cmv_pr",0),"peso":prod.get("peso",0),"st":prod.get("st",0),"st_imposto":prod.get("st_imposto",0),"ipi":prod.get("ipi",0),"ncm":prod.get("ncm","")}
+            result={}
+            if cprods:
+                lista=[c.strip() for c in cprods.split(",") if c.strip()]
+            elif cprod:
+                lista=[cprod]
+            else: self._ok({}); return
+            if not lista: self._ok({}); return
+            # Buscar por código exato E por código normalizado
+            ph=",".join(["%s"]*len(lista))
+            lnorm=[norm(c) for c in lista]
+            phn=",".join(["%s"]*len(lnorm))
+            rows=exe(f"SELECT cprod,sku,nome,cmv_br FROM cprod_map WHERE cprod IN ({ph})",tuple(lista),fetchall=True) or []
+            # Segunda busca: normalizada (remove pontos/traços)
+            rows2=exe(f"SELECT cprod,sku,nome,cmv_br FROM cprod_map WHERE regexp_replace(cprod,'[.\\-\\s]','','g') IN ({phn})",tuple(lnorm),fetchall=True) or []
+            # Unir resultados sem duplicar
+            codigos_achados={str(r["cprod"]) for r in rows}
+            rows+=[r for r in rows2 if str(r["cprod"]) not in codigos_achados]
+            for r in rows:
+                prod=exe("SELECT cmv_br,cmv_pr,peso,st,st_imposto,ipi,ncm,familia FROM produtos WHERE sku=%s",(str(r["sku"]),),fetchone=True) or {}
+                # Mapear pelo código original E pelo normalizado para achar na resposta
+                entry={"sku":r["sku"],"nome":r["nome"],"cmv_br":prod.get("cmv_br") or r.get("cmv_br",0),"cmv_pr":prod.get("cmv_pr",0),"peso":prod.get("peso",0),"st":prod.get("st",0),"st_imposto":prod.get("st_imposto",0),"ipi":prod.get("ipi",0),"ncm":prod.get("ncm",""),"familia":prod.get("familia","")}
+                result[str(r["cprod"])]=entry
+                # Também indexar pelo código normalizado para facilitar match no frontend
+                result[norm(str(r["cprod"]))]=entry
             self._ok(result)
-        except Exception as e: self._ok({"ok":False,"error":str(e)},500)
+        except Exception as e: self._ok({"ok":False,"error":str(e)})
 
     def _get_cprod_map(self):
         try:

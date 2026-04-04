@@ -106,9 +106,10 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
   <div class="card">
     <div class="card-h">
       <span>&#128203;</span><h2>Revis&atilde;o de Produtos</h2>
-      <input type="number" id="sku-inicial" placeholder="SKU inicial p/ novos" min="1001" step="1" style="width:160px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;padding:4px 8px;border-radius:6px;font-size:12px" title="SKU de partida para os produtos novos desta NF" oninput="resequenciarSkus()">
+      <input type="number" id="sku-inicial" placeholder="SKU base (preenche vazios)" min="1001" step="1" style="width:160px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;padding:4px 8px;border-radius:6px;font-size:12px" title="SKU de partida para os produtos novos desta NF" oninput="resequenciarSkus()">
       <span id="badge-novos" style="background:#dbeafe;color:#1d4ed8;border-radius:16px;padding:2px 10px;font-size:10px;font-weight:700"></span>
       <span style="font-size:11px;color:#64748b;margin-left:8px">Edite inline &mdash; clique em qualquer campo</span>
+      <button onclick="resequenciarSkus()" title="Preenche SKUs vazios em sequência a partir do número digitado" style="background:#1d4ed8;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">🔢 Gerar Seq.</button>
       <button onclick="gerarTodosEAN()" style="background:#7c3aed;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">🔢 Gerar EAN</button>
       <button onclick="novaFamilia()" title="Adicionar nova família" style="background:#7c3aed;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">+ Família</button>
       <select id="margem-sel" onchange="recalcularTodos()" style="border:1px solid #e2e8f0;border-radius:5px;padding:4px 8px;font-size:11px;outline:none;margin-left:auto">
@@ -211,22 +212,54 @@ function irStep(n){
     if(s) s.className='step'+(i===n?' ativo':i<n?' done':'');
   });
   if(n===2) 
-// AUTO-SKU
-(async function(){
-  var cods=fichas.map(function(f){return f.codigo;}).filter(Boolean).join(",");
-  if(!cods)return;
+// AUTO-SKU: buscar SKU pelo código do fornecedor
+(async function autoPreencherSku(){
+  var codigos = fichas.map(function(f){return f.codigo;}).filter(Boolean).join(',');
+  if(!codigos) return;
+  
+  // Normalizar código: remover pontos, traços, zeros à esquerda para comparação
+  function norm(c){ return String(c||'').replace(/[.\-\s]/g,'').replace(/^0+(?=\d)/,''); }
+  
   try{
-    var mapa=await fetch("https://web-production-5aa0f.up.railway.app/api/db/cprod-lookup?cprods="+encodeURIComponent(cods)).then(function(r){return r.json();});
-    var seq=await fetch("https://web-production-5aa0f.up.railway.app/api/db/proximo-sku").then(function(r){return r.json();}).then(function(d){return d.proximo_sku||2934;}).catch(function(){return 2934;});
-    fichas.forEach(function(f){
-      var r=mapa[String(f.codigo)];
-      if(r&&r.sku){f.sku=r.sku;f.existe=true;f._auto=true;
-        if(!f.peso&&r.peso)f.peso=r.peso;
-        if(r.cmv_br>0&&f.cmvBr===0){f.cmvBr=r.cmv_br;f.cmvPr=r.cmv_pr||r.cmv_br;}
-      } else {f._novo=true;f.sku=String(seq++);}
+    var resp = await fetch('https://web-production-5aa0f.up.railway.app/api/db/cprod-lookup?cprods='+encodeURIComponent(codigos));
+    var mapa = await resp.json();
+    
+    // Criar mapa normalizado para comparação flexível
+    var mapaNorm = {};
+    Object.keys(mapa).forEach(function(k){
+      mapaNorm[norm(k)] = mapa[k];
     });
+    
+    fichas.forEach(function(f){
+      var r = mapa[String(f.codigo)] || mapaNorm[norm(f.codigo)] || null;
+      
+      if(r && r.sku){
+        // PRODUTO ENCONTRADO — preencher com SKU conhecido
+        f.sku = r.sku;
+        f.existe = true;
+        f._auto = true;  // verde = auto-vinculado
+        if(!f.peso && r.peso) f.peso = r.peso;
+        if(r.cmv_br > 0 && f.cmvBr === 0){ f.cmvBr = r.cmv_br; f.cmvPr = r.cmv_pr || r.cmv_br; }
+        if(r.familia) f.familia = r.familia;
+      } else {
+        // NÃO ENCONTRADO — deixar SKU VAZIO para o usuário preencher
+        f.sku = '';
+        f._vazio = true;  // amarelo = aguardando preenchimento
+      }
+    });
+    
+    // Buscar peso do Bling para produtos sem peso
+    fichas.filter(function(f){ return !f.peso && f.codigo; }).forEach(async function(f){
+      try{
+        var rp = await fetch('https://web-production-5aa0f.up.railway.app/api/db/bling-peso?cprod='+encodeURIComponent(f.codigo)).then(function(r){return r.json();});
+        if(rp && rp.peso > 0){ f.peso = rp.peso; }
+      }catch(e){}
+    });
+    
+    setTimeout(renderTabela, 1500);
     renderTabela();
-  }catch(e){console.warn("Auto-SKU:",e.message);}
+    
+  }catch(e){ console.warn('Auto-SKU erro:', e.message); }
 })();
 renderTabela();
   if(n===3) renderResumoSalvar();
@@ -556,14 +589,24 @@ function novaFamilia() {
 
 function resequenciarSkus() {
   const base = parseInt(document.getElementById('sku-inicial')?.value)||0;
-  if(!base) return;
+  if(!base) { alert('Digite o SKU inicial no campo antes de gerar.'); return; }
   let seq = base;
-  fichas.forEach(f => {
-    if(f._novo) { // só produtos novos
+  let count = 0;
+  fichas.forEach(function(f) {
+    // Só preenche se o campo SKU estiver vazio
+    const skuAtual = String(f.sku||'').trim();
+    if(!skuAtual || f._vazio) {
       f.sku = String(seq++);
+      f._vazio = false;
+      f._gerado = true; // azul = gerado pela sequência
+      count++;
     }
   });
   renderTabela();
+  if(count > 0) {
+    document.getElementById('sku-inicial').value = seq; // atualizar para próxima vez
+    console.log('[SKU] ' + count + ' SKUs gerados a partir de ' + base);
+  }
 }
 
 </script>
