@@ -454,8 +454,24 @@ def sync_pedidos():
             raw = p.get('itens',[]) or []
             itens = json.dumps([{'sku':i.get('codigo',''),'nome':i.get('descricao',''),
                 'qtd':float(i.get('quantidade',1)),'preco':float(i.get('valor',0))} for i in raw])
-            canal = (p.get('canal') or {}).get('descricao','Bling') if isinstance(p.get('canal'),dict) else 'Bling'
-            status = (p.get('situacao') or {}).get('nome','') if isinstance(p.get('situacao'),dict) else ''
+            _canal = p.get('canal') or p.get('channel') or {}
+            if isinstance(_canal, dict):
+                canal = _canal.get('descricao') or _canal.get('nome') or 'Bling'
+            else:
+                canal = str(_canal) if _canal else 'Bling'
+            # Bling v3: situacao pode ser dict {id, valor} ou string
+            _sit = p.get('situacao') or p.get('situation') or {}
+            if isinstance(_sit, dict):
+                status = _sit.get('valor') or _sit.get('nome') or _sit.get('name') or ''
+            elif isinstance(_sit, (str,int)):
+                # mapeamento de código numérico
+                _MAP = {0:'Em aberto',3:'Em andamento',4:'Verificado',9:'Atendido',
+                        10:'Cancelado',11:'Em digitação',12:'Em projeto',
+                        15:'Aguardando confirmaçao',17:'Em produção',19:'Aguardando NF',
+                        21:'NF Emitida',23:'Faturado',26:'Em transporte',27:'Entregue'}
+                status = _MAP.get(int(_sit), str(_sit))
+            else:
+                status = ''
             total = float(p.get('totalProdutos',0) or p.get('total',0) or 0)
             data_p = (p.get('data','') or '')[:10]
             conflict = 'ON CONFLICT(id) DO UPDATE SET status=EXCLUDED.status' if IS_PG else 'ON CONFLICT(id) DO UPDATE SET status=excluded.status'
@@ -1200,10 +1216,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # Filtrar por status NF emitida (Bling: Atendido, NF Emitida, Faturado)
             status_nf = ('Atendido','NF Emitida','Faturado','Enviado','Entregue',
                          'Em andamento','Aguardando NF','Nota Fiscal Emitida')
-            ph = ','.join(['%s']*len(status_nf)) if IS_PG else ','.join(['?']*len(status_nf))
+            # Aceitar todos os pedidos (status vazio = ainda não sincronizado)
             rows = exe(
-                f"SELECT * FROM pedidos WHERE data >= %s AND status IN ({ph}) ORDER BY data DESC LIMIT 1000",
-                (desde,) + status_nf, fetchall=True
+                "SELECT * FROM pedidos WHERE data >= %s ORDER BY data DESC LIMIT 1000",
+                (desde,), fetchall=True
             ) or []
             result = []
             for p in rows:
