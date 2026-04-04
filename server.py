@@ -1347,14 +1347,21 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception as e: self._err(500, str(e))
 
     def _post_tokens(self):
+        global _bling_token, _ml_token
         try:
             d = self._body()
-            if d.get('bling_access'): salvar_tokens_db('bling', d['bling_access'], d.get('bling_refresh'))
-            if d.get('ml_access'):    salvar_tokens_db('ml', d['ml_access'], d.get('ml_refresh'))
+            if d.get('bling_access'):
+                salvar_tokens_db('bling', d['bling_access'], d.get('bling_refresh',''))
+                _bling_token['access']  = d['bling_access']  # ← atualiza memória
+                if d.get('bling_refresh'): _bling_token['refresh'] = d['bling_refresh']
+            if d.get('ml_access'):
+                salvar_tokens_db('ml', d['ml_access'], d.get('ml_refresh',''))
+                _ml_token['access']  = d['ml_access']  # ← atualiza memória
+                if d.get('ml_refresh'): _ml_token['refresh'] = d['ml_refresh']
             if d.get('bling_access') or d.get('ml_access'):
                 threading.Thread(target=sync_all, daemon=True).start()
             self._ok({'ok':True})
-            print('[AUTH] Tokens atualizados — sync iniciado')
+            print('[AUTH] Tokens atualizados em memória + DB')
         except Exception as e: self._err(500, str(e))
 
     def _post_cmv(self):
