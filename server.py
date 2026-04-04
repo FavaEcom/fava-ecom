@@ -681,6 +681,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/historico':          self._post_historico,
             '/api/db/nf':                 self._post_nf,
             '/api/db/listing':            self._post_listing,
+            '/api/db/listing/fiscal':      self._post_listing_fiscal,
             '/api/db/produtos/update-fiscal': self._post_update_fiscal,
             '/api/sync/lucro':            self._sync_lucro,
             '/api/db/campanha':           self._post_campanha,
@@ -730,8 +731,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 for p in prods:
                     sku=p.get("sku")
                     if not sku: continue
-                    db.execute("""UPDATE produtos SET st=%s,st_imposto=%s,cmv_br=%s,cmv_pr=%s,ncm=%s,cest=%s,origem=%s,cst=%s,ipi=%s,monofasico=%s,base_icms=%s,aliq_icms=%s,aliq_eff=%s WHERE sku=%s""",
+                    db.execute("""UPDATE produtos SET st=%s,st_imposto=%s,cmv_br=%s,cmv_pr=%s,custo_br=%s,custo_pr=%s,ncm=%s,cest=%s,origem=%s,cst=%s,ipi=%s,monofasico=%s,base_icms=%s,aliq_icms=%s,aliq_eff=%s WHERE sku=%s""",
                         (p.get("st",0),p.get("st_imposto",0),p.get("cmv_br"),p.get("cmv_pr"),
+                         p.get("cmv_br"),p.get("cmv_pr"),
                          p.get("ncm"),p.get("cest"),p.get("origem"),p.get("cst"),
                          p.get("ipi",0),p.get("monofasico",0),
                          p.get("base_icms",0),p.get("aliq_icms",0),p.get("aliq_eff",0),sku))
@@ -874,8 +876,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 SELECT l.id, l.sku, l.titulo, l.preco,
                        l.sale_fee, l.listing_type, l.free_shipping, l.status,
                        l.margem_minima, l.frete_medio, l.desconto,
-                       COALESCE(p.custo_br, cm.cmv_br, 0) as cmv,
-                       COALESCE(p.custo_pr, cm.cmv_pr, 0) as cmv_pr
+                       COALESCE(p.cmv_br, p.custo_br, cm.cmv_br, 0) as cmv,
+                       COALESCE(p.cmv_pr, p.custo_pr, cm.cmv_pr, 0) as cmv_pr,
+                       p.st, p.st_imposto, p.ncm, p.cest, p.ipi,
+                       p.monofasico, p.base_icms, p.aliq_icms, p.origem,
+                       p.pis, p.cofins, p.cred_pis_cofins
                 FROM ml_listings l
                 LEFT JOIN produtos p ON p.sku = l.sku
                 LEFT JOIN cprod_map cm ON cm.sku = l.sku
