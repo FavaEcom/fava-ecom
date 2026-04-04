@@ -106,9 +106,11 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
   <div class="card">
     <div class="card-h">
       <span>&#128203;</span><h2>Revis&atilde;o de Produtos</h2>
+      <input type="number" id="sku-inicial" placeholder="SKU inicial p/ novos" min="1001" step="1" style="width:160px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;padding:4px 8px;border-radius:6px;font-size:12px" title="SKU de partida para os produtos novos desta NF" oninput="resequenciarSkus()">
       <span id="badge-novos" style="background:#dbeafe;color:#1d4ed8;border-radius:16px;padding:2px 10px;font-size:10px;font-weight:700"></span>
       <span style="font-size:11px;color:#64748b;margin-left:8px">Edite inline &mdash; clique em qualquer campo</span>
       <button onclick="gerarTodosEAN()" style="background:#7c3aed;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">🔢 Gerar EAN</button>
+      <button onclick="novaFamilia()" title="Adicionar nova família" style="background:#7c3aed;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">+ Família</button>
       <select id="margem-sel" onchange="recalcularTodos()" style="border:1px solid #e2e8f0;border-radius:5px;padding:4px 8px;font-size:11px;outline:none;margin-left:auto">
         <option value="30">Margem 30%</option>
         <option value="35">Margem 35%</option>
@@ -174,9 +176,20 @@ var FORNECEDORES = {
   '76840537000121': {nome:'CSM Componentes', tipo:'csm'},
 };
 
-var FAMILIAS = ['FERRAMENTAS','PECAS PARA BETONEIRAS','PECAS PARA GUINCHOS E TALHAS',
-  'FIXACAO PNEUMATICA','PECAS E MANUTENCAO GERAL','CAMPING PRAIA E LAZER',
-  'ELETRODOMESTICOS E CLIMATIZACAO','UTILIDADES DOMESTICAS','OUTROS'];
+var FAMILIAS = [];
+// Carregar famílias do banco
+(async function carregarFamilias(){
+  try{
+    const r = await fetch('https://web-production-5aa0f.up.railway.app/api/db/familias');
+    if(r.ok){
+      const data = await r.json();
+      FAMILIAS = (Array.isArray(data)?data:[]).map(f=>f.nome||f);
+      if(!FAMILIAS.length) FAMILIAS = ['PEÇAS PULVERIZADOR','PEÇAS BETONEIRA','FERRAMENTAS','CAMPING','UTILIDADES'];
+    }
+  } catch(e) {
+    FAMILIAS = ['PEÇAS PULVERIZADOR','PEÇAS BETONEIRA','FERRAMENTAS','CAMPING','UTILIDADES'];
+  }
+})();
 
 var dadosNF=null, itensNF=[], fichas=[], proxSKU=3500;
 var blingToken=localStorage.getItem('bling_token')||'';
@@ -520,6 +533,39 @@ function _gerarAnuncios(){
   }
   proxAnuncio();
 }
+
+function novaFamilia() {
+  const nome = prompt('Nome da nova família (ex: PEÇAS PULVERIZADOR):');
+  if(!nome || !nome.trim()) return;
+  const categoria = prompt('Categoria (opcional):') || '';
+  const nomeFmt = nome.trim().toUpperCase();
+  fetch('https://web-production-5aa0f.up.railway.app/api/db/familia', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({nome: nomeFmt, categoria})
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok) {
+      FAMILIAS.push(nomeFmt);
+      FAMILIAS.sort();
+      alert('✅ Família "' + nomeFmt + '" adicionada!');
+      renderTabela();
+    } else {
+      alert('Erro: ' + (d.error||'desconhecido'));
+    }
+  }).catch(e=>alert('Erro: '+e.message));
+}
+
+function resequenciarSkus() {
+  const base = parseInt(document.getElementById('sku-inicial')?.value)||0;
+  if(!base) return;
+  let seq = base;
+  fichas.forEach(f => {
+    if(f._novo) { // só produtos novos
+      f.sku = String(seq++);
+    }
+  });
+  renderTabela();
+}
+
 </script>
 </body>
 </html>

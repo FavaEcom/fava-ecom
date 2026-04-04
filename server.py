@@ -76,6 +76,10 @@ def get_db():
 IS_PG = bool(DATABASE_URL)
 
 def criar_tabelas():
+    exe("""CREATE TABLE IF NOT EXISTS familias (id SERIAL PRIMARY KEY, nome TEXT UNIQUE NOT NULL, categoria TEXT, subcategoria TEXT, created_at TIMESTAMP DEFAULT NOW())""")
+    for _f in ["PEÇAS PULVERIZADOR","PEÇAS BETONEIRA","FERRAMENTAS","CAMPING","FIXADORES","UTILIDADES","AUTO PEÇAS","PEÇAS GUINCHO"]:
+        try: exe("INSERT INTO familias(nome) VALUES(%s) ON CONFLICT DO NOTHING",(_f,))
+        except: pass
     db = get_db()
     sqls = []
     if IS_PG:
@@ -679,7 +683,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/kits-mapa':         self._get_kits_mapa,
             '/api/db/cprod-map':         self._get_cprod_map,
             '/api/db/cprod-lookup':      self._get_cprod_lookup,
+            '/api/db/bling-peso':         self._get_bling_peso,
             '/api/db/proximo-sku':       self._get_proximo_sku,
+            '/api/db/familias':          self._get_familias,
             '/api/db/pedrinho':          self._get_pedrinho,
             '/api/db/kits':              self._get_kits,
             '/api/db/cadastros':         self._get_cadastros,
@@ -849,6 +855,39 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def _get_produtos(self):
         try: self._ok(exe("SELECT * FROM produtos ORDER BY sku", fetchall=True))
         except Exception as e: self._err(500, str(e))
+
+    def _get_bling_peso(self):
+        from urllib.parse import parse_qs
+        qs=parse_qs(self.path.split("?")[1] if "?" in self.path else "")
+        cprod=qs.get("cprod",[""])[0]
+        if not cprod: self._ok({"peso":0}); return
+        try:
+            row=exe("SELECT peso FROM produtos WHERE sku=%s",(cprod,),fetchone=True)
+            if row and row.get("peso",0)>0: self._ok({"peso":row["peso"],"fonte":"banco"}); return
+            tk=_bling_token.get("access","")
+            req=urllib.request.Request(f"https://www.bling.com.br/Api/v3/produtos?codigo={cprod}&limite=1",
+                headers={"Authorization":f"Bearer {tk}","Accept":"application/json"})
+            with urllib.request.urlopen(req,timeout=10) as r: d=json.loads(r.read())
+            pr=(d.get("data") or [{}])[0]
+            peso=float(pr.get("pesoLiquido",0) or pr.get("pesoBruto",0) or 0)
+            self._ok({"peso":peso,"nome":pr.get("nome",""),"fonte":"bling" if peso else "nf"})
+        except Exception as e: self._ok({"peso":0,"error":str(e)})
+
+    def _get_familias(self):
+        try:
+            rows=exe("SELECT id,nome,categoria,subcategoria FROM familias ORDER BY nome",fetchall=True)
+            self._ok(rows or [])
+        except: self._ok([])
+
+    def _post_familia(self):
+        try:
+            d=json.loads(self.rfile.read(int(self.headers.get("Content-Length",0))))
+            nome=str(d.get("nome","")).strip().upper()
+            cat=str(d.get("categoria","")).strip()
+            if not nome: self._ok({"ok":False}); return
+            exe("INSERT INTO familias(nome,categoria) VALUES(%s,%s) ON CONFLICT(nome) DO UPDATE SET categoria=%s",(nome,cat,cat))
+            self._ok({"ok":True,"nome":nome})
+        except Exception as e: self._ok({"ok":False,"error":str(e)})
 
     def _get_proximo_sku(self):
         try:
