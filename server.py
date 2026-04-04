@@ -914,13 +914,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def _get_yampi_listings(self):
         try:
-            import base64 as b64
-            ALIAS,TOKEN,SECRET="fava-ecom","pMMopJjv6qB1d9ccwargjmOJQeJcHHsWrdnTw477","sk_pjOvgahJ0QysIhv6i7RXhs3oynRRI5O1WaQXB"
-            creds=b64.b64encode(f"{TOKEN}:{SECRET}".encode()).decode()
+            # Usar constantes Yampi já definidas no servidor
+            headers={"User-Token":YAMPI_TOKEN,"User-Secret-Key":YAMPI_SECRET,"Content-Type":"application/json","Accept":"application/json"}
             result=[]; page=1
             while True:
-                url=f"https://api.dooki.com.br/v2/{ALIAS}/catalog/products?include=skus&limit=100&page={page}"
-                req=urllib.request.Request(url,headers={"Authorization":f"Basic {creds}","Content-Type":"application/json","User-Agent":"FavaEcom/1.0"})
+                url=f"https://api.dooki.com.br/v2/{YAMPI_ALIAS}/catalog/products?include=skus&limit=100&page={page}"
+                req=urllib.request.Request(url,headers=headers)
                 with urllib.request.urlopen(req,timeout=20) as r:
                     data=json.loads(r.read())
                 items=data.get("data",{}).get("data",data.get("data",[]))
@@ -928,17 +927,22 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 skus=[str(p.get("sku","")) for p in items if p.get("sku")]
                 cmv_map={}
                 if skus:
-                    rows=exe("SELECT sku,cmv_br,cmv_pr,st,st_imposto FROM produtos WHERE sku = ANY(%s)",(skus,),fetchall=True)
+                    rows=exe("SELECT sku,cmv_br,st,st_imposto FROM produtos WHERE sku=ANY(%s)",(skus,),fetchall=True)
                     for row in (rows or []): cmv_map[str(row["sku"])]=row
                 for p in items:
                     sku=str(p.get("sku",""))
-                    sd=(p.get("skus") or {}).get("data",[{}])
-                    sd=sd[0] if sd else {}
+                    sds=(p.get("skus") or {}).get("data",[])
+                    sd=sds[0] if sds else {}
                     preco=float(sd.get("price_sale") or 0)
                     db=cmv_map.get(sku,{})
-                    result.append({"id":str(p.get("id","")),"sku":sku,"titulo":p.get("name",""),"preco":preco,"desconto":0,"cmv":float(db.get("cmv_br") or 0),"frete_medio":0,"sale_fee":0.05,"status":"active" if p.get("active") else "paused","canal":"yampi","st":int(db.get("st",0)),"st_imposto":float(db.get("st_imposto",0)),"monofasico":0,"peso":float(sd.get("weight") or 0),"estoque":int(sd.get("total_in_stock") or 0)})
-                last_page=data.get("data",{}).get("last_page",1)
-                if page>=last_page or page>=10: break
+                    result.append({"id":str(p.get("id","")),"sku":sku,"titulo":str(p.get("name",""))[:200],
+                        "preco":preco,"desconto":0,"cmv":float(db.get("cmv_br") or 0),
+                        "frete_medio":0,"sale_fee":0.05,
+                        "status":"active" if p.get("active") else "paused","canal":"yampi",
+                        "st":int(db.get("st",0)),"st_imposto":float(db.get("st_imposto",0)),
+                        "monofasico":0,"peso":float(sd.get("weight") or 0),"estoque":int(sd.get("total_in_stock") or 0)})
+                last=data.get("data",{}).get("last_page",1)
+                if page>=last or page>=10: break
                 page+=1
             self._ok(result)
         except Exception as e: self._ok({"ok":False,"error":str(e)})
