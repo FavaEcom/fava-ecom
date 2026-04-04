@@ -739,10 +739,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             body=json.loads(self.rfile.read(int(self.headers.get("Content-Length",0))))
             access=body.get("access_token","").strip()
             refresh=body.get("refresh_token","").strip()
-            if not access: self._json({"ok":False,"error":"access_token obrigatorio"},400); return
+            if not access: self._ok({"ok":False,"error":"access_token obrigatorio"},400); return
             salvar_tokens_db("bling", access, refresh or None)
-            self._json({"ok":True,"msg":"Token Bling salvo"})
-        except Exception as e: self._json({"ok":False,"error":str(e)},500)
+            self._ok({"ok":True,"msg":"Token Bling salvo"})
+        except Exception as e: self._ok({"ok":False,"error":str(e)},500)
 
     def _bling_renovar(self):
         """GET /api/bling/renovar — usa refresh_token para obter novo access_token"""
@@ -868,13 +868,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     rows=db.fetchall(f"SELECT cprod,sku,nome,cmv_br FROM cprod_map WHERE cprod IN ({ph})",lista)
                 elif cprod:
                     rows=db.fetchall("SELECT cprod,sku,nome,cmv_br FROM cprod_map WHERE cprod=%s",(cprod,))
-                else: self._json({"ok":False},400); return
+                else: self._ok({"ok":False},400); return
                 result={}
                 for r in rows:
                     prod=db.fetchone("SELECT cmv_br,cmv_pr,peso,st,st_imposto,ipi,ncm FROM produtos WHERE sku=%s",(str(r["sku"]),)) or {}
                     result[str(r["cprod"])]={"sku":r["sku"],"nome":r["nome"],"cmv_br":prod.get("cmv_br") or r.get("cmv_br",0),"cmv_pr":prod.get("cmv_pr",0),"peso":prod.get("peso",0),"st":prod.get("st",0),"st_imposto":prod.get("st_imposto",0),"ipi":prod.get("ipi",0),"ncm":prod.get("ncm","")}
-            self._json(result)
-        except Exception as e: self._json({"ok":False,"error":str(e)},500)
+            self._ok(result)
+        except Exception as e: self._ok({"ok":False,"error":str(e)},500)
 
     def _get_cprod_map(self):
         try:
