@@ -849,6 +849,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         try: self._ok(exe("SELECT * FROM produtos ORDER BY sku", fetchall=True))
         except Exception as e: self._err(500, str(e))
 
+    def _get_proximo_sku(self):
+        try:
+            with get_db() as db:
+                row=db.fetchone("SELECT MAX(sku::integer) as m FROM produtos WHERE sku ~ '^[0-9]+$'")
+                mx=int(row["m"] or 2933) if row and row["m"] else 2933
+            self._ok({"proximo_sku": max(mx+1, 2934), "max_db": mx})
+        except Exception as e: self._ok({"proximo_sku":2934,"error":str(e)})
+
     def _get_cprod_lookup(self):
         p=parse_qs(self.path.split("?")[1] if "?" in self.path else "")
         cprod=p.get("cprod",[""])[0]; cprods=p.get("cprods",[""])[0]
