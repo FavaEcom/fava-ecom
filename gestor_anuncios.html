@@ -238,7 +238,10 @@ function nomeKit(sku){
 
 function C(r){
   const preco=parseFloat(r.preco||0),desc=parseFloat(r.desconto||0);
-  const pf=preco*(1-desc/100),tx=parseFloat(r.sale_fee||0.17);
+  const canal=r.canal||'ml';
+  const pf=preco*(1-desc/100);
+  // Taxa por canal
+  const tx=parseFloat(r.sale_fee||(canal==='yampi'?0.05:canal==='shopee'?0.20:0.17));
   const cmv=parseFloat(r.cmv||0),fr=parseFloat(r.frete_medio||13);
   const st=parseInt(r.st||0),si=parseFloat(r.st_imposto||0),mn=parseInt(r.monofasico||0);
   const ded=pf*(tx+TP+TC+TD+TI);
@@ -467,8 +470,9 @@ async function carregar(){
     fetch(SRV+'/api/db/yampi-listings').then(r=>r.json()).catch(()=>[])
   ]);
   const mlItems = (Array.isArray(mlData)?mlData:[]).map(r=>({...r,canal:'ml'}));
-  const yampiItems = (Array.isArray(yampiData)?yampiData:[]).map(r=>({...r,canal:'yampi',id:r.id||r.yampi_id,titulo:r.titulo||r.nome,preco:r.preco||r.price,sale_fee:0.12,status:r.situacao||'active'}));
-  const data = [...mlItems, ...yampiItems];
+  // Yampi já vem normalizado do server com CMV BR do banco
+  const yampiItems = (Array.isArray(yampiData)?yampiData:[]).map(r=>({...r,canal:r.canal||'yampi'}));
+const data = [...mlItems, ...yampiItems];
     _all=Array.isArray(data)?data:[];
     calcAll();stats();filtrar();
     document.getElementById('lbl-s').textContent=_all.length+' anúncios carregados';
