@@ -1162,29 +1162,17 @@ async function renovarTokenML(){
 }
 
 async function renovarTokenBling(){
-  const rt = tokenStore.bling.refresh;
-  if(!rt) return false;
   try{
-    const creds = btoa('19df6720532752f6888d5f0aad392bc8829974d3:590eed8f0b2fb1998e3f60335cef2a17bf5b2135fc69ec4a5ae925f520a8');
-    const r = await fetch('/api/bling/oauth/token',{
-      method:'POST',
-      headers:{'Content-Type':'application/x-www-form-urlencoded','Authorization':`Basic ${creds}`},
-      body:`grant_type=refresh_token&refresh_token=${rt}`
-    });
-    if(!r.ok) return false;
-    const d = await r.json();
-    if(d.access_token){
-      tokenStore.bling.access  = d.access_token;
-      tokenStore.bling.refresh = d.refresh_token || rt;
-      tokenStore.bling.expires = Date.now() + (d.expires_in||21600)*1000 - 300000;
-      tokens.bling = d.access_token;
-      if(document.getElementById('tk-bling')) document.getElementById('tk-bling').value = d.access_token;
+    const r=await fetch("https://web-production-5aa0f.up.railway.app/api/bling/renovar").then(r=>r.json());
+    if(r.ok){
+      // Token renovado no servidor — atualizar tokenStore local
+      if(r.access_token) tokenStore.bling.access = r.access_token;
+      tokenStore.bling.expires = Date.now() + 6*3600*1000; // 6h
       salvarTokenStore();
-      setDot('bling','ok','Bling ✓ (renovado)');
       return true;
     }
-  }catch(e){ console.error('Bling renovar:', e); }
-  return false;
+    return false;
+  }catch(e){ console.warn("[Bling renovar erro]", e.message); return false; }
 }
 
 async function forcarRenovacaoML(){
@@ -1197,8 +1185,11 @@ async function forcarRenovacaoML(){
 async function forcarRenovacaoBling(){
   setDot('bling','wait','Renovando...');
   const ok = await renovarTokenBling();
-  if(ok){ setDot('bling','ok','Bling ✓ (renovado)'); testar(); }
-  else{ setDot('bling','err','Falhou — cole novo token'); alert('Refresh token Bling falhou. Cole um novo access token em ⚙️ Tokens.'); }
+  if(ok){ setDot('bling','ok','Bling ✓'); testar(); }
+  else{
+    setDot('bling','err','Expirado');
+    if(confirm('Token Bling expirado. Abrir autorização? (10 segundos)')) window.open('https://web-production-5aa0f.up.railway.app/api/bling/autorizar','_blank');
+  }
 }
 
 // Renovação automática a cada 5h
@@ -1221,7 +1212,8 @@ window.onload=async ()=>{
   carregarTokenStore();
   // Tenta renovar tokens expirados no startup
   if(tokenStore.ml.refresh && tokenStore.ml.expires && Date.now() > tokenStore.ml.expires) await renovarTokenML();
-  if(tokenStore.bling.refresh && tokenStore.bling.expires && Date.now() > tokenStore.bling.expires) await renovarTokenBling();
+  // Renovar Bling via servidor (não depende de token local)
+  await renovarTokenBling();
   // Carrega chave Claude
   const ck=localStorage.getItem('fava_claude_key')||'';
   const elCk=document.getElementById('tk-claude');
