@@ -16,63 +16,72 @@ nav a.ativo{color:#93c5fd;border-bottom-color:#60a5fa}
 .toolbar input[type=text]{background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:5px 10px;border-radius:6px;font-size:12px;width:200px}
 .toolbar select{background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:5px 8px;border-radius:6px;font-size:12px}
 .btn{background:#2563eb;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600}
-.btn:hover{background:#1d4ed8}
-.btn-verde{background:#059669}
-.btn-verde:hover{background:#047857}
-.btn-cinza{background:#475569}
+.btn:hover{opacity:.85}
+.btn-verde{background:#059669}.btn-roxo{background:#7c3aed}.btn-cinza{background:#475569}
+.btn-toggle{padding:5px 14px;border:1px solid #334155;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;background:#1e293b;color:#94a3b8;transition:all .15s}
+.btn-toggle.ativo{background:#1e3a5f;color:#93c5fd;border-color:#3b82f6}
 .stats{display:flex;gap:16px;padding:6px 16px;background:#1e293b;border-bottom:1px solid #334155;font-size:12px;color:#94a3b8;flex-wrap:wrap}
 .stats span b{color:#e2e8f0}
-
+/* Cards */
+.cards-wrap{padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;max-height:calc(100vh - 210px);overflow-y:auto}
+.card{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px;cursor:pointer;transition:border-color .15s}
+.card:hover{border-color:#3b82f6}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px}
+.card-sku{font-weight:700;color:#60a5fa;font-size:12px}
+.card-mlb{font-size:10px;color:#64748b;font-family:monospace;margin-top:1px}
+.card-titulo{font-size:12px;line-height:1.4;margin-bottom:10px;min-height:34px}
+.card-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px}
+.cv label{display:block;font-size:10px;color:#64748b;margin-bottom:1px}
+.cv b{font-size:12px}
+.card-margem{text-align:center;padding:5px;border-radius:6px;font-weight:700;font-size:13px}
+.m-ok{background:#064e3b22;color:#10b981;border:1px solid #064e3b}
+.m-warn{background:#45170322;color:#f59e0b;border:1px solid #451703}
+.m-bad{background:#450a0a22;color:#ef4444;border:1px solid #450a0a}
+.tag-kit{font-size:10px;color:#a78bfa;font-weight:600;margin-left:4px}
+.tag-var{font-size:10px;color:#38bdf8;font-weight:600;margin-left:4px}
+.tag-st{font-size:10px;color:#fbbf24;font-weight:700;padding:1px 5px;background:#451a0344;border-radius:3px;margin-left:4px}
 /* Tabela */
-.tabela-wrap{overflow:auto;max-height:calc(100vh - 220px)}
-table{width:100%;border-collapse:collapse;min-width:1400px}
-thead th{background:#1e293b;padding:7px 8px;text-align:left;white-space:nowrap;font-size:11px;color:#94a3b8;font-weight:700;border-bottom:2px solid #334155;position:sticky;top:0;z-index:10}
-thead th.num{text-align:right}
+.tabela-wrap{overflow:auto;max-height:calc(100vh - 210px)}
+table{width:100%;border-collapse:collapse;min-width:1250px}
+thead th{background:#1e293b;padding:7px 8px;text-align:left;white-space:nowrap;font-size:11px;color:#94a3b8;font-weight:700;border-bottom:2px solid #334155;position:sticky;top:0;z-index:10;cursor:pointer;user-select:none}
+thead th:hover{color:#e2e8f0}
+thead th.n{text-align:right}
 tbody tr:nth-child(even){background:#0f1f35}
-tbody tr:hover{background:#1e3a5f}
+tbody tr:hover{background:#1e3a5f88}
 td{padding:5px 8px;font-size:12px;border-bottom:1px solid #1e293b;vertical-align:middle}
-td.num{text-align:right;font-family:monospace}
-td.sku{font-weight:700;color:#60a5fa;cursor:pointer}
-
-/* Células editáveis */
-td.edit{cursor:pointer;position:relative}
-td.edit:hover{background:#2563eb22}
-td.edit input{width:100%;background:#1e3a5f;border:1px solid #3b82f6;color:#fff;padding:2px 6px;border-radius:4px;font-size:12px;font-family:monospace}
-
-/* Margem cores */
-.margem-ok{color:#10b981;font-weight:700}
-.margem-warn{color:#f59e0b;font-weight:700}
-.margem-bad{color:#ef4444;font-weight:700}
-.st-sim{color:#f59e0b;font-size:11px;font-weight:700}
-.st-nao{color:#64748b;font-size:11px}
-
+td.n{text-align:right;font-family:monospace}
+td.ec{cursor:pointer}
+td.ec:hover{background:#1e3a5f88}
+td.ec input{width:100%;background:#0f172a;border:1px solid #3b82f6;color:#fff;padding:2px 6px;border-radius:4px;font-size:12px;outline:none}
 /* Modal */
 .modal{display:none;position:fixed;inset:0;background:#00000099;z-index:100;align-items:center;justify-content:center}
 .modal.open{display:flex}
-.modal-box{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:24px;min-width:600px;max-width:800px;max-height:90vh;overflow-y:auto}
-.modal-box h2{font-size:15px;font-weight:700;margin-bottom:16px;color:#93c5fd}
-.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.modal-field label{display:block;font-size:11px;color:#94a3b8;margin-bottom:4px}
-.modal-field input,.modal-field select{width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:7px 10px;border-radius:6px;font-size:13px}
-.calc-box{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:12px;margin-top:12px}
-.calc-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid #1e293b}
-.calc-row:last-child{border-bottom:none;font-weight:700;font-size:13px;color:#10b981}
-.calc-row.negativo{color:#ef4444}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
-
-/* Loading */
+.mbox{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:22px;width:680px;max-height:90vh;overflow-y:auto}
+.mbox h2{font-size:14px;font-weight:700;margin-bottom:2px;color:#93c5fd}
+.msub{font-size:11px;color:#64748b;margin-bottom:14px}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.mf label{display:block;font-size:11px;color:#94a3b8;margin-bottom:3px}
+.mf input,.mf select{width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:7px 10px;border-radius:6px;font-size:12px}
+.mf input:focus,.mf select:focus{border-color:#3b82f6;outline:none}
+.calc{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:12px}
+.ctitle{font-size:11px;color:#64748b;font-weight:700;margin-bottom:8px}
+.cr{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid #1e293b}
+.cr:last-child{border:none;font-weight:700;font-size:13px;padding-top:8px}
+.ma{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
 .loading{text-align:center;padding:40px;color:#64748b}
 </style>
 </head>
 <body>
 
 <header>
-  <h1>📢 Fava Ecom — Gestor de Anúncios</h1>
-  <span id="lbl-status" style="font-size:12px;color:#94a3b8">Carregando...</span>
-  <div style="margin-left:auto;display:flex;gap:6px">
-    <button class="btn" onclick="novoAnuncio()" style="background:#7c3aed">+ Novo Anúncio</button>
-    <button class="btn btn-cinza" onclick="syncAnuncios()">🔄 Sync ML</button>
-    <button class="btn btn-verde" onclick="exportarCSV()">📥 CSV</button>
+  <h1>📢 Gestor de Anúncios — Fava Ecom</h1>
+  <span id="lbl-s" style="font-size:12px;color:#94a3b8">Carregando...</span>
+  <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+    <button class="btn-toggle ativo" id="btn-vis" onclick="setModo('vis')">👁 Visualização</button>
+    <button class="btn-toggle" id="btn-gest" onclick="setModo('gest')">✏️ Gestão</button>
+    <button class="btn btn-roxo" onclick="window.open('https://web-production-5aa0f.up.railway.app/produto_novo.html','_blank')">📦 Novo</button>
+    <button class="btn btn-cinza" onclick="syncML()">🔄 Sync ML</button>
+    <button class="btn btn-verde" onclick="exportCSV()">📥 CSV</button>
   </div>
 </header>
 
@@ -85,483 +94,334 @@ td.edit input{width:100%;background:#1e3a5f;border:1px solid #3b82f6;color:#fff;
 </nav>
 
 <div class="toolbar">
-  <input type="text" id="filtro" placeholder="Buscar SKU, título, MLB..." oninput="filtrar()">
-  <select id="filtro-canal" onchange="filtrar()">
-    <option value="">Todos os canais</option>
-    <option value="ml">Mercado Livre</option>
-    <option value="shopee" disabled>Shopee (em breve)</option>
-    <option value="yampi" disabled>Yampi (em breve)</option>
-    <option value="balcao" disabled>Balcão (em breve)</option>
-  </select>
-  <select id="filtro-st" onchange="filtrar()">
-    <option value="">ST: Todos</option>
-    <option value="1">Com ST</option>
-    <option value="0">Sem ST</option>
-  </select>
-  <select id="filtro-margem" onchange="filtrar()">
-    <option value="">Margem: Todas</option>
-    <option value="ok">OK (≥15%)</option>
-    <option value="warn">Atenção (5-15%)</option>
-    <option value="bad">Ruim (&lt;5%)</option>
-  </select>
-  <select id="filtro-status" onchange="filtrar()">
-    <option value="">Status: Todos</option>
-    <option value="active">Ativo</option>
-    <option value="paused">Pausado</option>
-    <option value="closed">Fechado</option>
-  </select>
-  <button class="btn" onclick="carregarDados()">🔍 Buscar</button>
+  <input type="text" id="fi" placeholder="SKU, título, MLB..." oninput="filtrar()">
+  <select id="fst" onchange="filtrar()"><option value="">ST: Todos</option><option value="1">Com ST</option><option value="0">Sem ST</option></select>
+  <select id="fm" onchange="filtrar()"><option value="">Margem: Todas</option><option value="ok">OK (≥15%)</option><option value="warn">Atenção 5-15%</option><option value="bad">Ruim &lt;5%</option></select>
+  <select id="fs" onchange="filtrar()"><option value="">Status: Todos</option><option value="active">Ativo</option><option value="paused">Pausado</option></select>
+  <select id="ft" onchange="filtrar()"><option value="">Tipo: Todos</option><option value="simples">Simples</option><option value="kit">Kit</option><option value="variacao">Variação</option></select>
 </div>
 
 <div class="stats">
-  <span>Total: <b id="st-total">—</b></span>
-  <span>Com CMV: <b id="st-cmv">—</b></span>
-  <span>Margem média: <b id="st-marg-med">—</b></span>
-  <span>Com ST: <b id="st-st">—</b></span>
-  <span>Sem CMV: <b id="st-sem-cmv" style="color:#ef4444">—</b></span>
+  <span>Total: <b id="s-tot">—</b></span>
+  <span>Com CMV: <b id="s-cmv">—</b></span>
+  <span>Margem média: <b id="s-med">—</b></span>
+  <span>Com ST: <b id="s-st">—</b></span>
+  <span>Kits: <b id="s-kit" style="color:#a78bfa">—</b></span>
+  <span>Sem CMV: <b id="s-scmv" style="color:#ef4444">—</b></span>
 </div>
 
-<div class="tabela-wrap">
+<div id="v-cards" class="cards-wrap"></div>
+<div id="v-tabela" class="tabela-wrap" style="display:none">
   <table>
-    <thead>
-      <tr>
-        <th>MLB / Canal</th>
-        <th>SKU</th>
-        <th style="min-width:260px">Título / Produto</th>
-        <th class="num">Preço</th>
-        <th class="num">Desconto</th>
-        <th class="num">Preço Final</th>
-        <th class="num">CMV BR</th>
-        <th class="num">Frete</th>
-        <th class="num">Taxa ML</th>
-        <th class="num">Impostos</th>
-        <th class="num">Recebe</th>
-        <th class="num">Lucro</th>
-        <th class="num">Margem</th>
-        <th>ST</th>
-        <th>Status</th>
-        <th>Ação</th>
-      </tr>
-    </thead>
-    <tbody id="tbody">
-      <tr><td colspan="16" class="loading">Carregando anúncios...</td></tr>
-    </tbody>
+    <thead><tr>
+      <th>MLB</th><th onclick="ord('sku')">SKU ↕</th>
+      <th style="min-width:230px">Título</th>
+      <th class="n" onclick="ord('preco')">Preço ↕</th>
+      <th class="n">Desc%</th><th class="n">Final</th>
+      <th class="n" onclick="ord('cmv')">CMV ↕</th>
+      <th class="n">Frete</th><th class="n">Taxa</th>
+      <th class="n">Recebe</th>
+      <th class="n" onclick="ord('lucro')">Lucro ↕</th>
+      <th class="n" onclick="ord('margem')">Margem ↕</th>
+      <th>ST</th><th>Status</th><th>Ação</th>
+    </tr></thead>
+    <tbody id="tb"></tbody>
   </table>
 </div>
 
-<!-- Modal edição -->
-<div class="modal" id="modal-edit">
-  <div class="modal-box">
-    <h2 id="modal-titulo">Editar Anúncio</h2>
-    <input type="hidden" id="edit-id">
-    <input type="hidden" id="edit-sku">
-    <div class="modal-grid">
-      <div class="modal-field">
-        <label>MLB ID</label>
-        <input type="text" id="edit-mlb" readonly style="color:#94a3b8">
-      </div>
-      <div class="modal-field">
-        <label>SKU</label>
-        <input type="text" id="edit-sku-show" readonly style="color:#94a3b8">
-      </div>
-      <div class="modal-field">
-        <label>Preço de venda (R$)</label>
-        <input type="number" id="edit-preco" step="0.01" oninput="recalcular()">
-      </div>
-      <div class="modal-field">
-        <label>Desconto (%)</label>
-        <input type="number" id="edit-desc" step="0.5" min="0" max="80" oninput="recalcular()">
-      </div>
-      <div class="modal-field">
-        <label>CMV Brasil (R$)</label>
-        <input type="number" id="edit-cmv" step="0.01" oninput="recalcular()">
-      </div>
-      <div class="modal-field">
-        <label>Frete médio (R$)</label>
-        <input type="number" id="edit-frete" step="0.01" oninput="recalcular()">
-      </div>
-      <div class="modal-field">
-        <label>Taxa ML (%)</label>
-        <input type="number" id="edit-taxa" step="0.01" oninput="recalcular()">
-      </div>
-      <div class="modal-field">
-        <label>ST</label>
-        <select id="edit-st" onchange="recalcular()">
-          <option value="0">Não</option>
-          <option value="1">Sim</option>
-        </select>
-      </div>
-      <div class="modal-field">
-        <label>ST Imposto (%)</label>
-        <input type="number" id="edit-st-imp" step="0.001" oninput="recalcular()" placeholder="Ex: 0.195">
-      </div>
-      <div class="modal-field">
-        <label>Monofásico PIS/COFINS</label>
-        <select id="edit-mono" onchange="recalcular()">
-          <option value="0">Não (crédito normal)</option>
-          <option value="1">Sim (sem crédito)</option>
-        </select>
-      </div>
+<div class="modal" id="modal">
+  <div class="mbox">
+    <h2 id="mt">—</h2><div class="msub" id="ms">—</div>
+    <input type="hidden" id="eid"><input type="hidden" id="esku">
+    <div class="mgrid">
+      <div class="mf"><label>Preço (R$)</label><input type="number" id="ep" step="0.01" oninput="rc()"></div>
+      <div class="mf"><label>Desconto (%)</label><input type="number" id="ed" step="0.5" min="0" max="80" oninput="rc()"></div>
+      <div class="mf"><label>CMV Brasil (R$)</label><input type="number" id="ec" step="0.01" oninput="rc()"></div>
+      <div class="mf"><label>Frete médio (R$)</label><input type="number" id="ef" step="0.01" oninput="rc()"></div>
+      <div class="mf"><label>Taxa ML (%)</label><input type="number" id="et" step="0.01" oninput="rc()"></div>
+      <div class="mf"><label>ST</label><select id="est" onchange="rc()"><option value="0">Não</option><option value="1">Sim</option></select></div>
+      <div class="mf"><label>ST Imposto (%)</label><input type="number" id="esi" step="0.001" oninput="rc()"></div>
+      <div class="mf"><label>Monofásico</label><select id="emn" onchange="rc()"><option value="0">Não (crédito normal)</option><option value="1">Sim (sem crédito)</option></select></div>
     </div>
-
-    <div class="calc-box" id="calc-box">
-      <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;font-weight:700">CÁLCULO COMPLETO</div>
-      <div class="calc-row"><span>Preço de venda</span><span id="c-preco">—</span></div>
-      <div class="calc-row"><span>(-) Desconto</span><span id="c-desc">—</span></div>
-      <div class="calc-row"><span>= Preço final ao cliente</span><span id="c-final">—</span></div>
-      <div class="calc-row"><span>(-) Taxa ML</span><span id="c-taxa">—</span></div>
-      <div class="calc-row"><span>(-) PIS+COFINS saída (1,65%+7,6%)</span><span id="c-pis">—</span></div>
-      <div class="calc-row"><span>(-) ICMS saída (12% est.)</span><span id="c-icms">—</span></div>
-      <div class="calc-row"><span>(-) DIFAL médio (3,81%)</span><span id="c-difal">—</span></div>
-      <div class="calc-row"><span>(-) IBS (2%)</span><span id="c-ibs">—</span></div>
-      <div class="calc-row"><span>(+) Crédito PIS+COFINS entrada</span><span id="c-cred">—</span></div>
-      <div class="calc-row"><span>(+) Crédito ICMS entrada (PR)</span><span id="c-cred-icms">—</span></div>
-      <div class="calc-row"><span>= Recebe líquido</span><span id="c-recebe">—</span></div>
-      <div class="calc-row"><span>(-) CMV Brasil</span><span id="c-cmv">—</span></div>
-      <div class="calc-row"><span>(-) Frete médio</span><span id="c-frete">—</span></div>
-      <div class="calc-row"><span>(-) ST (se aplicável)</span><span id="c-st">—</span></div>
-      <div class="calc-row" id="calc-lucro-row"><span>= LUCRO ESTIMADO</span><span id="c-lucro">—</span></div>
-      <div class="calc-row" id="calc-marg-row"><span>% MARGEM SOBRE VENDA</span><span id="c-marg">—</span></div>
+    <div class="calc">
+      <div class="ctitle">CÁLCULO COMPLETO — Lucro Real Estimado</div>
+      <div class="cr"><span>Preço de venda</span><span id="cp"></span></div>
+      <div class="cr"><span>(-) Desconto</span><span id="cde"></span></div>
+      <div class="cr" style="font-weight:700;border-bottom:1px solid #334155;padding-bottom:6px"><span>= Preço final ao cliente</span><span id="cf"></span></div>
+      <div class="cr"><span>(-) Taxa ML / marketplace</span><span id="ctx"></span></div>
+      <div class="cr"><span>(-) PIS+COFINS+IBS saída (11,25%)</span><span id="cpi"></span></div>
+      <div class="cr"><span>(-) ICMS saída (12%)</span><span id="cic"></span></div>
+      <div class="cr"><span>(-) DIFAL médio (3,81%)</span><span id="cdi"></span></div>
+      <div class="cr"><span>(+) Crédito PIS/COFINS entrada</span><span id="ccp"></span></div>
+      <div class="cr"><span>(+) Crédito ICMS entrada PR</span><span id="cci"></span></div>
+      <div class="cr" style="font-weight:700;border-bottom:1px solid #334155;padding-bottom:6px"><span>= Recebe líquido</span><span id="cre"></span></div>
+      <div class="cr"><span>(-) CMV Brasil</span><span id="ccm"></span></div>
+      <div class="cr"><span>(-) Frete médio</span><span id="cfr"></span></div>
+      <div class="cr"><span>(-) ST (se aplicável)</span><span id="cst"></span></div>
+      <div class="cr"><span>= LUCRO ESTIMADO</span><span id="clu" style="font-size:14px"></span></div>
+      <div class="cr"><span>% MARGEM SOBRE VENDA</span><span id="cma" style="font-size:14px"></span></div>
     </div>
-
-    <div class="modal-actions">
-      <button class="btn btn-cinza" onclick="fecharModal()">Cancelar</button>
-      <button class="btn btn-verde" onclick="salvarListing()">💾 Salvar</button>
+    <div class="ma">
+      <button class="btn btn-cinza" onclick="fechar()">Cancelar</button>
+      <button class="btn btn-verde" onclick="salvar()">💾 Salvar</button>
     </div>
   </div>
 </div>
 
 <script>
-const SRV = 'https://web-production-5aa0f.up.railway.app';
-let _todos = [];
-let _filtrados = [];
+const SRV='https://web-production-5aa0f.up.railway.app';
+const TP=0.0925,TC=0.12,TD=0.0381,TI=0.02;
+let _all=[],_fil=[],_modo='vis',_ei=null,_ord={c:'',a:true};
 
-// Taxas fixas
-const TAXA_PIS_COFINS_SAIDA = 0.0165 + 0.076; // 9.25%
-const TAXA_ICMS_SAIDA = 0.12;
-const TAXA_DIFAL = 0.0381;
-const TAXA_IBS = 0.02;
-const CRED_PIS_COFINS = 0.0165 + 0.076; // crédito entrada = saída (lucro real)
-const CRED_ICMS_PR = 0.12;
-
-async function carregarDados() {
-  document.getElementById('tbody').innerHTML = '<tr><td colspan="16" class="loading">Carregando...</td></tr>';
-  try {
-    const data = await fetch(SRV + '/api/db/listings').then(r => r.json());
-    _todos = Array.isArray(data) ? data : [];
-    calcularTodos();
-    atualizarStats();
-    filtrar();
-    document.getElementById('lbl-status').textContent = `${_todos.length} anúncios carregados`;
-  } catch(e) {
-    document.getElementById('tbody').innerHTML = `<tr><td colspan="16" class="loading" style="color:#ef4444">Erro: ${e.message}</td></tr>`;
-  }
+function psku(s){
+  const p=String(s).split('-');
+  if(p.length===1)return 'simples';
+  if(p.length===2&&!isNaN(p[0])&&!isNaN(p[1])&&parseInt(p[0])<=9&&p[0].length===1)return 'kit';
+  if(p.length>=2&&p.every(x=>!isNaN(x)&&parseInt(x)>99))return 'kit';
+  if(p.length===2&&p[1].length<=3)return 'variacao';
+  return 'simples';
 }
 
-function calcularTodos() {
-  _todos.forEach(r => {
-    const preco = parseFloat(r.preco || 0);
-    const desc = parseFloat(r.desconto || 0);
-    const pf = preco * (1 - desc / 100);
-    const taxa_ml = parseFloat(r.sale_fee || 0.17);
-    const cmv = parseFloat(r.cmv || 0);
-    const frete = parseFloat(r.frete_medio || 13);
-    const st = parseInt(r.st || 0);
-    const st_imp = parseFloat(r.st_imposto || 0);
-    const mono = parseInt(r.monofasico || 0);
-
-    const taxa_total = taxa_ml + TAXA_PIS_COFINS_SAIDA + TAXA_ICMS_SAIDA + TAXA_DIFAL + TAXA_IBS;
-    const deducoes = pf * taxa_total;
-    
-    // Créditos
-    const cred_pis_cofins = mono ? 0 : cmv * CRED_PIS_COFINS;
-    const cred_icms = st ? 0 : cmv * CRED_ICMS_PR;
-    
-    const recebe = pf - deducoes + cred_pis_cofins + cred_icms;
-    const st_valor = st ? (pf * st_imp) : 0;
-    const lucro = recebe - cmv - frete - st_valor;
-    const margem = pf > 0 ? (lucro / pf * 100) : 0;
-
-    r._pf = pf;
-    r._taxa_ml = taxa_ml;
-    r._recebe = recebe;
-    r._lucro = lucro;
-    r._margem = margem;
-    r._cred_pis = cred_pis_cofins;
-    r._cred_icms = cred_icms;
-    r._st_valor = st_valor;
-  });
+function nomeKit(sku){
+  const p=String(sku).split('-');
+  const skus=parseInt(p[0])<=9&&p[0].length===1?Array(parseInt(p[0])).fill(p[1]):p;
+  const nomes=skus.map(s=>{const r=_all.find(x=>String(x.sku)===String(s));return r?(r.titulo||'SKU '+s):'SKU '+s;});
+  if(parseInt(p[0])<=9&&p[0].length===1)return `Kit ${p[0]}x: ${nomes[0]}`;
+  return 'Kit: '+nomes.slice(0,3).join(' + ')+(nomes.length>3?'...':'');
 }
 
-function atualizarStats() {
-  const total = _todos.length;
-  const comCmv = _todos.filter(r => parseFloat(r.cmv || 0) > 0).length;
-  const comST = _todos.filter(r => parseInt(r.st || 0) === 1).length;
-  const semCmv = total - comCmv;
-  const comMarg = _todos.filter(r => r._margem !== undefined);
-  const margMed = comMarg.length ? comMarg.reduce((s,r) => s + r._margem, 0) / comMarg.length : 0;
-
-  document.getElementById('st-total').textContent = total;
-  document.getElementById('st-cmv').textContent = comCmv;
-  document.getElementById('st-marg-med').textContent = margMed.toFixed(1) + '%';
-  if(comCmv < total * 0.5) {
-    document.getElementById('st-marg-med').style.color = '#ef4444';
-    document.getElementById('st-marg-med').title = 'Muitos produtos sem CMV — rode importar_base_dados.py';
-  }
-  document.getElementById('st-st').textContent = comST;
-  document.getElementById('st-sem-cmv').textContent = semCmv;
+function C(r){
+  const preco=parseFloat(r.preco||0),desc=parseFloat(r.desconto||0);
+  const pf=preco*(1-desc/100),tx=parseFloat(r.sale_fee||0.17);
+  const cmv=parseFloat(r.cmv||0),fr=parseFloat(r.frete_medio||13);
+  const st=parseInt(r.st||0),si=parseFloat(r.st_imposto||0),mn=parseInt(r.monofasico||0);
+  const ded=pf*(tx+TP+TC+TD+TI);
+  const cp=mn?0:cmv*(TP+TI),ci=st?0:cmv*TC;
+  const rec=pf-ded+cp+ci,stv=st?pf*si:0;
+  const luc=rec-cmv-fr-stv,mar=pf>0?luc/pf*100:0;
+  return{pf,rec,luc,mar,cp,ci,stv};
 }
 
-function filtrar() {
-  const q = document.getElementById('filtro').value.toLowerCase();
-  const fSt = document.getElementById('filtro-st').value;
-  const fMarg = document.getElementById('filtro-margem').value;
-  const fStatus = document.getElementById('filtro-status').value;
+function calcAll(){_all.forEach(r=>{const c=C(r);r.pf=c.pf;r.recebe=c.rec;r.lucro=c.luc;r.margem=c.mar;});}
 
-  _filtrados = _todos.filter(r => {
-    if (q && !(
-      (r.id || '').toLowerCase().includes(q) ||
-      (r.titulo || '').toLowerCase().includes(q) ||
-      String(r.sku || '').includes(q)
-    )) return false;
-    if (fSt && String(r.st || 0) !== fSt) return false;
-    if (fStatus && (r.status || '') !== fStatus) return false;
-    if (fMarg) {
-      const m = r._margem || 0;
-      if (fMarg === 'ok' && m < 15) return false;
-      if (fMarg === 'warn' && (m < 5 || m >= 15)) return false;
-      if (fMarg === 'bad' && m >= 5) return false;
-    }
+function stats(){
+  const tot=_all.length,cmv=_all.filter(r=>parseFloat(r.cmv||0)>0).length;
+  const st=_all.filter(r=>parseInt(r.st||0)).length,kits=_all.filter(r=>psku(r.sku)==='kit').length;
+  const ms=_all.filter(r=>parseFloat(r.cmv||0)>0);
+  const med=ms.length?ms.reduce((s,r)=>s+r.margem,0)/ms.length:0;
+  document.getElementById('s-tot').textContent=tot;
+  document.getElementById('s-cmv').textContent=cmv;
+  document.getElementById('s-med').textContent=med.toFixed(1)+'%';
+  document.getElementById('s-st').textContent=st;
+  document.getElementById('s-kit').textContent=kits;
+  document.getElementById('s-scmv').textContent=tot-cmv;
+}
+
+function filtrar(){
+  const q=document.getElementById('fi').value.toLowerCase();
+  const fst=document.getElementById('fst').value,fm=document.getElementById('fm').value;
+  const fs=document.getElementById('fs').value,ft=document.getElementById('ft').value;
+  _fil=_all.filter(r=>{
+    if(q&&![(r.id||''),(r.titulo||''),(String(r.sku||''))].join(' ').toLowerCase().includes(q))return false;
+    if(fst&&String(r.st||0)!==fst)return false;
+    if(fs&&(r.status||'')!==fs)return false;
+    if(ft&&psku(r.sku)!==ft)return false;
+    if(fm){const m=r.margem||0;
+      if(fm==='ok'&&m<15)return false;
+      if(fm==='warn'&&(m<5||m>=15))return false;
+      if(fm==='bad'&&m>=5)return false;}
     return true;
   });
-
-  renderTabela();
+  _modo==='vis'?renderCards():renderTabela();
 }
 
-function renderTabela() {
-  const tbody = document.getElementById('tbody');
-  if (!_filtrados.length) {
-    tbody.innerHTML = '<tr><td colspan="16" class="loading">Nenhum anúncio encontrado</td></tr>';
-    return;
-  }
+function setModo(m){
+  _modo=m;
+  document.getElementById('btn-vis').className='btn-toggle'+(m==='vis'?' ativo':'');
+  document.getElementById('btn-gest').className='btn-toggle'+(m==='gest'?' ativo':'');
+  document.getElementById('v-cards').style.display=m==='vis'?'':'none';
+  document.getElementById('v-tabela').style.display=m==='gest'?'':'none';
+  filtrar();
+}
 
-  const fmt = (v, d=2) => v !== null && v !== undefined ? parseFloat(v).toFixed(d) : '—';
-  const R = v => v !== null && v !== undefined ? 'R$ ' + parseFloat(v).toFixed(2) : '—';
+function renderCards(){
+  const w=document.getElementById('v-cards');
+  if(!_fil.length){w.innerHTML='<div class="loading">Nenhum anúncio</div>';return;}
+  const R=v=>'R$ '+parseFloat(v||0).toFixed(2),f=(v,d=1)=>parseFloat(v||0).toFixed(d);
+  w.innerHTML=_fil.slice(0,400).map((r,i)=>{
+    const m=r.margem||0,mc=m>=15?'m-ok':m>=5?'m-warn':'m-bad';
+    const cmv=parseFloat(r.cmv||0),tipo=psku(r.sku);
+    const titulo=tipo==='kit'?nomeKit(r.sku):(r.titulo||r.sku||'—');
+    const corT=tipo==='kit'?'#f59e0b':cmv>0?'#cbd5e1':'#64748b';
+    return `<div class="card" ondblclick="abrir(${i})">
+      <div class="card-head">
+        <div>
+          <div class="card-sku">${r.sku||'—'}${tipo==='kit'?'<span class="tag-kit">[kit]</span>':tipo==='variacao'?'<span class="tag-var">[var]</span>':''}${parseInt(r.st||0)?'<span class="tag-st">ST</span>':''}</div>
+          <div class="card-mlb">${(r.id||'').substring(0,20)}</div>
+        </div>
+        <div style="display:flex;gap:4px;align-items:center">
+          <span style="font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;background:${r.status==='active'?'#064e3b22':r.status==='paused'?'#45170322':'#1e2030'};color:${r.status==='active'?'#10b981':r.status==='paused'?'#f59e0b':'#64748b'}">${r.status||'?'}</span>
+          <button class="btn" style="padding:2px 8px;font-size:11px" onclick="abrir(${i})">✏</button>
+        </div>
+      </div>
+      <div class="card-titulo" style="color:${corT}" title="${titulo}">${titulo.substring(0,65)}</div>
+      <div class="card-grid">
+        <div class="cv"><label>Preço final</label><b>${R(r.pf||r.preco)}</b></div>
+        <div class="cv"><label>CMV BR</label><b style="color:${cmv>0?'#e2e8f0':'#ef4444'}">${cmv>0?R(cmv):'⚠ s/CMV'}</b></div>
+        <div class="cv"><label>Lucro</label><b style="color:${(r.lucro||0)>=0?'#10b981':'#ef4444'}">${R(r.lucro)}</b></div>
+      </div>
+      <div class="card-margem ${mc}">${f(m)}% margem</div>
+    </div>`;
+  }).join('');
+}
 
-  tbody.innerHTML = _filtrados.slice(0, 500).map((r, i) => {
-    const m = r._margem || 0;
-    const mc = m >= 15 ? 'margem-ok' : m >= 5 ? 'margem-warn' : 'margem-bad';
-    const cmv = parseFloat(r.cmv || 0);
-    const st = parseInt(r.st || 0);
-    const statusCor = r.status === 'active' ? '#10b981' : r.status === 'paused' ? '#f59e0b' : '#ef4444';
-    const bg = r._lucro < 0 ? 'background:#2d1515' : '';
-
-    return `<tr style="${bg}" ondblclick="abrirModal(${i})">
-      <td style="font-family:monospace;font-size:11px">${r.id || '—'}</td>
-      <td class="sku" onclick="abrirModal(${i})">${r.sku || '—'}</td>
-      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.titulo || ''}">${(r.titulo || r.sku || '').substring(0,45)}</td>
-      <td class="num">R$ ${fmt(r.preco)}</td>
-      <td class="edit num" onclick="editarCampo(this, ${i}, 'desconto')">${fmt(r.desconto, 1)}%</td>
-      <td class="num">R$ ${fmt(r._pf)}</td>
-      <td class="num" style="color:${cmv > 0 ? '#e2e8f0' : '#ef4444'}">${cmv > 0 ? 'R$ '+fmt(cmv) : '⚠ SEM CMV'}</td>
-      <td class="edit num" onclick="editarCampo(this, ${i}, 'frete_medio')">R$ ${fmt(r.frete_medio)}</td>
-      <td class="num">${fmt(parseFloat(r.sale_fee||0.17)*100, 1)}%</td>
-      <td class="num">${fmt((TAXA_PIS_COFINS_SAIDA+TAXA_ICMS_SAIDA+TAXA_DIFAL+TAXA_IBS)*100, 1)}%</td>
-      <td class="num">${R(r._recebe)}</td>
-      <td class="num ${r._lucro >= 0 ? 'margem-ok' : 'margem-bad'}">${R(r._lucro)}</td>
-      <td class="num ${mc}">${fmt(m, 1)}%</td>
-      <td>${st ? '<span class="st-sim">ST</span>' : '<span class="st-nao">—</span>'}</td>
-      <td><span style="color:${statusCor};font-size:11px">${r.status || '—'}</span></td>
-      <td><button class="btn" style="padding:3px 8px;font-size:11px" onclick="abrirModal(${i})">✏ Editar</button></td>
+function renderTabela(){
+  const tb=document.getElementById('tb');
+  if(!_fil.length){tb.innerHTML='<tr><td colspan="15" class="loading">Nenhum anúncio</td></tr>';return;}
+  const R=v=>'R$ '+parseFloat(v||0).toFixed(2),f=(v,d=1)=>parseFloat(v||0).toFixed(d);
+  let rows=[..._fil];
+  if(_ord.c)rows.sort((a,b)=>{const v=_ord.a?1:-1;return(parseFloat(a[_ord.c]||0)-parseFloat(b[_ord.c]||0))*v;});
+  tb.innerHTML=rows.slice(0,500).map((r,i)=>{
+    const m=r.margem||0,mc=m>=15?'#10b981':m>=5?'#f59e0b':'#ef4444';
+    const cmv=parseFloat(r.cmv||0),tipo=psku(r.sku);
+    const titulo=tipo==='kit'?nomeKit(r.sku):(r.titulo||'—');
+    const bg=(r.lucro||0)<0?'background:#2d1515':'';
+    return `<tr style="${bg}">
+      <td style="font-family:monospace;font-size:11px;color:#64748b">${(r.id||'').substring(0,16)}</td>
+      <td style="font-weight:700;color:#60a5fa">${r.sku}${tipo==='kit'?'<span class="tag-kit">[kit]</span>':tipo==='variacao'?'<span class="tag-var">[v]</span>':''}</td>
+      <td style="max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${tipo==='kit'?'color:#f59e0b':''}" title="${titulo}">${titulo.substring(0,48)}</td>
+      <td class="n">${R(r.preco)}</td>
+      <td class="n ec" onclick="ei(this,${i},'desconto')">${f(r.desconto)}%</td>
+      <td class="n">${R(r.pf||r.preco)}</td>
+      <td class="n" style="color:${cmv>0?'#e2e8f0':'#ef4444'}">${cmv>0?R(cmv):'⚠'}</td>
+      <td class="n ec" onclick="ei(this,${i},'frete_medio')">${R(r.frete_medio)}</td>
+      <td class="n">${f(parseFloat(r.sale_fee||0.17)*100)}%</td>
+      <td class="n">${R(r.recebe)}</td>
+      <td class="n" style="color:${(r.lucro||0)>=0?'#10b981':'#ef4444'}">${R(r.lucro)}</td>
+      <td class="n" style="color:${mc};font-weight:700">${f(m)}%</td>
+      <td>${parseInt(r.st||0)?'<span style="color:#f59e0b;font-size:11px;font-weight:700">ST</span>':'<span style="color:#334155">—</span>'}</td>
+      <td style="color:${r.status==='active'?'#10b981':r.status==='paused'?'#f59e0b':'#64748b'};font-size:11px">${r.status||'?'}</td>
+      <td><button class="btn" style="padding:3px 8px;font-size:11px" onclick="abrir(${i})">✏ Editar</button></td>
     </tr>`;
   }).join('');
 }
 
-function editarCampo(td, idx, campo) {
-  const r = _filtrados[idx];
-  const valor = campo === 'desconto' ? (r.desconto || 0) : (r.frete_medio || 13);
-  td.innerHTML = `<input type="number" step="${campo === 'desconto' ? '0.5' : '0.01'}" value="${valor}" 
-    onblur="salvarCampo(this, ${idx}, '${campo}')" 
-    onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.parentElement.textContent=this.value; filtrar();}"
-    autofocus>`;
+function ord(c){if(_ord.c===c)_ord.a=!_ord.a;else{_ord.c=c;_ord.a=false;}renderTabela();}
+
+function ei(td,i,campo){
+  const r=_fil[i],v=parseFloat(r[campo]||0).toFixed(campo==='desconto'?1:2);
+  td.innerHTML=`<input type="number" step="${campo==='desconto'?'0.5':'0.01'}" value="${v}"
+    onblur="si(this,${i},'${campo}')"
+    onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape')filtrar();" autofocus>`;
   td.querySelector('input').focus();
 }
 
-async function salvarCampo(inp, idx, campo) {
-  const r = _filtrados[idx];
-  const val = parseFloat(inp.value);
-  const body = { id: r.id, sku: r.sku };
-  body[campo] = val;
-  r[campo] = val;
-  calcularTodos();
+async function si(inp,i,campo){
+  const r=_fil[i];r[campo]=parseFloat(inp.value);const c=C(r);r.pf=c.pf;r.recebe=c.rec;r.lucro=c.luc;r.margem=c.mar;
   filtrar();
-  try {
-    const res = await fetch(SRV + '/api/db/listing', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(body)
-    }).then(r => r.json());
-    if (!res.ok) alert('Erro ao salvar: ' + JSON.stringify(res));
-  } catch(e) { alert('Erro: ' + e.message); }
+  await fetch(SRV+'/api/db/listing',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({id:r.id,sku:r.sku,[campo]:r[campo]})});
 }
 
-let _editIdx = null;
-
-function abrirModal(idx) {
-  _editIdx = idx;
-  const r = _filtrados[idx];
-  document.getElementById('edit-id').value = r.id || '';
-  document.getElementById('edit-sku').value = r.sku || '';
-  document.getElementById('edit-mlb').value = r.id || '';
-  document.getElementById('edit-sku-show').value = r.sku || '';
-  document.getElementById('edit-preco').value = parseFloat(r.preco || 0).toFixed(2);
-  document.getElementById('edit-desc').value = parseFloat(r.desconto || 0).toFixed(1);
-  document.getElementById('edit-cmv').value = parseFloat(r.cmv || 0).toFixed(4);
-  document.getElementById('edit-frete').value = parseFloat(r.frete_medio || 13).toFixed(2);
-  document.getElementById('edit-taxa').value = parseFloat((r.sale_fee || 0.17) * 100).toFixed(2);
-  document.getElementById('edit-st').value = String(r.st || 0);
-  document.getElementById('edit-st-imp').value = parseFloat(r.st_imposto || 0).toFixed(3);
-  document.getElementById('edit-mono').value = String(r.monofasico || 0);
-  document.getElementById('modal-titulo').textContent = (r.titulo || '').substring(0, 60);
-  document.getElementById('modal-edit').classList.add('open');
-  recalcular();
+function abrir(i){
+  _ei=i;const r=_fil[i];
+  const tipo=psku(r.sku),titulo=tipo==='kit'?nomeKit(r.sku):(r.titulo||r.sku||'');
+  document.getElementById('mt').textContent=titulo.substring(0,60);
+  document.getElementById('ms').textContent=`${r.id||''} | SKU: ${r.sku||''} | Tipo: ${tipo}`;
+  document.getElementById('eid').value=r.id||'';document.getElementById('esku').value=r.sku||'';
+  document.getElementById('ep').value=parseFloat(r.preco||0).toFixed(2);
+  document.getElementById('ed').value=parseFloat(r.desconto||0).toFixed(1);
+  document.getElementById('ec').value=parseFloat(r.cmv||0).toFixed(4);
+  document.getElementById('ef').value=parseFloat(r.frete_medio||13).toFixed(2);
+  document.getElementById('et').value=parseFloat((r.sale_fee||0.17)*100).toFixed(2);
+  document.getElementById('est').value=String(r.st||0);
+  document.getElementById('esi').value=parseFloat(r.st_imposto||0).toFixed(3);
+  document.getElementById('emn').value=String(r.monofasico||0);
+  document.getElementById('modal').classList.add('open');rc();
 }
 
-function fecharModal() {
-  document.getElementById('modal-edit').classList.remove('open');
-  _editIdx = null;
+function fechar(){document.getElementById('modal').classList.remove('open');_ei=null;}
+
+function rc(){
+  const p=parseFloat(document.getElementById('ep').value)||0;
+  const de=parseFloat(document.getElementById('ed').value)||0;
+  const cv=parseFloat(document.getElementById('ec').value)||0;
+  const fr=parseFloat(document.getElementById('ef').value)||0;
+  const tx=(parseFloat(document.getElementById('et').value)||17)/100;
+  const st=parseInt(document.getElementById('est').value);
+  const si=parseFloat(document.getElementById('esi').value)||0;
+  const mn=parseInt(document.getElementById('emn').value);
+  const pf=p*(1-de/100),dml=pf*tx,dpi=pf*TP,dic=pf*TC,ddi=pf*TD,dis=pf*TI;
+  const cp=mn?0:cv*(TP+TI),ci=st?0:cv*TC;
+  const rec=pf-dml-dpi-dic-ddi-dis+cp+ci;
+  const stv=st?pf*si:0,luc=rec-cv-fr-stv,mar=pf>0?luc/pf*100:0;
+  const R=v=>'R$ '+v.toFixed(2),P=v=>'(R$ '+v.toFixed(2)+')';
+  document.getElementById('cp').textContent=R(p);
+  document.getElementById('cde').textContent=de>0?P(p*de/100):'—';
+  document.getElementById('cf').textContent=R(pf);
+  document.getElementById('ctx').textContent=P(dml)+' '+(tx*100).toFixed(1)+'%';
+  document.getElementById('cpi').textContent=P(dpi+dis);
+  document.getElementById('cic').textContent=P(dic)+' 12%';
+  document.getElementById('cdi').textContent=P(ddi)+' 3,81%';
+  document.getElementById('ccp').textContent=mn?'Monofásico: R$ 0,00':'+'+R(cp);
+  document.getElementById('cci').textContent=st?'ST: sem crédito ICMS':'+'+R(ci);
+  document.getElementById('cre').textContent=R(rec);
+  document.getElementById('ccm').textContent=P(cv);
+  document.getElementById('cfr').textContent=P(fr);
+  document.getElementById('cst').textContent=st?P(stv)+' '+(si*100).toFixed(1)+'%':'—';
+  const el=document.getElementById('clu'),em=document.getElementById('cma');
+  el.textContent=R(luc);em.textContent=mar.toFixed(2)+'%';
+  el.style.color=luc>=0?'#10b981':'#ef4444';
+  em.style.color=mar>=15?'#10b981':mar>=5?'#f59e0b':'#ef4444';
 }
 
-function recalcular() {
-  const preco = parseFloat(document.getElementById('edit-preco').value) || 0;
-  const desc = parseFloat(document.getElementById('edit-desc').value) || 0;
-  const cmv = parseFloat(document.getElementById('edit-cmv').value) || 0;
-  const frete = parseFloat(document.getElementById('edit-frete').value) || 0;
-  const taxa_ml = (parseFloat(document.getElementById('edit-taxa').value) || 17) / 100;
-  const st = parseInt(document.getElementById('edit-st').value);
-  const st_imp = parseFloat(document.getElementById('edit-st-imp').value) || 0;
-  const mono = parseInt(document.getElementById('edit-mono').value);
-
-  const pf = preco * (1 - desc / 100);
-  const dml = pf * taxa_ml;
-  const dpis = pf * TAXA_PIS_COFINS_SAIDA;
-  const dicms = pf * TAXA_ICMS_SAIDA;
-  const ddifal = pf * TAXA_DIFAL;
-  const dibs = pf * TAXA_IBS;
-  const cpis = mono ? 0 : cmv * CRED_PIS_COFINS;
-  const cicms = st ? 0 : cmv * CRED_ICMS_PR;
-  const recebe = pf - dml - dpis - dicms - ddifal - dibs + cpis + cicms;
-  const st_val = st ? pf * st_imp : 0;
-  const lucro = recebe - cmv - frete - st_val;
-  const marg = pf > 0 ? lucro / pf * 100 : 0;
-
-  const R = v => 'R$ ' + v.toFixed(2);
-  const P = (v, d) => '(' + R(v) + ')';
-
-  document.getElementById('c-preco').textContent = R(preco);
-  document.getElementById('c-desc').textContent = desc > 0 ? P(preco * desc / 100) : '—';
-  document.getElementById('c-final').textContent = R(pf);
-  document.getElementById('c-taxa').textContent = '(' + R(dml) + ') ' + (taxa_ml*100).toFixed(1) + '%';
-  document.getElementById('c-pis').textContent = '(' + R(dpis) + ') ' + (TAXA_PIS_COFINS_SAIDA*100).toFixed(2) + '%';
-  document.getElementById('c-icms').textContent = '(' + R(dicms) + ') 12%';
-  document.getElementById('c-difal').textContent = '(' + R(ddifal) + ') 3,81%';
-  document.getElementById('c-ibs').textContent = '(' + R(dibs) + ') 2%';
-  document.getElementById('c-cred').textContent = mono ? 'Monofásico: R$ 0,00' : '+' + R(cpis);
-  document.getElementById('c-cred-icms').textContent = st ? 'ST: sem crédito' : '+' + R(cicms);
-  document.getElementById('c-recebe').textContent = R(recebe);
-  document.getElementById('c-cmv').textContent = '(' + R(cmv) + ')';
-  document.getElementById('c-frete').textContent = '(' + R(frete) + ')';
-  document.getElementById('c-st').textContent = st ? '(' + R(st_val) + ') ST ' + (st_imp*100).toFixed(1) + '%' : '—';
-
-  const el_lucro = document.getElementById('c-lucro');
-  const el_marg = document.getElementById('c-marg');
-  const lrow = document.getElementById('calc-lucro-row');
-  const mrow = document.getElementById('calc-marg-row');
-
-  el_lucro.textContent = R(lucro);
-  el_marg.textContent = marg.toFixed(2) + '%';
-  el_lucro.className = lucro >= 0 ? '' : 'negativo';
-  el_marg.className = marg >= 15 ? 'margem-ok' : marg >= 5 ? 'margem-warn' : 'margem-bad';
+async function salvar(){
+  if(_ei===null)return;
+  const r=_fil[_ei];
+  const body={id:document.getElementById('eid').value,sku:document.getElementById('esku').value,
+    preco:parseFloat(document.getElementById('ep').value),
+    desconto:parseFloat(document.getElementById('ed').value),
+    cmv_br:parseFloat(document.getElementById('ec').value),
+    frete_medio:parseFloat(document.getElementById('ef').value)};
+  Object.assign(r,{preco:body.preco,desconto:body.desconto,cmv:body.cmv_br,frete_medio:body.frete_medio,
+    st:parseInt(document.getElementById('est').value),
+    st_imposto:parseFloat(document.getElementById('esi').value),
+    monofasico:parseInt(document.getElementById('emn').value),
+    sale_fee:parseFloat(document.getElementById('et').value)/100});
+  calcAll();filtrar();fechar();
+  await Promise.all([
+    fetch(SRV+'/api/db/listing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),
+    body.cmv_br>0&&fetch(SRV+'/api/db/listing/fiscal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),
+  ]);
 }
 
-async function salvarListing() {
-  if (_editIdx === null) return;
-  const r = _filtrados[_editIdx];
-  const body = {
-    id: document.getElementById('edit-id').value,
-    sku: document.getElementById('edit-sku').value,
-    preco: parseFloat(document.getElementById('edit-preco').value),
-    desconto: parseFloat(document.getElementById('edit-desc').value),
-    cmv_br: parseFloat(document.getElementById('edit-cmv').value),
-    frete_medio: parseFloat(document.getElementById('edit-frete').value),
-    margem_minima: 5,
-  };
-  // Salvar fiscal também
-  const fiscal = {
-    id: body.id, sku: body.sku,
-    preco: body.preco, desconto: body.desconto,
-    frete_medio: body.frete_medio, cmv_br: body.cmv_br,
-  };
-
-  try {
-    await Promise.all([
-      fetch(SRV + '/api/db/listing', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify(body)
-      }),
-      fetch(SRV + '/api/db/listing/fiscal', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify(fiscal)
-      }),
-    ]);
-    // Atualizar local
-    Object.assign(r, {
-      preco: body.preco, desconto: body.desconto,
-      cmv: body.cmv_br, frete_medio: body.frete_medio,
-      st: parseInt(document.getElementById('edit-st').value),
-      st_imposto: parseFloat(document.getElementById('edit-st-imp').value),
-      monofasico: parseInt(document.getElementById('edit-mono').value),
-      sale_fee: parseFloat(document.getElementById('edit-taxa').value) / 100,
-    });
-    calcularTodos();
-    filtrar();
-    fecharModal();
-  } catch(e) { alert('Erro ao salvar: ' + e.message); }
+async function syncML(){
+  if(!confirm('Sincronizar anúncios ML?'))return;
+  document.getElementById('lbl-s').textContent='Sincronizando...';
+  await fetch(SRV+'/api/sync/bling-anuncios',{method:'POST'});
+  await carregar();
 }
 
-async function syncAnuncios() {
-  if (!confirm('Sincronizar anúncios do ML/Bling? Pode demorar alguns minutos.')) return;
-  document.getElementById('lbl-status').textContent = 'Sincronizando...';
-  try {
-    const r = await fetch(SRV + '/api/sync/bling-anuncios', {method:'POST'}).then(r => r.json());
-    document.getElementById('lbl-status').textContent = 'Sync concluído: ' + JSON.stringify(r);
-    await carregarDados();
-  } catch(e) { alert('Erro sync: ' + e.message); }
+function exportCSV(){
+  if(!_fil.length)return;
+  const cols=['id','sku','titulo','preco','desconto','pf','cmv','frete_medio','recebe','lucro','margem','st','status'];
+  const csv=[cols.join(',')].concat(_fil.map(r=>cols.map(c=>JSON.stringify(r[c]!==undefined?r[c]:'')).join(','))).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='gestor.csv';a.click();
 }
 
-function novoAnuncio() {
-  window.open('https://web-production-5aa0f.up.railway.app/produto_novo.html', '_blank');
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)fechar();});
+
+async function carregar(){
+  document.getElementById('v-cards').innerHTML='<div class="loading">Carregando...</div>';
+  try{
+    const data=await fetch(SRV+'/api/db/listings').then(r=>r.json());
+    _all=Array.isArray(data)?data:[];
+    calcAll();stats();filtrar();
+    document.getElementById('lbl-s').textContent=_all.length+' anúncios carregados';
+  }catch(e){document.getElementById('v-cards').innerHTML=`<div class="loading" style="color:#ef4444">Erro: ${e.message}</div>`;}
 }
 
-function exportarCSV() {
-  if (!_filtrados.length) return;
-  const cols = ['id','sku','titulo','preco','desconto','_pf','cmv','frete_medio','_recebe','_lucro','_margem','st','status'];
-  const heads = ['MLB','SKU','Título','Preço','Desc%','Preço Final','CMV BR','Frete','Recebe','Lucro','Margem%','ST','Status'];
-  const csv = [heads.join(',')].concat(_filtrados.map(r =>
-    cols.map(c => JSON.stringify(r[c] !== undefined ? (typeof r[c] === 'number' ? parseFloat(r[c].toFixed(4)) : r[c]) : '')).join(',')
-  )).join('\n');
-  const a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-  a.download = 'gestor_anuncios.csv';
-  a.click();
-}
-
-// Fechar modal clicando fora
-document.getElementById('modal-edit').addEventListener('click', function(e) {
-  if (e.target === this) fecharModal();
-});
-
-// Carregar ao iniciar
-carregarDados();
+carregar();
 </script>
 </body>
 </html>
