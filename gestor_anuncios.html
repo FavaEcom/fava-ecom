@@ -337,53 +337,67 @@ function nomeKit(sku){
 }
 
 function C(r){
-  const preco=parseFloat(r.preco||0),desc=parseFloat(r.desconto||0);
+  const preco=parseFloat(r.preco||0), desc=parseFloat(r.desconto||0);
   const canal=r.canal||'ml';
   const pf=preco*(1-desc/100);
-  // Taxa por canal
-  // Taxa por canal — Shopee usa tabela escalonada
-  let tx, fixoCanal=0;
-  if(canal==='shopee') {
-    const sh = calcTaxaShopee(parseFloat(r.preco||0));
-    tx = sh.pct; fixoCanal = sh.fixo;
-  } else if(canal==='yampi') {
-    tx = 0.05;
-  } else {
-    tx = parseFloat(r.sale_fee||0.17);
-  }
-  // Frete calculado pela tabela Full Super se peso disponível e canal ML
-  // Peso volumétrico: maior entre real e L×A×P/6000
-  const pesoFinal = calcPesoFinal(r.peso, r.largura, r.altura, r.profundidade);
-  // Para kits: peso pode ser somado dos componentes (já calculado externamente)
-  const freteCalc = canal==='ml' && pesoFinal > 0
-    ? calcFreteML(pesoFinal, parseFloat(r.preco||0))
-    : canal==='shopee'
-    ? calcFreteShopee(pesoFinal)
-    : null;
-  const cmv=parseFloat(r.cmv||0),fr=parseFloat(r.frete_medio||13);
-  const st=parseInt(r.st||0),si=parseFloat(r.st_imposto||0),mn=parseInt(r.monofasico||0);
-  const ded=pf*(tx+TP+TC+TD+TI);
-  const cp=mn?0:cmv*(TP+TI),ci=st?0:cmv*TC;
-  const rec=pf-ded+cp+ci,stv=st?pf*si:0;
-  const luc=rec-cmv-fr-stv,mar=pf>0?luc/pf*100:0;
+  if(pf<=0) return{pf:0,rec:0,luc:0,mar:0,cp:0,ci:0,stv:0,fr:0,freteCalc:null};
+
+  // Taxa e custo fixo por canal
+  let tx=0.17, fixo=0;
+  if(canal==='shopee'){const sh=calcTaxaShopee(preco); tx=sh.pct; fixo=sh.fixo;}
+  else if(canal==='yampi') tx=0.05;
+  else tx=parseFloat(r.sale_fee||0.17);
+
+  // Frete calculado pela tabela (ML=Full Super, Shopee=estimado)
+  const pesoFinal=calcPesoFinal(r.peso,r.largura,r.altura,r.profundidade);
+  const freteCalc = canal==='ml' && pesoFinal>0 ? calcFreteML(pesoFinal,preco)
+                  : canal==='shopee' ? calcFreteShopee(pesoFinal) : null;
+  const fr = freteCalc!==null ? freteCalc : parseFloat(r.frete_medio||0);
+
+  // CMV e impostos
+  const cmv=parseFloat(r.cmv||0);
+  const st=parseInt(r.st||0), si=parseFloat(r.st_imposto||0), mn=parseInt(r.monofasico||0);
+
+  // Deduções sobre o preço final
+  const usaDifal = canal!=='yampi' && canal!=='balcao'; // DIFAL só marketplace interestadual
+  const ded = pf*(tx + TP + (usaDifal ? TC+TD+TI : TC)) + fixo;
+
+  // Créditos fiscais (entrada)
+  const cp = mn ? 0 : cmv*(TP+TI);   // crédito PIS/COFINS
+  const ci = st ? 0 : cmv*TC;         // crédito ICMS PR
+
+  // Resultado
+  const rec=pf-ded+cp+ci;
+  const stv=st?pf*si:0;
+  const luc=rec-cmv-fr-stv;
+  const mar=pf>0?luc/pf*100:0;
   return{pf,rec,luc,mar,cp,ci,stv,fr,freteCalc};
 }
 
-function calcAll(){_all.forEach(r=>{const c=C(r);r.pf=c.pf;r.recebe=c.rec;r.lucro=c.luc;r.margem=c.mar;r.frete_calc=c.freteCalc;r.frete_usado=c.fr;});}
+function calcAll(){
+  _all.forEach(r=>{
+    const c=C(r);
+    r.pf=c.pf; r.recebe=c.rec; r.lucro=c.luc; r.margem=c.mar;
+    r.frete_calc=c.freteCalc; r.frete_usado=c.fr;
+  });
+}
 
 function stats(){
   const fcanal=document.getElementById('fcanal')?.value||'';
   const base = fcanal ? _all.filter(r=>(r.canal||'ml')===fcanal) : _all;
-  const tot=base.length,cmv=_all.filter(r=>parseFloat(r.cmv||0)>0).length;
+  const tot=base.length;
+  const comCmv=base.filter(r=>parseFloat(r.cmv||0)>0).length;
   const st=base.filter(r=>parseInt(r.st||0)).length,kits=base.filter(r=>psku(r.sku)==='kit').length;
-  const ms=base.filter(r=>parseFloat(r.cmv||0)>0);
+  const ms=base.filter(r=>parseFloat(r.cmv||0)>0&&parseFloat(r.margem||0)!==0);
   const med=ms.length?ms.reduce((s,r)=>s+r.margem,0)/ms.length:0;
-  document.getElementById('s-tot').textContent=fcanal?`${tot} (${fcanal})`:tot;
-  document.getElementById('s-cmv').textContent=cmv;
-  document.getElementById('s-med').textContent=med.toFixed(1)+'%';
+  document.getElementById('s-tot').textContent=tot;
+  document.getElementById('s-cmv').textContent=comCmv;
+  const medStr = isNaN(med)?'—':med.toFixed(1)+'%';
+  document.getElementById('s-med').textContent=medStr;
+  document.getElementById('s-med').style.color=isNaN(med)||med<5?'#ef4444':med<15?'#f59e0b':'#10b981';
   document.getElementById('s-st').textContent=st;
   document.getElementById('s-kit').textContent=kits;
-  document.getElementById('s-scmv').textContent=tot-cmv;
+  document.getElementById('s-scmv').textContent=tot-comCmv;
 }
 
 function filtrar(){
