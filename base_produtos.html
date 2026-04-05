@@ -190,7 +190,7 @@ td.ec input,td.ec select{width:100%;background:#0f172a;border:1px solid #3b82f6;
     </div>
     <div class="ma">
       <button class="btn btn-cinza" onclick="fechar()">Cancelar</button>
-      <button class="btn btn-verde" onclick="salvarModal()">💾 Salvar</button>
+      <button class="btn btn-verde" id="btn-salvar-modal" onclick="salvarModal()">💾 Salvar</button>
     </div>
   </div>
 </div>
@@ -342,6 +342,21 @@ function salvarInline(inp,sku,campo){
   if(campo==='cmv_pr')prod.custo_pr=val;
   _alterados[sku]=true;
   atualizarStats();filtrar();
+  // Persiste no servidor
+  fetch(SRV+'/api/db/produtos/update-fiscal',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({produtos:[{
+      sku,
+      cmv_br:parseFloat(prod.cmv_br||prod.custo_br||0),
+      cmv_pr:parseFloat(prod.cmv_pr||prod.custo_pr||0),
+      nome:prod.nome||'', familia:prod.familia||'',
+      st:parseInt(prod.st||0), st_imposto:parseFloat(prod.st_imposto||0),
+      ipi:parseFloat(prod.ipi||0), monofasico:parseInt(prod.monofasico||0),
+      peso:parseFloat(prod.peso||0), largura:parseFloat(prod.largura||0),
+      altura:parseFloat(prod.altura||0), profundidade:parseFloat(prod.profundidade||0),
+      ncm:prod.ncm||''
+    }]})
+  }).then(r=>r.json()).then(()=>{ delete _alterados[sku]; atualizarStats(); }).catch(()=>{});
 }
 
 // ── Modal ─────────────────────────────────────────────────────────
@@ -394,7 +409,8 @@ function salvarModal(){
   if(!prod)return;
   const cmvbr=parseFloat(document.getElementById('e-cmvbr').value)||0;
   const cmvpr=parseFloat(document.getElementById('e-cmvpr').value)||cmvbr;
-  Object.assign(prod,{
+  const dados={
+    sku,
     nome:document.getElementById('e-nome').value,
     familia:document.getElementById('e-fam').value,
     ncm:document.getElementById('e-ncm').value,
@@ -412,9 +428,26 @@ function salvarModal(){
     largura:parseFloat(document.getElementById('e-larg').value)||0,
     altura:parseFloat(document.getElementById('e-alt').value)||0,
     profundidade:parseFloat(document.getElementById('e-prof').value)||0,
-  });
+  };
+  // Atualiza memória local
+  Object.assign(prod, dados);
   _alterados[sku]=true;
-  atualizarStats();filtrar();fechar();
+  atualizarStats(); filtrar();
+  // Salva no servidor imediatamente
+  const btn=document.getElementById('btn-salvar-modal');
+  btn.disabled=true; btn.textContent='Salvando...';
+  fetch(SRV+'/api/db/produtos/update-fiscal',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({produtos:[dados]})
+  }).then(r=>r.json()).then(r=>{
+    delete _alterados[sku];
+    atualizarStats();
+    btn.textContent='✅ Salvo!';
+    setTimeout(()=>{ btn.disabled=false; btn.textContent='💾 Salvar'; fechar(); },800);
+  }).catch(e=>{
+    btn.disabled=false; btn.textContent='💾 Salvar';
+    alert('Erro ao salvar: '+e.message);
+  });
 }
 
 // ── Salvar tudo no servidor ───────────────────────────────────────

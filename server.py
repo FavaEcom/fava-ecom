@@ -786,6 +786,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         clean = self.path.split('?')[0]
         routes = {
             '/api/db/produtos':          self._get_produtos,
+            '/api/db/produto':           self._get_produto_sku,
             '/api/db/historico':         self._get_historico,
             '/api/db/pedidos-nf':        self._get_pedidos_nf,
             '/api/db/pedidos':           self._get_pedidos,
@@ -829,6 +830,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         clean = self.path.split('?')[0]
         routes = {
             '/api/db/produto':            self._post_produto,
+            '/api/db/produtos/update-fiscal': self._post_produtos_update_fiscal,
             '/api/db/historico':          self._post_historico,
             '/api/db/nf':                 self._post_nf,
             '/api/db/listing':            self._post_listing,
@@ -1326,6 +1328,61 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def _get_nfs(self):
         try: self._ok(exe("SELECT * FROM nf_entrada ORDER BY emissao DESC LIMIT 300", fetchall=True))
+        except Exception as e: self._err(500, str(e))
+
+    def _get_produto_sku(self):
+        try:
+            p = parse_qs(self.path.split("?")[1] if "?" in self.path else "")
+            sku = p.get("sku",[""])[0].strip()
+            if not sku: self._err(400,"sku obrigatorio"); return
+            row = exe("SELECT * FROM produtos WHERE sku=%s LIMIT 1",(sku,),fetchone=True)
+            self._ok(row if row else None)
+        except Exception as e: self._err(500, str(e))
+
+    def _post_produtos_update_fiscal(self):
+        """POST /api/db/produtos/update-fiscal — atualiza dados fiscais e logísticos em lote"""
+        try:
+            body = self._body()
+            prods = body if isinstance(body, list) else body.get("produtos", [])
+            if not prods: self._err(400,"produtos obrigatorio"); return
+            updated = 0
+            for p in prods:
+                sku = str(p.get("sku","")).strip()
+                if not sku: continue
+                # Colunas base (sempre existem)
+                base = {
+                    "custo_br": float(p.get("cmv_br") or p.get("custo_br") or 0),
+                    "custo_pr": float(p.get("cmv_pr") or p.get("custo_pr") or 0),
+                    "ipi":      float(p.get("ipi") or 0),
+                }
+                if p.get("nome"):   base["nome"]   = str(p["nome"])
+                if p.get("familia"):base["familia"] = str(p["familia"])
+                if p.get("ncm"):    base["ncm"]     = str(p["ncm"])
+                # Colunas opcionais — tentar update completo, fallback sem elas
+                opt = {
+                    "st":          int(p.get("st") or 0),
+                    "st_imposto":  float(p.get("st_imposto") or 0),
+                    "monofasico":  int(p.get("monofasico") or 0),
+                    "peso":        float(p.get("peso") or 0),
+                    "largura":     float(p.get("largura") or 0),
+                    "altura":      float(p.get("altura") or 0),
+                    "comprimento": float(p.get("profundidade") or p.get("comprimento") or 0),
+                }
+                if p.get("cest"):   opt["cest"]   = str(p["cest"])
+                if p.get("origem"): opt["origem"]  = str(p["origem"])
+                if p.get("cst"):    opt["cst"]     = str(p["cst"])
+                try:
+                    all_f = {**base, **opt}
+                    sets = ",".join(f"{k}=%s" for k in all_f)
+                    exe(f"UPDATE produtos SET {sets} WHERE sku=%s", list(all_f.values())+[sku])
+                    updated += 1
+                except:
+                    try:
+                        sets2 = ",".join(f"{k}=%s" for k in base)
+                        exe(f"UPDATE produtos SET {sets2} WHERE sku=%s", list(base.values())+[sku])
+                        updated += 1
+                    except: pass
+            self._ok({"ok":True,"updated":updated})
         except Exception as e: self._err(500, str(e))
 
     def _get_yampi_listings(self):
