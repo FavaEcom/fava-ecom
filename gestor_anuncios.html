@@ -721,6 +721,7 @@ async function lookupSkuGestor(sku){
 }
 
 
+async function salvar(){
   if(_ei===null)return;
   const r=_fil[_ei];
   const skuNovo = (document.getElementById('esku').value||'').trim() || r.sku || '';
