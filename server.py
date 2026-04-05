@@ -111,6 +111,20 @@ def criar_tabelas():
                 sale_fee REAL DEFAULT 0, listing_type TEXT, free_shipping INTEGER DEFAULT 0,
                 status TEXT, margem_minima REAL DEFAULT 0, frete_medio REAL DEFAULT 0,
                 desconto REAL DEFAULT 0,
+                peso REAL DEFAULT 0, largura REAL DEFAULT 0, altura REAL DEFAULT 0, comprimento REAL DEFAULT 0,
+                st INTEGER DEFAULT 0, st_imposto REAL DEFAULT 0, monofasico INTEGER DEFAULT 0,
+                updated_at TIMESTAMP DEFAULT NOW())""",
+            """CREATE TABLE IF NOT EXISTS yampi_listings (
+                id TEXT PRIMARY KEY, sku TEXT, titulo TEXT,
+                preco REAL DEFAULT 0, preco_lista REAL DEFAULT 0,
+                preco_custo REAL DEFAULT 0, peso REAL DEFAULT 0,
+                estoque INTEGER DEFAULT 0, status TEXT DEFAULT 'active',
+                updated_at TIMESTAMP DEFAULT NOW())""",
+            """CREATE TABLE IF NOT EXISTS yampi_listings (
+                id TEXT PRIMARY KEY, sku TEXT, titulo TEXT,
+                preco REAL DEFAULT 0, preco_lista REAL DEFAULT 0,
+                preco_custo REAL DEFAULT 0, peso REAL DEFAULT 0,
+                estoque INTEGER DEFAULT 0, status TEXT DEFAULT 'active',
                 updated_at TIMESTAMP DEFAULT NOW())""",
             """CREATE TABLE IF NOT EXISTS pedidos (
                 id TEXT PRIMARY KEY, canal TEXT, data TEXT, status TEXT,
@@ -281,6 +295,21 @@ def criar_tabelas():
     except: pass
     try:
         exe("ALTER TABLE ml_listings ADD COLUMN IF NOT EXISTS margem_real REAL DEFAULT 0")
+    except: pass
+    # Migração: peso, dimensões, fiscal
+    for col, tipo in [('peso','REAL DEFAULT 0'),('largura','REAL DEFAULT 0'),('altura','REAL DEFAULT 0'),
+                      ('comprimento','REAL DEFAULT 0'),('st','INTEGER DEFAULT 0'),
+                      ('st_imposto','REAL DEFAULT 0'),('monofasico','INTEGER DEFAULT 0')]:
+        try: exe(f"ALTER TABLE ml_listings ADD COLUMN IF NOT EXISTS {col} {tipo}")
+        except: pass
+    # Tabela yampi_listings
+    try:
+        exe("""CREATE TABLE IF NOT EXISTS yampi_listings (
+            id TEXT PRIMARY KEY, sku TEXT, titulo TEXT,
+            preco REAL DEFAULT 0, preco_lista REAL DEFAULT 0,
+            preco_custo REAL DEFAULT 0, peso REAL DEFAULT 0,
+            estoque INTEGER DEFAULT 0, status TEXT DEFAULT 'active',
+            updated_at TIMESTAMP DEFAULT NOW())""")
     except: pass
     try:
         exe("""CREATE TABLE IF NOT EXISTS pedidos_pc (
@@ -548,7 +577,7 @@ def sync_ml_listings():
     salvos = 0
     for i in range(0, len(all_ids), 20):
         lote = ','.join(all_ids[i:i+20])
-        d = ml_get(f'items?ids={lote}&attributes=id,title,price,seller_sku,listing_type_id,status,sale_fee,shipping')
+        d = ml_get(f'items?ids={lote}&attributes=id,title,price,seller_sku,listing_type_id,status,sale_fee,shipping,shipping_dimensions')
         if not d: continue
         for x in (d if isinstance(d, list) else []):
             if x.get('code') != 200: continue
@@ -563,15 +592,23 @@ def sync_ml_listings():
             shp       = it.get('shipping',{}) or {}
             free_ship = 1 if (shp.get('free_shipping') or ltype in ('gold_pro','gold_premium')) else 0
             status_it = it.get('status','')
+            # Dimensões e peso
+            dims = it.get('shipping_dimensions') or {}
+            peso_kg  = float((dims.get('weight') or {}).get('value') or 0) / 1000 if isinstance((dims.get('weight') or {}), dict) and (dims.get('weight') or {}).get('unit','') == 'g' else float((dims.get('weight') or {}).get('value') or 0)
+            larg_cm  = float((dims.get('width')  or {}).get('value') or 0)
+            alt_cm   = float((dims.get('height') or {}).get('value') or 0)
+            comp_cm  = float((dims.get('length') or {}).get('value') or 0)
             try:
                 c = ('ON CONFLICT(id) DO UPDATE SET sku=EXCLUDED.sku,titulo=EXCLUDED.titulo,'
                      'preco=EXCLUDED.preco,sale_fee=EXCLUDED.sale_fee,listing_type=EXCLUDED.listing_type,'
-                     'free_shipping=EXCLUDED.free_shipping,status=EXCLUDED.status') if IS_PG else \
+                     'free_shipping=EXCLUDED.free_shipping,status=EXCLUDED.status,'
+                     'peso=EXCLUDED.peso,largura=EXCLUDED.largura,altura=EXCLUDED.altura,comprimento=EXCLUDED.comprimento') if IS_PG else \
                     ('ON CONFLICT(id) DO UPDATE SET sku=excluded.sku,titulo=excluded.titulo,'
                      'preco=excluded.preco,sale_fee=excluded.sale_fee,listing_type=excluded.listing_type,'
-                     'free_shipping=excluded.free_shipping,status=excluded.status')
-                exe(f"INSERT INTO ml_listings (id,sku,titulo,preco,sale_fee,listing_type,free_shipping,status) VALUES ({qmark(8)}) {c}",
-                    (iid,sku,titulo,preco,sale_fee,ltype,free_ship,status_it))
+                     'free_shipping=excluded.free_shipping,status=excluded.status,'
+                     'peso=excluded.peso,largura=excluded.largura,altura=excluded.altura,comprimento=excluded.comprimento')
+                exe(f"INSERT INTO ml_listings (id,sku,titulo,preco,sale_fee,listing_type,free_shipping,status,peso,largura,altura,comprimento) VALUES ({qmark(12)}) {c}",
+                    (iid,sku,titulo,preco,sale_fee,ltype,free_ship,status_it,peso_kg,larg_cm,alt_cm,comp_cm))
                 salvos += 1
             except Exception as e:
                 print(f'[ML] listing {iid}: {e}')
@@ -749,7 +786,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         clean = self.path.split('?')[0]
         routes = {
             '/api/db/produtos':          self._get_produtos,
-            '/api/db/produto':           self._get_produto_sku,
             '/api/db/historico':         self._get_historico,
             '/api/db/pedidos-nf':        self._get_pedidos_nf,
             '/api/db/pedidos':           self._get_pedidos,
@@ -773,6 +809,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/cmv-cache':            self._get_cmv_compat,
             '/api/sync/now':             self._sync_now,
             '/api/sync/bling-anuncios':  self._sync_bling_anuncios,
+            '/api/sync/yampi':           self._sync_yampi,
             # ── NOVO: Bling OAuth ──────────────────────────────
             '/api/ml/refresh':            self._ml_refresh,
             '/api/ml/renovar':            self._ml_refresh,
@@ -807,8 +844,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/auth/tokens':           self._post_tokens,
             '/api/bling/set-token':         self._bling_set_token,
             '/api/cmv-cache':             self._post_cmv,
-            '/api/ml/item-status':        self._post_ml_item_status,
-            '/api/ml/item-excluir':       self._post_ml_item_excluir,
         }
         if clean in routes: routes[clean]()
         elif clean.startswith('/api/'): self._proxy('POST')
@@ -1065,16 +1100,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         try: self._ok(exe("SELECT * FROM produtos ORDER BY sku", fetchall=True))
         except Exception as e: self._err(500, str(e))
 
-    def _get_produto_sku(self):
-        try:
-            p = parse_qs(self.path.split("?")[1] if "?" in self.path else "")
-            sku = p.get("sku",[""])[0].strip()
-            if not sku: self._err(400, "sku obrigatorio"); return
-            row = exe("SELECT * FROM produtos WHERE sku=%s LIMIT 1", (sku,), fetchone=True)
-            if row: self._ok(row)
-            else: self._ok(None)
-        except Exception as e: self._err(500, str(e))
-
     def _post_bling_buscar_produto(self):
         """POST /api/db/bling-buscar-produto — busca produto no Bling por nome e retorna peso/dimensões"""
         try:
@@ -1305,6 +1330,52 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def _get_yampi_listings(self):
         try:
+            headers={"User-Token":YAMPI_TOKEN,"User-Secret-Key":YAMPI_SECRET,"Content-Type":"application/json","Accept":"application/json"}
+            result=[]; page=1
+            while True:
+                url=f"https://api.dooki.com.br/v2/{YAMPI_ALIAS}/catalog/products?include=skus&limit=100&page={page}"
+                req=urllib.request.Request(url,headers=headers)
+                with urllib.request.urlopen(req,timeout=20) as r:
+                    data=json.loads(r.read())
+                inner=data.get("data",[])
+                items=inner.get("data",[]) if isinstance(inner,dict) else inner
+                if not isinstance(items,list) or not items: break
+                skus=[str(p.get("sku","")) for p in items if p.get("sku")]
+                cmv_map={}
+                if skus:
+                    # Só colunas que existem em produtos
+                    rows=exe("SELECT sku,custo_br,custo_pr,familia FROM produtos WHERE sku=ANY(%s)",(skus,),fetchall=True)
+                    for row in (rows or []): cmv_map[str(row["sku"])]=row
+                for p in items:
+                    sku=str(p.get("sku",""))
+                    sds=(p.get("skus") or {}).get("data",[])
+                    sd=sds[0] if sds else {}
+                    # price_discount = preço real de venda; fallback para price_sale
+                    preco_desc = float(sd.get("price_discount") or 0)
+                    preco_sale = float(sd.get("price_sale") or 0)
+                    preco = preco_desc if preco_desc > 0 else preco_sale
+                    peso  = float(sd.get("weight") or 0)
+                    db=cmv_map.get(sku,{})
+                    cmv_pr = float(db.get("custo_pr") or db.get("custo_br") or 0)
+                    result.append({
+                        "id":str(p.get("id","")),"sku":sku,
+                        "titulo":str(p.get("name",""))[:200],
+                        "preco":preco,"preco_lista":preco_sale,
+                        "desconto":0,
+                        "cmv":cmv_pr,"cmv_br":float(db.get("custo_br") or 0),"cmv_pr":cmv_pr,
+                        "frete_medio":0,"sale_fee":0.05,
+                        "status":"active" if p.get("active") else "paused","canal":"yampi",
+                        "st":0,"st_imposto":0,"monofasico":0,
+                        "familia":str(db.get("familia","")),"peso":peso,
+                        "estoque":int(sd.get("total_in_stock") or 0)
+                    })
+                inner2=data.get("data",{})
+                last=inner2.get("last_page",1) if isinstance(inner2,dict) else 1
+                if page>=last or page>=15: break
+                page+=1
+            self._ok(result)
+        except Exception as e: self._ok({"ok":False,"error":str(e)})
+        try:
             # Usar constantes Yampi já definidas no servidor
             headers={"User-Token":YAMPI_TOKEN,"User-Secret-Key":YAMPI_SECRET,"Content-Type":"application/json","Accept":"application/json"}
             result=[]; page=1
@@ -1344,14 +1415,30 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def _get_listings(self):
         try:
             rows = exe("""
+                WITH ult_camp AS (
+                    SELECT DISTINCT ON (mlb_id)
+                        mlb_id, campanha as camp_nome, desconto as camp_desconto,
+                        data_aplicacao as camp_data, status as camp_status
+                    FROM campanha_historico
+                    ORDER BY mlb_id, data_aplicacao DESC
+                )
                 SELECT l.id, l.sku, COALESCE(NULLIF(l.titulo,''), p.nome, l.sku) as titulo, l.preco,
                        l.sale_fee, l.listing_type, l.free_shipping, l.status,
                        l.margem_minima, l.frete_medio, l.desconto,
                        COALESCE(p.custo_br, cm.cmv_br, 0) as cmv,
-                       COALESCE(p.custo_pr, cm.cmv_pr, 0) as cmv_pr
+                       COALESCE(p.custo_pr, cm.cmv_pr, 0) as cmv_pr,
+                       COALESCE(l.peso, p.peso, 0) as peso,
+                       COALESCE(l.largura, p.largura, 0) as largura,
+                       COALESCE(l.altura, p.altura, 0) as altura,
+                       COALESCE(l.comprimento, p.comprimento, 0) as profundidade,
+                       COALESCE(l.st, p.st, 0) as st,
+                       COALESCE(l.st_imposto, p.st_imposto, 0) as st_imposto,
+                       COALESCE(l.monofasico, p.monofasico, 0) as monofasico,
+                       ch.camp_nome, ch.camp_desconto, ch.camp_data, ch.camp_status
                 FROM ml_listings l
                 LEFT JOIN produtos p ON p.sku = l.sku
                 LEFT JOIN cprod_map cm ON cm.sku = l.sku
+                LEFT JOIN ult_camp ch ON ch.mlb_id = l.id
                 WHERE l.id IS NOT NULL
                 ORDER BY l.titulo
             """, fetchall=True)
@@ -1415,6 +1502,46 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 exe("UPDATE ml_listings SET lucro_estimado=%s,margem_real=%s WHERE id=%s",(round(lucro,2),round(marg,2),r["id"]))
             self._ok({"ok":True,"updated":len(rows)})
         except Exception as e: self._err(500, str(e))
+
+    def _sync_yampi(self):
+        """POST /api/sync/yampi — sincroniza anúncios Yampi para yampi_listings"""
+        try:
+            headers={"User-Token":YAMPI_TOKEN,"User-Secret-Key":YAMPI_SECRET,"Content-Type":"application/json","Accept":"application/json"}
+            salvos=0; page=1
+            c_pg = 'ON CONFLICT(id) DO UPDATE SET sku=EXCLUDED.sku,titulo=EXCLUDED.titulo,preco=EXCLUDED.preco,preco_lista=EXCLUDED.preco_lista,preco_custo=EXCLUDED.preco_custo,peso=EXCLUDED.peso,estoque=EXCLUDED.estoque,status=EXCLUDED.status,updated_at=NOW()'
+            while True:
+                url=f"https://api.dooki.com.br/v2/{YAMPI_ALIAS}/catalog/products?include=skus&limit=100&page={page}"
+                req=urllib.request.Request(url,headers=headers)
+                with urllib.request.urlopen(req,timeout=20) as r:
+                    data=json.loads(r.read())
+                inner=data.get("data",[])
+                items=inner.get("data",[]) if isinstance(inner,dict) else inner
+                if not isinstance(items,list) or not items: break
+                for p in items:
+                    sds=(p.get("skus") or {}).get("data",[])
+                    sd=sds[0] if sds else {}
+                    pid   = str(p.get("id",""))
+                    sku   = str(p.get("sku",""))
+                    nome  = str(p.get("name",""))[:200]
+                    p_desc= float(sd.get("price_discount") or 0)
+                    p_sale= float(sd.get("price_sale") or 0)
+                    preco = p_desc if p_desc > 0 else p_sale
+                    custo = float(sd.get("price_cost") or 0)
+                    peso  = float(sd.get("weight") or 0)
+                    estq  = int(sd.get("total_in_stock") or 0)
+                    status= "active" if p.get("active") else "paused"
+                    if not pid: continue
+                    try:
+                        exe(f"INSERT INTO yampi_listings (id,sku,titulo,preco,preco_lista,preco_custo,peso,estoque,status) VALUES ({qmark(9)}) {c_pg}",
+                            (pid,sku,nome,preco,p_sale,custo,peso,estq,status))
+                        salvos+=1
+                    except Exception as e: print(f'[YAMPI] {pid}: {e}')
+                inner2=data.get("data",{})
+                last=inner2.get("last_page",1) if isinstance(inner2,dict) else 1
+                if page>=last or page>=15: break
+                page+=1
+            self._ok({"ok":True,"salvos":salvos})
+        except Exception as e: self._err(500,str(e))
 
     def _sync_bling_anuncios(self):
         threading.Thread(target=sync_bling_anuncios, daemon=True).start()
@@ -1507,57 +1634,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         try:
             rows = exe("SELECT id,numero,data,canal,uf,total,lucro,margem,frete,sem_imposto,sem_custo FROM pedidos_pc ORDER BY data DESC LIMIT 1000", fetchall=True)
             self._ok({'total': len(rows), 'rows': rows})
-        except Exception as e: self._err(500, str(e))
-
-    def _post_ml_item_status(self):
-        """POST /api/ml/item-status — pausa ou reativa anúncio ML. body: {id, status: 'paused'|'active'}"""
-        try:
-            body = self._body()
-            mlb_id = str(body.get('id','')).strip()
-            status = str(body.get('status','paused')).strip()
-            if status not in ('paused','active'): self._err(400,'status deve ser paused ou active'); return
-            if not mlb_id: self._err(400,'id obrigatorio'); return
-            token = _ml_token.get('access','')
-            if not token: self._err(401,'token ML ausente'); return
-            url = f'https://api.mercadolibre.com/items/{mlb_id}'
-            payload = json.dumps({'status': status}).encode()
-            req = urllib.request.Request(url, data=payload, method='PUT',
-                headers={'Authorization':f'Bearer {token}','Content-Type':'application/json'})
-            try:
-                with urllib.request.urlopen(req, timeout=15) as r:
-                    resp = json.loads(r.read())
-            except urllib.error.HTTPError as e:
-                body_err = e.read().decode()
-                self._err(e.code, body_err); return
-            # Atualiza banco local
-            exe("UPDATE ml_listings SET status=%s WHERE id=%s", (status, mlb_id))
-            self._ok({'ok': True, 'id': mlb_id, 'status': status})
-        except Exception as e: self._err(500, str(e))
-
-    def _post_ml_item_excluir(self):
-        """POST /api/ml/item-excluir — fecha anúncio ML (status closed) e remove do banco local. body: {id}"""
-        try:
-            body = self._body()
-            mlb_id = str(body.get('id','')).strip()
-            if not mlb_id: self._err(400,'id obrigatorio'); return
-            token = _ml_token.get('access','')
-            if not token: self._err(401,'token ML ausente'); return
-            # Fechar no ML (status closed)
-            url = f'https://api.mercadolibre.com/items/{mlb_id}'
-            payload = json.dumps({'status': 'closed'}).encode()
-            req = urllib.request.Request(url, data=payload, method='PUT',
-                headers={'Authorization':f'Bearer {token}','Content-Type':'application/json'})
-            ml_ok = False
-            try:
-                with urllib.request.urlopen(req, timeout=15) as r:
-                    json.loads(r.read()); ml_ok = True
-            except urllib.error.HTTPError as e:
-                err_body = e.read().decode()
-                # Se já estava fechado (400) ou não existe (404), ainda remove do banco
-                if e.code not in (400, 404): self._err(e.code, err_body); return
-            # Remove do banco local
-            exe("DELETE FROM ml_listings WHERE id=%s", (mlb_id,))
-            self._ok({'ok': True, 'id': mlb_id, 'ml_fechado': ml_ok, 'removido_banco': True})
         except Exception as e: self._err(500, str(e))
 
     def _post_pedidos_pc(self):
