@@ -635,6 +635,21 @@ function renderResumoSalvar(){
   document.getElementById('resumo-salvar').innerHTML=html;
 }
 
+function limparParaNovoCadastro(){
+  fichas=[];dadosNF=null;
+  document.getElementById('log-ops').innerHTML='';
+  var btnNovo=document.getElementById('btn-novo-cad');
+  if(btnNovo) btnNovo.style.display='none';
+  document.getElementById('btn-anuncios').disabled=true;
+  // Volta para etapa 1
+  mostrarEtapa(1);
+  // Limpa inputs do step 1 se existirem
+  var xmlInp=document.getElementById('xml-upload');
+  if(xmlInp) xmlInp.value='';
+  mostrarSt('st-1','Pronto para novo cadastro','ok');
+  mostrarSt('st-2','');mostrarSt('st-3','');
+}
+
 function salvarTodos(){
   var selecionados=fichas.filter(function(f){return f.sel;});
   if(!selecionados.length){ mostrarSt('st-3','Nenhum produto selecionado.','err'); return; }
@@ -649,7 +664,21 @@ function salvarTodos(){
     if(idx>=selecionados.length){
       btn.disabled=false; btn.textContent='Salvar todos no banco';
       mostrarSt('st-3',ok+' produtos salvos'+(erros?' | '+erros+' erros':''),ok>0?'ok':'err');
-      if(ok>0) document.getElementById('btn-anuncios').disabled=false;
+      if(ok>0){
+        document.getElementById('btn-anuncios').disabled=false;
+        // Mostra botão Novo Cadastro
+        var btnNovo=document.getElementById('btn-novo-cad');
+        if(!btnNovo){
+          btnNovo=document.createElement('button');
+          btnNovo.id='btn-novo-cad';
+          btnNovo.className='btn';
+          btnNovo.style.cssText='background:#7c3aed;color:#fff;margin-top:8px;width:100%';
+          btnNovo.textContent='➕ Novo Cadastro';
+          btnNovo.onclick=limparParaNovoCadastro;
+          document.getElementById('log-ops').after(btnNovo);
+        }
+        btnNovo.style.display='';
+      }
       return;
     }
     var f=selecionados[idx]; idx++;

@@ -749,6 +749,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         clean = self.path.split('?')[0]
         routes = {
             '/api/db/produtos':          self._get_produtos,
+            '/api/db/produto':           self._get_produto_sku,
             '/api/db/historico':         self._get_historico,
             '/api/db/pedidos-nf':        self._get_pedidos_nf,
             '/api/db/pedidos':           self._get_pedidos,
@@ -806,6 +807,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/auth/tokens':           self._post_tokens,
             '/api/bling/set-token':         self._bling_set_token,
             '/api/cmv-cache':             self._post_cmv,
+            '/api/ml/item-status':        self._post_ml_item_status,
+            '/api/ml/item-excluir':       self._post_ml_item_excluir,
         }
         if clean in routes: routes[clean]()
         elif clean.startswith('/api/'): self._proxy('POST')
@@ -1060,6 +1063,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     # ────────────────────────────────────────────────────────────
     def _get_produtos(self):
         try: self._ok(exe("SELECT * FROM produtos ORDER BY sku", fetchall=True))
+        except Exception as e: self._err(500, str(e))
+
+    def _get_produto_sku(self):
+        try:
+            p = parse_qs(self.path.split("?")[1] if "?" in self.path else "")
+            sku = p.get("sku",[""])[0].strip()
+            if not sku: self._err(400, "sku obrigatorio"); return
+            row = exe("SELECT * FROM produtos WHERE sku=%s LIMIT 1", (sku,), fetchone=True)
+            if row: self._ok(row)
+            else: self._ok(None)
         except Exception as e: self._err(500, str(e))
 
     def _post_bling_buscar_produto(self):
@@ -1331,23 +1344,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def _get_listings(self):
         try:
             rows = exe("""
-                WITH ult_camp AS (
-                    SELECT DISTINCT ON (mlb_id)
-                        mlb_id, campanha as camp_nome, desconto as camp_desconto,
-                        data_aplicacao as camp_data, status as camp_status
-                    FROM campanha_historico
-                    ORDER BY mlb_id, data_aplicacao DESC
-                )
                 SELECT l.id, l.sku, COALESCE(NULLIF(l.titulo,''), p.nome, l.sku) as titulo, l.preco,
                        l.sale_fee, l.listing_type, l.free_shipping, l.status,
                        l.margem_minima, l.frete_medio, l.desconto,
                        COALESCE(p.custo_br, cm.cmv_br, 0) as cmv,
-                       COALESCE(p.custo_pr, cm.cmv_pr, 0) as cmv_pr,
-                       ch.camp_nome, ch.camp_desconto, ch.camp_data, ch.camp_status
+                       COALESCE(p.custo_pr, cm.cmv_pr, 0) as cmv_pr
                 FROM ml_listings l
                 LEFT JOIN produtos p ON p.sku = l.sku
                 LEFT JOIN cprod_map cm ON cm.sku = l.sku
-                LEFT JOIN ult_camp ch ON ch.mlb_id = l.id
                 WHERE l.id IS NOT NULL
                 ORDER BY l.titulo
             """, fetchall=True)
@@ -1503,6 +1507,57 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         try:
             rows = exe("SELECT id,numero,data,canal,uf,total,lucro,margem,frete,sem_imposto,sem_custo FROM pedidos_pc ORDER BY data DESC LIMIT 1000", fetchall=True)
             self._ok({'total': len(rows), 'rows': rows})
+        except Exception as e: self._err(500, str(e))
+
+    def _post_ml_item_status(self):
+        """POST /api/ml/item-status — pausa ou reativa anúncio ML. body: {id, status: 'paused'|'active'}"""
+        try:
+            body = self._body()
+            mlb_id = str(body.get('id','')).strip()
+            status = str(body.get('status','paused')).strip()
+            if status not in ('paused','active'): self._err(400,'status deve ser paused ou active'); return
+            if not mlb_id: self._err(400,'id obrigatorio'); return
+            token = _ml_token.get('access','')
+            if not token: self._err(401,'token ML ausente'); return
+            url = f'https://api.mercadolibre.com/items/{mlb_id}'
+            payload = json.dumps({'status': status}).encode()
+            req = urllib.request.Request(url, data=payload, method='PUT',
+                headers={'Authorization':f'Bearer {token}','Content-Type':'application/json'})
+            try:
+                with urllib.request.urlopen(req, timeout=15) as r:
+                    resp = json.loads(r.read())
+            except urllib.error.HTTPError as e:
+                body_err = e.read().decode()
+                self._err(e.code, body_err); return
+            # Atualiza banco local
+            exe("UPDATE ml_listings SET status=%s WHERE id=%s", (status, mlb_id))
+            self._ok({'ok': True, 'id': mlb_id, 'status': status})
+        except Exception as e: self._err(500, str(e))
+
+    def _post_ml_item_excluir(self):
+        """POST /api/ml/item-excluir — fecha anúncio ML (status closed) e remove do banco local. body: {id}"""
+        try:
+            body = self._body()
+            mlb_id = str(body.get('id','')).strip()
+            if not mlb_id: self._err(400,'id obrigatorio'); return
+            token = _ml_token.get('access','')
+            if not token: self._err(401,'token ML ausente'); return
+            # Fechar no ML (status closed)
+            url = f'https://api.mercadolibre.com/items/{mlb_id}'
+            payload = json.dumps({'status': 'closed'}).encode()
+            req = urllib.request.Request(url, data=payload, method='PUT',
+                headers={'Authorization':f'Bearer {token}','Content-Type':'application/json'})
+            ml_ok = False
+            try:
+                with urllib.request.urlopen(req, timeout=15) as r:
+                    json.loads(r.read()); ml_ok = True
+            except urllib.error.HTTPError as e:
+                err_body = e.read().decode()
+                # Se já estava fechado (400) ou não existe (404), ainda remove do banco
+                if e.code not in (400, 404): self._err(e.code, err_body); return
+            # Remove do banco local
+            exe("DELETE FROM ml_listings WHERE id=%s", (mlb_id,))
+            self._ok({'ok': True, 'id': mlb_id, 'ml_fechado': ml_ok, 'removido_banco': True})
         except Exception as e: self._err(500, str(e))
 
     def _post_pedidos_pc(self):

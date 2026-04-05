@@ -93,6 +93,7 @@ td.ec input{width:100%;background:#0f172a;border:1px solid #3b82f6;color:#fff;pa
   <a href="https://web-production-5aa0f.up.railway.app/produto_novo.html">📦 Produto Novo</a>
   <a href="https://web-production-5aa0f.up.railway.app/gestor_anuncios.html" class="ativo">📢 Gestor</a>
   <a href="https://web-production-5aa0f.up.railway.app/calculadora_fava.html">🧮 Calculadora</a>
+  <a href="https://web-production-5aa0f.up.railway.app/cotacao_fava.html">📋 Cotação</a>
 </nav>
 
 <div class="toolbar">
@@ -138,8 +139,15 @@ td.ec input{width:100%;background:#0f172a;border:1px solid #3b82f6;color:#fff;pa
 <div class="modal" id="modal">
   <div class="mbox">
     <h2 id="mt">—</h2><div class="msub" id="ms">—</div>
-    <input type="hidden" id="eid"><input type="hidden" id="esku"><input type="hidden" id="ecanal">
+    <input type="hidden" id="eid"><input type="hidden" id="ecanal">
     <div class="mgrid">
+      <div class="mf" style="grid-column:span 2">
+        <label>SKU Fava <span id="sku-lookup-status" style="font-size:10px;margin-left:6px"></span></label>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="esku" style="flex:1;background:#0f172a;border:1px solid #334155;color:#60a5fa;padding:6px 10px;border-radius:6px;font-size:13px;font-weight:700;font-family:monospace" placeholder="Ex: 1363" onchange="lookupSkuGestor(this.value.trim())">
+          <button class="btn btn-cinza" style="font-size:11px;padding:5px 10px" onclick="lookupSkuGestor(document.getElementById('esku').value.trim())">🔍 Buscar</button>
+        </div>
+      </div>
       <div class="mf"><label>Preço (R$)</label><input type="number" id="ep" step="0.01" oninput="rc()"></div>
       <div class="mf"><label>Desconto (%)</label><input type="number" id="ed" step="0.5" min="0" max="80" oninput="rc()"></div>
       <div class="mf"><label>CMV Brasil (R$)</label><input type="number" id="ec" step="0.01" oninput="rc()"></div>
@@ -176,6 +184,8 @@ td.ec input{width:100%;background:#0f172a;border:1px solid #3b82f6;color:#fff;pa
     </div>
     <div class="ma">
       <button class="btn btn-cinza" onclick="fechar()">Cancelar</button>
+      <button class="btn" id="btn-status-ml" style="background:#d97706" onclick="alterarStatusML()">⏸ Pausar ML</button>
+      <button class="btn" style="background:#dc2626" onclick="fecharAnuncioML()">🗑 Fechar/Excluir ML</button>
       <button class="btn btn-verde" onclick="salvar()">💾 Salvar</button>
     </div>
   </div>
@@ -568,7 +578,13 @@ function abrir(i){
   document.getElementById('mt').textContent=titulo.substring(0,60);
   document.getElementById('ms').textContent=`${r.id||''} | SKU: ${r.sku||''} | Canal: ${(r.canal||'ml').toUpperCase()} | Tipo: ${tipo}`;
   document.getElementById('eid').value=r.id||'';
-  const _elCanal=document.getElementById('ecanal');if(_elCanal)_elCanal.value=r.canal||'ml';document.getElementById('esku').value=r.sku||'';
+  const _elCanal=document.getElementById('ecanal');if(_elCanal)_elCanal.value=r.canal||'ml';
+  const _skuEl=document.getElementById('esku');
+  if(_skuEl){ _skuEl.value=r.sku||''; }
+  const _stEl=document.getElementById('sku-lookup-status');
+  if(_stEl) _stEl.textContent='';
+  // Se SKU preenchido, busca dados do produto automaticamente
+  if(r.sku) lookupSkuGestor(r.sku);
   document.getElementById('ep').value=parseFloat(r.preco||0).toFixed(2);
   document.getElementById('ed').value=parseFloat(r.desconto||0).toFixed(1);
   document.getElementById('ec').value=parseFloat(r.cmv||0).toFixed(4);
@@ -581,6 +597,13 @@ function abrir(i){
   document.getElementById('esi').value=parseFloat(r.st_imposto||0).toFixed(3);
   document.getElementById('emn').value=String(r.monofasico||0);
   document.getElementById('modal').classList.add('open');rc();
+  // Ajusta botão Pausar/Reativar
+  const btnSt=document.getElementById('btn-status-ml');
+  if(btnSt){
+    if(r.status==='active'){ btnSt.textContent='⏸ Pausar ML'; btnSt.style.background='#d97706'; }
+    else if(r.status==='paused'){ btnSt.textContent='▶ Reativar ML'; btnSt.style.background='#059669'; }
+    else { btnSt.style.display='none'; }
+  }
 }
 
 function fechar(){document.getElementById('modal').classList.remove('open');_ei=null;}
@@ -632,15 +655,81 @@ function rc(){
   em.style.color=mar>=15?'#10b981':mar>=5?'#f59e0b':'#ef4444';
 }
 
-async function salvar(){
+async function alterarStatusML(){
   if(_ei===null)return;
   const r=_fil[_ei];
-  const body={id:document.getElementById('eid').value,sku:document.getElementById('esku').value,
+  const id=document.getElementById('eid').value;
+  if(!id||!id.startsWith('MLB')){alert('Este anúncio não tem ID ML válido.');return;}
+  const novoStatus = (r.status==='active')?'paused':'active';
+  const label = novoStatus==='paused'?'Pausar':'Reativar';
+  if(!confirm(`${label} o anúncio ${id}?`))return;
+  const btn=document.getElementById('btn-status-ml');
+  btn.disabled=true; btn.textContent='Aguarde...';
+  try{
+    const res=await fetch(SRV+'/api/ml/item-status',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id,status:novoStatus})});
+    const d=await res.json();
+    if(d.ok){
+      r.status=novoStatus;
+      alert(`✅ Anúncio ${novoStatus==='paused'?'pausado':'reativado'} no ML.`);
+      calcAll();filtrar();fechar();
+    } else { alert('Erro ML: '+(d.error||JSON.stringify(d))); }
+  }catch(e){alert('Erro: '+e.message);}
+  finally{btn.disabled=false;}
+}
+
+async function fecharAnuncioML(){
+  if(_ei===null)return;
+  const r=_fil[_ei];
+  const id=document.getElementById('eid').value;
+  if(!id||!id.startsWith('MLB')){alert('Este anúncio não tem ID ML válido.');return;}
+  if(!confirm(`⚠️ Fechar e EXCLUIR permanentemente o anúncio ${id} (${r.titulo||r.sku||''})?\n\nEsta ação fecha no ML e remove do painel.`))return;
+  try{
+    const res=await fetch(SRV+'/api/ml/item-excluir',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id})});
+    const d=await res.json();
+    if(d.ok){
+      _all=_all.filter(x=>x.id!==id);
+      calcAll();filtrar();fechar();
+      alert('✅ Anúncio fechado no ML e removido do painel.');
+    } else { alert('Erro: '+(d.error||JSON.stringify(d))); }
+  }catch(e){alert('Erro: '+e.message);}
+}
+
+async function lookupSkuGestor(sku){
+  if(!sku) return;
+  const st = document.getElementById('sku-lookup-status');
+  if(st) { st.textContent='🔍...'; st.style.color='#94a3b8'; }
+  try{
+    const r = await fetch(SRV+'/api/db/produto?sku='+encodeURIComponent(sku));
+    const prod = await r.json();
+    if(prod && prod.sku){
+      if(parseFloat(prod.custo_br||prod.cmv_br||0)>0){
+        document.getElementById('ec').value = parseFloat(prod.custo_br||prod.cmv_br||0).toFixed(4);
+      }
+      document.getElementById('est').value = String(prod.st||0);
+      document.getElementById('esi').value = parseFloat(prod.st_imposto||0).toFixed(3);
+      document.getElementById('emn').value = String(prod.monofasico||0);
+      if(st){ st.textContent='✅ '+( prod.nome||sku); st.style.color='#10b981'; }
+      rc();
+    } else {
+      if(st){ st.textContent='⚠ SKU não cadastrado'; st.style.color='#f59e0b'; }
+    }
+  }catch(e){
+    if(st){ st.textContent='Erro: '+e.message; st.style.color='#ef4444'; }
+  }
+}
+
+
+  if(_ei===null)return;
+  const r=_fil[_ei];
+  const skuNovo = (document.getElementById('esku').value||'').trim() || r.sku || '';
+  const body={id:document.getElementById('eid').value,sku:skuNovo,
     preco:parseFloat(document.getElementById('ep').value),
     desconto:parseFloat(document.getElementById('ed').value),
     cmv_br:parseFloat(document.getElementById('ec').value),
     frete_medio:parseFloat(document.getElementById('ef').value)};
-  Object.assign(r,{preco:body.preco,desconto:body.desconto,cmv:body.cmv_br,frete_medio:body.frete_medio,
+  Object.assign(r,{sku:skuNovo,preco:body.preco,desconto:body.desconto,cmv:body.cmv_br,frete_medio:body.frete_medio,
     st:parseInt(document.getElementById('est').value),
     st_imposto:parseFloat(document.getElementById('esi').value),
     monofasico:parseInt(document.getElementById('emn').value),

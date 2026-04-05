@@ -2431,10 +2431,11 @@ async function buscarSkuOrc(idx){
     // 1. Tenta banco local (cmvBanco) primeiro — mais rápido
     const local = cmvBanco[sku] || cmvBanco[String(parseInt(sku))] || null;
     if(local && local.cmvPr>0){
-      orcItems[idx-1]={...orcItems[idx-1], sku, nome:local.nome||sku, cmvUnit:local.cmvPr, temST:!!(local.st||0), manual:false};
+      const nomeLocal = local.nome && local.nome !== sku ? local.nome : (local.nome||sku);
+      orcItems[idx-1]={...orcItems[idx-1], sku, nome:nomeLocal, cmvUnit:local.cmvPr, temST:!!(local.st||0), stImposto:local.stImposto||0, manual:false};
       const elNome1=document.getElementById(`orc-nome-${idx}`);
       const elCmv1=document.getElementById(`orc-cmv-${idx}`);
-      if(elNome1) elNome1.textContent=local.nome||sku;
+      if(elNome1) elNome1.textContent=nomeLocal;
       if(elCmv1)  elCmv1.value=local.cmvPr.toFixed(4);
       // força re-render se tabela ainda não existe
       if(!document.getElementById('orc-precounit-1')) renderOrcTabela();
@@ -2450,10 +2451,11 @@ async function buscarSkuOrc(idx){
         if(prod && (prod.custo_pr||prod.custo_br)>0){
           const cmvPr = prod.custo_pr||prod.custo_br||0;
           cmvBanco[sku] = {nome:prod.nome||sku, cmvBr:prod.cmv_br||prod.custo_br||0, cmvPr:prod.cmv_pr||prod.custo_pr||cmvPr, st:parseInt(prod.st||0), stImposto:parseFloat(prod.st_imposto||0), custo:prod.custo||0, dt:new Date().toISOString().slice(0,10)};
-          orcItems[idx-1]={...orcItems[idx-1], sku, nome:prod.nome||sku, cmvUnit:cmvPr, temST:!!(parseInt(prod.st||0)), manual:false};
+          const nomeRail = prod.nome || sku;
+          orcItems[idx-1]={...orcItems[idx-1], sku, nome:nomeRail, cmvUnit:cmvPr, temST:!!(parseInt(prod.st||0)), stImposto:parseFloat(prod.st_imposto||0), manual:false};
           const elNome2=document.getElementById(`orc-nome-${idx}`);
           const elCmv2=document.getElementById(`orc-cmv-${idx}`);
-          if(elNome2) elNome2.textContent=prod.nome||sku;
+          if(elNome2) elNome2.textContent=nomeRail;
           if(elCmv2)  elCmv2.value=cmvPr.toFixed(4);
           if(!document.getElementById('orc-precounit-1')) renderOrcTabela();
           else calcOrc();
@@ -2526,9 +2528,9 @@ function calcOrc(){
     // Qtd e MC
     if(inpQtd) orcItems[i].qtd = parseFloat(inpQtd.value)||1;
     orcItems[i].mc = inpMc ? (parseFloat(inpMc.value)||30)/100 : mcPad;
-    // Nome: sempre sincroniza se orcItem tem nome real
-    if(elNome){
-      elNome.textContent = (orcItems[i].nome && orcItems[i].nome !== orcItems[i].sku) ? orcItems[i].nome : (elNome.textContent||orcItems[i].sku||'—');
+    // Nome: prioridade ao nome do orcItem se for diferente de vazio
+    if(elNome && orcItems[i].nome && orcItems[i].nome.length > 0){
+      elNome.textContent = orcItems[i].nome;
     }
   });
 
@@ -2697,7 +2699,15 @@ function renderOrcTabela(){
   const origST = switchTab;
   switchTab = function(t){
     origST(t);
-    if(t === 'orcamento') setTimeout(calcOrc, 50);
+    if(t === 'orcamento'){
+      // Pré-carrega banco para ter nome e ST disponíveis no buscarSkuOrc
+      if(Object.keys(cmvBanco).length < 5){
+        fetch('https://web-production-5aa0f.up.railway.app/api/db/produtos').then(r=>r.json()).then(prods=>{
+          prods.forEach(p=>{ if(p.sku){ const k=String(p.sku).trim(); cmvBanco[k]={nome:p.nome||k,cmvBr:p.custo_br||0,cmvPr:p.custo_pr||p.custo_br||0,custo:p.custo||0,st:parseInt(p.st||0),stImposto:parseFloat(p.st_imposto||0)}; } });
+        }).catch(()=>{});
+      }
+      setTimeout(calcOrc, 50);
+    }
   };
 })();
 
@@ -2716,7 +2726,7 @@ async function balcaoInit(){
         prods.forEach(p=>{
           if(p.sku){
             const k = String(p.sku).trim();
-            cmvBanco[k] = {nome:p.nome||k, cmvBr:p.custo_br||0, cmvPr:p.custo_pr||p.custo_br||0, custo:p.custo||0};
+            cmvBanco[k] = {nome:p.nome||k, cmvBr:p.custo_br||0, cmvPr:p.custo_pr||p.custo_br||0, custo:p.custo||0, st:parseInt(p.st||0), stImposto:parseFloat(p.st_imposto||0)};
           }
         });
       }
