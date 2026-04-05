@@ -1484,13 +1484,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                        l.margem_minima, l.frete_medio, l.desconto,
                        COALESCE(p.custo_br, cm.cmv_br, 0) as cmv,
                        COALESCE(p.custo_pr, cm.cmv_pr, 0) as cmv_pr,
-                       COALESCE(l.peso, p.peso, 0) as peso,
-                       COALESCE(l.largura, p.largura, 0) as largura,
-                       COALESCE(l.altura, p.altura, 0) as altura,
-                       COALESCE(l.comprimento, p.comprimento, 0) as profundidade,
-                       COALESCE(l.st, p.st, 0) as st,
-                       COALESCE(l.st_imposto, p.st_imposto, 0) as st_imposto,
-                       COALESCE(l.monofasico, p.monofasico, 0) as monofasico,
+                       COALESCE(l.peso, 0) as peso,
+                       COALESCE(l.largura, 0) as largura,
+                       COALESCE(l.altura, 0) as altura,
+                       COALESCE(l.comprimento, 0) as profundidade,
+                       COALESCE(l.st, 0) as st,
+                       COALESCE(l.st_imposto, 0) as st_imposto,
+                       COALESCE(l.monofasico, 0) as monofasico,
                        ch.camp_nome, ch.camp_desconto, ch.camp_data, ch.camp_status
                 FROM ml_listings l
                 LEFT JOIN produtos p ON p.sku = l.sku
