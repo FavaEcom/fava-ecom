@@ -1331,14 +1331,23 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def _get_listings(self):
         try:
             rows = exe("""
+                WITH ult_camp AS (
+                    SELECT DISTINCT ON (mlb_id)
+                        mlb_id, campanha as camp_nome, desconto as camp_desconto,
+                        data_aplicacao as camp_data, status as camp_status
+                    FROM campanha_historico
+                    ORDER BY mlb_id, data_aplicacao DESC
+                )
                 SELECT l.id, l.sku, COALESCE(NULLIF(l.titulo,''), p.nome, l.sku) as titulo, l.preco,
                        l.sale_fee, l.listing_type, l.free_shipping, l.status,
                        l.margem_minima, l.frete_medio, l.desconto,
                        COALESCE(p.custo_br, cm.cmv_br, 0) as cmv,
-                       COALESCE(p.custo_pr, cm.cmv_pr, 0) as cmv_pr
+                       COALESCE(p.custo_pr, cm.cmv_pr, 0) as cmv_pr,
+                       ch.camp_nome, ch.camp_desconto, ch.camp_data, ch.camp_status
                 FROM ml_listings l
                 LEFT JOIN produtos p ON p.sku = l.sku
                 LEFT JOIN cprod_map cm ON cm.sku = l.sku
+                LEFT JOIN ult_camp ch ON ch.mlb_id = l.id
                 WHERE l.id IS NOT NULL
                 ORDER BY l.titulo
             """, fetchall=True)

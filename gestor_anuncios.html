@@ -40,6 +40,8 @@ nav a.ativo{color:#93c5fd;border-bottom-color:#60a5fa}
 .tag-kit{font-size:10px;color:#a78bfa;font-weight:600;margin-left:4px}
 .tag-var{font-size:10px;color:#38bdf8;font-weight:600;margin-left:4px}
 .tag-st{font-size:10px;color:#fbbf24;font-weight:700;padding:1px 5px;background:#451a0344;border-radius:3px;margin-left:4px}
+.tag-promo{font-size:10px;color:#fff;font-weight:700;padding:2px 6px;background:#b45309;border-radius:4px;display:inline-flex;align-items:center;gap:3px}
+.card-promo{margin-top:6px;padding:5px 8px;border-radius:5px;background:#451a0344;border:1px solid #92400e;font-size:11px;display:flex;justify-content:space-between;align-items:center}
 /* Tabela */
 .tabela-wrap{overflow:auto;max-height:calc(100vh - 210px)}
 table{width:100%;border-collapse:collapse;min-width:1250px}
@@ -100,6 +102,7 @@ td.ec input{width:100%;background:#0f172a;border:1px solid #3b82f6;color:#fff;pa
   <select id="fm" onchange="filtrar()"><option value="">Margem: Todas</option><option value="ok">OK (≥15%)</option><option value="warn">Atenção 5-15%</option><option value="bad">Ruim &lt;5%</option></select>
   <select id="fs" onchange="filtrar()"><option value="">Status: Todos</option><option value="active">Ativo</option><option value="paused">Pausado</option></select>
   <select id="ft" onchange="filtrar()"><option value="">Tipo: Todos</option><option value="simples">Simples</option><option value="kit">Kit</option><option value="variacao">Variação</option></select>
+  <select id="fprom" onchange="filtrar()"><option value="">Promo: Todas</option><option value="1">Em promoção</option><option value="0">Sem promoção</option></select>
 </div>
 
 <div class="stats">
@@ -109,6 +112,7 @@ td.ec input{width:100%;background:#0f172a;border:1px solid #3b82f6;color:#fff;pa
   <span>Com ST: <b id="s-st">—</b></span>
   <span>Kits: <b id="s-kit" style="color:#a78bfa">—</b></span>
   <span>Sem CMV: <b id="s-scmv" style="color:#ef4444">—</b></span>
+  <span>Em promoção: <b id="s-prom" style="color:#f59e0b">—</b></span>
 </div>
 
 <div id="v-cards" class="cards-wrap"></div>
@@ -124,6 +128,7 @@ td.ec input{width:100%;background:#0f172a;border:1px solid #3b82f6;color:#fff;pa
       <th class="n">Recebe</th>
       <th class="n" onclick="ord('lucro')">Lucro ↕</th>
       <th class="n" onclick="ord('margem')">Margem ↕</th>
+      <th>Promo</th>
       <th>ST</th><th>Status</th><th>Ação</th>
     </tr></thead>
     <tbody id="tb"></tbody>
@@ -427,6 +432,7 @@ function stats(){
   document.getElementById('s-st').textContent=st;
   document.getElementById('s-kit').textContent=kits;
   document.getElementById('s-scmv').textContent=tot-comCmv;
+  document.getElementById('s-prom').textContent=base.filter(r=>parseFloat(r.camp_desconto||0)>0).length;
 }
 
 function filtrar(){
@@ -434,12 +440,15 @@ function filtrar(){
   const fcanal=document.getElementById('fcanal').value;
   const fst=document.getElementById('fst').value,fm=document.getElementById('fm').value;
   const fs=document.getElementById('fs').value,ft=document.getElementById('ft').value;
+  const fprom=document.getElementById('fprom').value;
   _fil=_all.filter(r=>{
     if(q&&![(r.id||''),(r.titulo||''),(String(r.sku||''))].join(' ').toLowerCase().includes(q))return false;
     if(fcanal&&(r.canal||'ml')!==fcanal)return false;
     if(fst&&String(r.st||0)!==fst)return false;
     if(fs&&(r.status||'')!==fs)return false;
     if(ft&&psku(r.sku)!==ft)return false;
+    if(fprom==='1'&&!(parseFloat(r.camp_desconto||0)>0))return false;
+    if(fprom==='0'&&parseFloat(r.camp_desconto||0)>0)return false;
     if(fm){const m=r.margem||0;
       if(fm==='ok'&&m<15)return false;
       if(fm==='warn'&&(m<5||m>=15))return false;
@@ -467,10 +476,18 @@ function renderCards(){
     const cmv=parseFloat(r.cmv||0),tipo=psku(r.sku);
     const titulo=tipo==='kit'?nomeKit(r.sku):(r.titulo||r.sku||'—');
     const corT=tipo==='kit'?'#f59e0b':cmv>0?'#cbd5e1':'#64748b';
+    const campDesc=parseFloat(r.camp_desconto||0);
+    const campNome=r.camp_nome||'';
+    const mProm=campDesc>0?C({...r,desconto:campDesc}):null;
+    const promBadge=campDesc>0?`<span class="tag-promo">🏷️ ${campDesc.toFixed(0)}% off</span>`:'';
+    const promBloco=campDesc>0?`<div class="card-promo">
+      <span style="color:#fbbf24;font-weight:700">${campNome}</span>
+      <span style="color:${(mProm.mar>=10)?'#10b981':(mProm.mar>=0)?'#f59e0b':'#ef4444'};font-weight:700">Marg c/promo: ${mProm.mar.toFixed(1)}%</span>
+    </div>`:'';
     return `<div class="card" ondblclick="abrir(${i})">
       <div class="card-head">
         <div>
-          <div class="card-sku">${r.sku||'—'}${tipo==='kit'?'<span class="tag-kit">[kit]</span>':tipo==='variacao'?'<span class="tag-var">[var]</span>':''}${parseInt(r.st||0)?'<span class="tag-st">ST</span>':''}</div>
+          <div class="card-sku">${r.sku||'—'}${tipo==='kit'?'<span class="tag-kit">[kit]</span>':tipo==='variacao'?'<span class="tag-var">[var]</span>':''}${parseInt(r.st||0)?'<span class="tag-st">ST</span>':''}${promBadge}</div>
           <div class="card-mlb">${(r.id||'').substring(0,20)}</div>
         </div>
         <div style="display:flex;gap:4px;align-items:center">
@@ -486,6 +503,7 @@ function renderCards(){
         <div class="cv"><label>Lucro</label><b style="color:${(r.lucro||0)>=0?'#10b981':'#ef4444'}">${R(r.lucro)}</b></div>
       </div>
       <div class="card-margem ${mc}">${f(m)}% margem</div>
+      ${promBloco}
     </div>`;
   }).join('');
 }
@@ -519,6 +537,7 @@ function renderTabela(){
       <td class="n">${R(r.recebe)}</td>
       <td class="n" style="color:${(r.lucro||0)>=0?'#10b981':'#ef4444'}">${R(r.lucro)}</td>
       <td class="n" style="color:${mc};font-weight:700">${f(m)}%</td>
+      <td>${(()=>{const cd=parseFloat(r.camp_desconto||0);if(!cd)return '<span style="color:#334155">—</span>';const mp=C({...r,desconto:cd});const mc2=mp.mar>=10?'#10b981':mp.mar>=0?'#f59e0b':'#ef4444';return `<span style="color:#fbbf24;font-size:10px;font-weight:700">🏷️ ${cd.toFixed(0)}%</span> <span style="color:${mc2};font-size:10px">${mp.mar.toFixed(1)}%</span>`;})()}</td>
       <td>${parseInt(r.st||0)?'<span style="color:#f59e0b;font-size:11px;font-weight:700">ST</span>':'<span style="color:#334155">—</span>'}</td>
       <td style="color:${r.status==='active'?'#10b981':r.status==='paused'?'#f59e0b':'#64748b'};font-size:11px">${r.status||'?'}</td>
       <td><button class="btn" style="padding:3px 8px;font-size:11px" onclick="abrir(${i})">✏ Editar</button></td>
