@@ -1340,7 +1340,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception as e: self._err(500, str(e))
 
     def _post_produtos_update_fiscal(self):
-        """POST /api/db/produtos/update-fiscal — atualiza dados fiscais e logísticos em lote"""
+        """POST /api/db/produtos/update-fiscal — atualiza dados fiscais, logísticos e código"""
         try:
             body = self._body()
             prods = body if isinstance(body, list) else body.get("produtos", [])
@@ -1349,16 +1349,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             for p in prods:
                 sku = str(p.get("sku","")).strip()
                 if not sku: continue
-                # Colunas base (sempre existem)
                 base = {
                     "custo_br": float(p.get("cmv_br") or p.get("custo_br") or 0),
                     "custo_pr": float(p.get("cmv_pr") or p.get("custo_pr") or 0),
                     "ipi":      float(p.get("ipi") or 0),
                 }
-                if p.get("nome"):   base["nome"]   = str(p["nome"])
-                if p.get("familia"):base["familia"] = str(p["familia"])
-                if p.get("ncm"):    base["ncm"]     = str(p["ncm"])
-                # Colunas opcionais — tentar update completo, fallback sem elas
+                if p.get("nome"):    base["nome"]    = str(p["nome"])
+                if p.get("familia"): base["familia"] = str(p["familia"])
+                if p.get("ncm"):     base["ncm"]     = str(p["ncm"])
                 opt = {
                     "st":          int(p.get("st") or 0),
                     "st_imposto":  float(p.get("st_imposto") or 0),
@@ -1368,9 +1366,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     "altura":      float(p.get("altura") or 0),
                     "comprimento": float(p.get("profundidade") or p.get("comprimento") or 0),
                 }
-                if p.get("cest"):   opt["cest"]   = str(p["cest"])
-                if p.get("origem"): opt["origem"]  = str(p["origem"])
-                if p.get("cst"):    opt["cst"]     = str(p["cst"])
+                if p.get("cest"):              opt["cest"]   = str(p["cest"])
+                if p.get("origem"):            opt["origem"]  = str(p["origem"])
+                if p.get("cst"):               opt["cst"]     = str(p["cst"])
+                if p.get("codigo_fornecedor"): opt["fornecedor"] = str(p["codigo_fornecedor"])
                 try:
                     all_f = {**base, **opt}
                     sets = ",".join(f"{k}=%s" for k in all_f)
@@ -1381,6 +1380,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         sets2 = ",".join(f"{k}=%s" for k in base)
                         exe(f"UPDATE produtos SET {sets2} WHERE sku=%s", list(base.values())+[sku])
                         updated += 1
+                    except: pass
+                # Vincular codigo_fornecedor ao cprod_map
+                codigo = str(p.get("codigo_fornecedor","")).strip()
+                nome   = str(p.get("nome","")).strip()
+                cmvbr  = float(p.get("cmv_br") or p.get("custo_br") or 0)
+                cmvpr  = float(p.get("cmv_pr") or p.get("custo_pr") or 0)
+                if codigo:
+                    try:
+                        c = "ON CONFLICT(cprod) DO UPDATE SET sku=EXCLUDED.sku,nome=COALESCE(NULLIF(EXCLUDED.nome,''),cprod_map.nome),cmv_br=EXCLUDED.cmv_br,cmv_pr=EXCLUDED.cmv_pr"
+                        exe(f"INSERT INTO cprod_map(cprod,sku,nome,cmv_br,cmv_pr) VALUES(%s,%s,%s,%s,%s) {c}",
+                            (codigo,sku,nome,cmvbr,cmvpr))
                     except: pass
             self._ok({"ok":True,"updated":updated})
         except Exception as e: self._err(500, str(e))

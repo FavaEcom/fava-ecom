@@ -76,6 +76,7 @@ td.ec input,td.ec select{width:100%;background:#0f172a;border:1px solid #3b82f6;
   <a href="https://web-production-5aa0f.up.railway.app/gestor_anuncios.html">📢 Gestor</a>
   <a href="https://web-production-5aa0f.up.railway.app/balcao_fava.html">🏪 Balcão</a>
   <a href="https://web-production-5aa0f.up.railway.app/calculadora_fava.html">🧮 Calculadora</a>
+  <a href="https://web-production-5aa0f.up.railway.app/cotacao_fava.html">📋 Cotação</a>
 </nav>
 
 <div class="toolbar">
@@ -115,6 +116,7 @@ td.ec input,td.ec select{width:100%;background:#0f172a;border:1px solid #3b82f6;
   <table>
     <thead><tr>
       <th onclick="ord('sku')">SKU ↕</th>
+      <th style="min-width:100px">Código</th>
       <th style="min-width:220px">Nome</th>
       <th>Família</th>
       <th class="n" onclick="ord('cmv_br')">CMV BR ↕</th>
@@ -143,6 +145,7 @@ td.ec input,td.ec select{width:100%;background:#0f172a;border:1px solid #3b82f6;
     <div class="mgrid">
       <div class="sep">Identificação</div>
       <div class="mf"><label>SKU</label><input type="text" id="e-sku-show" readonly style="color:#94a3b8"></div>
+      <div class="mf"><label>Código Fornecedor</label><input type="text" id="e-codigo" placeholder="Ex: 30203385"></div>
       <div class="mf w2"><label>Nome</label><input type="text" id="e-nome"></div>
       <div class="mf"><label>Família</label><select id="e-fam"></select></div>
       <div class="mf"><label>NCM</label><input type="text" id="e-ncm"></div>
@@ -293,6 +296,7 @@ function renderTabela(rows){
     const pfinal=Math.max(peso,pvol);
     return `<tr style="${bg}">
       <td style="font-weight:700;color:${alt[sku]?'#10b981':'#60a5fa'}">${sku}</td>
+      <td class="ec" onclick="ei(this,'${sku}','codigo_fornecedor')" style="font-family:monospace;font-size:11px;color:#94a3b8">${p.codigo_fornecedor||p.codigo||'—'}</td>
       <td class="ec" onclick="ei(this,'${sku}','nome')" title="${p.nome||''}">${(p.nome||'').substring(0,35)}</td>
       <td class="ec" onclick="ei(this,'${sku}','familia')"><span class="tag-fam">${p.familia||'—'}</span></td>
       <td class="n ec" onclick="ei(this,'${sku}','cmv_br')">${cmvbr>0?'R$ '+cmvbr.toFixed(4):'—'}</td>
@@ -326,6 +330,7 @@ function ei(td, sku, campo){
   }
   
   const tipo=(['cmv_br','cmv_pr','peso','largura','altura','profundidade','ipi','st_imposto'].includes(campo))?'number':'text';
+  const step = ['cmv_br','cmv_pr'].includes(campo)?'0.0001':['peso','largura','altura','profundidade'].includes(campo)?'0.001':'0.01';
   td.innerHTML=`<input type="${tipo}" step="0.0001" value="${val}"
     onblur="salvarInline(this,'${sku}','${campo}')"
     onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape')filtrar();" autofocus>`;
@@ -366,6 +371,7 @@ function abrirModal(sku){
   document.getElementById('mt').textContent=(p.nome||sku).substring(0,60);
   document.getElementById('e-sku').value=sku;
   document.getElementById('e-sku-show').value=sku;
+  document.getElementById('e-codigo').value=p.codigo_fornecedor||p.codigo||'';
   document.getElementById('e-nome').value=p.nome||'';
   document.getElementById('e-fam').value=p.familia||'';
   document.getElementById('e-ncm').value=p.ncm||'';
@@ -411,6 +417,7 @@ function salvarModal(){
   const cmvpr=parseFloat(document.getElementById('e-cmvpr').value)||cmvbr;
   const dados={
     sku,
+    codigo_fornecedor: document.getElementById('e-codigo').value.trim(),
     nome:document.getElementById('e-nome').value,
     familia:document.getElementById('e-fam').value,
     ncm:document.getElementById('e-ncm').value,
