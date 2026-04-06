@@ -174,16 +174,20 @@ def parse_xml(path):
         icms_un = icms_r/qtd if qtd else 0
         st_un   = st_r/qtd   if qtd else 0
         cred_pc = (pis_r+cof_r)/qtd if qtd else 0
-        custo_r = vunit + ipi_un
+        custo_r = vunit + ipi_un + st_un   # ST é custo real de entrada — inclui no custo total
         cmv_br  = round(max(custo_r - icms_un - cred_pc, custo_r*0.35), 6)
         cmv_pr  = round(max(custo_r - ICMS_PR*custo_r - cred_pc, custo_r*0.35), 6)
+
+        # cred_icms = crédito real = vICMS / vProd (base efetiva, não alíquota nominal)
+        cred_icms = round(icms_r / vtot, 6) if vtot > 0 and icms_r > 0 else (icms_p if icms_p > 0 else 0.0)
 
         itens.append(dict(
             cod=cod, nome=nome, qtd=qtd, vunit=vunit, vtot=vtot,
             ipi_p=ipi_p, ipi_r=ipi_r, ipi_un=ipi_un,
-            icms_p=icms_p, icms_r=icms_r, st_r=st_r, st_un=st_un,
+            icms_p=icms_p, icms_r=icms_r, icms_un=icms_un, st_r=st_r, st_un=st_un,
             pis_r=pis_r, cof_r=cof_r, cred_pc=cred_pc,
             custo_r=custo_r, cmv_br=cmv_br, cmv_pr=cmv_pr,
+            cred_icms=cred_icms,
             ncm=ncm, cfop=cfop, cest=cest,
         ))
 
@@ -465,6 +469,10 @@ def main():
                         'icms_p': it['icms_p'], 'cred_pc': it['cred_pc'],
                         'custo_r': it['custo_r'], 'cmv_br': it['cmv_br'],
                         'cmv_pr': it['cmv_pr'], 'ncm': it['ncm'], 'cfop': it['cfop'],
+                        'v_st': it['st_r'],        # ST total da linha
+                        'icms_r': it['icms_r'],    # vICMS real da NF
+                        'icms_un': it['icms_un'],  # ICMS por unidade
+                        'cred_icms': it['cred_icms'],  # crédito real = vICMS/vProd
                     })
         dados_nf_list = []
         for xml_path3 in sorted(xmls):

@@ -109,8 +109,10 @@ def criar_tabelas():
                 icms_p REAL DEFAULT 0, cred_pc REAL DEFAULT 0, custo_r REAL DEFAULT 0,
                 cmv_br REAL DEFAULT 0, cmv_pr REAL DEFAULT 0, ncm TEXT, cfop TEXT,
                 v_st REAL DEFAULT 0,
+                cred_icms REAL DEFAULT 0,
                 created_at TIMESTAMP DEFAULT NOW())""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS v_st REAL DEFAULT 0""",
+            """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS cred_icms REAL DEFAULT 0""",
             """CREATE TABLE IF NOT EXISTS nf_entrada (
                 chave TEXT PRIMARY KEY, nf TEXT, fornecedor TEXT, cnpj TEXT,
                 emissao TEXT, valor REAL DEFAULT 0, created_at TIMESTAMP DEFAULT NOW())""",
@@ -1546,30 +1548,26 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             nf_num = p.get('nf', [''])[0].strip()
             if not nf_num: self._err(400, 'nf obrigatorio'); return
 
-            # DISTINCT ON sku (cprod) — pega apenas o registro mais recente por produto
+            # ORDER BY id ASC = ordem original da NF
             itens = exe("""SELECT DISTINCT ON (sku) * FROM historico_compras
-                           WHERE nf=%s ORDER BY sku, id DESC""", (nf_num,), fetchall=True) or []
+                           WHERE nf=%s ORDER BY sku, id ASC""", (nf_num,), fetchall=True) or []
 
             header = exe("SELECT * FROM nf_entrada WHERE nf=%s ORDER BY emissao DESC LIMIT 1", (nf_num,), fetchone=True)
 
             if not itens and not header:
                 itens = exe("""SELECT DISTINCT ON (sku) * FROM historico_compras
-                               WHERE nf LIKE %s ORDER BY sku, id DESC""", (f'%{nf_num}%',), fetchall=True) or []
+                               WHERE nf LIKE %s ORDER BY sku, id ASC""", (f'%{nf_num}%',), fetchall=True) or []
                 header = exe("SELECT * FROM nf_entrada WHERE nf LIKE %s ORDER BY emissao DESC LIMIT 1", (f'%{nf_num}%',), fetchone=True)
 
-            # Carregar todos os produtos do banco para cruzar por CMV e cprod_map
-            todos_prods = exe("SELECT sku, nome, custo_br, custo_pr, familia, fornecedor FROM produtos", fetchall=True) or []
-            prod_por_fornecedor = {}  # fornecedor(=cprod) → produto
+            # SEM match por CMV — só match exato por cprod_map e fornecedor
+            todos_prods = exe("SELECT sku, nome, custo_br, custo_pr, familia, peso, fornecedor FROM produtos", fetchall=True) or []
+            prod_por_fornecedor = {}
+            prod_por_sku = {}
             for pr in todos_prods:
                 forn = str(pr.get('fornecedor','') or '').strip()
                 if forn: prod_por_fornecedor[forn] = pr
-            # CMV → lista de produtos (para matching por similaridade)
-            prod_por_cmv = {}
-            for pr in todos_prods:
-                cmv = round(float(pr.get('custo_br') or 0), 2)
-                if cmv > 0:
-                    if cmv not in prod_por_cmv: prod_por_cmv[cmv] = []
-                    prod_por_cmv[cmv].append(pr)
+                s = str(pr.get('sku','') or '').strip()
+                if s: prod_por_sku[s] = pr
 
             fichas = []
             for it in itens:
@@ -1587,23 +1585,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     familia_real = str(pr.get('familia') or '')
                     peso_real  = float(pr.get('peso') or 0)
 
-                # 3. Matching por CMV (tolerância 3%) como fallback
-                if not sku_real:
-                    cmv_hist = round(float(it.get('cmv_br') or 0), 2)
-                    if cmv_hist > 0:
-                        for delta in [0, 0.01, 0.02, 0.05, 0.10]:
-                            chave = round(cmv_hist * (1 + delta), 2)
-                            chave2 = round(cmv_hist * (1 - delta), 2)
-                            for c in [chave, chave2]:
-                                if c in prod_por_cmv:
-                                    for pr in prod_por_cmv[c]:
-                                        if not str(pr.get('nome','')):  # prefer unnamed (recently created)
-                                            sku_real = str(pr['sku'])
-                                            familia_real = str(pr.get('familia') or '')
-                                            peso_real = float(pr.get('peso') or 0)
-                                            break
-                                    if sku_real: break
-                            if sku_real: break
+                # Sem match por CMV — evita matches errados entre produtos com CMV similar
 
                 # Se encontrou SKU, puxar dados completos do produto
                 if sku_real:
@@ -1639,8 +1621,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 elif _cfop in ('6404','5404'):       _cst = '60'
                 elif _cfop in ('6102','5102','6101','5101','6108','5108'): _cst = '00'
                 elif _st_cfop: _cst = '10'
-                # credita ICMS se CST 00 ou 20 (não credita em CST 40,41,50,60,10 com ST retido)
-                _credICMS = _icmsP if _cst in ('00','20') else 0.0
+                # Crédito ICMS real = cred_icms do banco (vICMS/vProd calculado no import)
+                # Se não tiver cred_icms (importação antiga), usa icms_p (nominal) como fallback
+                _cred_icms_db = float(it.get('cred_icms',0) or 0)
+                if _cred_icms_db > 0:
+                    _credICMS = _cred_icms_db  # crédito real da NF
+                elif _cst in ('00','20','51'):
+                    _credICMS = _icmsP  # fallback: alíquota nominal
+                else:
+                    _credICMS = 0.0
                 _credPC   = float(it.get('cred_pc',0) or 0)
                 fichas.append({
                     'codigo':        cprod,
@@ -2491,13 +2480,26 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                  (nf, cprod), fetchone=True)
                     if existe:
                         # Atualizar v_st (e outros campos que podem ter mudado)
-                        exe("UPDATE historico_compras SET v_st=%s, custo_r=%s, cmv_br=%s, cmv_pr=%s WHERE nf=%s AND sku=%s",
-                            (v_st, float(row.get('custo_r',0)), float(row.get('cmv_br',0)),
+                        cred_icms_u = float(row.get('cred_icms',0))
+                        if not cred_icms_u:
+                            v_icms_u = float(row.get('icms_r',0) or row.get('icms_un',0)*float(row.get('qtd',1) or 1))
+                            vtot_u = float(row.get('vtot',0)) or float(row.get('vunit',0))
+                            if v_icms_u > 0 and vtot_u > 0:
+                                cred_icms_u = round(v_icms_u / vtot_u, 6)
+                        exe("UPDATE historico_compras SET v_st=%s, cred_icms=%s, custo_r=%s, cmv_br=%s, cmv_pr=%s WHERE nf=%s AND sku=%s",
+                            (v_st, cred_icms_u, float(row.get('custo_r',0)), float(row.get('cmv_br',0)),
                              float(row.get('cmv_pr',0)), nf, cprod))
                     else:
-                        exe(f"INSERT INTO historico_compras "
-                            f"(nf,fornecedor,data_emissao,sku,nome,qtd,vunit,vtot,ipi_p,ipi_un,icms_p,cred_pc,custo_r,cmv_br,cmv_pr,ncm,cfop,v_st) "
-                            f"VALUES ({qmark(18)})",
+                        cred_icms = float(row.get('cred_icms',0))
+                    if not cred_icms:
+                        # calcular do vICMS / vtot se disponível
+                        v_icms = float(row.get('icms_r',0) or row.get('icms_un',0)*float(row.get('qtd',1) or 1))
+                        vtot_r = float(row.get('vtot',0)) or float(row.get('vunit',0))
+                        if v_icms > 0 and vtot_r > 0:
+                            cred_icms = round(v_icms / vtot_r, 6)
+                    exe(f"INSERT INTO historico_compras "
+                            f"(nf,fornecedor,data_emissao,sku,nome,qtd,vunit,vtot,ipi_p,ipi_un,icms_p,cred_pc,custo_r,cmv_br,cmv_pr,ncm,cfop,v_st,cred_icms) "
+                            f"VALUES ({qmark(19)})",
                             (nf, row.get('fornecedor',''), row.get('data_emissao',''),
                              cprod, row.get('nome',''),
                              float(row.get('qtd',0)), float(row.get('vunit',0)), float(row.get('vtot',0)),
@@ -2505,7 +2507,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                              float(row.get('icms_p',0)), float(row.get('cred_pc',0)),
                              float(row.get('custo_r',0)), float(row.get('cmv_br',0)),
                              float(row.get('cmv_pr',0)), row.get('ncm',''), row.get('cfop',''),
-                             v_st))
+                             v_st, cred_icms))
                     n+=1
                 except Exception as e: print(f'[HIST] {e}')
             self._ok({'ok':True,'inseridos':n})
