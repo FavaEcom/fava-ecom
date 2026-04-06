@@ -140,11 +140,12 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
       <table class="rev-table" id="rev-table">
         <thead><tr>
           <th style="width:30px"><input type="checkbox" id="sel-all" onchange="selAll(this.checked)" style="accent-color:#fff"></th>
-          <th>Status</th><th>C&oacute;d.Forn</th><th style="min-width:70px">SKU</th>
+          <th>Status</th><th>Cód.Forn</th><th style="min-width:70px">SKU</th>
           <th style="min-width:220px">Nome</th><th>NCM</th><th>CST</th><th>ST</th>
-          <th style="min-width:130px">Fam&iacute;lia</th>
-          <th>Custo NF</th><th>CMV BR</th><th>CMV PR</th><th>Peso</th><th>IPI%</th><th>ST</th><th>Mono</th><th>Lucro BR</th><th>Margem</th>
-          <th>ML Cl.</th><th>Shopee</th><th>Balc&atilde;o</th>
+          <th style="min-width:130px">Família</th>
+          <th>Custo NF</th><th style="color:#f97316">IPI R$</th><th style="color:#f59e0b">ST R$</th><th style="background:#eff6ff;color:#1d4ed8">Custo Entr.</th>
+          <th>CMV BR</th><th>CMV PR</th><th>Peso</th><th>IPI%</th><th>ST</th><th>Mono</th><th>Lucro BR</th><th>Margem</th>
+          <th>ML Cl.</th><th>Shopee</th><th>Balcão</th>
           <th style="min-width:80px">EAN</th><th style="min-width:160px">Título ML <small style="color:#94a3b8">(60)</small></th><th style="min-width:200px">Título Shopee <small style="color:#94a3b8">(120)</small></th>
         </tr></thead>
         <tbody id="rev-tbody"></tbody>
@@ -212,7 +213,7 @@ var dadosNF=null, itensNF=[], fichas=[], proxSKU=3500;
 function cadastroManual(){
   // Pega o próximo SKU disponível do banco
   fetch(RAILWAY+'/api/db/produtos').then(function(r){return r.json();}).then(function(prods){
-    var skus = prods.map(function(p){return parseInt(p.sku)||0;}).filter(function(s){return s>0;});
+    var skus = prods.map(function(p){return parseInt(p.sku)||0;}).filter(function(s){return s>=1000 && s<=9999;});
     proxSKU = (skus.length ? Math.max.apply(null,skus) : 3500) + 1;
     // Criar uma ficha em branco
     fichas = [{
@@ -407,22 +408,25 @@ function lerXML(file){
         // ── CUSTO ────────────────────────────────────────────────
         var custo = parseFloat(prod&&prod.querySelector('vUnCom')?prod.querySelector('vUnCom').textContent:0);
         var qtd   = parseFloat(prod&&prod.querySelector('qCom')?prod.querySelector('qCom').textContent:1);
-        // Custo sem IPI (base NF)
-        var custoNF = ipiPct > 0 ? custo / (1 + ipiPct) : custo;
+        // vUnCom JÁ vem sem IPI — custo base da NF
+        var custoNF = custo;
+        // IPI por unidade (total IPI dividido pela qtd)
+        var ipiUn = qtd > 0 ? vIpiTotal / qtd : 0;
+        // ST por unidade (total ST dividido pela qtd)
+        var stUn  = (temST && vStTotal > 0 && qtd > 0) ? vStTotal / qtd : 0;
+        // Custo total de entrada por unidade (o que você pagou de fato)
+        var custoEntrada = custoNF + ipiUn + stUn;
 
         // ── CRÉDITO ICMS REAL ────────────────────────────────────
         // CST 51 (diferimento): crédito = vICMS (parcial, não cheio)
         // CST 10/70 (ST): crédito = ICMS próprio (não o ST)
         // CST 60/400/500 (ST retido): SEM crédito ICMS
         // CST 20 (base reduzida): crédito proporcional (vICMS real)
-        var creditoICMS_pct = 0; // como % do custo NF
-        var vNF_unit = custo * qtd; // valor total do item com IPI
-        var vNF_s_ipi = custoNF * qtd;
+        var creditoICMS_pct = 0; // como % do custo NF (base s/ IPI)
+        var vNF_s_ipi = custoNF * qtd; // base de cálculo dos créditos
         if(vStTotal > 0 || cstSTretido){
-          // Com ST ou ST retido: sem crédito ICMS de entrada
-          creditoICMS_pct = 0;
+          creditoICMS_pct = 0; // Com ST: sem crédito ICMS entrada
         } else if(vICMS_real > 0 && vNF_s_ipi > 0){
-          // Crédito real = vICMS da nota / valor do item (base s/ IPI)
           creditoICMS_pct = vICMS_real / vNF_s_ipi;
         } else if(pICMSnominal > 0){
           creditoICMS_pct = pICMSnominal;
@@ -432,33 +436,26 @@ function lerXML(file){
         var pisEl   = imp ? imp.querySelector('PIS')   : null;
         var cofEl   = imp ? imp.querySelector('COFINS') : null;
         var pisCst  = pisEl ? (pisEl.querySelector('CST')||pisEl.querySelector('pPIS') ? parseInt(pisEl.querySelector('CST')?.textContent||'0') : 0) : 0;
-        // CST PIS/COFINS 70/71/72/73/74/75 = monofásico
         var monofasico = [70,71,72,73,74,75].includes(pisCst);
         var vPIS   = parseFloat(pisEl&&pisEl.querySelector('vPIS')?pisEl.querySelector('vPIS').textContent:0);
         var pPIS   = parseFloat(pisEl&&pisEl.querySelector('pPIS')?pisEl.querySelector('pPIS').textContent:0)/100;
         var vCOF   = parseFloat(cofEl&&cofEl.querySelector('vCOFINS')?cofEl.querySelector('vCOFINS').textContent:0);
         var pCOF   = parseFloat(cofEl&&cofEl.querySelector('pCOFINS')?cofEl.querySelector('pCOFINS').textContent:0)/100;
 
-        // Crédito PIS/COFINS (Lucro Real, não monofásico, não ST retido)
+        // Crédito PIS/COFINS (sobre custo s/ IPI)
         var credPisCof = (!monofasico && !cstSTretido) ? (pPIS+pCOF > 0 ? pPIS+pCOF : 0.0925) : 0;
 
         // ── CMV BRASIL ───────────────────────────────────────────
-        // CMV BR = custo NF líquido - crédito ICMS - crédito PIS/COFINS + ST (custo)
-        // Simplificado: custo sem IPI, descontando créditos fiscais
-        var credTotal = creditoICMS_pct + credPisCof;
-        var cmvBr = custoNF * (1 - credTotal);
-        // ST entra como custo no CMV BR (já está no custo da nota)
-        if(temST && vStTotal > 0){
-          // ST por unidade = vST total / qtd
-          cmvBr += vStTotal / qtd;
-        }
-        cmvBr = Math.max(cmvBr, custoNF * 0.30); // mínimo 30% do custo
+        // custoEntrada = vUnCom + IPI/unit + ST/unit (custo real de entrada)
+        // créditos são calculados sobre a base NF (s/ IPI, s/ ST)
+        var credIcmsR   = creditoICMS_pct * custoNF; // crédito ICMS em R$ por unidade
+        var credPisCofR = credPisCof * custoNF;       // crédito PIS/COFINS em R$
+        var cmvBr = custoEntrada - credIcmsR - credPisCofR;
+        cmvBr = Math.max(cmvBr, custoNF * 0.10); // piso mínimo de segurança
 
         // ── CMV PARANÁ ───────────────────────────────────────────
-        // Venda local PR: sem DIFAL
-        // Com ST: ICMS saída = 0, crédito ICMS = 0
-        // Sem ST: ICMS saída PR (crédito entra no cálculo)
-        var cmvPr = cmvBr; // base igual, diferença é no cálculo de venda
+        // CMV PR = mesmo CMV BR (diferença fica no cálculo de venda/saída)
+        var cmvPr = cmvBr;
 
         // ── ORIGEM DO PRODUTO ─────────────────────────────────────
         var origEl = icmsEl ? icmsEl.querySelector('orig') : null;
@@ -478,8 +475,11 @@ function lerXML(file){
           // Custos
           custo:      custo,
           custoUnit:  custo,
-          custoNF:    custoNF,
+          custoNF:    custoNF,        // vUnCom (base s/ IPI)
           custoNFunit:custoNF,
+          ipiUn:      ipiUn,          // IPI por unidade
+          stUn:       stUn,           // ST por unidade
+          custoEntrada: custoEntrada, // custo total entrada = custo + IPI + ST
           // IPI
           ipiPct:   ipiPct,
           ipi:      ipiPct,
@@ -533,15 +533,30 @@ function lerXML(file){
 function carregarBanco(){
   var _hd=document.getElementById('hd-st'); if(_hd) _hd.textContent='Carregando banco...';
   fetch(RAILWAY+'/api/db/produtos').then(function(r){return r.json();}).then(function(prods){
-    var skus=prods.map(function(p){return parseInt(p.sku);}).filter(function(n){return !isNaN(n);});
-    proxSKU=(skus.length?Math.max.apply(null,skus):3500)+1;
-    var codigos=new Set(prods.map(function(p){return String(p.sku).trim();}));
-    itensNF.forEach(function(it){ it.existe=codigos.has(it.codigo); });
-    fichas=itensNF.map(function(it,i){
-      return Object.assign({},it,{sku:it.existe?it.codigo:String(proxSKU+i),titulo_ml:'',titulo_shopee:'',titulo_yampi:'',familia:'',peso:0,sel:!it.existe});
+    var skus=prods.map(function(p){return parseInt(p.sku)||0;}).filter(function(n){return n>=1000 && n<=9999;});
+    proxSKU=(skus.length?Math.max.apply(null,skus):2860)+1;
+    var skuIni=document.getElementById('sku-inicial');
+    if(skuIni && !skuIni.value) skuIni.value=proxSKU;
+    // Mapear cprod → sku existente no banco
+    var codigoToSku={};
+    prods.forEach(function(p){
+      if(p.fornecedor) codigoToSku[String(p.fornecedor).trim()]=String(p.sku||'').trim();
     });
-    var novos=itensNF.filter(function(x){return !x.existe;}).length;
-    var _hd2=document.getElementById('hd-st'); if(_hd2) _hd2.textContent=novos+' novos | '+itensNF.filter(function(x){return x.existe;}).length+' existentes';
+    fichas=itensNF.map(function(it){
+      var skuExistente=codigoToSku[String(it.codigo||'').trim()]||'';
+      var existe=!!skuExistente;
+      return Object.assign({},it,{
+        sku:existe?skuExistente:'',
+        existe:existe, _auto:existe,
+        titulo_ml:'', titulo_shopee:'', titulo_yampi:'',
+        familia:it.familia||'', peso:it.peso||0,
+        sel:!existe
+      });
+    });
+    var novos=fichas.filter(function(x){return !x.existe;}).length;
+    var _hd2=document.getElementById('hd-st');
+    if(_hd2) _hd2.textContent=novos+' novos (SKU vazio) | '+fichas.filter(function(x){return x.existe;}).length+' existentes | Próximo SKU: '+proxSKU;
+    renderTabela();
   }).catch(function(e){ var _hd3=document.getElementById('hd-st'); if(_hd3) _hd3.textContent='Erro banco: '+e.message; });
 }
 
@@ -584,14 +599,21 @@ function renderTabela(){
     html+='<td><input class="rev-input" value="'+f.cst+'" readonly style="background:#f8fafc;width:40px"></td>';
     html+='<td style="text-align:center">'+(f.temST?'<span class="pill pill-st">ST</span>':'—')+'</td>';
     html+='<td><select class="rev-select" onchange="fichas['+i+'].familia=this.value" style="width:130px">'+famOpts+'</select></td>';
-    html+='<td style="text-align:right"><b>R$ '+fmt(f.custoNF)+'</b></td>';
+    html+='<td style="text-align:right"><b>R$ '+fmt(f.custoNF)+'</b></td>';  
+    html+='<td style="text-align:right;font-size:11px;color:#f97316">'+(f.ipiUn>0?'R$ '+fmt(f.ipiUn):'—')+'</td>';
+    html+='<td style="text-align:right;font-size:11px;color:#f59e0b">'+(f.stUn>0?'R$ '+fmt(f.stUn):'—')+'</td>';
+    html+='<td style="text-align:right;background:#eff6ff"><b>R$ '+fmt(f.custoEntrada||f.custoNF)+'</b></td>';
     html+='<td><input class="rev-input" type="number" value="'+f.cmvBr.toFixed(4)+'" onchange="fichas['+i+'].cmvBr=parseFloat(this.value)||0;atualizarPrecos('+i+')" style="width:80px;text-align:right"></td>';
     html+='<td><input class="rev-input" type="number" value="'+f.cmvPr.toFixed(4)+'" onchange="fichas['+i+'].cmvPr=parseFloat(this.value)||0;atualizarPrecos('+i+')" style="width:80px;text-align:right"></td>';
     html+='<td><input class="rev-input" type="number" value="'+(f.peso||'')+'" placeholder="0.000" onchange="fichas['+i+'].peso=parseFloat(this.value)||0" style="width:65px"></td>';
     html+='<td style="text-align:right;font-size:11px">'+(f.ipi>0?(f.ipi*100).toFixed(1)+'%':'—')+'</td>';
     html+='<td style="text-align:center">'+(f.temST?'<span style="color:#f59e0b;font-weight:700;font-size:11px">ST</span>':'<span style="color:#ccc;font-size:11px">—</span>')+'</td>';
     html+='<td style="text-align:center">'+(f.monofasico?'<span style="color:#60a5fa;font-weight:700;font-size:11px">M</span>':'<span style="color:#ccc;font-size:11px">—</span>')+'</td>';
-    var _icms=f.temST?0:0.12;var _pis=0.0165,_cof=0.076;var _denom=Math.max(1-_pis-_cof-_icms-(mg/100),0.05);var _pDesc=f.cmvBr/_denom;var _trib=_pDesc*(_pis+_cof+_icms);var _cred=f.temST?0:f.cmvBr*(_pis+_cof);var _lBr=_pDesc-_trib-f.cmvBr+_cred;var _mBr=_pDesc>0?_lBr/_pDesc*100:0;
+    // Fix margem: mg já é fração (0.40), não dividir por 100 de novo
+    var _icms=f.temST?0:0.12;var _pis=0.0165,_cof=0.076;
+    var _denom=Math.max(1-_pis-_cof-_icms-mg,0.05);
+    var _pDesc=((f.custoEntrada||f.cmvBr)+FRETE_ML)/_denom;var _trib=_pDesc*(_pis+_cof+_icms);
+    var _cred=f.temST?0:f.cmvBr*(_pis+_cof);var _lBr=_pDesc-_trib-f.cmvBr+_cred;var _mBr=_pDesc>0?_lBr/_pDesc*100:0;
     html+='<td style="text-align:right;font-size:11px;color:'+(_lBr>=0?'#10b981':'#ef4444')+'">R$ '+_lBr.toFixed(2)+'</td>';
     html+='<td style="text-align:right;font-size:11px;color:'+(_mBr>=15?'#10b981':_mBr>=8?'#f59e0b':'#ef4444')+';font-weight:700">'+_mBr.toFixed(1)+'%</td>';
     html+='<td id="p-ml-'+i+'" style="font-size:10px;white-space:nowrap"><b>R$ '+fmt(pML)+'</b></td>';
