@@ -36,7 +36,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
 .st.err{background:#fee2e2;color:#dc2626;display:block}
 .st.info{background:#dbeafe;color:#1d4ed8;display:block}
 .rev-table{width:100%;border-collapse:collapse;font-size:11px}
-.rev-table th{background:#1F3864;color:#fff;padding:7px 8px;text-align:left;font-size:10px;font-weight:700;white-space:nowrap}
+.rev-table th{background:#1F3864;color:#fff;padding:7px 8px;text-align:left;font-size:10px;font-weight:700;white-space:nowrap;position:sticky;top:0;z-index:5}
 .rev-table td{padding:5px 6px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
 .rev-table tr:hover td{background:#fafbff}
 .rev-table tr.novo td{background:#eff6ff}
@@ -74,8 +74,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
 </nav>
 <div class="steps">
   <div class="step ativo" id="step-1"><span class="n">1</span> Upload NF</div>
-  <div class="step" id="step-2"><span class="n">2</span> Revisar &amp; Ajustar</div>
-  <div class="step" id="step-3"><span class="n">3</span> Salvar &amp; Anunciar</div>
+  <div class="step" id="step-2"><span class="n">2</span> ✔ Impostos &amp; SKU</div>
+  <div class="step" id="step-3"><span class="n">3</span> 📢 Anúncios</div>
+  <div class="step" id="step-4"><span class="n">4</span> Salvar &amp; Criar</div>
 </div>
 
 <!-- STEP 1 -->
@@ -148,7 +149,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
         <option value="50">Margem 50%</option>
       </select>
     </div>
-    <div class="card-b" style="padding:0;overflow-x:auto">
+    <div class="card-b" style="padding:0;overflow:auto;max-height:calc(100vh - 280px)">
       <div class="st" id="st-2" style="margin:10px"></div>
       <table class="rev-table" id="rev-table">
         <thead><tr>
@@ -167,18 +168,44 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
     <div class="card-b" style="border-top:1px solid #e2e8f0">
       <div class="btn-wrap">
         <button class="btn btn-cinza" onclick="irStep(1)">&larr; Voltar</button>
-        <button class="btn btn-azul" onclick="irStep(3)">Salvar &amp; Anunciar &rarr;</button>
-        <button class="btn btn-roxo" onclick="gerarTitulosIA()" id="btn-ia-titulos">&#10024; Gerar t&iacute;tulos com IA</button>
+        <button class="btn btn-azul" onclick="irStep(3)">Definir Anúncios &rarr;</button>
+        <button class="btn btn-roxo" onclick="gerarTitulosIA()" id="btn-ia-titulos">&#10024; Títulos IA</button>
         <span style="font-size:11px;color:#64748b" id="prog-ia"></span>
       </div>
     </div>
   </div>
 </div>
 
-<!-- STEP 3 -->
+<!-- STEP 3 — CONFIGURAÇÃO DOS ANÚNCIOS -->
 <div id="view-3" class="pg" style="display:none">
   <div class="card">
-    <div class="card-h"><span>&#128640;</span><h2>Salvar &amp; Gerar An&uacute;ncios</h2></div>
+    <div class="card-h">
+      <span>📢</span><h2>Configuração de Anúncios por Produto</h2>
+      <select id="mg-anuncio" style="margin-left:auto;border:1px solid #334155;background:#0f172a;color:#e2e8f0;padding:4px 8px;border-radius:6px;font-size:12px" onchange="renderAnuncios()">
+        <option value="30">Margem 30%</option>
+        <option value="35">Margem 35%</option>
+        <option value="40" selected>Margem 40%</option>
+        <option value="45">Margem 45%</option>
+        <option value="50">Margem 50%</option>
+      </select>
+      <button onclick="aplicarDescontoGlobal()" style="background:#7c3aed;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:700">% Desconto Global</button>
+    </div>
+    <div class="card-b" style="padding:0">
+      <div id="anuncio-lista" style="padding:10px"></div>
+    </div>
+    <div class="card-b" style="border-top:1px solid #e2e8f0">
+      <div class="btn-wrap">
+        <button class="btn btn-cinza" onclick="irStep(2)">&larr; Voltar</button>
+        <button class="btn btn-azul" onclick="irStep(4)">Salvar &amp; Criar &rarr;</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 4 — SALVAR -->
+<div id="view-4" class="pg" style="display:none">
+  <div class="card">
+    <div class="card-h"><span>&#128640;</span><h2>Salvar &amp; Gerar Anúncios</h2></div>
     <div class="card-b">
       <div class="st" id="st-3"></div>
       <div id="resumo-salvar" style="margin-bottom:14px"></div>
@@ -186,12 +213,13 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
         <button class="btn btn-verde" onclick="salvarTodos()" id="btn-salvar">&#128190; Salvar no banco</button>
         <button onclick="salvarRascunho('parcial')" style="background:#0891b2;color:#fff;border:none;padding:8px 14px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700">💾 Salvar Rascunho</button>
         <button class="btn btn-roxo" onclick="gerarAnunciosBling()" id="btn-anuncios" disabled>&#128226; Gerar anúncios ML via Bling</button>
-        <button class="btn btn-cinza" onclick="irStep(2)">&larr; Voltar</button>
+        <button class="btn btn-cinza" onclick="irStep(3)">&larr; Voltar</button>
       </div>
       <div id="log-ops" style="margin-top:14px;max-height:400px;overflow-y:auto;font-family:monospace"></div>
     </div>
   </div>
 </div>
+
 
 <script>
 var RAILWAY  = 'https://web-production-5aa0f.up.railway.app';
@@ -266,13 +294,15 @@ function mostrarSt(id,msg,tipo){
 }
 
 function irStep(n){
-  [1,2,3].forEach(function(i){
-    document.getElementById('view-'+i).style.display=i===n?'block':'none';
+  [1,2,3,4].forEach(function(i){
+    var v=document.getElementById('view-'+i);
+    if(v) v.style.display=i===n?'block':'none';
     var s=document.getElementById('step-'+i);
     if(s) s.className='step'+(i===n?' ativo':i<n?' done':'');
   });
   if(n===2) carregarBanco();
-  if(n===3) renderResumoSalvar();
+  if(n===3) renderAnuncios();
+  if(n===4) renderResumoSalvar();
 }
 
 
@@ -500,35 +530,67 @@ function carregarBanco(){
     proxSKU=(skus.length?Math.max.apply(null,skus):2860)+1;
     var skuIni=document.getElementById('sku-inicial');
     if(skuIni && !skuIni.value) skuIni.value=proxSKU;
-    // Mapear fornecedor(cProd) → sku existente
-    var codigoToSku={}, codigoToFamilia={}, codigoToPeso={};
+
+    // 3 mapas para matching: cprod(fornecedor) → produto, cprod_map, cmv
+    var fornMap={}, famMap={}, pesoMap={};
     prods.forEach(function(p){
-      var cod=String(p.fornecedor||'').trim();
-      if(cod){
-        codigoToSku[cod]=String(p.sku||'').trim();
-        if(p.familia) codigoToFamilia[cod]=p.familia;
-        if(p.peso>0) codigoToPeso[cod]=p.peso;
-      }
+      var forn=String(p.fornecedor||'').trim();
+      if(forn){ fornMap[forn]=p; if(p.familia) famMap[forn]=p.familia; if(p.peso>0) pesoMap[forn]=p.peso; }
     });
-    fichas=itensNF.map(function(it){
-      var cod=String(it.codigo||'').trim();
-      var skuExistente=codigoToSku[cod]||'';
-      var existe=!!skuExistente;
-      return Object.assign({},it,{
-        sku:existe?skuExistente:'',
-        existe:existe, _auto:existe,
-        titulo_ml:'', titulo_shopee:'', titulo_yampi:'',
-        familia: codigoToFamilia[cod]||it.familia||'',
-        peso: codigoToPeso[cod]||it.peso||0,
-        sel:!existe
+    // Também indexar por sku para busca direta
+    var skuMap={};
+    prods.forEach(function(p){ skuMap[String(p.sku||'').trim()]=p; });
+
+    // Buscar cprod_map de todos os cprods da nota
+    var codigos=itensNF.map(function(f){return f.codigo;}).filter(Boolean).join(',');
+    var cprodPromise = codigos
+      ? fetch(RAILWAY+'/api/db/cprod-lookup?cprods='+encodeURIComponent(codigos)).then(function(r){return r.json();}).catch(function(){return {};})
+      : Promise.resolve({});
+
+    cprodPromise.then(function(cprodMap){
+      fichas=itensNF.map(function(it){
+        var cod=String(it.codigo||'').trim();
+        var sku='', familia=it.familia||'', peso=it.peso||0, _auto=false;
+
+        // Se já tem SKU no item (veio do histórico/rascunho), respeitar
+        if(it.sku && /^\d{4}$/.test(String(it.sku||'').trim())){
+          sku=String(it.sku).trim(); _auto=true;
+          var pr=skuMap[sku];
+          if(pr){ if(!familia&&pr.familia) familia=pr.familia; if(!peso&&pr.peso>0) peso=pr.peso; }
+        }
+
+        // 1. cprod_map
+        if(!sku && cprodMap && cprodMap[cod] && cprodMap[cod].sku){
+          sku=String(cprodMap[cod].sku); _auto=true;
+          var pr2=skuMap[sku]||{};
+          if(!familia&&pr2.familia) familia=pr2.familia;
+          if(!peso&&(pr2.peso||cprodMap[cod].peso||0)>0) peso=pr2.peso||cprodMap[cod].peso||0;
+        }
+
+        // 2. fornecedor = cprod
+        if(!sku && cod && fornMap[cod]){
+          var pr3=fornMap[cod];
+          sku=String(pr3.sku||''); _auto=true;
+          if(!familia&&pr3.familia) familia=pr3.familia;
+          if(!peso&&pr3.peso>0) peso=pr3.peso;
+        }
+
+        return Object.assign({},it,{
+          sku:sku, existe:_auto, _auto:_auto,
+          familia:familia||it.familia||'',
+          peso:peso||it.peso||0,
+          titulo_ml:it.titulo_ml||'', titulo_shopee:it.titulo_shopee||'', titulo_yampi:it.titulo_yampi||'',
+          sel:!_auto
+        });
       });
+
+      var vinc=fichas.filter(function(x){return x.existe;}).length;
+      var novos=fichas.filter(function(x){return !x.existe;}).length;
+      var _hd2=document.getElementById('hd-st');
+      if(_hd2) _hd2.textContent=vinc+' vinculados | '+novos+' novos (SKU vazio) | Próximo SKU: '+proxSKU;
+      renderTabela();
+      if(novos>0) buscarBlingBackground();
     });
-    var novos=fichas.filter(function(x){return !x.existe;}).length;
-    var _hd2=document.getElementById('hd-st');
-    if(_hd2) _hd2.textContent=novos+' novos (SKU vazio) | '+fichas.filter(function(x){return x.existe;}).length+' existentes | Próximo SKU: '+proxSKU;
-    renderTabela();
-    // Busca no Bling em background p/ produtos sem SKU (pega código Fava + peso)
-    buscarBlingBackground();
   }).catch(function(e){ var _hd3=document.getElementById('hd-st'); if(_hd3) _hd3.textContent='Erro banco: '+e.message; });
 }
 
@@ -587,53 +649,55 @@ function gerarEAN(idx){
 function gerarTodosEAN(){fichas.forEach(function(f,i){if(!f.ean)gerarEAN(i);});}
 
 function renderTabela(){
-  var mg=(parseFloat((document.getElementById('margem-sel')||{value:'40'}).value)||40)/100;
   var novos=fichas.filter(function(f){return !f.existe;}).length;
   var _bn=document.getElementById('badge-novos'); if(_bn) _bn.textContent=novos+' novos';
   var html='';
   fichas.forEach(function(f,i){
-    var pML=calcPreco(f.cmvBr,mg,TAXA_ML_CL,FRETE_ML,DIFAL+IBS,ICMS_SAIDA);
-    var pSH=calcPreco(f.cmvBr,mg,TAXA_SHOPEE,FRETE_SHOPEE,DIFAL+IBS,ICMS_SAIDA);
-    var pBL=calcPreco(f.cmvPr,mg,0,0,0,f.temST?0:ICMS_PR);
-    var famOpts='<option value="">-- familia --</option>'+FAMILIAS.map(function(fm){return '<option'+(f.familia===fm?' selected':'')+'>'+fm+'</option>';}).join('');
+    var famOpts='<option value="">-- familia --</option>'+FAMILIAS.map(function(fm){
+      return '<option'+(f.familia===fm?' selected':'')+' value="'+fm+'">'+fm+'</option>';
+    }).join('');
+    var nome=String(f.nome||'').replace(/"/g,'&#39;');
+    var cst=String(f.cst||'');
+    var ncm=String(f.ncm||'');
+    var custoNF=parseFloat(f.custoNF||0);
+    var ipiUn=parseFloat(f.ipiUn||0);
+    var stUn=parseFloat(f.stUn||0);
+    var custoEnt=parseFloat(f.custoEntrada||(custoNF+ipiUn+stUn));
+    var icmsPct=parseFloat(f.icmsPct||0);
+    var credICMSpct=parseFloat(f.creditoICMS_pct||0);
+    var credPisCofPct=parseFloat(f.credPisCof||0.0925);
+    var credIcmsR=credICMSpct*custoNF;
+    var credPisCofR=f.monofasico?0:credPisCofPct*custoNF;
+    var totalCred=credIcmsR+credPisCofR;
+    var ipiPct=parseFloat(f.ipiPct||f.ipi||0);
     html+='<tr class="'+(f.existe?'exist':'novo')+'" id="tr-'+i+'">';
     html+='<td><input type="checkbox"'+(f.sel?' checked':'')+' onchange="fichas['+i+'].sel=this.checked" style="accent-color:#1F3864"></td>';
     html+='<td>'+(f.existe?'<span class="pill pill-exist">Existe</span>':'<span class="pill pill-novo">Novo</span>')+'</td>';
-    html+='<td><span style="font-size:10px;color:#64748b">'+f.codigo+'</span></td>';
-    html+='<td><input class="rev-input" value="'+f.sku+'" onchange="fichas['+i+'].sku=this.value" style="width:70px"></td>';
-    html+='<td><input class="rev-input" value="'+f.nome.replace(/"/g,'&#39;')+'" onchange="fichas['+i+'].nome=this.value" style="width:220px"></td>';
-    html+='<td><input class="rev-input" value="'+f.ncm+'" readonly style="background:#f8fafc;width:80px"></td>';
-    html+='<td><input class="rev-input" value="'+f.cst+'" readonly style="background:#f8fafc;width:40px"></td>';
-    html+='<td style="text-align:center">'+(f.temST?'<span class="pill pill-st">ST</span>':'—')+'</td>';
-    html+='<td><select class="rev-select" onchange="fichas['+i+'].familia=this.value" style="width:130px">'+famOpts+'</select></td>';
-    html+='<td style="text-align:right"><b>R$ '+fmt(f.custoNF)+'</b></td>';  
-    html+='<td style="text-align:right;font-size:11px;color:#f97316">'+(f.ipiUn>0?'R$ '+fmt(f.ipiUn):'—')+'</td>';
-    html+='<td style="text-align:right;font-size:11px;color:#f59e0b">'+(f.stUn>0?'R$ '+fmt(f.stUn):'—')+'</td>';
-    html+='<td style="text-align:right;background:#eff6ff"><b>R$ '+fmt(f.custoEntrada||f.custoNF)+'</b></td>';
-    html+='<td><input class="rev-input" type="number" value="'+f.cmvBr.toFixed(4)+'" onchange="fichas['+i+'].cmvBr=parseFloat(this.value)||0;atualizarPrecos('+i+')" style="width:80px;text-align:right"></td>';
-    html+='<td><input class="rev-input" type="number" value="'+f.cmvPr.toFixed(4)+'" onchange="fichas['+i+'].cmvPr=parseFloat(this.value)||0;atualizarPrecos('+i+')" style="width:80px;text-align:right"></td>';
-    html+='<td><input class="rev-input" type="number" value="'+(f.peso||'')+'" placeholder="0.000" onchange="fichas['+i+'].peso=parseFloat(this.value)||0" style="width:65px"></td>';
-    html+='<td style="text-align:right;font-size:11px">'+(f.ipi>0?(f.ipi*100).toFixed(1)+'%':'—')+'</td>';
-    html+='<td style="text-align:center">'+(f.temST?'<span style="color:#f59e0b;font-weight:700;font-size:11px">ST</span>':'<span style="color:#ccc;font-size:11px">—</span>')+'</td>';
-    html+='<td style="text-align:center">'+(f.monofasico?'<span style="color:#60a5fa;font-weight:700;font-size:11px">M</span>':'<span style="color:#ccc;font-size:11px">—</span>')+'</td>';
-    // Fix margem: mg já é fração (0.40), não dividir por 100 de novo
-    var _icms=f.temST?0:0.12;var _pis=0.0165,_cof=0.076;
-    var _denom=Math.max(1-_pis-_cof-_icms-mg,0.05);
-    var _pDesc=((f.custoEntrada||f.cmvBr)+FRETE_ML)/_denom;var _trib=_pDesc*(_pis+_cof+_icms);
-    var _cred=f.temST?0:f.cmvBr*(_pis+_cof);var _lBr=_pDesc-_trib-f.cmvBr+_cred;var _mBr=_pDesc>0?_lBr/_pDesc*100:0;
-    html+='<td style="text-align:right;font-size:11px;color:'+(_lBr>=0?'#10b981':'#ef4444')+'">R$ '+_lBr.toFixed(2)+'</td>';
-    html+='<td style="text-align:right;font-size:11px;color:'+(_mBr>=15?'#10b981':_mBr>=8?'#f59e0b':'#ef4444')+';font-weight:700">'+_mBr.toFixed(1)+'%</td>';
-    html+='<td id="p-ml-'+i+'" style="font-size:10px;white-space:nowrap"><b>R$ '+fmt(pML)+'</b></td>';
-    html+='<td id="p-sh-'+i+'" style="font-size:10px;white-space:nowrap"><b>R$ '+fmt(pSH)+'</b></td>';
-    html+='<td id="p-bl-'+i+'" style="font-size:10px;white-space:nowrap"><b>R$ '+fmt(pBL)+'</b></td>';
-    html+='<td><div style="display:flex;gap:2px"><input class="rev-input" id="ean-'+i+'" value="'+(f.ean||'')+'" onchange="fichas['+i+'].ean=this.value" style="width:88px;font-size:11px" placeholder="EAN"><button onclick="gerarEAN('+i+')" title="Gerar EAN" style="background:#2563eb;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:10px;padding:1px 4px">🔢</button></div></td>';
-    html+='<td><input class="rev-input" value="'+(f.titulo_ml||'').replace(/"/g,'&#39;')+'" onchange="fichas['+i+'].titulo_ml=this.value" style="width:160px" placeholder="Titulo ML..."></td>';
-    html+='<td><input class="rev-input" value="'+(f.titulo_shopee||'').replace(/"/g,'&#39;')+'" onchange="fichas['+i+'].titulo_shopee=this.value" style="width:200px" placeholder="Titulo Shopee..."></td>';
+    html+='<td><span style="font-size:10px;color:#64748b;font-family:monospace">'+f.codigo+'</span></td>';
+    html+='<td><input class="rev-input" value="'+f.sku+'" onchange="fichas['+i+'].sku=this.value" style="width:66px" placeholder="SKU"></td>';
+    html+='<td><input class="rev-input" value="'+nome+'" onchange="fichas['+i+'].nome=this.value" style="min-width:190px"></td>';
+    html+='<td style="font-size:10px;color:#94a3b8;font-family:monospace">'+ncm+'</td>';
+    html+='<td style="text-align:center;font-size:10px;font-weight:700;color:'+(cst?'#e2e8f0':'#ef4444')+'">'+( cst||'!' )+'</td>';
+    html+='<td style="text-align:center">'+(f.temST?'<span class="pill pill-st" title="ST R$ '+stUn.toFixed(4)+'/un">ST</span>':'<span style="color:#475569;font-size:11px">-</span>')+'</td>';
+    html+='<td><select class="rev-select" onchange="fichas['+i+'].familia=this.value" style="width:116px">'+famOpts+'</select></td>';
+    html+='<td style="text-align:right;font-weight:700;white-space:nowrap">R$ '+fmt(custoNF)+'</td>';
+    html+='<td style="text-align:right;font-size:11px;color:#f97316">'+(ipiPct>0?(ipiPct*100).toFixed(1)+'%':'-')+'</td>';
+    html+='<td style="text-align:right;font-size:11px;color:#f97316">'+(ipiUn>0?'R$ '+fmt(ipiUn):'-')+'</td>';
+    html+='<td style="text-align:right;font-size:11px;color:#f59e0b">'+(stUn>0?'<b>R$ '+fmt(stUn)+'</b>':'-')+'</td>';
+    html+='<td style="text-align:right;background:#eff6ff;font-weight:700;color:#1d4ed8;white-space:nowrap">R$ '+fmt(custoEnt)+'</td>';
+    html+='<td style="text-align:right;font-size:11px;color:'+(icmsPct>0?'#10b981':'#475569')+'">'+(icmsPct>0?(icmsPct*100).toFixed(0)+'%':'-')+'</td>';
+    html+='<td style="text-align:right;font-size:11px;color:'+(credIcmsR>0?'#10b981':'#475569')+'">'+(credIcmsR>0?'R$ '+fmt(credIcmsR):'-')+'</td>';
+    html+='<td style="text-align:right;font-size:11px;color:'+(credPisCofR>0?'#60a5fa':'#475569')+'">'+(f.monofasico?'<span style="color:#60a5fa" title="Monofasico sem credito">Mono</span>':(credPisCofR>0?'R$ '+fmt(credPisCofR):'-'))+'</td>';
+    html+='<td style="text-align:right;font-size:11px;color:#a855f7;font-weight:700">'+(totalCred>0?'<b>R$ '+fmt(totalCred)+'</b>':'-')+'</td>';
+    html+='<td style="background:#0f172a"><input class="rev-input" type="number" value="'+f.cmvBr.toFixed(4)+'" onchange="fichas['+i+'].cmvBr=parseFloat(this.value)||0" style="width:74px;text-align:right;background:#0f172a;color:#93c5fd;border:1px solid #3b82f6"></td>';
+    html+='<td style="background:#0f172a"><input class="rev-input" type="number" value="'+f.cmvPr.toFixed(4)+'" onchange="fichas['+i+'].cmvPr=parseFloat(this.value)||0" style="width:74px;text-align:right;background:#0f172a;color:#93c5fd;border:1px solid #1d4ed8"></td>';
+    html+='<td><input class="rev-input" type="number" value="'+(f.peso||'')+'" placeholder="kg" onchange="fichas['+i+'].peso=parseFloat(this.value)||0" style="width:56px"></td>';
+    html+='<td style="text-align:center;font-size:10px">'+(f.monofasico?'<b style="color:#60a5fa">M</b>':'-')+'</td>';
+    html+='<td><div style="display:flex;gap:2px"><input class="rev-input" id="ean-'+i+'" value="'+(f.ean||'')+'" onchange="fichas['+i+'].ean=this.value" style="width:76px;font-size:10px" placeholder="EAN"><button onclick="gerarEAN('+i+')" style="background:#2563eb;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:10px;padding:1px 4px">EAN</button></div></td>';
     html+='</tr>';
   });
   var _tb=document.getElementById('rev-tbody'); if(_tb) _tb.innerHTML=html;
 }
-
 function atualizarPrecos(i){
   var f=fichas[i];
   var mg=(parseFloat(document.getElementById('margem-sel').value)||40)/100;
@@ -693,8 +757,193 @@ function gerarTitulosIA(){
   processar(0);
 }
 
-function renderResumoSalvar(){
-  var selecionados=fichas.filter(function(f){return f.sel;});
+
+// ── STEP 3: CONFIGURAÇÃO DE ANÚNCIOS ──────────────────────────────────────
+
+var _CANAIS = {
+  'ml_cl':     {label:'ML Clássico',  icon:'🛒', taxa:0.17, difal:0.0381+0.02, icms:0.1067},
+  'ml_pr':     {label:'ML Premium',   icon:'⭐', taxa:0.19, difal:0.0381+0.02, icms:0.1067},
+  'ml_gf':     {label:'ML Grátis',    icon:'🚚', taxa:0.17, difal:0.0381+0.02, icms:0.1067},
+  'shopee':    {label:'Shopee',        icon:'🛍️', taxa:0,    difal:0.0381+0.02, icms:0.1067},
+  'yampi':     {label:'Yampi (site)',  icon:'🌐', taxa:0.05, difal:0,           icms:0.12},
+  'balcao':    {label:'Balcão',        icon:'🏪', taxa:0,    difal:0,           icms:0.12},
+};
+
+var _FRETE_TIPOS = {
+  'full':      'Full Super',
+  'rapido':    'Frete Rápido',
+  'gratis':    'Frete Grátis (absorve)',
+  'fixo':      'Taxa Fixa R$',
+  'combinar':  'A Combinar',
+};
+
+// Estrutura de anúncios por produto: {sku: [{canal, frete_tipo, frete_val, desconto, preco_sugerido}]}
+var _anunciosCfg = {};
+
+function calcTaxaShopeeLocal(preco){
+  if(preco<80)  return {pct:0.20,fixo:4.00};
+  if(preco<100) return {pct:0.14,fixo:16.00};
+  if(preco<200) return {pct:0.14,fixo:20.00};
+  if(preco<500) return {pct:0.14,fixo:26.00};
+  return {pct:0.14,fixo:28.00};
+}
+
+function calcFreteMLLocal(peso, preco){
+  if(!peso||peso<=0) return 0;
+  var FS=[[0.3,[1.25,1.50,2.00,3.00,4.00,6.00,20.95]],[0.5,[1.25,1.50,2.00,3.00,4.00,6.00,22.55]],
+    [1.0,[1.25,1.50,2.00,3.00,4.00,6.00,23.65]],[2.0,[1.75,2.00,2.50,3.50,4.50,6.50,24.65]],
+    [3.0,[2.00,2.50,3.00,4.00,5.00,7.00,26.25]],[5.0,[2.50,3.50,4.00,5.00,6.00,7.50,30.75]],
+    [7.0,[4.00,5.00,5.50,6.50,7.00,7.50,44.05]],[10.0,[5.00,6.00,6.50,7.00,7.50,8.00,49.35]],
+    [9999,[5.00,6.00,6.50,7.00,7.50,8.00,110.75]]];
+  var fi=preco>=199?6:preco>=99?5:preco>=79?4:preco>=49?3:preco>=29?2:preco>=19?1:0;
+  for(var k=0;k<FS.length;k++){if(peso<=FS[k][0]) return FS[k][1][fi];}
+  return 8;
+}
+
+function calcResultadoAnuncio(cmvBr, cmvPr, peso, temST, monofasico, canal, freteTipo, freteVal, descPct, precoBase){
+  var TP=0.0925, TC=0.1067, TD=0.0381, TI=0.02, TC_PR=0.12;
+  var pf = precoBase * (1 - (descPct||0)/100);
+  if(pf<=0) return null;
+  var ch = _CANAIS[canal]||_CANAIS['ml_cl'];
+  var tx = ch.taxa;
+  var freteR = 0;
+  var fixoShopee = 0;
+
+  if(canal==='shopee'){
+    var sh = calcTaxaShopeeLocal(pf);
+    tx = sh.pct; fixoShopee = sh.fixo;
+    freteR = sh.fixo; // taxa fixa shopee = logística
+  } else if(freteTipo==='full'){
+    freteR = calcFreteMLLocal(parseFloat(peso||0), pf) || parseFloat(freteVal||0) || 7;
+  } else if(freteTipo==='rapido'){
+    freteR = parseFloat(freteVal||0) || 12;
+  } else if(freteTipo==='gratis'){
+    freteR = 0; // absorvido na taxa
+    if(canal==='ml_gf'||canal==='ml_cl'||canal==='ml_pr') tx += 0.02;
+  } else if(freteTipo==='fixo'){
+    freteR = parseFloat(freteVal||0);
+  }
+
+  var cmv = (canal==='balcao'||canal==='yampi') ? parseFloat(cmvPr||cmvBr||0) : parseFloat(cmvBr||0);
+  var difal = ch.difal||0;
+  var icms  = ch.icms||0;
+  var ded, cp, ci;
+  if(canal==='balcao'||canal==='yampi'){
+    ded = pf*(tx + TP + (temST?0:TC_PR) + TI);
+    cp  = monofasico ? 0 : cmv*(TP+TI);
+    ci  = temST ? 0 : cmv*TC_PR;
+  } else {
+    ded = pf*(tx + TP + TC + TD + TI) + fixoShopee;
+    cp  = monofasico ? 0 : cmv*(TP+TI);
+    ci  = temST ? 0 : cmv*TC_PR;
+  }
+  var rec  = pf - ded + cp + ci;
+  var stv  = temST ? pf*(parseFloat(0)) : 0;
+  var luc  = rec - cmv - freteR - stv;
+  var mar  = pf>0 ? luc/pf*100 : 0;
+  var cor  = mar>=20?'#10b981':mar>=10?'#f59e0b':'#ef4444';
+  return {pf, rec, luc, mar, freteR, cor, tx, difal, ded, cp, ci};
+}
+
+function initAnunciosCfg(){
+  fichas.filter(function(f){return f.sel;}).forEach(function(f){
+    var k = f.sku||f.codigo;
+    if(!_anunciosCfg[k]){
+      // Sugerir anúncios padrão
+      _anunciosCfg[k] = [
+        {canal:'ml_cl', frete_tipo:'full', frete_val:0, desconto:0},
+        {canal:'ml_pr', frete_tipo:'full', frete_val:0, desconto:0},
+      ];
+    }
+  });
+}
+
+function renderAnuncios(){
+  initAnunciosCfg();
+  var mg = (parseFloat(document.getElementById('mg-anuncio')?.value||40))/100;
+  var lista = document.getElementById('anuncio-lista');
+  if(!lista) return;
+  var html = '';
+  fichas.filter(function(f){return f.sel;}).forEach(function(f){
+    var k = f.sku||f.codigo;
+    var anuncios = _anunciosCfg[k]||[];
+    html += '<div style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px;margin-bottom:12px">';
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">';
+    html += '<span style="background:#1F3864;color:#93c5fd;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">SKU '+f.sku+'</span>';
+    html += '<span style="font-size:13px;font-weight:700;color:#e2e8f0">'+f.nome.slice(0,60)+'</span>';
+    html += '<span style="font-size:11px;color:#64748b;margin-left:4px">CMV BR: R$ '+fmt(f.cmvBr)+' | CMV PR: R$ '+fmt(f.cmvPr)+'</span>';
+    html += '<button onclick="adicionarAnuncio(\''+k+'\')" style="margin-left:auto;background:#0891b2;color:#fff;border:none;padding:4px 10px;border-radius:5px;cursor:pointer;font-size:11px">+ Anúncio</button>';
+    html += '</div>';
+    // Tabela de anúncios
+    html += '<table style="width:100%;border-collapse:collapse;font-size:11px">';
+    html += '<tr style="background:#0f172a;color:#94a3b8"><th style="padding:5px 6px;text-align:left">Canal</th><th>Frete</th><th>Val.Frete</th><th>Desconto</th><th style="text-align:right">Preço Base</th><th style="text-align:right">Preço Final</th><th style="text-align:right">Frete R$</th><th style="text-align:right">Lucro</th><th style="text-align:right">Margem</th><th>Ação</th></tr>';
+    anuncios.forEach(function(an, ai){
+      var ch = _CANAIS[an.canal]||_CANAIS['ml_cl'];
+      // Calcular preço base sugerido com a margem
+      var pb = an.preco_base||0;
+      if(!pb){
+        var cmvBase=(an.canal==='balcao'||an.canal==='yampi')?f.cmvPr:f.cmvBr;
+        var taxTot=(an.canal==='shopee')?0.14:ch.taxa;
+        var denom=Math.max(1-taxTot-0.0925-ch.icms-(ch.difal||0)-mg,0.05);
+        pb=cmvBase/denom;
+        if(an.frete_tipo==='full') pb=(cmvBase+7)/denom;
+        pb=Math.ceil(pb*100)/100;
+        an.preco_base=pb;
+      }
+      var res = calcResultadoAnuncio(f.cmvBr,f.cmvPr,f.peso,f.temST,f.monofasico,an.canal,an.frete_tipo,an.frete_val,an.desconto,pb);
+      if(!res) return;
+      var canalOpts = Object.keys(_CANAIS).map(function(c){
+        return '<option value="'+c+'"'+(an.canal===c?' selected':'')+'>'+_CANAIS[c].icon+' '+_CANAIS[c].label+'</option>';
+      }).join('');
+      var freteOpts = Object.keys(_FRETE_TIPOS).map(function(t){
+        return '<option value="'+t+'"'+(an.frete_tipo===t?' selected':'')+'>'+_FRETE_TIPOS[t]+'</option>';
+      }).join('');
+      html += '<tr style="border-bottom:1px solid #1e293b">';
+      html += '<td style="padding:4px 6px"><select onchange="_anunciosCfg[\''+k+'\']['+ai+'].canal=this.value;renderAnuncios()" style="background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:4px;font-size:11px;padding:2px">'+canalOpts+'</select></td>';
+      html += '<td style="padding:4px 6px"><select onchange="_anunciosCfg[\''+k+'\']['+ai+'].frete_tipo=this.value;renderAnuncios()" style="background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:4px;font-size:11px;padding:2px">'+freteOpts+'</select></td>';
+      html += '<td style="padding:4px 6px"><input type="number" value="'+(an.frete_val||0)+'" min="0" step="0.01" onchange="_anunciosCfg[\''+k+'\']['+ai+'].frete_val=parseFloat(this.value)||0;renderAnuncios()" style="width:60px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:3px;padding:2px;font-size:11px"></td>';
+      html += '<td style="padding:4px 6px"><input type="number" value="'+(an.desconto||0)+'" min="0" max="80" step="1" onchange="_anunciosCfg[\''+k+'\']['+ai+'].desconto=parseFloat(this.value)||0;renderAnuncios()" style="width:50px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:3px;padding:2px;font-size:11px" placeholder="%">%</td>';
+      html += '<td style="text-align:right;padding:4px 6px"><input type="number" value="'+pb.toFixed(2)+'" min="0" step="0.01" onchange="_anunciosCfg[\''+k+'\']['+ai+'].preco_base=parseFloat(this.value)||0;renderAnuncios()" style="width:72px;background:#0f172a;color:#fbbf24;border:1px solid #334155;border-radius:3px;padding:2px;font-size:11px;text-align:right"></td>';
+      html += '<td style="text-align:right;padding:4px 6px;font-weight:700;color:#f9fafb">R$ '+fmt(res.pf)+'</td>';
+      html += '<td style="text-align:right;padding:4px 6px;color:#94a3b8">R$ '+fmt(res.freteR)+'</td>';
+      html += '<td style="text-align:right;padding:4px 6px;color:'+(res.luc>=0?'#10b981':'#ef4444')+';font-weight:700">R$ '+res.luc.toFixed(2)+'</td>';
+      html += '<td style="text-align:right;padding:4px 6px;color:'+res.cor+';font-weight:700">'+res.mar.toFixed(1)+'%</td>';
+      html += '<td style="padding:4px 6px"><button onclick="removerAnuncio(\''+k+'\','+ai+')" style="background:#7f1d1d;color:#fca5a5;border:none;border-radius:3px;cursor:pointer;font-size:10px;padding:2px 6px">✕</button></td>';
+      html += '</tr>';
+      // Linha de detalhe fiscal
+      html += '<tr style="background:#0a0f1a;font-size:10px;color:#64748b">';
+      html += '<td colspan="4" style="padding:2px 6px">Taxa: '+(res.tx*100).toFixed(1)+'% | PIS/COF: '+(0.0925*100).toFixed(2)+'% | ICMS: '+(ch.icms*100).toFixed(1)+'%'+(ch.difal?' | DIFAL: '+(ch.difal*100).toFixed(1)+'%':'')+'</td>';
+      html += '<td colspan="2" style="padding:2px 6px;text-align:right">Deduções: R$ '+res.ded.toFixed(2)+'</td>';
+      html += '<td colspan="2" style="padding:2px 6px;text-align:right">Créd.entrada: R$ '+(res.cp+res.ci).toFixed(2)+'</td>';
+      html += '<td colspan="2" style="padding:2px 6px;text-align:right">Recebe: R$ '+res.rec.toFixed(2)+'</td>';
+      html += '</tr>';
+    });
+    html += '</table>';
+    html += '</div>';
+  });
+  lista.innerHTML = html || '<p style="color:#64748b;padding:20px">Nenhum produto selecionado. Volte ao step anterior e selecione os produtos.</p>';
+}
+
+function adicionarAnuncio(k){
+  if(!_anunciosCfg[k]) _anunciosCfg[k]=[];
+  _anunciosCfg[k].push({canal:'ml_cl',frete_tipo:'full',frete_val:0,desconto:0,preco_base:0});
+  renderAnuncios();
+}
+function removerAnuncio(k,ai){
+  if(_anunciosCfg[k]) _anunciosCfg[k].splice(ai,1);
+  renderAnuncios();
+}
+function aplicarDescontoGlobal(){
+  var d=parseFloat(prompt('Desconto global %:','0')||0);
+  if(isNaN(d)) return;
+  Object.keys(_anunciosCfg).forEach(function(k){
+    (_anunciosCfg[k]||[]).forEach(function(an){ an.desconto=d; an.preco_base=0; });
+  });
+  renderAnuncios();
+}
+
+
+function renderResumoSalvar(){  var selecionados=fichas.filter(function(f){return f.sel;});
   var mg=(parseFloat(document.getElementById('margem-sel').value)||40)/100;
   var html='<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px;margin-bottom:12px">';
   html+='<div style="font-size:13px;font-weight:700;color:#1F3864;margin-bottom:10px">'+selecionados.length+' produto(s) para salvar</div>';
@@ -1050,11 +1299,14 @@ async function buscarRascunho(){
       carregarDoRascunho(d);
       return;
     }
-    // 2. Tentar histórico de compras (importar_todas_nfe)
+    // 2. Tentar histórico de compras — server já deduplica e vincula SKUs/famílias
     var h = await fetch(RAILWAY+'/api/db/historico-nf?nf='+encodeURIComponent(nf)).then(r=>r.json());
     if(h && h.fichas && h.fichas.length){
-      lista.innerHTML='<p style="color:#10b981;font-size:12px">✅ NF encontrada no histórico ('+h.n_itens+' itens)</p>';
-      // Montar como rascunho temporário
+      var vinc=h.vinculados||h.fichas.filter(function(f){return f.sku;}).length;
+      var novos=h.novos||h.fichas.filter(function(f){return !f.sku;}).length;
+      lista.innerHTML='<p style="color:#10b981;font-size:12px">✅ NF '+h.nf_num+' | '+h.n_itens+' produtos | '
+        +'<span style="color:#10b981">'+vinc+' vinculados</span>'
+        +(novos?' | <span style="color:#f59e0b">'+novos+' novos</span>':'')+'</p>';
       _rascunhoId = null;
       itensNF = h.fichas;
       fichas  = h.fichas.map(function(it){ return Object.assign({},it); });
@@ -1065,8 +1317,9 @@ async function buscarRascunho(){
       _el=document.getElementById('nf-data'); if(_el) _el.textContent=h.data_nf||'';
       _el=document.getElementById('nf-total');if(_el) _el.textContent='R$ '+(h.valor||0).toFixed(2);
       var cardNF=document.getElementById('card-nf'); if(cardNF) cardNF.style.display='';
-      var nfR=document.getElementById('nf-resumo'); if(nfR) nfR.textContent=h.n_itens+' produto(s) carregados do histórico';
-      mostrarSt('st-1','✅ NF '+h.nf_num+' — '+h.fornecedor+' ('+h.n_itens+' itens)','ok');
+      var nfR=document.getElementById('nf-resumo');
+      if(nfR) nfR.textContent=h.n_itens+' produtos | '+vinc+' com SKU | '+novos+' novos';
+      mostrarSt('st-1','✅ NF '+h.nf_num+' — '+h.fornecedor+' ('+h.n_itens+' itens, '+vinc+' vinculados)','ok');
     } else {
       lista.innerHTML='<p style="color:#f59e0b;font-size:12px">⚠️ NF '+nf+' não encontrada. Importe o XML ou rode importar_todas_nfe.</p>';
     }

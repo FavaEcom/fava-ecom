@@ -1535,58 +1535,105 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception as e: self._err(500, str(e))
 
     def _get_historico_nf(self):
-        """GET /api/db/historico-nf?nf=315065 — retorna itens de uma NF do histórico"""
+        """GET /api/db/historico-nf?nf=315065 — retorna itens únicos de uma NF do histórico"""
         try:
             p = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
             nf_num = p.get('nf', [''])[0].strip()
             if not nf_num: self._err(400, 'nf obrigatorio'); return
 
-            # Buscar itens do histórico
-            itens = exe("SELECT * FROM historico_compras WHERE nf=%s ORDER BY id", (nf_num,), fetchall=True) or []
+            # DISTINCT ON sku (cprod) — pega apenas o registro mais recente por produto
+            itens = exe("""SELECT DISTINCT ON (sku) * FROM historico_compras
+                           WHERE nf=%s ORDER BY sku, id DESC""", (nf_num,), fetchall=True) or []
 
-            # Buscar header da NF
             header = exe("SELECT * FROM nf_entrada WHERE nf=%s ORDER BY emissao DESC LIMIT 1", (nf_num,), fetchone=True)
 
             if not itens and not header:
-                # Tentar busca parcial (por parte do número)
-                itens = exe("SELECT * FROM historico_compras WHERE nf LIKE %s ORDER BY id", (f'%{nf_num}%',), fetchall=True) or []
+                itens = exe("""SELECT DISTINCT ON (sku) * FROM historico_compras
+                               WHERE nf LIKE %s ORDER BY sku, id DESC""", (f'%{nf_num}%',), fetchall=True) or []
                 header = exe("SELECT * FROM nf_entrada WHERE nf LIKE %s ORDER BY emissao DESC LIMIT 1", (f'%{nf_num}%',), fetchone=True)
 
-            # Converter para formato fichas do produto_novo
+            # Carregar todos os produtos do banco para cruzar por CMV e cprod_map
+            todos_prods = exe("SELECT sku, nome, custo_br, custo_pr, familia, peso, fornecedor FROM produtos", fetchall=True) or []
+            prod_por_fornecedor = {}  # fornecedor(=cprod) → produto
+            for pr in todos_prods:
+                forn = str(pr.get('fornecedor','') or '').strip()
+                if forn: prod_por_fornecedor[forn] = pr
+            # CMV → lista de produtos (para matching por similaridade)
+            prod_por_cmv = {}
+            for pr in todos_prods:
+                cmv = round(float(pr.get('custo_br') or 0), 2)
+                if cmv > 0:
+                    if cmv not in prod_por_cmv: prod_por_cmv[cmv] = []
+                    prod_por_cmv[cmv].append(pr)
+
             fichas = []
             for it in itens:
-                # Tenta pegar SKU real do cprod_map
-                cprod = str(it.get('sku','') or it.get('cprod','') or '')
-                sku_real = ''
-                if cprod:
-                    cm = exe("SELECT sku FROM cprod_map WHERE cprod=%s LIMIT 1", (cprod,), fetchone=True)
-                    if cm: sku_real = str(cm['sku'])
-                # Se sku no historico já é um SKU Fava (4 dígitos), usar
-                sku_hist = str(it.get('sku','') or '')
-                if re.match(r'^\d{4}$', sku_hist): sku_real = sku_hist
+                cprod = str(it.get('sku','') or '').strip()  # historico.sku = cprod do fornecedor
+                sku_real = ''; familia_real = ''; peso_real = 0; nome_real = str(it.get('nome','') or '')
+
+                # 1. Buscar no cprod_map
+                cm = exe("SELECT sku FROM cprod_map WHERE cprod=%s LIMIT 1", (cprod,), fetchone=True) if cprod else None
+                if cm: sku_real = str(cm['sku'])
+
+                # 2. Buscar pelo campo fornecedor do produtos (cprod salvo como fornecedor)
+                if not sku_real and cprod and cprod in prod_por_fornecedor:
+                    pr = prod_por_fornecedor[cprod]
+                    sku_real   = str(pr['sku'])
+                    familia_real = str(pr.get('familia') or '')
+                    peso_real  = float(pr.get('peso') or 0)
+
+                # 3. Matching por CMV (tolerância 3%) como fallback
+                if not sku_real:
+                    cmv_hist = round(float(it.get('cmv_br') or 0), 2)
+                    if cmv_hist > 0:
+                        for delta in [0, 0.01, 0.02, 0.05, 0.10]:
+                            chave = round(cmv_hist * (1 + delta), 2)
+                            chave2 = round(cmv_hist * (1 - delta), 2)
+                            for c in [chave, chave2]:
+                                if c in prod_por_cmv:
+                                    for pr in prod_por_cmv[c]:
+                                        if not str(pr.get('nome','')):  # prefer unnamed (recently created)
+                                            sku_real = str(pr['sku'])
+                                            familia_real = str(pr.get('familia') or '')
+                                            peso_real = float(pr.get('peso') or 0)
+                                            break
+                                    if sku_real: break
+                            if sku_real: break
+
+                # Se encontrou SKU, puxar dados completos do produto
+                if sku_real:
+                    pr_full = exe("SELECT * FROM produtos WHERE sku=%s", (sku_real,), fetchone=True)
+                    if pr_full:
+                        if not familia_real: familia_real = str(pr_full.get('familia') or '')
+                        if not peso_real:    peso_real    = float(pr_full.get('peso') or 0)
+                        if pr_full.get('nome'): nome_real = str(pr_full['nome'])
 
                 fichas.append({
-                    'codigo':       cprod or sku_hist,
-                    'nome':         str(it.get('nome','') or ''),
-                    'ncm':          str(it.get('ncm','') or ''),
-                    'cfop':         str(it.get('cfop','') or ''),
-                    'qtd':          float(it.get('qtd',1) or 1),
-                    'sku':          sku_real,
-                    'existe':       bool(sku_real),
-                    'custoNF':      float(it.get('vunit',0) or 0),
-                    'custoEntrada': float(it.get('custo_r',0) or 0),
-                    'ipiUn':        float(it.get('ipi_un',0) or 0),
-                    'ipiPct':       float(it.get('ipi_p',0) or 0),
-                    'stUn':         0,
-                    'temST':        False,
-                    'cmvBr':        float(it.get('cmv_br',0) or 0),
-                    'cmvPr':        float(it.get('cmv_pr',0) or 0),
-                    'monofasico':   False,
-                    'familia':      '',
-                    'peso':         0,
-                    'titulo_ml':    '',
-                    'titulo_shopee':'',
-                    'sel':          not bool(sku_real),
+                    'codigo':        cprod,
+                    'nome':          nome_real,
+                    'ncm':           str(it.get('ncm','') or ''),
+                    'cfop':          str(it.get('cfop','') or ''),
+                    'qtd':           float(it.get('qtd',1) or 1),
+                    'sku':           sku_real,
+                    'existe':        bool(sku_real),
+                    '_auto':         bool(sku_real),
+                    'custoNF':       float(it.get('vunit',0) or 0),
+                    'custoEntrada':  float(it.get('custo_r',0) or 0),
+                    'ipiUn':         float(it.get('ipi_un',0) or 0),
+                    'ipiPct':        float(it.get('ipi_p',0) or 0),
+                    'stUn':          0,
+                    'temST':         False,
+                    'cmvBr':         float(it.get('cmv_br',0) or 0),
+                    'cmvPr':         float(it.get('cmv_pr',0) or 0),
+                    'monofasico':    False,
+                    'familia':       familia_real,
+                    'peso':          peso_real,
+                    'titulo_ml':     '',
+                    'titulo_shopee': '',
+                    'sel':           not bool(sku_real),
+                    'creditoICMS_pct': float(it.get('icms_p',0) or 0) / 100.0 if float(it.get('icms_p',0) or 0) > 1 else float(it.get('icms_p',0) or 0),
+                    'icmsPct':       float(it.get('icms_p',0) or 0) / 100.0 if float(it.get('icms_p',0) or 0) > 1 else float(it.get('icms_p',0) or 0),
+                    'credPisCof':    float(it.get('cred_pc',0) or 0),
                 })
 
             self._ok({
@@ -1597,6 +1644,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 'valor':     float(header.get('valor',0) if header else 0),
                 'fichas':    fichas,
                 'n_itens':   len(fichas),
+                'vinculados': sum(1 for f in fichas if f['sku']),
+                'novos':      sum(1 for f in fichas if not f['sku']),
             })
         except Exception as e: self._err(500, str(e))
 
