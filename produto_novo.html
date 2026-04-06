@@ -92,6 +92,10 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
         <p style="font-size:11px;color:#64748b;margin-top:4px">Arquivo .xml da nota fiscal de entrada</p>
       </div>
       <input type="file" id="xml-inp" accept=".xml" style="display:none" onchange="lerXML(this.files[0])">
+      <div style="margin-top:14px;text-align:center;padding-top:14px;border-top:1px solid #e2e8f0">
+        <p style="font-size:12px;color:#94a3b8;margin-bottom:10px">Não tem XML? Cadastre manualmente</p>
+        <button class="btn btn-roxo" onclick="cadastroManual()">✏️ Cadastro Manual (sem NF)</button>
+      </div>
     </div>
   </div>
   <div class="card" id="card-nf" style="display:none">
@@ -204,6 +208,36 @@ var FAMILIAS = [];
 })();
 
 var dadosNF=null, itensNF=[], fichas=[], proxSKU=3500;
+
+function cadastroManual(){
+  // Pega o próximo SKU disponível do banco
+  fetch(RAILWAY+'/api/db/produtos').then(function(r){return r.json();}).then(function(prods){
+    var skus = prods.map(function(p){return parseInt(p.sku)||0;}).filter(function(s){return s>0;});
+    proxSKU = (skus.length ? Math.max.apply(null,skus) : 3500) + 1;
+    // Criar uma ficha em branco
+    fichas = [{
+      sel:true, sku:String(proxSKU), nome:'', familia:'', peso:0,
+      cmvBr:0, cmvPr:0, ipiPct:0, temST:false, stUn:0,
+      titulo_ml:'', titulo_shopee:'', titulo_yampi:'',
+      codigo:'', ncm:'', ean:'', existe:false, _vazio:true,
+      custoNF:0, custo:0, qtd:1
+    }];
+    dadosNF = null;
+    mostrarSt('st-1','Cadastro manual — preencha os dados na próxima etapa','ok');
+    irStep(2);
+  }).catch(function(){
+    // Fallback sem banco
+    fichas = [{
+      sel:true, sku:String(proxSKU), nome:'', familia:'', peso:0,
+      cmvBr:0, cmvPr:0, ipiPct:0, temST:false, stUn:0,
+      titulo_ml:'', titulo_shopee:'', titulo_yampi:'',
+      codigo:'', ncm:'', ean:'', existe:false, _vazio:true,
+      custoNF:0, custo:0, qtd:1
+    }];
+    dadosNF = null;
+    irStep(2);
+  });
+}
 var blingToken=localStorage.getItem('bling_token')||'';
 
 function fmt(v){ return (v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
@@ -479,7 +513,11 @@ function lerXML(file){
       document.getElementById('nf-forn').textContent=forn.nome;
       document.getElementById('nf-num').textContent='NF '+dadosNF.nf;
       document.getElementById('nf-data').textContent=dadosNF.data;
-      document.getElementById('nf-valor').textContent='R$ '+(dadosNF.valor||0).toFixed(2);
+      document.getElementById('nf-total').textContent='R$ '+(dadosNF.valor||0).toFixed(2);
+      var cnpjEl=document.getElementById('nf-cnpj'); if(cnpjEl) cnpjEl.textContent=dadosNF.cnpjRaw||dadosNF.cnpj||'';
+      var cardNF=document.getElementById('card-nf'); if(cardNF) cardNF.style.display='';
+      var nfResumo=document.getElementById('nf-resumo'); if(nfResumo) nfResumo.textContent=itensNF.length+' iten(s) na nota';
+      mostrarSt('st-1',itensNF.length+' produtos lidos da NF','ok');
       fichas=itensNF.map(function(it,i){return Object.assign({sel:true,sku:'',familia:'',peso:0,titulo_ml:'',titulo_shopee:'',existe:false,_vazio:true},it);});
       irStep(2);
       renderTabela();
