@@ -1114,8 +1114,7 @@ async function gerarTitulosIAProduto(sku){
     var res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,
-        messages:[{role:'user',content:'Produto: '+f.nome+(f.ncm?' NCM '+f.ncm:'')+'. Familia: '+(f.familia||'').
-          +'\nGere (responda APENAS JSON, sem markdown):\n{"titulo_ml":"(ate 60 car, completo, com marca/modelo)","titulo_shopee":"(ate 120 car)","titulo_yampi":"(ate 120 car)","tipo":"(tipo do produto em 2-3 palavras)"}'}]})
+        messages:[{role:'user',content:'Produto: '+f.nome+(f.ncm?' NCM '+f.ncm:'')+'. Familia: '+(f.familia||'')+'\nGere (responda APENAS JSON, sem markdown):\n{"titulo_ml":"(ate 60 car, completo, com marca/modelo)","titulo_shopee":"(ate 120 car)","titulo_yampi":"(ate 120 car)","tipo":"(tipo do produto em 2-3 palavras)"}'}]})
     }).then(function(x){return x.json();});
     var txt=(res.content||[]).map(function(b){return b.text||'';}).join('');
     var j=JSON.parse(txt.replace(/```json|```/g,'').trim());
