@@ -118,14 +118,15 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
 <div id="view-2" class="pg" style="display:none">
   <div class="card">
     <div class="card-h">
-      <span>&#128203;</span><h2>Revis&atilde;o de Produtos</h2>
-      <input type="number" id="sku-inicial" placeholder="SKU base (preenche vazios)" min="1001" step="1" style="width:160px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;padding:4px 8px;border-radius:6px;font-size:12px" title="SKU de partida para os produtos novos desta NF" oninput="resequenciarSkus()">
+      <span>&#128203;</span><h2>Revisão de Produtos</h2>
+      <input type="number" id="sku-inicial" placeholder="SKU inicial para novos" min="1001" step="1" style="width:150px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;padding:4px 8px;border-radius:6px;font-size:12px" title="Preenche SKU base — clique Gerar Seq. para aplicar">
+      <button onclick="resequenciarSkus()" title="Preenche SKUs VAZIOS em sequência. Não altera SKUs já preenchidos." style="background:#1d4ed8;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">🔢 Gerar Seq.</button>
+      <button onclick="limparSkusNovos()" title="Limpa SKUs dos produtos novos (não apaga os existentes)" style="background:#6b7280;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">🧹 Limpar SKUs</button>
       <span id="badge-novos" style="background:#dbeafe;color:#1d4ed8;border-radius:16px;padding:2px 10px;font-size:10px;font-weight:700"></span>
-      <span style="font-size:11px;color:#64748b;margin-left:8px">Edite inline &mdash; clique em qualquer campo</span>
-      <button onclick="resequenciarSkus()" title="Preenche SKUs vazios em sequência a partir do número digitado" style="background:#1d4ed8;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">🔢 Gerar Seq.</button>
       <button onclick="gerarTodosEAN()" style="background:#7c3aed;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">🔢 Gerar EAN</button>
-      <input type="password" id="claude-key" placeholder="🔑 API Key Claude" style="width:180px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;padding:4px 8px;border-radius:6px;font-size:11px" title="Cole sua API Key da Anthropic (claude.ai/account)" onchange="localStorage.setItem('claude_api_key',this.value)">
-      <button onclick="gerarTitulosIA()" title="Gerar títulos ML e Shopee com IA para produtos sem título" style="background:#0891b2;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">✨ Gerar Títulos</button>
+      <button onclick="gerarFamiliasIA()" title="Gera família automaticamente para todos os sem família usando IA" style="background:#0891b2;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">🤖 Famílias IA</button>
+      <input type="password" id="claude-key" placeholder="🔑 API Key Claude" style="width:160px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;padding:4px 8px;border-radius:6px;font-size:11px" title="Cole sua API Key da Anthropic" onchange="localStorage.setItem('claude_api_key',this.value)">
+      <button onclick="gerarTitulosIA()" title="Gerar títulos ML e Shopee com IA" style="background:#059669;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">✨ Títulos IA</button>
       <button onclick="novaFamilia()" title="Adicionar nova família" style="background:#7c3aed;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">+ Família</button>
       <select id="margem-sel" onchange="recalcularTodos()" style="border:1px solid #e2e8f0;border-radius:5px;padding:4px 8px;font-size:11px;outline:none;margin-left:auto">
         <option value="30">Margem 30%</option>
@@ -257,63 +258,10 @@ function irStep(n){
     var s=document.getElementById('step-'+i);
     if(s) s.className='step'+(i===n?' ativo':i<n?' done':'');
   });
-  if(n===2) 
-// AUTO-SKU: buscar SKU no cprod_map (não preenche novos automaticamente)
-(async function autoPreencherSku(){
-  var codigos = fichas.map(function(f){return f.codigo;}).filter(Boolean).join(',');
-  if(!codigos) return;
-
-  // Normalizar código: remove pontos/traços/espaços e zeros à esquerda
-  function norm(c){ return String(c||'').replace(/[.\-\s]/g,'').replace(/^0+(?=\d)/,''); }
-
-  try{
-    var resp = await fetch('https://web-production-5aa0f.up.railway.app/api/db/cprod-lookup?cprods='+encodeURIComponent(codigos));
-    var mapa = await resp.json();
-
-    // Índice normalizado para match flexível
-    var mapaNorm = {};
-    Object.keys(mapa).forEach(function(k){ mapaNorm[norm(k)] = mapa[k]; });
-
-    fichas.forEach(function(f){
-      var r = mapa[String(f.codigo)] || mapaNorm[norm(String(f.codigo))] || null;
-      if(r && r.sku){
-        // PRODUTO ENCONTRADO → preencher SKU automaticamente
-        f.sku = r.sku;
-        f.existe = true;
-        f._auto = true;
-        if(!f.peso && r.peso) f.peso = r.peso;
-        if(r.cmv_br > 0 && f.cmvBr === 0){ f.cmvBr = r.cmv_br; f.cmvPr = r.cmv_pr || r.cmv_br; }
-        if(r.familia) f.familia = r.familia;
-      } else {
-        // NÃO ENCONTRADO → SKU vazio, usuário preenche
-        f.sku = '';
-        f._vazio = true;
-      }
-    });
-
-    // Buscar peso no Bling para todos sem peso (em background)
-    fichas.filter(function(f){ return !f.peso; }).forEach(async function(f){
-      try{
-        var rp = await fetch('https://web-production-5aa0f.up.railway.app/api/db/bling-buscar-produto', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({cprod: f.codigo, nome: f.nome})
-        }).then(function(r){return r.json();});
-        if(rp && rp.found && rp.peso > 0){
-          f.peso = rp.peso;
-          if(rp.largura) f.largura = rp.largura;
-          if(rp.altura) f.altura = rp.altura;
-          if(rp.profundidade) f.profundidade = rp.profundidade;
-        }
-      }catch(e){}
-    });
-    setTimeout(renderTabela, 2000);
-    renderTabela();
-
-  }catch(e){ console.warn('Auto-SKU erro:', e.message); renderTabela(); }
-})();
-renderTabela();
+  if(n===2) carregarBanco();
   if(n===3) renderResumoSalvar();
 }
+
 
 function lerXML(file){
   if(!file) return;
@@ -537,19 +485,26 @@ function carregarBanco(){
     proxSKU=(skus.length?Math.max.apply(null,skus):2860)+1;
     var skuIni=document.getElementById('sku-inicial');
     if(skuIni && !skuIni.value) skuIni.value=proxSKU;
-    // Mapear cprod → sku existente no banco
-    var codigoToSku={};
+    // Mapear fornecedor(cProd) → sku existente
+    var codigoToSku={}, codigoToFamilia={}, codigoToPeso={};
     prods.forEach(function(p){
-      if(p.fornecedor) codigoToSku[String(p.fornecedor).trim()]=String(p.sku||'').trim();
+      var cod=String(p.fornecedor||'').trim();
+      if(cod){
+        codigoToSku[cod]=String(p.sku||'').trim();
+        if(p.familia) codigoToFamilia[cod]=p.familia;
+        if(p.peso>0) codigoToPeso[cod]=p.peso;
+      }
     });
     fichas=itensNF.map(function(it){
-      var skuExistente=codigoToSku[String(it.codigo||'').trim()]||'';
+      var cod=String(it.codigo||'').trim();
+      var skuExistente=codigoToSku[cod]||'';
       var existe=!!skuExistente;
       return Object.assign({},it,{
         sku:existe?skuExistente:'',
         existe:existe, _auto:existe,
         titulo_ml:'', titulo_shopee:'', titulo_yampi:'',
-        familia:it.familia||'', peso:it.peso||0,
+        familia: codigoToFamilia[cod]||it.familia||'',
+        peso: codigoToPeso[cod]||it.peso||0,
         sel:!existe
       });
     });
@@ -557,8 +512,45 @@ function carregarBanco(){
     var _hd2=document.getElementById('hd-st');
     if(_hd2) _hd2.textContent=novos+' novos (SKU vazio) | '+fichas.filter(function(x){return x.existe;}).length+' existentes | Próximo SKU: '+proxSKU;
     renderTabela();
+    // Busca no Bling em background p/ produtos sem SKU (pega código Fava + peso)
+    buscarBlingBackground();
   }).catch(function(e){ var _hd3=document.getElementById('hd-st'); if(_hd3) _hd3.textContent='Erro banco: '+e.message; });
 }
+
+async function buscarBlingBackground(){
+  var semSku=fichas.filter(function(f){ return !f.sku && f.codigo; });
+  if(!semSku.length) return;
+  var _hd=document.getElementById('hd-st');
+  if(_hd) _hd.textContent=(_hd.textContent||'')+' | 🔍 Buscando '+semSku.length+' no Bling...';
+  var achou=0;
+  await Promise.all(semSku.map(async function(f){
+    try{
+      var rb=await fetch(RAILWAY+'/api/db/bling-buscar-produto',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({cprod:f.codigo,nome:f.nome})
+      }).then(function(r){return r.json();});
+      if(rb && rb.found){
+        // SKU Fava = campo "codigo" do produto no Bling (4 dígitos)
+        if(rb.codigo && /^\d{4}$/.test(rb.codigo)){
+          f.sku=rb.codigo; f.existe=true; f._auto=true; f._fonte='bling'; achou++;
+        }
+        if(!f.peso && rb.peso>0){
+          f.peso=rb.peso;
+          if(rb.largura) f.largura=rb.largura;
+          if(rb.altura) f.altura=rb.altura;
+          if(rb.profundidade) f.profundidade=rb.profundidade;
+        }
+      }
+    }catch(e){}
+  }));
+  var aindaVazio=fichas.filter(function(f){return !f.sku;}).length;
+  if(_hd) _hd.textContent=
+    fichas.filter(function(x){return x.existe;}).length+' vinculados'
+    +(achou?' ('+achou+' via Bling)':'')
+    +(aindaVazio?' | '+aindaVazio+' sem SKU → use 🔢 Gerar Seq.':'');
+  renderTabela();
+}
+
 
 function calcPreco(cmv,mg,taxa,frete,difal,icms){
   if(cmv<=0) return 0;
@@ -858,7 +850,6 @@ function resequenciarSkus() {
   let seq = base;
   let count = 0;
   fichas.forEach(function(f) {
-    // REGRA: só preenche se o campo SKU estiver VAZIO e não for auto-vinculado
     const val = String(f.sku||'').trim();
     if(!val && !f._auto) {
       f.sku = String(seq++);
@@ -866,15 +857,61 @@ function resequenciarSkus() {
       f._gerado = true;
       count++;
     }
-    // Campos com valor (manual ou auto) → NUNCA são tocados
   });
-  if(count === 0) {
-    alert('Nenhum campo vazio para preencher. Campos com SKU existente não são alterados.');
-    return;
-  }
+  if(count === 0) { alert('Nenhum campo vazio para preencher. SKUs existentes não foram alterados.'); return; }
   renderTabela();
   document.getElementById('sku-inicial').value = seq;
-  console.log('[SKU] ' + count + ' SKUs gerados: ' + base + ' a ' + (seq-1));
+}
+
+function limparSkusNovos() {
+  if(!confirm('Limpar SKUs dos produtos NOVOS (não toca nos já vinculados ao banco)?')) return;
+  fichas.forEach(function(f) {
+    if(!f._auto && !f.existe) {
+      f.sku = '';
+      f._gerado = false;
+      f._vazio = true;
+    }
+  });
+  renderTabela();
+}
+
+async function gerarFamiliasIA() {
+  var semFamilia = fichas.filter(function(f){ return f.sel && (!f.familia || f.familia===''); });
+  if(!semFamilia.length){ alert('Todos os produtos selecionados já têm família.'); return; }
+  var apiKey = localStorage.getItem('claude_api_key') || document.getElementById('claude-key')?.value || '';
+  if(!apiKey){ alert('Cole sua API Key Claude no campo 🔑 antes de usar.'); return; }
+  var btn = document.querySelector('[onclick="gerarFamiliasIA()"]');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Gerando...'; }
+  try{
+    var nomes = semFamilia.map(function(f){ return f.nome||f.codigo; }).join('\n');
+    var familiasList = FAMILIAS.slice(0,30).join(', ');
+    var resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:1000,
+        messages:[{role:'user',content:
+          'Classifique cada produto abaixo em uma das famílias disponíveis.\n'+
+          'Famílias disponíveis: '+familiasList+'\n\n'+
+          'Produtos:\n'+nomes+'\n\n'+
+          'Responda SOMENTE em JSON puro: {"resultados":[{"nome":"...","familia":"..."}]}\n'+
+          'Use exatamente o nome da família da lista. Se não souber, use a mais próxima.'
+        }]
+      })
+    });
+    var d = await resp.json();
+    var txt = d.content[0].text.replace(/```json|```/g,'').trim();
+    var resultado = JSON.parse(txt);
+    var mapa = {};
+    (resultado.resultados||[]).forEach(function(r){ mapa[r.nome]=r.familia; });
+    semFamilia.forEach(function(f){
+      var key = f.nome||f.codigo;
+      if(mapa[key]) f.familia = mapa[key];
+    });
+    renderTabela();
+    alert('✅ Famílias geradas para '+semFamilia.length+' produtos!');
+  }catch(e){ alert('Erro: '+e.message); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent='🤖 Famílias IA'; } }
 }
 
 
