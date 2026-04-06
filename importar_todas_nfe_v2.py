@@ -454,11 +454,16 @@ def main():
     # Envia CMV para o painel web
     if ENVIAR_PAINEL:
         cmv_total = {**cmv_existente, **cmv_novos}
-        # Prepara lista do histórico para envio
+        # Prepara lista do histórico SOMENTE das NFs novas importadas agora
+        # (não remanda todas as 452 toda vez — evita duplicatas no banco)
         hist_list = []
+        dados_nf_list = []
         for xml_path2 in sorted(xmls):
             data2, err2 = parse_xml(str(xml_path2))
-            if data2:
+            if not data2: continue
+            # Só incluir NFs que foram importadas nessa rodada
+            if str(data2['nf']) not in nfs_existentes - {str(data2['nf'])}:
+                dados_nf_list.append(data2)
                 for it in data2['itens']:
                     hist_list.append({
                         'nf': str(data2['nf']), 'fornecedor': data2['forn'],
@@ -469,15 +474,11 @@ def main():
                         'icms_p': it['icms_p'], 'cred_pc': it['cred_pc'],
                         'custo_r': it['custo_r'], 'cmv_br': it['cmv_br'],
                         'cmv_pr': it['cmv_pr'], 'ncm': it['ncm'], 'cfop': it['cfop'],
-                        'v_st': it['st_r'],        # ST total da linha
-                        'icms_r': it['icms_r'],    # vICMS real da NF
-                        'icms_un': it['icms_un'],  # ICMS por unidade
-                        'cred_icms': it['cred_icms'],  # crédito real = vICMS/vProd
+                        'v_st': it['st_r'],
+                        'icms_r': it['icms_r'],
+                        'icms_un': it['icms_un'],
+                        'cred_icms': it['cred_icms'],
                     })
-        dados_nf_list = []
-        for xml_path3 in sorted(xmls):
-            data3, err3 = parse_xml(str(xml_path3))
-            if data3: dados_nf_list.append(data3)
 
         print(f'\n  📡 Enviando dados para o banco no Railway...')
         print(f'     {len(dados_nf_list)} NFs | {len(hist_list)} itens histórico | {len(cmv_total)} CMVs')
