@@ -2469,50 +2469,42 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         try:
             payload = self._body()
             if isinstance(payload, dict): payload = [payload]
+            # Garantir unique constraint para upsert
+            try: exe("CREATE UNIQUE INDEX IF NOT EXISTS idx_hist_nf_sku ON historico_compras(nf,sku)")
+            except: pass
             n=0
             for row in payload:
                 try:
-                    nf   = row.get('nf','')
-                    cprod= row.get('sku','')  # campo sku = cprod do fornecedor
-                    v_st = float(row.get('v_st',0))
-                    # Verificar se já existe registro
-                    existe = exe("SELECT id FROM historico_compras WHERE nf=%s AND sku=%s LIMIT 1",
-                                 (nf, cprod), fetchone=True)
-                    if existe:
-                        # Atualizar v_st (e outros campos que podem ter mudado)
-                        cred_icms_u = float(row.get('cred_icms',0))
-                        if not cred_icms_u:
-                            v_icms_u = float(row.get('icms_r',0) or row.get('icms_un',0)*float(row.get('qtd',1) or 1))
-                            vtot_u = float(row.get('vtot',0)) or float(row.get('vunit',0))
-                            if v_icms_u > 0 and vtot_u > 0:
-                                cred_icms_u = round(v_icms_u / vtot_u, 6)
-                        exe("UPDATE historico_compras SET v_st=%s, cred_icms=%s, custo_r=%s, cmv_br=%s, cmv_pr=%s WHERE nf=%s AND sku=%s",
-                            (v_st, cred_icms_u, float(row.get('custo_r',0)), float(row.get('cmv_br',0)),
-                             float(row.get('cmv_pr',0)), nf, cprod))
-                    else:
-                        cred_icms = float(row.get('cred_icms',0))
+                    nf    = str(row.get('nf',''))
+                    cprod = str(row.get('sku',''))
+                    v_st  = float(row.get('v_st',0) or 0)
+                    # cred_icms = crédito real vICMS/vProd
+                    cred_icms = float(row.get('cred_icms',0) or 0)
                     if not cred_icms:
-                        # calcular do vICMS / vtot se disponível
-                        v_icms = float(row.get('icms_r',0) or row.get('icms_un',0)*float(row.get('qtd',1) or 1))
-                        vtot_r = float(row.get('vtot',0)) or float(row.get('vunit',0))
+                        v_icms = float(row.get('icms_r',0) or 0)
+                        vtot_r = float(row.get('vtot',0) or row.get('vunit',0) or 0)
                         if v_icms > 0 and vtot_r > 0:
                             cred_icms = round(v_icms / vtot_r, 6)
-                    exe(f"INSERT INTO historico_compras "
-                            f"(nf,fornecedor,data_emissao,sku,nome,qtd,vunit,vtot,ipi_p,ipi_un,icms_p,cred_pc,custo_r,cmv_br,cmv_pr,ncm,cfop,v_st,cred_icms) "
-                            f"VALUES ({qmark(19)})",
-                            (nf, row.get('fornecedor',''), row.get('data_emissao',''),
-                             cprod, row.get('nome',''),
-                             float(row.get('qtd',0)), float(row.get('vunit',0)), float(row.get('vtot',0)),
-                             float(row.get('ipi_p',0)), float(row.get('ipi_un',0)),
-                             float(row.get('icms_p',0)), float(row.get('cred_pc',0)),
-                             float(row.get('custo_r',0)), float(row.get('cmv_br',0)),
-                             float(row.get('cmv_pr',0)), row.get('ncm',''), row.get('cfop',''),
-                             v_st, cred_icms))
+                    exe("""INSERT INTO historico_compras
+                            (nf,fornecedor,data_emissao,sku,nome,qtd,vunit,vtot,
+                             ipi_p,ipi_un,icms_p,cred_pc,custo_r,cmv_br,cmv_pr,ncm,cfop,v_st,cred_icms)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                           ON CONFLICT (nf,sku) DO UPDATE SET
+                             v_st=EXCLUDED.v_st, cred_icms=EXCLUDED.cred_icms,
+                             custo_r=EXCLUDED.custo_r, cmv_br=EXCLUDED.cmv_br,
+                             cmv_pr=EXCLUDED.cmv_pr""",
+                        (nf, row.get('fornecedor',''), row.get('data_emissao',''),
+                         cprod, row.get('nome',''),
+                         float(row.get('qtd',0)), float(row.get('vunit',0)), float(row.get('vtot',0)),
+                         float(row.get('ipi_p',0)), float(row.get('ipi_un',0)),
+                         float(row.get('icms_p',0)), float(row.get('cred_pc',0)),
+                         float(row.get('custo_r',0)), float(row.get('cmv_br',0)),
+                         float(row.get('cmv_pr',0)), row.get('ncm',''), row.get('cfop',''),
+                         v_st, cred_icms))
                     n+=1
                 except Exception as e: print(f'[HIST] {e}')
             self._ok({'ok':True,'inseridos':n})
         except Exception as e: self._err(500, str(e))
-
     def _post_nf(self):
         try:
             d = self._body()
