@@ -1,5 +1,3 @@
-# rebuild
-# v2.0 - 06/04/2026
 """
 FAVA ECOM — Servidor Railway v3
 ================================
@@ -1558,7 +1556,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 header = exe("SELECT * FROM nf_entrada WHERE nf LIKE %s ORDER BY emissao DESC LIMIT 1", (f'%{nf_num}%',), fetchone=True)
 
             # Carregar todos os produtos do banco para cruzar por CMV e cprod_map
-            todos_prods = exe("SELECT sku, nome, custo_br, custo_pr, familia, peso, fornecedor FROM produtos", fetchall=True) or []
+            todos_prods = exe("SELECT sku, nome, custo_br, custo_pr, familia, fornecedor FROM produtos", fetchall=True) or []
             prod_por_fornecedor = {}  # fornecedor(=cprod) → produto
             for pr in todos_prods:
                 forn = str(pr.get('fornecedor','') or '').strip()
@@ -1585,7 +1583,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     pr = prod_por_fornecedor[cprod]
                     sku_real   = str(pr['sku'])
                     familia_real = str(pr.get('familia') or '')
-                    peso_real  = float(pr.get('peso') or 0)
+                    peso_real  = 0.0
 
                 # 3. Matching por CMV (tolerância 3%) como fallback
                 if not sku_real:
@@ -1600,7 +1598,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                         if not str(pr.get('nome','')):  # prefer unnamed (recently created)
                                             sku_real = str(pr['sku'])
                                             familia_real = str(pr.get('familia') or '')
-                                            peso_real = float(pr.get('peso') or 0)
+                                            peso_real = 0.0
                                             break
                                     if sku_real: break
                             if sku_real: break
