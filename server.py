@@ -113,6 +113,11 @@ def criar_tabelas():
                 created_at TIMESTAMP DEFAULT NOW())""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS v_st REAL DEFAULT 0""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS cred_icms REAL DEFAULT 0""",
+            # Deduplicar antes de criar o índice único
+            """DELETE FROM historico_compras WHERE id NOT IN (
+                SELECT MIN(id) FROM historico_compras GROUP BY nf, sku
+            )""",
+            """CREATE UNIQUE INDEX IF NOT EXISTS idx_hist_nf_sku ON historico_compras(nf, sku)""",
             """CREATE TABLE IF NOT EXISTS nf_entrada (
                 chave TEXT PRIMARY KEY, nf TEXT, fornecedor TEXT, cnpj TEXT,
                 emissao TEXT, valor REAL DEFAULT 0, created_at TIMESTAMP DEFAULT NOW())""",
@@ -2484,30 +2489,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         try:
             payload = self._body()
             if isinstance(payload, dict): payload = [payload]
-            # Garantir unique constraint para upsert
-            try: exe("CREATE UNIQUE INDEX IF NOT EXISTS idx_hist_nf_sku ON historico_compras(nf,sku)")
-            except: pass
-            n=0
+            n = 0
             for row in payload:
                 try:
                     nf    = str(row.get('nf',''))
                     cprod = str(row.get('sku',''))
+                    if not nf or not cprod: continue
                     v_st  = float(row.get('v_st',0) or 0)
-                    # cred_icms = crédito real vICMS/vProd
                     cred_icms = float(row.get('cred_icms',0) or 0)
                     if not cred_icms:
                         v_icms = float(row.get('icms_r',0) or 0)
                         vtot_r = float(row.get('vtot',0) or row.get('vunit',0) or 0)
                         if v_icms > 0 and vtot_r > 0:
                             cred_icms = round(v_icms / vtot_r, 6)
+                    # DELETE antigo + INSERT novo — sem precisar de índice único
+                    exe("DELETE FROM historico_compras WHERE nf=%s AND sku=%s", (nf, cprod))
                     exe("""INSERT INTO historico_compras
                             (nf,fornecedor,data_emissao,sku,nome,qtd,vunit,vtot,
                              ipi_p,ipi_un,icms_p,cred_pc,custo_r,cmv_br,cmv_pr,ncm,cfop,v_st,cred_icms)
-                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                           ON CONFLICT (nf,sku) DO UPDATE SET
-                             v_st=EXCLUDED.v_st, cred_icms=EXCLUDED.cred_icms,
-                             custo_r=EXCLUDED.custo_r, cmv_br=EXCLUDED.cmv_br,
-                             cmv_pr=EXCLUDED.cmv_pr""",
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                         (nf, row.get('fornecedor',''), row.get('data_emissao',''),
                          cprod, row.get('nome',''),
                          float(row.get('qtd',0)), float(row.get('vunit',0)), float(row.get('vtot',0)),
@@ -2516,7 +2516,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                          float(row.get('custo_r',0)), float(row.get('cmv_br',0)),
                          float(row.get('cmv_pr',0)), row.get('ncm',''), row.get('cfop',''),
                          v_st, cred_icms))
-                    n+=1
+                    n += 1
                 except Exception as e: print(f'[HIST] {e}')
             self._ok({'ok':True,'inseridos':n})
         except Exception as e: self._err(500, str(e))
