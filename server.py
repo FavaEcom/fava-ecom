@@ -1560,7 +1560,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 header = exe("SELECT * FROM nf_entrada WHERE nf LIKE %s ORDER BY emissao DESC LIMIT 1", (f'%{nf_num}%',), fetchone=True)
 
             # SEM match por CMV — só match exato por cprod_map e fornecedor
-            todos_prods = exe("SELECT sku, nome, custo_br, custo_pr, familia, peso, fornecedor FROM produtos", fetchall=True) or []
+            todos_prods = exe("SELECT sku, nome, custo_br, custo_pr, familia, fornecedor FROM produtos", fetchall=True) or []
             prod_por_fornecedor = {}
             prod_por_sku = {}
             for pr in todos_prods:
@@ -1583,7 +1583,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     pr = prod_por_fornecedor[cprod]
                     sku_real   = str(pr['sku'])
                     familia_real = str(pr.get('familia') or '')
-                    peso_real  = float(pr.get('peso') or 0)
+                    peso_real  = 0.0
 
                 # Sem match por CMV — evita matches errados entre produtos com CMV similar
 
