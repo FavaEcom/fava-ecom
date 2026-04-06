@@ -9,6 +9,8 @@ FAVA ECOM — Servidor Railway v3
 
 import http.server
 import re
+import hmac
+import hashlib
 import urllib.request
 import urllib.error
 from urllib.parse import parse_qs
@@ -23,6 +25,15 @@ PORTA = int(os.environ.get('PORT', 8080))
 DATABASE_URL = os.environ.get('DATABASE_URL', '')
 
 BLING_ACCESS  = os.environ.get('BLING_ACCESS', '')
+
+# ── Shopee API ──────────────────────────────────────────────────────────────
+SHOPEE_PARTNER_ID  = int(os.environ.get('SHOPEE_PARTNER_ID', 0))
+SHOPEE_PARTNER_KEY = os.environ.get('SHOPEE_PARTNER_KEY', '')
+SHOPEE_SHOP_ID     = int(os.environ.get('SHOPEE_SHOP_ID', 0))
+SHOPEE_BASE_URL    = 'https://api.shopee.com.br'
+_shopee_token = {'access': os.environ.get('SHOPEE_ACCESS_TOKEN',''),
+                 'refresh': os.environ.get('SHOPEE_REFRESH_TOKEN',''),
+                 'shop_id': SHOPEE_SHOP_ID}
 BLING_REFRESH = os.environ.get('BLING_REFRESH', '')
 BLING_CLIENT  = os.environ.get('BLING_CLIENT', '19df6720532752f6888d5f0aad392bc8829974d3')
 BLING_SECRET  = os.environ.get('BLING_SECRET', '590eed8f0b2fb1998e3f60335cef2a17bf5b2135fc69ec4a5ae925f520a8')
@@ -311,6 +322,27 @@ def criar_tabelas():
             estoque INTEGER DEFAULT 0, status TEXT DEFAULT 'active',
             updated_at TIMESTAMP DEFAULT NOW())""")
     except: pass
+    # Tabela shopee_listings
+    try:
+        exe("""CREATE TABLE IF NOT EXISTS shopee_listings (
+            id TEXT PRIMARY KEY, sku TEXT, titulo TEXT,
+            preco REAL DEFAULT 0, estoque INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'NORMAL', peso REAL DEFAULT 0,
+            imagem TEXT, updated_at TIMESTAMP DEFAULT NOW())""")
+    except: pass
+    # Tabela nf_rascunho — salva estado de processamento de NF
+    try:
+        exe("""CREATE TABLE IF NOT EXISTS nf_rascunho (
+            id SERIAL PRIMARY KEY,
+            nf_num TEXT,
+            fornecedor TEXT,
+            cnpj TEXT,
+            data_nf TEXT,
+            status TEXT DEFAULT 'rascunho',
+            itens JSONB,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW())""")
+    except: pass
     try:
         exe("""CREATE TABLE IF NOT EXISTS pedidos_pc (
             id TEXT PRIMARY KEY, numero TEXT, data TEXT, canal TEXT, uf TEXT,
@@ -541,6 +573,186 @@ def sync_frete_por_anuncio():
         return n
     except Exception as e:
         print(f'[SYNC] frete erro: {e}'); return 0
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SHOPEE API — HMAC-SHA256
+# ══════════════════════════════════════════════════════════════════════════════
+
+def shopee_sign(path, ts, access_token='', shop_id=0):
+    """Gera assinatura HMAC-SHA256 para Shopee API v2"""
+    if not SHOPEE_PARTNER_KEY: return ''
+    base = f"{SHOPEE_PARTNER_ID}{path}{ts}"
+    if access_token: base += access_token
+    if shop_id:      base += str(shop_id)
+    return hmac.new(SHOPEE_PARTNER_KEY.encode(), base.encode(), hashlib.sha256).hexdigest()
+
+def shopee_get(path, params=None, use_token=True):
+    """GET autenticado na API Shopee"""
+    if not SHOPEE_PARTNER_ID or not SHOPEE_PARTNER_KEY:
+        return None
+    ts = int(time.time())
+    access = _shopee_token.get('access','') if use_token else ''
+    shop   = _shopee_token.get('shop_id', SHOPEE_SHOP_ID) if use_token else 0
+    sign   = shopee_sign(path, ts, access, shop)
+    qp = {'partner_id': SHOPEE_PARTNER_ID, 'timestamp': ts, 'sign': sign}
+    if use_token and access: qp['access_token'] = access
+    if use_token and shop:   qp['shop_id'] = shop
+    if params: qp.update(params)
+    url = SHOPEE_BASE_URL + path + '?' + urllib.parse.urlencode(qp)
+    try:
+        req = urllib.request.Request(url, headers={'Content-Type':'application/json'})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return json.loads(r.read())
+    except Exception as e:
+        print(f'[SHOPEE] GET {path}: {e}'); return None
+
+def shopee_post(path, body, use_token=True):
+    """POST autenticado na API Shopee"""
+    if not SHOPEE_PARTNER_ID or not SHOPEE_PARTNER_KEY:
+        return None
+    ts = int(time.time())
+    access = _shopee_token.get('access','') if use_token else ''
+    shop   = _shopee_token.get('shop_id', SHOPEE_SHOP_ID) if use_token else 0
+    sign   = shopee_sign(path, ts, access, shop)
+    qp = {'partner_id': SHOPEE_PARTNER_ID, 'timestamp': ts, 'sign': sign}
+    if use_token and access: qp['access_token'] = access
+    if use_token and shop:   qp['shop_id'] = shop
+    url = SHOPEE_BASE_URL + path + '?' + urllib.parse.urlencode(qp)
+    try:
+        data = json.dumps(body).encode()
+        req = urllib.request.Request(url, data=data, method='POST',
+              headers={'Content-Type':'application/json'})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return json.loads(r.read())
+    except Exception as e:
+        print(f'[SHOPEE] POST {path}: {e}'); return None
+
+def shopee_refresh_token():
+    """Renova access_token Shopee"""
+    global _shopee_token
+    rt = _shopee_token.get('refresh','')
+    if not rt or not SHOPEE_PARTNER_ID: return False
+    path = '/api/v2/auth/access_token/get'
+    ts   = int(time.time())
+    sign = shopee_sign(path, ts)
+    url  = SHOPEE_BASE_URL + path + f'?partner_id={SHOPEE_PARTNER_ID}&timestamp={ts}&sign={sign}'
+    body = {'refresh_token': rt, 'partner_id': SHOPEE_PARTNER_ID,
+            'shop_id': _shopee_token.get('shop_id', SHOPEE_SHOP_ID)}
+    try:
+        data = json.dumps(body).encode()
+        req  = urllib.request.Request(url, data=data, method='POST',
+               headers={'Content-Type':'application/json'})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            d = json.loads(r.read())
+        if d.get('access_token'):
+            _shopee_token['access']  = d['access_token']
+            _shopee_token['refresh'] = d.get('refresh_token', rt)
+            print('[SHOPEE] Token renovado OK')
+            return True
+    except Exception as e:
+        print(f'[SHOPEE] Refresh erro: {e}')
+    return False
+
+def sync_shopee_listings():
+    """Sincroniza anúncios da Shopee para shopee_listings"""
+    if not _shopee_token.get('access'): return 0
+    print('[SHOPEE] Sincronizando anúncios...')
+    offset = 0; salvos = 0
+    c_pg = ('ON CONFLICT(id) DO UPDATE SET sku=EXCLUDED.sku,titulo=EXCLUDED.titulo,'
+            'preco=EXCLUDED.preco,estoque=EXCLUDED.estoque,status=EXCLUDED.status,'
+            'peso=EXCLUDED.peso,imagem=EXCLUDED.imagem,updated_at=NOW()')
+    while True:
+        d = shopee_get('/api/v2/product/get_item_list',
+                       {'offset': offset, 'page_size': 100, 'item_status': 'NORMAL'})
+        if not d or d.get('error'): break
+        resp  = d.get('response', {})
+        items = resp.get('item', [])
+        if not items: break
+        # Buscar detalhes em lote (max 50 por chamada)
+        ids = [str(it['item_id']) for it in items]
+        for i in range(0, len(ids), 50):
+            lote = ids[i:i+50]
+            det  = shopee_get('/api/v2/product/get_item_base_info',
+                              {'item_id_list': ','.join(lote)})
+            if not det: continue
+            for p in (det.get('response',{}).get('item_list') or []):
+                iid  = str(p.get('item_id',''))
+                sku  = str(p.get('item_sku','') or '')
+                nome = str(p.get('item_name',''))[:200]
+                preco= float((p.get('price_info') or [{}])[0].get('current_price',0) or 0)
+                est  = int(p.get('stock_info_v2',{}).get('summary_info',{}).get('total_reserved_stock',0)
+                           + p.get('stock_info_v2',{}).get('summary_info',{}).get('total_available_stock',0))
+                stat = p.get('item_status','NORMAL')
+                peso = float(p.get('weight',0) or 0)
+                img  = (p.get('image',{}).get('image_url_list') or [''])[0]
+                if not iid: continue
+                try:
+                    exe(f"INSERT INTO shopee_listings (id,sku,titulo,preco,estoque,status,peso,imagem) VALUES ({qmark(8)}) {c_pg}",
+                        (iid,sku,nome,preco,est,stat,peso,img))
+                    salvos += 1
+                except Exception as e:
+                    print(f'[SHOPEE] listing {iid}: {e}')
+        if not resp.get('has_next_page'): break
+        offset += 100
+        time.sleep(0.3)
+    print(f'[SHOPEE] {salvos} anúncios salvos')
+    return salvos
+
+def sync_shopee_pedidos():
+    """Sincroniza pedidos Shopee para tabela pedidos"""
+    if not _shopee_token.get('access'): return 0
+    print('[SHOPEE] Sincronizando pedidos...')
+    from_time = int(time.time()) - 30 * 86400  # últimos 30 dias
+    to_time   = int(time.time())
+    offset = 0; salvos = 0
+    c_pg = ('ON CONFLICT(id) DO UPDATE SET status=EXCLUDED.status,total=EXCLUDED.total,'
+            'canal=EXCLUDED.canal,data=EXCLUDED.data,itens=EXCLUDED.itens')
+    while True:
+        d = shopee_get('/api/v2/order/get_order_list', {
+            'time_range_field': 'create_time',
+            'time_from': from_time, 'time_to': to_time,
+            'page_size': 50, 'cursor': str(offset),
+            'order_status': 'ALL',
+            'response_optional_fields': 'order_status'
+        })
+        if not d or d.get('error'): break
+        resp   = d.get('response', {})
+        orders = resp.get('order_list', [])
+        if not orders: break
+        # Buscar detalhes
+        sns = [o['order_sn'] for o in orders]
+        for i in range(0, len(sns), 50):
+            lote = ','.join(sns[i:i+50])
+            det  = shopee_get('/api/v2/order/get_order_detail', {
+                'order_sn_list': lote,
+                'response_optional_fields': 'item_list,total_amount,buyer_username'
+            })
+            if not det: continue
+            for o in (det.get('response',{}).get('order_list') or []):
+                oid    = str(o.get('order_sn',''))
+                status = o.get('order_status','')
+                total  = float(o.get('total_amount',0) or 0)
+                ts     = o.get('create_time', int(time.time()))
+                data   = datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
+                itens  = json.dumps([{
+                    'nome': it.get('item_name',''), 'sku': it.get('item_sku',''),
+                    'qtd': it.get('model_quantity_purchased',1),
+                    'preco': float(it.get('model_discounted_price',0) or 0)
+                } for it in (o.get('item_list') or [])])
+                if not oid: continue
+                try:
+                    exe(f"INSERT INTO pedidos (id,canal,data,status,total,itens) VALUES ({qmark(6)}) {c_pg}",
+                        (oid,'shopee',data,status,total,itens))
+                    salvos += 1
+                except Exception as e:
+                    print(f'[SHOPEE] pedido {oid}: {e}')
+        if not resp.get('more'): break
+        offset += 50
+        time.sleep(0.3)
+    print(f'[SHOPEE] {salvos} pedidos salvos')
+    return salvos
+
 
 def ml_get(path):
     token = _ml_token.get('access','')
@@ -788,12 +1000,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/produtos':          self._get_produtos,
             '/api/db/produto':           self._get_produto_sku,
             '/api/db/historico':         self._get_historico,
+            '/api/db/historico-nf':      self._get_historico_nf,
             '/api/db/pedidos-nf':        self._get_pedidos_nf,
             '/api/db/pedidos':           self._get_pedidos,
             '/api/db/boletos':           self._get_boletos,
             '/api/db/nfs':               self._get_nfs,
             '/api/db/listings':          self._get_listings,
             '/api/db/yampi-listings':   self._get_yampi_listings,
+            '/api/db/shopee-listings':  self._get_shopee_listings,
+            '/api/db/nf-rascunho':      self._get_nf_rascunho,
+            '/api/shopee/autorizar':    self._shopee_autorizar,
+            '/api/shopee/callback':     self._shopee_callback,
+            '/api/shopee/renovar':      self._shopee_renovar,
             '/api/db/listings-performance': self._get_listings_performance,
             '/api/db/campanha':            self._get_campanha,
             '/api/db/kits-mapa':         self._get_kits_mapa,
@@ -811,6 +1029,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/sync/now':             self._sync_now,
             '/api/sync/bling-anuncios':  self._sync_bling_anuncios,
             '/api/sync/yampi':           self._sync_yampi,
+            '/api/sync/shopee':          self._sync_shopee,
+            '/api/db/nf-rascunho':      self._post_nf_rascunho,
+            '/api/shopee/status':        self._get_shopee_status,
             # ── NOVO: Bling OAuth ──────────────────────────────
             '/api/ml/refresh':            self._ml_refresh,
             '/api/ml/renovar':            self._ml_refresh,
@@ -1312,6 +1533,72 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         try: self._ok(exe("SELECT * FROM historico_compras ORDER BY data_emissao DESC LIMIT 1000", fetchall=True))
         except Exception as e: self._err(500, str(e))
 
+    def _get_historico_nf(self):
+        """GET /api/db/historico-nf?nf=315065 — retorna itens de uma NF do histórico"""
+        try:
+            p = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+            nf_num = p.get('nf', [''])[0].strip()
+            if not nf_num: self._err(400, 'nf obrigatorio'); return
+
+            # Buscar itens do histórico
+            itens = exe("SELECT * FROM historico_compras WHERE nf=%s ORDER BY id", (nf_num,), fetchall=True) or []
+
+            # Buscar header da NF
+            header = exe("SELECT * FROM nf_entrada WHERE nf=%s ORDER BY emissao DESC LIMIT 1", (nf_num,), fetchone=True)
+
+            if not itens and not header:
+                # Tentar busca parcial (por parte do número)
+                itens = exe("SELECT * FROM historico_compras WHERE nf LIKE %s ORDER BY id", (f'%{nf_num}%',), fetchall=True) or []
+                header = exe("SELECT * FROM nf_entrada WHERE nf LIKE %s ORDER BY emissao DESC LIMIT 1", (f'%{nf_num}%',), fetchone=True)
+
+            # Converter para formato fichas do produto_novo
+            fichas = []
+            for it in itens:
+                # Tenta pegar SKU real do cprod_map
+                cprod = str(it.get('sku','') or it.get('cprod','') or '')
+                sku_real = ''
+                if cprod:
+                    cm = exe("SELECT sku FROM cprod_map WHERE cprod=%s LIMIT 1", (cprod,), fetchone=True)
+                    if cm: sku_real = str(cm['sku'])
+                # Se sku no historico já é um SKU Fava (4 dígitos), usar
+                sku_hist = str(it.get('sku','') or '')
+                if re.match(r'^\d{4}$', sku_hist): sku_real = sku_hist
+
+                fichas.append({
+                    'codigo':       cprod or sku_hist,
+                    'nome':         str(it.get('nome','') or ''),
+                    'ncm':          str(it.get('ncm','') or ''),
+                    'cfop':         str(it.get('cfop','') or ''),
+                    'qtd':          float(it.get('qtd',1) or 1),
+                    'sku':          sku_real,
+                    'existe':       bool(sku_real),
+                    'custoNF':      float(it.get('vunit',0) or 0),
+                    'custoEntrada': float(it.get('custo_r',0) or 0),
+                    'ipiUn':        float(it.get('ipi_un',0) or 0),
+                    'ipiPct':       float(it.get('ipi_p',0) or 0),
+                    'stUn':         0,
+                    'temST':        False,
+                    'cmvBr':        float(it.get('cmv_br',0) or 0),
+                    'cmvPr':        float(it.get('cmv_pr',0) or 0),
+                    'monofasico':   False,
+                    'familia':      '',
+                    'peso':         0,
+                    'titulo_ml':    '',
+                    'titulo_shopee':'',
+                    'sel':          not bool(sku_real),
+                })
+
+            self._ok({
+                'nf_num':    nf_num,
+                'fornecedor': str(header.get('fornecedor','') if header else ''),
+                'cnpj':      str(header.get('cnpj','') if header else ''),
+                'data_nf':   str(header.get('emissao','') if header else ''),
+                'valor':     float(header.get('valor',0) if header else 0),
+                'fichas':    fichas,
+                'n_itens':   len(fichas),
+            })
+        except Exception as e: self._err(500, str(e))
+
     def _get_pedidos(self):
         try:
             rows = exe("SELECT * FROM pedidos ORDER BY data DESC LIMIT 500", fetchall=True)
@@ -1393,6 +1680,167 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                             (codigo,sku,nome,cmvbr,cmvpr))
                     except: pass
             self._ok({"ok":True,"updated":updated})
+        except Exception as e: self._err(500, str(e))
+
+    # ── SHOPEE ──────────────────────────────────────────────────────────────
+
+    def _get_shopee_status(self):
+        """GET /api/shopee/status — retorna status da integração Shopee"""
+        self._ok({
+            'configurado': bool(SHOPEE_PARTNER_ID and SHOPEE_PARTNER_KEY),
+            'partner_id':  SHOPEE_PARTNER_ID,
+            'shop_id':     _shopee_token.get('shop_id', SHOPEE_SHOP_ID),
+            'tem_token':   bool(_shopee_token.get('access')),
+            'tem_refresh': bool(_shopee_token.get('refresh')),
+        })
+
+    def _shopee_autorizar(self):
+        """GET /api/shopee/autorizar — redireciona para OAuth Shopee"""
+        if not SHOPEE_PARTNER_ID or not SHOPEE_PARTNER_KEY:
+            self._err(400, 'SHOPEE_PARTNER_ID e SHOPEE_PARTNER_KEY não configurados no Railway')
+            return
+        ts   = int(time.time())
+        path = '/api/v2/shop/auth_partner'
+        sign = shopee_sign(path, ts)
+        redirect = os.environ.get('SHOPEE_REDIRECT_URL',
+                   'https://web-production-5aa0f.up.railway.app/api/shopee/callback')
+        url = (f"{SHOPEE_BASE_URL}{path}?partner_id={SHOPEE_PARTNER_ID}"
+               f"&timestamp={ts}&sign={sign}&redirect={urllib.parse.quote(redirect)}")
+        self.send_response(302)
+        self.send_header('Location', url)
+        self.end_headers()
+
+    def _shopee_callback(self):
+        """GET /api/shopee/callback — recebe code OAuth Shopee e troca por token"""
+        global _shopee_token
+        p        = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        code     = p.get('code',[''])[0]
+        shop_id  = int(p.get('shop_id',['0'])[0] or 0)
+        if not code: self._err(400, 'code ausente'); return
+        ts   = int(time.time())
+        path = '/api/v2/auth/token/get'
+        sign = shopee_sign(path, ts)
+        url  = f"{SHOPEE_BASE_URL}{path}?partner_id={SHOPEE_PARTNER_ID}&timestamp={ts}&sign={sign}"
+        body = {'code': code, 'shop_id': shop_id, 'partner_id': SHOPEE_PARTNER_ID}
+        try:
+            data = json.dumps(body).encode()
+            req  = urllib.request.Request(url, data=data, method='POST',
+                   headers={'Content-Type':'application/json'})
+            with urllib.request.urlopen(req, timeout=15) as r:
+                d = json.loads(r.read())
+            if d.get('access_token'):
+                _shopee_token['access']  = d['access_token']
+                _shopee_token['refresh'] = d.get('refresh_token','')
+                _shopee_token['shop_id'] = shop_id
+                print(f'[SHOPEE] Token obtido para shop_id={shop_id}')
+                self.send_response(200)
+                self.send_header('Content-Type','text/html; charset=utf-8')
+                self.end_headers()
+                self.wfile.write(b'<html><body style="font-family:system-ui;padding:40px">'
+                                 b'<h2 style="color:#16a34a">&#10003; Shopee autorizada com sucesso!</h2>'
+                                 b'<p>Feche esta aba e volte ao painel.</p>'
+                                 b'<script>setTimeout(()=>window.close(),3000)</script></body></html>')
+            else:
+                self._err(400, str(d))
+        except Exception as e: self._err(500, str(e))
+
+    def _shopee_renovar(self):
+        """GET /api/shopee/renovar — renova access token Shopee"""
+        ok = shopee_refresh_token()
+        self._ok({'ok': ok, 'tem_token': bool(_shopee_token.get('access'))})
+
+    def _get_nf_rascunho(self):
+        """GET /api/db/nf-rascunho?nf=315065 ou ?id=5 — busca rascunho ou lista todos"""
+        try:
+            import json as _json
+            p = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+            nf_num = p.get('nf', [''])[0].strip()
+            rid    = p.get('id', [''])[0].strip()
+            def parse_row(row):
+                if not row: return None
+                d = dict(row)
+                if isinstance(d.get('itens'), str):
+                    try: d['itens'] = _json.loads(d['itens'])
+                    except: pass
+                for k in ['created_at','updated_at']:
+                    if d.get(k): d[k] = str(d[k])
+                return d
+            if rid:
+                row = exe("SELECT * FROM nf_rascunho WHERE id=%s", (int(rid),), fetchone=True)
+                self._ok(parse_row(row))
+            elif nf_num:
+                row = exe("SELECT * FROM nf_rascunho WHERE nf_num=%s ORDER BY updated_at DESC LIMIT 1", (nf_num,), fetchone=True)
+                self._ok(parse_row(row))
+            else:
+                rows = exe("""SELECT id, nf_num, fornecedor, data_nf, status, updated_at,
+                              jsonb_array_length(itens) as n_itens
+                              FROM nf_rascunho ORDER BY updated_at DESC LIMIT 100""", fetchall=True) or []
+                result = []
+                for r in rows:
+                    d = dict(r)
+                    if d.get('updated_at'): d['updated_at'] = str(d['updated_at'])
+                    result.append(d)
+                self._ok(result)
+        except Exception as e: self._err(500, str(e))
+
+    def _post_nf_rascunho(self):
+        """POST /api/db/nf-rascunho — cria ou atualiza rascunho"""
+        try:
+            import json as _json
+            body = self._body()
+            nf_num   = str(body.get('nf_num','') or '').strip()
+            forn     = str(body.get('fornecedor','') or '').strip()
+            cnpj     = str(body.get('cnpj','') or '').strip()
+            data_nf  = str(body.get('data_nf','') or '').strip()
+            status   = str(body.get('status','rascunho'))
+            itens    = body.get('itens', [])
+            itens_j  = _json.dumps(itens, ensure_ascii=False)
+            rascunho_id = body.get('id')
+            if rascunho_id:
+                exe("UPDATE nf_rascunho SET nf_num=%s, fornecedor=%s, cnpj=%s, data_nf=%s, status=%s, itens=%s::jsonb, updated_at=NOW() WHERE id=%s",
+                    (nf_num, forn, cnpj, data_nf, status, itens_j, int(rascunho_id)))
+                self._ok({'ok': True, 'id': int(rascunho_id)})
+            else:
+                # Verificar se já existe rascunho com mesmo nf_num
+                existing = exe("SELECT id FROM nf_rascunho WHERE nf_num=%s ORDER BY updated_at DESC LIMIT 1", (nf_num,), fetchone=True) if nf_num else None
+                if existing:
+                    eid = existing['id']
+                    exe("UPDATE nf_rascunho SET fornecedor=%s, cnpj=%s, data_nf=%s, status=%s, itens=%s::jsonb, updated_at=NOW() WHERE id=%s",
+                        (forn, cnpj, data_nf, status, itens_j, eid))
+                    self._ok({'ok': True, 'id': eid})
+                else:
+                    row = exe("INSERT INTO nf_rascunho (nf_num, fornecedor, cnpj, data_nf, status, itens) VALUES (%s,%s,%s,%s,%s,%s::jsonb) RETURNING id",
+                        (nf_num, forn, cnpj, data_nf, status, itens_j), fetchone=True)
+                    self._ok({'ok': True, 'id': row['id'] if row else None})
+        except Exception as e: self._err(500, str(e))
+
+    def _get_shopee_listings(self):
+        """GET /api/db/shopee-listings — retorna anúncios Shopee do banco"""
+        try:
+            rows = exe("""
+                SELECT s.id, s.sku, s.titulo, s.preco, s.estoque, s.status,
+                       s.peso, s.imagem,
+                       COALESCE(p.custo_br, cm.cmv_br, 0) as cmv,
+                       COALESCE(p.custo_pr, cm.cmv_pr, 0) as cmv_pr
+                FROM shopee_listings s
+                LEFT JOIN produtos p ON p.sku = s.sku
+                LEFT JOIN cprod_map cm ON cm.sku = s.sku
+                ORDER BY s.titulo
+            """, fetchall=True)
+            self._ok(rows if rows else [])
+        except Exception as e: self._err(500, str(e))
+
+    def _sync_shopee(self):
+        """POST /api/sync/shopee — sincroniza pedidos e anúncios Shopee"""
+        try:
+            if not _shopee_token.get('access'):
+                self._ok({'ok': False, 'error': 'Shopee não autorizada. Acesse /api/shopee/autorizar'})
+                return
+            # Tenta renovar token antes de sincronizar
+            shopee_refresh_token()
+            n_listings = sync_shopee_listings()
+            n_pedidos  = sync_shopee_pedidos()
+            self._ok({'ok': True, 'listings': n_listings, 'pedidos': n_pedidos})
         except Exception as e: self._err(500, str(e))
 
     def _get_yampi_listings(self):

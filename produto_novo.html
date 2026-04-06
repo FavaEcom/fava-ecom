@@ -98,6 +98,18 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
       </div>
     </div>
   </div>
+
+  <!-- RETOMAR NF SALVA -->
+  <div class="card">
+    <div class="card-h"><span>📋</span><h2>Retomar NF Salva</h2>
+      <input type="text" id="busca-nf" placeholder="Número da NF (ex: 315065)" style="border:1px solid #334155;background:#0f172a;color:#e2e8f0;padding:5px 10px;border-radius:6px;font-size:12px;width:200px;margin-left:auto">
+      <button onclick="buscarRascunho()" style="background:#1d4ed8;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:700">🔍 Buscar</button>
+    </div>
+    <div class="card-b" style="padding:10px">
+      <div id="lista-rascunhos"></div>
+    </div>
+  </div>
+
   <div class="card" id="card-nf" style="display:none">
     <div class="card-h"><span>&#127981;</span><h2 id="nf-forn">Fornecedor</h2></div>
     <div class="card-b">
@@ -171,8 +183,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
       <div class="st" id="st-3"></div>
       <div id="resumo-salvar" style="margin-bottom:14px"></div>
       <div class="btn-wrap">
-        <button class="btn btn-verde" onclick="salvarTodos()" id="btn-salvar">&#128190; Salvar todos no banco</button>
-        <button class="btn btn-roxo" onclick="gerarAnunciosBling()" id="btn-anuncios" disabled>&#128226; Gerar an&uacute;ncios no ML via Bling</button>
+        <button class="btn btn-verde" onclick="salvarTodos()" id="btn-salvar">&#128190; Salvar no banco</button>
+        <button onclick="salvarRascunho('parcial')" style="background:#0891b2;color:#fff;border:none;padding:8px 14px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700">💾 Salvar Rascunho</button>
+        <button class="btn btn-roxo" onclick="gerarAnunciosBling()" id="btn-anuncios" disabled>&#128226; Gerar anúncios ML via Bling</button>
         <button class="btn btn-cinza" onclick="irStep(2)">&larr; Voltar</button>
       </div>
       <div id="log-ops" style="margin-top:14px;max-height:400px;overflow-y:auto;font-family:monospace"></div>
@@ -468,6 +481,8 @@ function lerXML(file){
       var nfResumo=document.getElementById('nf-resumo'); if(nfResumo) nfResumo.textContent=itensNF.length+' iten(s) na nota';
       mostrarSt('st-1',itensNF.length+' produtos lidos da NF','ok');
       fichas=itensNF.map(function(it,i){return Object.assign({sel:true,sku:'',familia:'',peso:0,titulo_ml:'',titulo_shopee:'',existe:false,_vazio:true},it);});
+      // Auto-salvar rascunho com os dados da NF
+      setTimeout(autoSalvarRascunho, 500);
       irStep(2);
       renderTabela();
     }catch(err){
@@ -724,8 +739,9 @@ function salvarTodos(){
 
   function salvarProximo(){
     if(idx>=selecionados.length){
-      btn.disabled=false; btn.textContent='Salvar todos no banco';
+      btn.disabled=false; btn.textContent='Salvar no banco';
       mostrarSt('st-3',ok+' produtos salvos'+(erros?' | '+erros+' erros':''),ok>0?'ok':'err');
+      if(ok>0) salvarRascunho('completo', true); // Marcar NF como completa
       if(ok>0){
         document.getElementById('btn-anuncios').disabled=false;
         // Mostra botão Novo Cadastro
@@ -957,6 +973,142 @@ async function gerarTitulosIA() {
   }
   if(btn) { btn.textContent = 'Gerar Titulos'; btn.disabled = false; }
 }
+
+// ── RASCUNHO NF ───────────────────────────────────────────────────────────
+var _rascunhoId = null; // ID do rascunho atual
+
+// Salvar rascunho automaticamente após ler XML
+function autoSalvarRascunho(){
+  if(!dadosNF || !fichas.length) return;
+  salvarRascunho('rascunho', true);
+}
+
+async function salvarRascunho(status, silencioso){
+  if(!dadosNF && !fichas.length){ if(!silencioso) alert('Nenhuma NF carregada.'); return; }
+  try{
+    var payload = {
+      id: _rascunhoId,
+      nf_num: dadosNF ? dadosNF.nf : '',
+      fornecedor: dadosNF ? dadosNF.fornecedor : '',
+      cnpj: dadosNF ? dadosNF.cnpj : '',
+      data_nf: dadosNF ? dadosNF.data : '',
+      status: status || 'rascunho',
+      itens: fichas.map(function(f){
+        return {
+          sku: f.sku, nome: f.nome, codigo: f.codigo, ncm: f.ncm,
+          familia: f.familia, peso: f.peso, ean: f.ean,
+          cmvBr: f.cmvBr, cmvPr: f.cmvPr, custoNF: f.custoNF,
+          ipiUn: f.ipiUn, stUn: f.stUn, custoEntrada: f.custoEntrada,
+          ipiPct: f.ipiPct, temST: f.temST, monofasico: f.monofasico,
+          qtd: f.qtd, existe: f.existe,
+          titulo_ml: f.titulo_ml, titulo_shopee: f.titulo_shopee,
+          sel: f.sel
+        };
+      })
+    };
+    var d = await fetch(RAILWAY+'/api/db/nf-rascunho',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    }).then(function(r){return r.json();});
+    if(d.ok){
+      _rascunhoId = d.id;
+      if(!silencioso) mostrarSt('st-3','✅ Rascunho salvo (NF '+payload.nf_num+' | ID '+d.id+')','ok');
+    }
+  }catch(e){ if(!silencioso) alert('Erro ao salvar rascunho: '+e.message); }
+}
+
+async function buscarRascunho(){
+  var nf = (document.getElementById('busca-nf')?.value||'').trim();
+  if(!nf){ carregarListaRascunhos(); return; }
+  var lista = document.getElementById('lista-rascunhos');
+  lista.innerHTML = '<p style="color:#94a3b8;font-size:12px">🔍 Buscando NF '+nf+'...</p>';
+  try{
+    // 1. Tentar rascunho salvo primeiro
+    var d = await fetch(RAILWAY+'/api/db/nf-rascunho?nf='+encodeURIComponent(nf)).then(r=>r.json());
+    if(d && d.itens && d.itens.length){
+      lista.innerHTML='<p style="color:#10b981;font-size:12px">✅ Rascunho encontrado!</p>';
+      carregarDoRascunho(d);
+      return;
+    }
+    // 2. Tentar histórico de compras (importar_todas_nfe)
+    var h = await fetch(RAILWAY+'/api/db/historico-nf?nf='+encodeURIComponent(nf)).then(r=>r.json());
+    if(h && h.fichas && h.fichas.length){
+      lista.innerHTML='<p style="color:#10b981;font-size:12px">✅ NF encontrada no histórico ('+h.n_itens+' itens)</p>';
+      // Montar como rascunho temporário
+      _rascunhoId = null;
+      itensNF = h.fichas;
+      fichas  = h.fichas.map(function(it){ return Object.assign({},it); });
+      dadosNF = {nf: h.nf_num, fornecedor: h.fornecedor, cnpj: h.cnpj, data: h.data_nf, valor: h.valor};
+      var _el;
+      _el=document.getElementById('nf-forn'); if(_el) _el.textContent=h.fornecedor||'';
+      _el=document.getElementById('nf-num');  if(_el) _el.textContent='NF '+h.nf_num;
+      _el=document.getElementById('nf-data'); if(_el) _el.textContent=h.data_nf||'';
+      _el=document.getElementById('nf-total');if(_el) _el.textContent='R$ '+(h.valor||0).toFixed(2);
+      var cardNF=document.getElementById('card-nf'); if(cardNF) cardNF.style.display='';
+      var nfR=document.getElementById('nf-resumo'); if(nfR) nfR.textContent=h.n_itens+' produto(s) carregados do histórico';
+      mostrarSt('st-1','✅ NF '+h.nf_num+' — '+h.fornecedor+' ('+h.n_itens+' itens)','ok');
+    } else {
+      lista.innerHTML='<p style="color:#f59e0b;font-size:12px">⚠️ NF '+nf+' não encontrada. Importe o XML ou rode importar_todas_nfe.</p>';
+    }
+  }catch(e){ lista.innerHTML='<p style="color:#ef4444;font-size:12px">Erro: '+e.message+'</p>'; }
+}
+
+function carregarDoRascunho(d){
+  _rascunhoId = d.id;
+  itensNF = d.itens || [];
+  fichas  = itensNF.map(function(it){ return Object.assign({sel:true},it); });
+  dadosNF = {
+    nf: d.nf_num, fornecedor: d.fornecedor, cnpj: d.cnpj,
+    data: d.data_nf, valor: 0
+  };
+  // Preencher card NF
+  var _el;
+  _el=document.getElementById('nf-forn'); if(_el) _el.textContent=d.fornecedor||'';
+  _el=document.getElementById('nf-num');  if(_el) _el.textContent='NF '+d.nf_num;
+  _el=document.getElementById('nf-data'); if(_el) _el.textContent=d.data_nf||'';
+  _el=document.getElementById('nf-total');if(_el) _el.textContent='(rascunho)';
+  var cardNF=document.getElementById('card-nf'); if(cardNF) cardNF.style.display='';
+  var nfR=document.getElementById('nf-resumo'); if(nfR) nfR.textContent=fichas.length+' produto(s) — status: '+d.status;
+  mostrarSt('st-1','✅ NF '+d.nf_num+' carregada do rascunho ('+fichas.length+' itens)','ok');
+}
+
+async function carregarListaRascunhos(){
+  try{
+    var lista = await fetch(RAILWAY+'/api/db/nf-rascunho').then(r=>r.json());
+    if(!lista || !lista.length){
+      document.getElementById('lista-rascunhos').innerHTML='<p style="color:#64748b;font-size:12px">Nenhum rascunho salvo ainda.</p>';
+      return;
+    }
+    var html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+    html += '<tr style="background:#1e293b"><th style="padding:6px;text-align:left">NF</th><th>Fornecedor</th><th>Data</th><th>Itens</th><th>Status</th><th></th></tr>';
+    lista.forEach(function(r){
+      var cor = r.status==='completo'?'#10b981':r.status==='parcial'?'#f59e0b':'#94a3b8';
+      html += '<tr style="border-bottom:1px solid #334155">';
+      html += '<td style="padding:5px 6px;font-weight:700">'+r.nf_num+'</td>';
+      html += '<td style="padding:5px 6px;color:#94a3b8">'+r.fornecedor+'</td>';
+      html += '<td style="padding:5px 6px;color:#64748b">'+r.data_nf+'</td>';
+      html += '<td style="padding:5px 6px;text-align:center">'+r.n_itens+'</td>';
+      html += '<td style="padding:5px 6px;color:'+cor+';font-weight:700">'+r.status+'</td>';
+      html += '<td style="padding:5px 6px"><button onclick="carregarRascunhoById('+r.id+')" style="background:#1d4ed8;color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700">↩ Retomar</button></td>';
+      html += '</tr>';
+    });
+    html += '</table>';
+    document.getElementById('lista-rascunhos').innerHTML = html;
+  }catch(e){}
+}
+
+async function carregarRascunhoById(id){
+  var d = await fetch(RAILWAY+'/api/db/nf-rascunho?id='+id).then(r=>r.json()).catch(()=>null);
+  if(d) carregarDoRascunho(d);
+}
+
+// Inicializar lista de rascunhos ao carregar a página
+window.addEventListener('load', function(){ 
+  setTimeout(carregarListaRascunhos, 500); 
+  // Carregar API key salva
+  var key = localStorage.getItem('claude_api_key');
+  if(key){ var el=document.getElementById('claude-key'); if(el) el.value=key; }
+});
 
 </script>
 </body>
