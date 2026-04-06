@@ -712,7 +712,7 @@ function renderTabela(){
     var custoTotal = custoNF + ipiUn + stUn;
     // Creditos
     var icmsPct    = parseFloat(f.icmsPct||0);
-    var credIcmsPct = parseFloat(f.creditoICMS_pct||0) || (icmsPct > 0 && !f.temST ? 0.12 : 0);
+    var credIcmsPct = parseFloat(f.creditoICMS_pct||0);
     var credICMS   = credIcmsPct * custoNF;
     var credPC     = f.monofasico ? 0 : parseFloat(f.credPisCof||0.0925) * custoNF;
     var totalCred  = credICMS + credPC;
