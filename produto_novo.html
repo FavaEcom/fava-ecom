@@ -184,7 +184,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
           <th title="Badge ST" style="color:#f59e0b">ST</th>
           <th title="ICMS ST por unidade — calculado custo_r - vunit - ipi" style="color:#f59e0b">ST R$/un</th>
           <th title="Custo total = vUnit + IPI + ST  — use este para cadastrar no Bling" style="background:#1e3a5f;color:#60a5fa;font-weight:900">Custo Total</th>
-          <th title="Aliquota ICMS" style="color:#10b981">ICMS%</th>
+          <th title="Base ICMS creditável (12% para PR)" style="color:#10b981">Base ICMS</th>
           <th title="Credito ICMS por unidade" style="color:#10b981">Cr.ICMS</th>
           <th title="Credito PIS+COFINS" style="color:#60a5fa">Cr.PIS/COF</th>
           <th title="CMV Brasil = CustoTotal - Creditos" style="background:#0f172a;color:#93c5fd">CMV BR</th>
@@ -706,13 +706,14 @@ function renderTabela(){
     var custoNF  = parseFloat(f.custoNF||0);
     var ipiPct   = parseFloat(f.ipiPct||f.ipi||0);
     var ipiUn    = parseFloat(f.ipiUn||0);
-    var stUn     = parseFloat(f.stUn||0);
+    var stUn     = parseFloat(f.stUn||0) || (parseFloat(f.vSt||0) > 0 ? parseFloat(f.vSt||0) / parseFloat(f.qtd||1) : 0);
     var vtot     = parseFloat(f.vtot||custoNF*qtd);
     // CUSTO TOTAL por unidade = NF + IPI + ST  (valor para cadastrar no Bling)
     var custoTotal = custoNF + ipiUn + stUn;
     // Creditos
     var icmsPct    = parseFloat(f.icmsPct||0);
-    var credICMS   = parseFloat(f.creditoICMS_pct||0) * custoNF;
+    var credIcmsPct = parseFloat(f.creditoICMS_pct||0) || (icmsPct > 0 && !f.temST ? 0.12 : 0);
+    var credICMS   = credIcmsPct * custoNF;
     var credPC     = f.monofasico ? 0 : parseFloat(f.credPisCof||0.0925) * custoNF;
     var totalCred  = credICMS + credPC;
     // CMV
@@ -757,8 +758,8 @@ function renderTabela(){
            +(stUn>0?'R$ '+fmt(stUn):'-')+'</td>';
     // CUSTO TOTAL — coluna principal destacada em azul
     html += '<td style="text-align:right;font-weight:700;color:#60a5fa;background:#0f172a;white-space:nowrap" title="Custo Total = NF + IPI + ST — use este no Bling">R$ '+fmt(custoTotal)+'</td>';
-    // ICMS%
-    html += '<td style="text-align:right;font-size:11px;color:'+(icmsPct>0?'#10b981':'#334155')+'">'+(icmsPct>0?(icmsPct*100).toFixed(0)+'%':'-')+'</td>';
+    // Base ICMS (crédito aproveitável, não alíquota cheia)
+    html += '<td style="text-align:right;font-size:11px;color:'+(credIcmsPct>0?'#10b981':'#334155')+'" title="Base ICMS creditável">'+(credIcmsPct>0?(credIcmsPct*100).toFixed(1)+'%':'-')+'</td>';
     // Cr.ICMS
     html += '<td style="text-align:right;font-size:11px;color:'+(credICMS>0?'#10b981':'#334155')+'">'+(credICMS>0?'R$ '+fmt(credICMS):'-')+'</td>';
     // Cr.PIS/COF
