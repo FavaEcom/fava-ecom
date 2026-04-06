@@ -73,7 +73,10 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
   <a href="https://web-production-5aa0f.up.railway.app/calculadora_fava.html" style="padding:6px 12px;color:#9ca3af;font-size:11px;font-weight:700;text-decoration:none">🧮 Calculadora</a>
 </nav>
 <div class="steps">
-  <div class="step ativo" id="step-1"><span class="n">1</span> Upload NF</div>
+  <div class="step ativo" id="step-1"><span class="n">1</span> Upload / Buscar NF</div>
+  <div class="step" id="step-2"><span class="n">2</span> Revisar Impostos + SKU</div>
+  <div class="step" id="step-3"><span class="n">3</span> Salvar no Banco</div>
+</div>
   <div class="step" id="step-2"><span class="n">2</span> ✔ Impostos &amp; SKU</div>
   <div class="step" id="step-3"><span class="n">3</span> 📢 Anúncios</div>
   <div class="step" id="step-4"><span class="n">4</span> Salvar &amp; Criar</div>
@@ -139,29 +142,40 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
       <button onclick="gerarTodosEAN()" style="background:#7c3aed;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">🔢 Gerar EAN</button>
       <button onclick="gerarFamiliasIA()" title="Gera família automaticamente para todos os sem família usando IA" style="background:#0891b2;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">🤖 Famílias IA</button>
       <input type="password" id="claude-key" placeholder="🔑 API Key Claude" style="width:160px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;padding:4px 8px;border-radius:6px;font-size:11px" title="Cole sua API Key da Anthropic" onchange="localStorage.setItem('claude_api_key',this.value)">
-      <button onclick="gerarTitulosIA()" title="Gerar títulos ML e Shopee com IA" style="background:#059669;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">✨ Títulos IA</button>
+      
       <button onclick="novaFamilia()" title="Adicionar nova família" style="background:#7c3aed;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">+ Família</button>
-      <select id="margem-sel" onchange="recalcularTodos()" style="border:1px solid #e2e8f0;border-radius:5px;padding:4px 8px;font-size:11px;outline:none;margin-left:auto">
-        <option value="30">Margem 30%</option>
-        <option value="35">Margem 35%</option>
-        <option value="40" selected>Margem 40%</option>
-        <option value="45">Margem 45%</option>
-        <option value="50">Margem 50%</option>
-      </select>
+      
     </div>
     <div class="card-b" style="padding:0;overflow:auto;max-height:calc(100vh - 280px)">
       <div class="st" id="st-2" style="margin:10px"></div>
       <table class="rev-table" id="rev-table">
-        <thead><tr>
-          <th style="width:30px"><input type="checkbox" id="sel-all" onchange="selAll(this.checked)" style="accent-color:#fff"></th>
-          <th>Status</th><th>Cód.Forn</th><th style="min-width:70px">SKU</th>
-          <th style="min-width:220px">Nome</th><th>NCM</th><th>CST</th><th>ST</th>
-          <th style="min-width:130px">Família</th>
-          <th>Custo NF</th><th style="color:#f97316">IPI R$</th><th style="color:#f59e0b">ST R$</th><th style="background:#eff6ff;color:#1d4ed8">Custo Entr.</th>
-          <th>CMV BR</th><th>CMV PR</th><th>Peso</th><th>IPI%</th><th>ST</th><th>Mono</th><th>Lucro BR</th><th>Margem</th>
-          <th>ML Cl.</th><th>Shopee</th><th>Balcão</th>
-          <th style="min-width:80px">EAN</th><th style="min-width:160px">Título ML <small style="color:#94a3b8">(60)</small></th><th style="min-width:200px">Título Shopee <small style="color:#94a3b8">(120)</small></th>
-        </tr></thead>
+        <thead>
+        <tr style="position:sticky;top:0;z-index:10;background:#1F3864">
+          <th style="width:28px"><input type="checkbox" id="sel-all" onchange="selAll(this.checked)" style="accent-color:#fff"></th>
+          <th>Status</th>
+          <th title="Codigo do produto no fornecedor (cProd)">Cod.Forn</th>
+          <th style="min-width:66px">SKU</th>
+          <th style="min-width:190px">Nome</th>
+          <th title="NCM">NCM</th>
+          <th title="CST / CSOSN">CST</th>
+          <th title="Substituicao Tributaria">ST</th>
+          <th style="min-width:116px">Familia</th>
+          <th title="Custo unit. sem IPI (vUnCom)">Custo NF</th>
+          <th title="Aliquota IPI" style="color:#f97316">IPI%</th>
+          <th title="IPI por unidade = vIPI/qtd" style="color:#f97316">IPI R$/un</th>
+          <th title="ST por unidade = vST/qtd" style="color:#f59e0b">ST R$/un</th>
+          <th title="Custo Total = Custo NF + IPI + ST" style="color:#60a5fa;font-weight:900">Custo Total</th>
+          <th title="Aliquota ICMS da nota" style="color:#10b981">ICMS%</th>
+          <th title="Credito ICMS por unidade" style="color:#10b981">Cr.ICMS</th>
+          <th title="Credito PIS+COFINS por unidade" style="color:#60a5fa">Cr.PIS/COF</th>
+          <th title="Total creditos (ICMS+PIS+COF)" style="color:#a855f7">Total Cred.</th>
+          <th title="CMV Brasil editavel" style="background:#0f172a;color:#93c5fd">CMV BR</th>
+          <th title="CMV Parana editavel" style="background:#0f172a;color:#93c5fd">CMV PR</th>
+          <th title="Peso kg">Peso</th>
+          <th title="Monofasico PIS/COFINS">Mono</th>
+          <th style="min-width:80px">EAN</th>
+        </tr>
+        </thead>
         <tbody id="rev-tbody"></tbody>
       </table>
     </div>
@@ -301,7 +315,7 @@ function irStep(n){
     if(s) s.className='step'+(i===n?' ativo':i<n?' done':'');
   });
   if(n===2) carregarBanco();
-  if(n===3) renderAnuncios();
+  if(n===3) renderResumoSalvar();
   if(n===4) renderResumoSalvar();
 }
 
@@ -656,45 +670,46 @@ function renderTabela(){
     var famOpts='<option value="">-- familia --</option>'+FAMILIAS.map(function(fm){
       return '<option'+(f.familia===fm?' selected':'')+' value="'+fm+'">'+fm+'</option>';
     }).join('');
-    var nome=String(f.nome||'').replace(/"/g,'&#39;');
-    var cst=String(f.cst||'');
-    var ncm=String(f.ncm||'');
-    var custoNF=parseFloat(f.custoNF||0);
-    var ipiUn=parseFloat(f.ipiUn||0);
-    var stUn=parseFloat(f.stUn||0);
-    var custoEnt=parseFloat(f.custoEntrada||(custoNF+ipiUn+stUn));
-    var icmsPct=parseFloat(f.icmsPct||0);
-    var credICMSpct=parseFloat(f.creditoICMS_pct||0);
-    var credPisCofPct=parseFloat(f.credPisCof||0.0925);
-    var credIcmsR=credICMSpct*custoNF;
-    var credPisCofR=f.monofasico?0:credPisCofPct*custoNF;
-    var totalCred=credIcmsR+credPisCofR;
-    var ipiPct=parseFloat(f.ipiPct||f.ipi||0);
-    html+='<tr class="'+(f.existe?'exist':'novo')+'" id="tr-'+i+'">';
-    html+='<td><input type="checkbox"'+(f.sel?' checked':'')+' onchange="fichas['+i+'].sel=this.checked" style="accent-color:#1F3864"></td>';
-    html+='<td>'+(f.existe?'<span class="pill pill-exist">Existe</span>':'<span class="pill pill-novo">Novo</span>')+'</td>';
-    html+='<td><span style="font-size:10px;color:#64748b;font-family:monospace">'+f.codigo+'</span></td>';
-    html+='<td><input class="rev-input" value="'+f.sku+'" onchange="fichas['+i+'].sku=this.value" style="width:66px" placeholder="SKU"></td>';
-    html+='<td><input class="rev-input" value="'+nome+'" onchange="fichas['+i+'].nome=this.value" style="min-width:190px"></td>';
-    html+='<td style="font-size:10px;color:#94a3b8;font-family:monospace">'+ncm+'</td>';
-    html+='<td style="text-align:center;font-size:10px;font-weight:700;color:'+(cst?'#e2e8f0':'#ef4444')+'">'+( cst||'!' )+'</td>';
-    html+='<td style="text-align:center">'+(f.temST?'<span class="pill pill-st" title="ST R$ '+stUn.toFixed(4)+'/un">ST</span>':'<span style="color:#475569;font-size:11px">-</span>')+'</td>';
-    html+='<td><select class="rev-select" onchange="fichas['+i+'].familia=this.value" style="width:116px">'+famOpts+'</select></td>';
-    html+='<td style="text-align:right;font-weight:700;white-space:nowrap">R$ '+fmt(custoNF)+'</td>';
-    html+='<td style="text-align:right;font-size:11px;color:#f97316">'+(ipiPct>0?(ipiPct*100).toFixed(1)+'%':'-')+'</td>';
-    html+='<td style="text-align:right;font-size:11px;color:#f97316">'+(ipiUn>0?'R$ '+fmt(ipiUn):'-')+'</td>';
-    html+='<td style="text-align:right;font-size:11px;color:#f59e0b">'+(stUn>0?'<b>R$ '+fmt(stUn)+'</b>':'-')+'</td>';
-    html+='<td style="text-align:right;background:#eff6ff;font-weight:700;color:#1d4ed8;white-space:nowrap">R$ '+fmt(custoEnt)+'</td>';
-    html+='<td style="text-align:right;font-size:11px;color:'+(icmsPct>0?'#10b981':'#475569')+'">'+(icmsPct>0?(icmsPct*100).toFixed(0)+'%':'-')+'</td>';
-    html+='<td style="text-align:right;font-size:11px;color:'+(credIcmsR>0?'#10b981':'#475569')+'">'+(credIcmsR>0?'R$ '+fmt(credIcmsR):'-')+'</td>';
-    html+='<td style="text-align:right;font-size:11px;color:'+(credPisCofR>0?'#60a5fa':'#475569')+'">'+(f.monofasico?'<span style="color:#60a5fa" title="Monofasico sem credito">Mono</span>':(credPisCofR>0?'R$ '+fmt(credPisCofR):'-'))+'</td>';
-    html+='<td style="text-align:right;font-size:11px;color:#a855f7;font-weight:700">'+(totalCred>0?'<b>R$ '+fmt(totalCred)+'</b>':'-')+'</td>';
-    html+='<td style="background:#0f172a"><input class="rev-input" type="number" value="'+f.cmvBr.toFixed(4)+'" onchange="fichas['+i+'].cmvBr=parseFloat(this.value)||0" style="width:74px;text-align:right;background:#0f172a;color:#93c5fd;border:1px solid #3b82f6"></td>';
-    html+='<td style="background:#0f172a"><input class="rev-input" type="number" value="'+f.cmvPr.toFixed(4)+'" onchange="fichas['+i+'].cmvPr=parseFloat(this.value)||0" style="width:74px;text-align:right;background:#0f172a;color:#93c5fd;border:1px solid #1d4ed8"></td>';
-    html+='<td><input class="rev-input" type="number" value="'+(f.peso||'')+'" placeholder="kg" onchange="fichas['+i+'].peso=parseFloat(this.value)||0" style="width:56px"></td>';
-    html+='<td style="text-align:center;font-size:10px">'+(f.monofasico?'<b style="color:#60a5fa">M</b>':'-')+'</td>';
-    html+='<td><div style="display:flex;gap:2px"><input class="rev-input" id="ean-'+i+'" value="'+(f.ean||'')+'" onchange="fichas['+i+'].ean=this.value" style="width:76px;font-size:10px" placeholder="EAN"><button onclick="gerarEAN('+i+')" style="background:#2563eb;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:10px;padding:1px 4px">EAN</button></div></td>';
-    html+='</tr>';
+    var nome   = String(f.nome||'').replace(/"/g,'&#39;');
+    var cst    = String(f.cst||'');
+    var ncm    = String(f.ncm||'');
+    // Custos e impostos
+    var custoNF  = parseFloat(f.custoNF||0);
+    var ipiPct   = parseFloat(f.ipiPct||f.ipi||0);
+    var ipiUn    = parseFloat(f.ipiUn||0);
+    var stUn     = parseFloat(f.stUn||0);
+    var custoTotal = custoNF + ipiUn + stUn; // Custo Total = NF + IPI + ST
+    var icmsPct    = parseFloat(f.icmsPct||0);
+    var credICMS   = parseFloat(f.creditoICMS_pct||0) * custoNF;
+    var credPisCof = f.monofasico ? 0 : parseFloat(f.credPisCof||0.0925) * custoNF;
+    var totalCred  = credICMS + credPisCof;
+
+    html += '<tr class="'+(f.existe?'exist':'novo')+'" id="tr-'+i+'">';
+    html += '<td><input type="checkbox"'+(f.sel?' checked':'')+' onchange="fichas['+i+'].sel=this.checked" style="accent-color:#1F3864"></td>';
+    html += '<td>'+(f.existe?'<span class="pill pill-exist">Existe</span>':'<span class="pill pill-novo">Novo</span>')+'</td>';
+    html += '<td style="font-size:10px;color:#64748b;font-family:monospace">'+f.codigo+'</td>';
+    html += '<td><input class="rev-input" value="'+f.sku+'" onchange="fichas['+i+'].sku=this.value" style="width:66px" placeholder="SKU"></td>';
+    html += '<td><input class="rev-input" value="'+nome+'" onchange="fichas['+i+'].nome=this.value" style="min-width:190px"></td>';
+    html += '<td style="font-size:10px;color:#94a3b8;font-family:monospace">'+ncm+'</td>';
+    html += '<td style="text-align:center;font-size:11px;font-weight:700;color:'+(cst?'#e2e8f0':'#ef4444')+'">'+( cst||'!' )+'</td>';
+    html += '<td style="text-align:center">'+(f.temST?'<span class="pill pill-st">ST</span>':'-')+'</td>';
+    html += '<td><select class="rev-select" onchange="fichas['+i+'].familia=this.value" style="width:116px">'+famOpts+'</select></td>';
+    // Colunas fiscais na ordem correta
+    html += '<td style="text-align:right;font-weight:700">R$ '+fmt(custoNF)+'</td>';
+    html += '<td style="text-align:right;font-size:11px;color:#f97316">'+(ipiPct>0?(ipiPct*100).toFixed(1)+'%':'-')+'</td>';
+    html += '<td style="text-align:right;font-size:11px;color:#f97316">'+(ipiUn>0?'R$ '+fmt(ipiUn):'-')+'</td>';
+    html += '<td style="text-align:right;font-size:11px;color:#f59e0b">'+(stUn>0?'<b>R$ '+fmt(stUn)+'</b>':'-')+'</td>';
+    html += '<td style="text-align:right;font-weight:700;color:#60a5fa;background:#0f172a">R$ '+fmt(custoTotal)+'</td>';
+    html += '<td style="text-align:right;font-size:11px;color:'+(icmsPct>0?'#10b981':'#475569')+'">'+(icmsPct>0?(icmsPct*100).toFixed(0)+'%':'-')+'</td>';
+    html += '<td style="text-align:right;font-size:11px;color:'+(credICMS>0?'#10b981':'#475569')+'">'+(credICMS>0?'R$ '+fmt(credICMS):'-')+'</td>';
+    html += '<td style="text-align:right;font-size:11px;color:'+(credPisCof>0?'#60a5fa':'#475569')+'">'+(f.monofasico?'Mono':(credPisCof>0?'R$ '+fmt(credPisCof):'-'))+'</td>';
+    html += '<td style="text-align:right;font-size:11px;color:#a855f7;font-weight:700">'+(totalCred>0?'R$ '+fmt(totalCred):'-')+'</td>';
+    html += '<td style="background:#0f172a"><input class="rev-input" type="number" value="'+parseFloat(f.cmvBr||0).toFixed(4)+'" onchange="fichas['+i+'].cmvBr=parseFloat(this.value)||0" style="width:74px;text-align:right;background:#0f172a;color:#93c5fd;border:1px solid #3b82f6"></td>';
+    html += '<td style="background:#0f172a"><input class="rev-input" type="number" value="'+parseFloat(f.cmvPr||0).toFixed(4)+'" onchange="fichas['+i+'].cmvPr=parseFloat(this.value)||0" style="width:74px;text-align:right;background:#0f172a;color:#93c5fd;border:1px solid #1d4ed8"></td>';
+    html += '<td><input class="rev-input" type="number" value="'+(f.peso||'')+'" placeholder="kg" onchange="fichas['+i+'].peso=parseFloat(this.value)||0" style="width:56px"></td>';
+    html += '<td style="text-align:center;font-size:10px">'+(f.monofasico?'<b style="color:#60a5fa">M</b>':'-')+'</td>';
+    html += '<td><div style="display:flex;gap:2px"><input class="rev-input" id="ean-'+i+'" value="'+(f.ean||'')+'" onchange="fichas['+i+'].ean=this.value" style="width:76px;font-size:10px" placeholder="EAN"><button onclick="gerarEAN('+i+')" style="background:#2563eb;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:10px;padding:1px 4px">EAN</button></div></td>';
+    html += '</tr>';
   });
   var _tb=document.getElementById('rev-tbody'); if(_tb) _tb.innerHTML=html;
 }
