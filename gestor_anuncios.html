@@ -194,49 +194,65 @@ td.ec input{width:100%;background:#0f172a;border:1px solid #3b82f6;color:#fff;pa
 
 <!-- Modal Novo Anúncio -->
 <div class="modal" id="modal-novo">
-  <div class="mbox" style="width:520px">
-    <h2>📦 Novo Anúncio Manual</h2>
-    <div class="msub">Adiciona um anúncio avulso para calcular precificação</div>
+  <div class="mbox" style="width:580px">
+    <h2>&#128230; Importar / Novo An&#250;ncio</h2>
+    <div class="msub">Importe pelo MLB ou SKU direto da API ML, ou cadastre manualmente</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-end">
+      <div style="flex:1">
+        <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:4px">MLB ID ou SKU Fava</label>
+        <input type="text" id="nn-import-id" placeholder="MLB5571776700 ou SKU 1582"
+          style="width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:12px"
+          onkeydown="if(event.key==='Enter') importarAnuncioML()">
+      </div>
+      <button onclick="importarAnuncioML()" style="background:#f97316;color:#fff;border:none;padding:7px 16px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">&#128269; Importar ML</button>
+    </div>
+    <div id="nn-import-status" style="font-size:11px;margin-bottom:8px;min-height:16px;color:#10b981"></div>
+    <hr style="border:none;border-top:1px solid #334155;margin:8px 0">
     <div class="mgrid">
-      <div class="mf"><label>MLB ID (opcional)</label><input type="text" id="nn-id" placeholder="MLB1234567..."></div>
-      <div class="mf"><label>SKU Fava</label><input type="text" id="nn-sku" placeholder="Ex: 1582"></div>
-      <div class="mf" style="grid-column:span 2"><label>Título / Nome do produto</label><input type="text" id="nn-titulo" placeholder="Nome do anúncio"></div>
-      <div class="mf"><label>Preço de venda (R$)</label><input type="number" id="nn-preco" step="0.01" value="0" oninput="rcNovo()"></div>
+      <div class="mf"><label>MLB ID</label><input type="text" id="nn-id" placeholder="MLB1234567..."></div>
+      <div class="mf"><label>SKU Fava</label><input type="text" id="nn-sku" placeholder="Ex: 1582" oninput="buscaCmvPorSku(this.value)"></div>
+      <div class="mf" style="grid-column:span 2"><label>T&#237;tulo</label><input type="text" id="nn-titulo" placeholder="Nome do an&#250;ncio"></div>
+      <div class="mf"><label>Pre&#231;o (R$)</label><input type="number" id="nn-preco" step="0.01" value="0" oninput="rcNovo()"></div>
       <div class="mf"><label>CMV Brasil (R$)</label><input type="number" id="nn-cmv" step="0.01" value="0" oninput="rcNovo()"></div>
-      <div class="mf"><label>Frete médio (R$)</label><input type="number" id="nn-frete" step="0.01" value="13" oninput="rcNovo()"></div>
-      <div class="mf"><label>Taxa marketplace (%)</label><input type="number" id="nn-taxa" step="0.01" value="17" oninput="rcNovo()"></div>
+      <div class="mf"><label>Frete (R$)</label><input type="number" id="nn-frete" step="0.01" value="13" oninput="rcNovo()"></div>
+      <div class="mf"><label>Taxa (%)</label><input type="number" id="nn-taxa" step="0.01" value="17" oninput="rcNovo()"></div>
       <div class="mf"><label>Canal</label>
-        <select id="nn-canal"><option value="ml">Mercado Livre</option><option value="shopee">Shopee</option><option value="yampi">Yampi/Site</option><option value="balcao">Balcão</option></select>
+        <select id="nn-canal" onchange="rcNovo()"><option value="ml">Mercado Livre</option><option value="shopee">Shopee</option><option value="yampi">Yampi/Site</option><option value="balcao">Bal&#227;o</option></select>
       </div>
       <div class="mf"><label>ST</label>
-        <select id="nn-st" onchange="rcNovo()"><option value="0">Não</option><option value="1">Sim</option></select>
+        <select id="nn-st" onchange="rcNovo()"><option value="0">N&#227;o</option><option value="1">Sim</option></select>
+      </div>
+      <div class="mf"><label>Tipo an&#250;ncio</label>
+        <select id="nn-tipo"><option value="gold_special">Cl&#225;ssico</option><option value="gold_pro">Premium</option></select>
+      </div>
+      <div class="mf"><label>Frete Gr&#225;tis</label>
+        <select id="nn-frete-gratis"><option value="0">N&#227;o</option><option value="1">Sim</option></select>
       </div>
     </div>
-    <div class="calc" style="margin-top:12px">
-      <div class="ctitle">RESULTADO IMEDIATO</div>
+    <div class="calc" style="margin-top:10px">
+      <div class="ctitle">RESULTADO</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">
         <div style="text-align:center;padding:8px;background:#0f172a;border-radius:6px">
-          <div style="font-size:10px;color:#64748b">Preço Final</div>
-          <div id="nn-res-preco" style="font-size:16px;font-weight:700;color:#e2e8f0">—</div>
+          <div style="font-size:10px;color:#64748b">Pre&#231;o Final</div>
+          <div id="nn-res-preco" style="font-size:16px;font-weight:700;color:#e2e8f0">&#8212;</div>
         </div>
         <div style="text-align:center;padding:8px;background:#0f172a;border-radius:6px">
           <div style="font-size:10px;color:#64748b">Lucro Est.</div>
-          <div id="nn-res-lucro" style="font-size:16px;font-weight:700">—</div>
+          <div id="nn-res-lucro" style="font-size:16px;font-weight:700">&#8212;</div>
         </div>
         <div style="text-align:center;padding:8px;background:#0f172a;border-radius:6px">
           <div style="font-size:10px;color:#64748b">Margem</div>
-          <div id="nn-res-marg" style="font-size:18px;font-weight:700">—</div>
+          <div id="nn-res-marg" style="font-size:18px;font-weight:700">&#8212;</div>
         </div>
       </div>
     </div>
     <div class="ma">
       <button class="btn btn-cinza" onclick="document.getElementById('modal-novo').classList.remove('open')">Cancelar</button>
-      <button class="btn btn-verde" onclick="salvarNovo()">💾 Adicionar à lista</button>
+      <button class="btn btn-verde" onclick="salvarNovo()">&#128190; Adicionar &#224; lista</button>
+      <button id="btn-salvar-banco" class="btn btn-azul" style="display:none" onclick="salvarNovoBanco()">&#128190; Salvar no banco</button>
     </div>
   </div>
 </div>
-
-
 
 <script>
 const SRV='https://web-production-5aa0f.up.railway.app';
@@ -803,6 +819,140 @@ async function carregar(){
     document.getElementById('lbl-s').textContent=_all.length+' anúncios carregados'
       +(shopeeItems.length?' ('+shopeeItems.length+' Shopee)':'');
   }catch(e){document.getElementById('v-cards').innerHTML=`<div class="loading" style="color:#ef4444">Erro: ${e.message}</div>`;}
+}
+
+
+// ── IMPORTAR ANÚNCIO DA API ML ───────────────────────────────────────────────
+async function importarAnuncioML(){
+  const raw = (document.getElementById('nn-import-id')?.value||'').trim();
+  if(!raw){ alert('Digite um MLB ou SKU'); return; }
+  const st = document.getElementById('nn-import-status');
+  st.textContent = '🔍 Buscando...'; st.style.color='#f59e0b';
+
+  const set = (id,v) => { const el=document.getElementById(id); if(el) el.value=v; };
+
+  // Verifica se é MLB ou SKU
+  const isMLB = /^MLB/i.test(raw);
+  const isSKU = /^\d{4}$/.test(raw.trim());
+
+  if(isMLB){
+    // Buscar anúncio diretamente pelo MLB
+    try{
+      const d = await fetch(SRV+'/api/ml/items/'+raw.toUpperCase()+
+        '?attributes=id,title,price,status,buying_mode,listing_type_id,shipping,seller_custom_field,sale_terms').then(r=>r.json());
+      if(!d || d.error){
+        st.textContent = '❌ Não encontrado: '+(d?.message||d?.error||'erro desconhecido');
+        st.style.color='#ef4444'; return;
+      }
+      // Preencher campos
+      set('nn-id', d.id||raw);
+      set('nn-titulo', d.title||'');
+      set('nn-preco', parseFloat(d.price||0).toFixed(2));
+
+      // Taxa ML conforme tipo
+      const tipo = d.listing_type_id||'gold_special';
+      const isPremium = tipo==='gold_pro'||tipo==='gold_premium';
+      const taxa = isPremium ? 19 : 17;
+      set('nn-taxa', taxa);
+      set('nn-tipo', tipo);
+
+      // Frete grátis
+      const fgr = d.shipping?.free_shipping ? '1' : '0';
+      set('nn-frete-gratis', fgr);
+
+      // seller_custom_field pode ter o SKU
+      const skuMaybe = d.seller_custom_field||'';
+      if(skuMaybe && /^\d{4}$/.test(skuMaybe)) set('nn-sku', skuMaybe);
+
+      // Buscar CMV do banco pelo SKU se encontrou
+      if(skuMaybe) await buscaCmvPorSku(skuMaybe);
+
+      // Marcar no banco se já existe
+      const existe = _all.find(r=>r.id===d.id||r.mlb===d.id);
+      if(existe){
+        st.textContent = '⚠️ Este MLB já está na lista (SKU '+existe.sku+'). Você pode editá-lo.';
+        st.style.color='#f59e0b';
+      } else {
+        st.textContent = '✅ Importado: '+d.title.slice(0,50)+' | R$ '+parseFloat(d.price).toFixed(2);
+        st.style.color='#10b981';
+      }
+      document.getElementById('btn-salvar-banco').style.display='';
+      rcNovo();
+    }catch(e){
+      st.textContent='❌ Erro: '+e.message; st.style.color='#ef4444';
+    }
+  } else if(isSKU){
+    // Buscar pelo SKU: encontrar anúncios ML com esse SKU no banco
+    const matches = _all.filter(r=>String(r.sku||'').trim()===raw.trim() && r.canal==='ml');
+    if(matches.length){
+      // Pré-preencher com o primeiro anúncio encontrado
+      const m=matches[0];
+      set('nn-id', m.id||m.mlb||'');
+      set('nn-sku', m.sku||raw);
+      set('nn-titulo', m.titulo||'');
+      set('nn-preco', parseFloat(m.preco||0).toFixed(2));
+      set('nn-cmv', parseFloat(m.cmv||0).toFixed(4));
+      st.textContent = '✅ '+matches.length+' anúncio(s) encontrado(s) para SKU '+raw;
+      st.style.color='#10b981';
+    } else {
+      // Buscar CMV do banco
+      await buscaCmvPorSku(raw);
+      set('nn-sku', raw);
+      st.textContent = 'SKU '+raw+' não encontrado na lista local. CMV buscado do banco.';
+      st.style.color='#f59e0b';
+    }
+    rcNovo();
+  } else {
+    st.textContent='⚠️ Digite um MLB válido (MLB...) ou SKU de 4 dígitos';
+    st.style.color='#f59e0b';
+  }
+}
+
+async function buscaCmvPorSku(sku){
+  if(!sku || !/^\d{3,5}$/.test(sku.trim())) return;
+  try{
+    const d = await fetch(SRV+'/api/db/produto?sku='+sku.trim()).then(r=>r.json());
+    if(d && (d.custo_br||d.cmv_br||d.custo)){
+      const cmv = d.custo_br||d.cmv_br||d.custo||0;
+      const el = document.getElementById('nn-cmv');
+      if(el && parseFloat(el.value||0)===0) el.value = parseFloat(cmv).toFixed(4);
+      if(!document.getElementById('nn-titulo').value && d.nome)
+        document.getElementById('nn-titulo').value = d.nome;
+      const st2 = document.getElementById('nn-import-status');
+      if(st2 && !st2.textContent.includes('✅')) {
+        st2.textContent = 'CMV SKU '+sku+': R$ '+parseFloat(cmv).toFixed(4);
+        st2.style.color='#60a5fa';
+      }
+      rcNovo();
+    }
+  }catch(e){}
+}
+
+async function salvarNovoBanco(){
+  const mlb = (document.getElementById('nn-id')?.value||'').trim();
+  const sku  = (document.getElementById('nn-sku')?.value||'').trim();
+  const preco= parseFloat(document.getElementById('nn-preco')?.value||0);
+  const cmv  = parseFloat(document.getElementById('nn-cmv')?.value||0);
+  const titulo=document.getElementById('nn-titulo')?.value||'';
+  const tipo = document.getElementById('nn-tipo')?.value||'gold_special';
+  const taxa = parseFloat(document.getElementById('nn-taxa')?.value||17)/100;
+  const fgr  = document.getElementById('nn-frete-gratis')?.value==='1';
+  if(!mlb){ alert('MLB ID obrigatório para salvar no banco'); return; }
+  try{
+    await fetch(SRV+'/api/db/listings-batch',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({listings:[{
+        id:mlb, sku, titulo, preco,
+        sale_fee:taxa, listing_type:tipo, free_shipping:fgr?1:0,
+        status:'active', cmv_br:cmv, desconto:0
+      }]})
+    });
+    document.getElementById('nn-import-status').textContent='✅ Salvo no banco!';
+    await carregar(); // recarregar lista
+    document.getElementById('modal-novo').classList.remove('open');
+  }catch(e){
+    document.getElementById('nn-import-status').textContent='❌ Erro ao salvar: '+e.message;
+  }
 }
 
 function rcNovo(){
