@@ -1001,6 +1001,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/produto':           self._get_produto_sku,
             '/api/db/historico':         self._get_historico,
             '/api/db/historico-nf':      self._get_historico_nf,
+            '/api/db/reconstruir-nf':    self._post_reconstruir_nf,
             '/api/db/pedidos-nf':        self._get_pedidos_nf,
             '/api/db/pedidos':           self._get_pedidos,
             '/api/db/boletos':           self._get_boletos,
@@ -1597,6 +1598,77 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 'fichas':    fichas,
                 'n_itens':   len(fichas),
             })
+        except Exception as e: self._err(500, str(e))
+
+    def _post_reconstruir_nf(self):
+        """POST /api/db/reconstruir-nf — reconstrói vínculos cProd→SKU por similaridade de CMV.
+        Recebe: {nf_num, sku_range: [min, max]}
+        Retorna mapa de correspondências e salva em produtos + cprod_map.
+        """
+        try:
+            body = self._body()
+            nf_num   = str(body.get('nf_num','') or '').strip()
+            sku_min  = int(body.get('sku_min', 1000))
+            sku_max  = int(body.get('sku_max', 9999))
+
+            if not nf_num: self._err(400,'nf_num obrigatorio'); return
+
+            # 1. Buscar itens do histórico desta NF
+            hist = exe("SELECT * FROM historico_compras WHERE nf=%s ORDER BY id", (nf_num,), fetchall=True) or []
+            if not hist: self._err(404, f'NF {nf_num} não encontrada no histórico'); return
+
+            # 2. Buscar produtos sem cprod_map no range de SKU
+            prods = exe("SELECT sku, nome, custo_br, custo_pr, familia FROM produtos WHERE sku::int >= %s AND sku::int <= %s ORDER BY sku::int",
+                        (sku_min, sku_max), fetchall=True) or []
+            if not prods: self._err(404, f'Nenhum produto no range {sku_min}-{sku_max}'); return
+
+            # 3. Matching por CMV (tolerância 2%)
+            vinculados = 0; resultado = []
+            prods_sem_vinculo = []
+            for p in prods:
+                sku = str(p['sku'])
+                # Checar se já tem vínculo no cprod_map
+                existente = exe("SELECT cprod FROM cprod_map WHERE sku=%s LIMIT 1", (sku,), fetchone=True)
+                if existente:
+                    resultado.append({'sku':sku,'cprod':existente['cprod'],'status':'ja_vinculado'})
+                    continue
+                prods_sem_vinculo.append(p)
+
+            for p in prods_sem_vinculo:
+                sku = str(p['sku'])
+                cmv_prod = float(p.get('custo_br') or 0)
+                if cmv_prod <= 0:
+                    resultado.append({'sku':sku,'status':'sem_cmv'})
+                    continue
+                # Buscar item do histórico com CMV mais próximo
+                melhor = None; melhor_diff = 999
+                for it in hist:
+                    cmv_hist = float(it.get('cmv_br') or 0)
+                    if cmv_hist <= 0: continue
+                    diff = abs(cmv_prod - cmv_hist) / max(cmv_hist, 0.01)
+                    if diff < melhor_diff:
+                        melhor_diff = diff
+                        melhor = it
+                if melhor and melhor_diff < 0.05:  # tolerância 5%
+                    cprod = str(melhor.get('sku','') or '')  # historico.sku = cprod
+                    nome  = str(melhor.get('nome','') or '')
+                    # Salvar vínculo no cprod_map
+                    try:
+                        c = "ON CONFLICT(cprod) DO UPDATE SET sku=EXCLUDED.sku,nome=COALESCE(NULLIF(EXCLUDED.nome,''),cprod_map.nome),cmv_br=EXCLUDED.cmv_br,cmv_pr=EXCLUDED.cmv_pr"
+                        exe(f"INSERT INTO cprod_map(cprod,sku,nome,cmv_br,cmv_pr) VALUES(%s,%s,%s,%s,%s) {c}",
+                            (cprod,sku,nome,cmv_prod,float(p.get('custo_pr') or cmv_prod)))
+                    except: pass
+                    # Atualizar nome e fornecedor no produtos
+                    if nome:
+                        try: exe("UPDATE produtos SET nome=%s, fornecedor=%s WHERE sku=%s AND (nome IS NULL OR nome='')", (nome,cprod,sku))
+                        except: pass
+                    vinculados += 1
+                    resultado.append({'sku':sku,'cprod':cprod,'nome':nome[:40],'diff_pct':round(melhor_diff*100,2),'status':'vinculado'})
+                else:
+                    resultado.append({'sku':sku,'cmv':cmv_prod,'status':'sem_match','melhor_diff':round(melhor_diff*100,1) if melhor else None})
+
+            self._ok({'ok':True,'vinculados':vinculados,'total_prods':len(prods),
+                      'sem_vinculo':len(prods_sem_vinculo),'resultado':resultado})
         except Exception as e: self._err(500, str(e))
 
     def _get_pedidos(self):
@@ -2326,21 +2398,31 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         try:
             d = self._body()
             n = 0
-            for cprod, info in d.items():
+            c = ('ON CONFLICT(cprod) DO UPDATE SET sku=EXCLUDED.sku,nome=COALESCE(NULLIF(EXCLUDED.nome,\'\'),cprod_map.nome),'
+                 'cmv_br=EXCLUDED.cmv_br,cmv_pr=EXCLUDED.cmv_pr') if IS_PG else \
+                ('ON CONFLICT(cprod) DO UPDATE SET sku=excluded.sku,nome=excluded.nome,'
+                 'cmv_br=excluded.cmv_br,cmv_pr=excluded.cmv_pr')
+            # Aceitar objeto único {cprod, sku, nome, ...} OU dict {cprod: {sku,nome,...}}
+            if isinstance(d, dict) and 'cprod' in d and 'sku' in d:
+                items = {d['cprod']: {'sku': d['sku'], 'nome': d.get('nome',''), 'cmv_br': d.get('cmv_br',0), 'cmv_pr': d.get('cmv_pr',0)}}
+            else:
+                items = d
+            for cprod, info in items.items():
                 sku    = str(info.get('sku','') or '')
                 nome   = str(info.get('nome','') or '')
                 cmv_br = float(info.get('cmv_br',0) or 0)
                 cmv_pr = float(info.get('cmv_pr',0) or 0)
-                c = ('ON CONFLICT(cprod) DO UPDATE SET sku=EXCLUDED.sku,nome=EXCLUDED.nome,'
-                     'cmv_br=EXCLUDED.cmv_br,cmv_pr=EXCLUDED.cmv_pr') if IS_PG else \
-                    ('ON CONFLICT(cprod) DO UPDATE SET sku=excluded.sku,nome=excluded.nome,'
-                     'cmv_br=excluded.cmv_br,cmv_pr=excluded.cmv_pr')
+                if not sku: continue
                 exe(f"INSERT INTO cprod_map (cprod,sku,nome,cmv_br,cmv_pr) VALUES ({qmark(5)}) {c}",
                     (cprod,sku,nome,cmv_br,cmv_pr))
-                if sku and (cmv_br>0 or cmv_pr>0):
-                    upsert_produto(sku, nome, custo=cmv_br or cmv_pr, custo_br=cmv_br or cmv_pr, custo_pr=cmv_pr or cmv_br)
+                # Atualizar fornecedor + nome no produtos
+                try:
+                    exe("UPDATE produtos SET fornecedor=%s WHERE sku=%s AND (fornecedor IS NULL OR fornecedor='')", (cprod, sku))
+                    if nome:
+                        exe("UPDATE produtos SET nome=%s WHERE sku=%s AND (nome IS NULL OR nome='')", (nome, sku))
+                except: pass
                 n += 1
-            self._ok({'ok':n})
+            self._ok({'ok': True, 'n': n})
         except Exception as e: self._err(500, str(e))
 
     def _post_listings_batch(self):
@@ -2454,7 +2536,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         b = self._body()
         fotos = json.dumps(b.get('fotos',[]))
         taref = json.dumps(b.get('tarefas',[]))
+        sku_val = str(b.get('sku','') or '').strip()
         try:
+            # CMV anterior para alerta de reposição com custo maior
+            cmv_anterior = 0
+            if sku_val:
+                prev = exe("SELECT custo_br FROM produtos WHERE sku=%s", (sku_val,), fetchone=True)
+                if prev and prev.get('custo_br'): cmv_anterior = float(prev['custo_br'])
             campos = ['sku','nome','fornecedor','codigo_fornecedor','ncm','cst','cfop',
                 'ipi','tem_st','custo','custo_br','custo_pr','peso','comprimento','largura',
                 'altura','ean','categoria','familia','fotos','titulo_ml','titulo_shopee',
@@ -2478,7 +2566,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             else:
                 sql = sql.replace('INSERT INTO','INSERT OR REPLACE INTO')
             exe(sql, vals)
-            self._ok({'ok': True, 'sku': b.get('sku')})
+            self._ok({'ok': True, 'sku': sku_val, 'cmv_anterior': cmv_anterior})
         except Exception as e:
             self._err(500, str(e))
 

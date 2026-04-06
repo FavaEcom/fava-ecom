@@ -377,52 +377,70 @@ function C(r){
   const preco=parseFloat(r.preco||0), desc=parseFloat(r.desconto||0);
   const canal=r.canal||'ml';
   const pf=preco*(1-desc/100);
-  if(pf<=0) return{pf:0,rec:0,luc:0,mar:0,cp:0,ci:0,stv:0,fr:0,freteCalc:null};
+  if(pf<=0) return{pf:0,rec:0,luc:0,mar:0,cp:0,ci:0,stv:0,fr:0,freteCalc:null,freteTipo:'none'};
 
   // Taxa e custo fixo por canal
-  let tx=0.17, fixo=0;
-  if(canal==='shopee'){const sh=calcTaxaShopee(preco); tx=sh.pct; fixo=sh.fixo;}
-  else if(canal==='yampi') tx=0.05;
+  let tx=0.17, fixo=0, sh_fixo=0;
+  if(canal==='shopee'){
+    const sh=calcTaxaShopee(preco);
+    tx=sh.pct;
+    sh_fixo=sh.fixo;  // Taxa fixa Shopee (logística) = mostrada como "frete"
+    fixo=0;           // Retirado do ded — será contado como fr
+  } else if(canal==='yampi') tx=0.05;
   else tx=parseFloat(r.sale_fee||0.17);
 
-  // Frete calculado pela tabela (ML=Full Super, Shopee=estimado)
+  // Frete calculado
   const pesoFinal=calcPesoFinal(r.peso,r.largura,r.altura,r.profundidade);
-  const freteCalc = canal==='ml' && pesoFinal>0 ? calcFreteML(pesoFinal,preco)
-                  : canal==='shopee' ? calcFreteShopee(pesoFinal) : null;
-  const fr = freteCalc!==null ? freteCalc : parseFloat(r.frete_medio||0);
+  let freteCalc=null, freteTipo='manual';
+
+  if(canal==='shopee'){
+    // Shopee: taxa fixa É o frete (logística Shopee)
+    freteCalc=sh_fixo;
+    freteTipo='taxa_fixa';
+  } else if(canal==='ml' && pesoFinal>0){
+    freteCalc=calcFreteML(pesoFinal,preco);
+    freteTipo='full_super';
+  } else if(canal==='ml' && pesoFinal<=0){
+    // ML sem peso: usar frete_medio salvo ou mínimo R$7
+    freteCalc=null;
+    freteTipo=parseFloat(r.frete_medio||0)>0?'manual':'estimado';
+  }
+
+  // Frete efetivo
+  let fr;
+  if(freteCalc!==null) fr=freteCalc;
+  else if(parseFloat(r.frete_medio||0)>0) fr=parseFloat(r.frete_medio);
+  else fr=7; // mínimo estimado quando sem peso e sem frete salvo
 
   // CMV e impostos
   const cmv=parseFloat(r.cmv||0);
   const st=parseInt(r.st||0), si=parseFloat(r.st_imposto||0), mn=parseInt(r.monofasico||0);
 
-  // Deduções sobre o preço final
-  // ICMS + DIFAL por canal:
+  // Deduções sobre o preço final (fixo não entra mais para Shopee — já em fr)
   let ded;
   if(canal==='yampi'||canal==='balcao'){
-    // PR local: sem DIFAL, ICMS 0 se ST, 12% se não
     ded = pf*(tx + TP + (st?0:TC_PR) + TI) + fixo;
   } else {
-    // Marketplace nacional: médias ponderadas TC(10.67%)+TD(7.68%)
     ded = pf*(tx + TP + TC + TD + TI) + fixo;
   }
 
   // Créditos fiscais (entrada)
-  const cp = mn ? 0 : cmv*(TP+TI);   // crédito PIS/COFINS entrada
-  const ci = st ? 0 : cmv*TC_PR;     // crédito ICMS PR entrada (sempre 12% independente de canal)
+  const cp = mn ? 0 : cmv*(TP+TI);
+  const ci = st ? 0 : cmv*TC_PR;
 
   // Resultado
   const rec=pf-ded+cp+ci;
   const stv=st?pf*si:0;
   const luc=rec-cmv-fr-stv;
   const mar=pf>0?luc/pf*100:0;
-  return{pf,rec,luc,mar,cp,ci,stv,fr,freteCalc};
+  return{pf,rec,luc,mar,cp,ci,stv,fr,freteCalc,freteTipo};
 }
 
 function calcAll(){
   _all.forEach(r=>{
     const c=C(r);
     r.pf=c.pf; r.recebe=c.rec; r.lucro=c.luc; r.margem=c.mar;
-    r.frete_calc=c.freteCalc; r.frete_usado=c.fr;
+    r.frete_calc=c.freteCalc; r.frete_usado=c.fr; r.frete_tipo=c.freteTipo;
   });
 }
 
@@ -509,7 +527,15 @@ function renderCards(){
       <div class="card-grid">
         <div class="cv"><label>Preço final</label><b>${R(r.pf||r.preco)}</b></div>
         <div class="cv"><label>CMV BR</label><b style="color:${cmv>0?'#e2e8f0':'#ef4444'}">${cmv>0?R(cmv):'⚠ s/CMV'}</b></div>
-        <div class="cv"><label>Frete ${r.frete_calc!==null?'📦calc':'✏man'}</label><b style="color:${r.frete_calc!==null?'#10b981':'#f59e0b'}">${R(r.frete_usado||r.frete_medio||0)}</b></div>
+        <div class="cv"><label>${
+          r.frete_tipo==='taxa_fixa' ? '💰Taxa Fixa' :
+          r.frete_tipo==='full_super' ? '📦Full Super' :
+          r.frete_tipo==='estimado' ? '⚠️Est.' : '✏️Man.'
+        }</label><b style="color:${
+          r.frete_tipo==='taxa_fixa'?'#a855f7':
+          r.frete_tipo==='full_super'?'#10b981':
+          r.frete_tipo==='estimado'?'#f59e0b':'#f59e0b'
+        }">${R(r.frete_usado||0)}</b></div>
         <div class="cv"><label>Lucro</label><b style="color:${(r.lucro||0)>=0?'#10b981':'#ef4444'}">${R(r.lucro)}</b></div>
       </div>
       <div class="card-margem ${mc}">${f(m)}% margem</div>
@@ -761,17 +787,21 @@ document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.cu
 async function carregar(){
   document.getElementById('v-cards').innerHTML='<div class="loading">Carregando...</div>';
   try{
-    const [mlData, yampiData] = await Promise.all([
-    fetch(SRV+'/api/db/listings').then(r=>r.json()).catch(()=>[]),
-    fetch(SRV+'/api/db/yampi-listings').then(r=>r.json()).catch(()=>[])
-  ]);
-  const mlItems = (Array.isArray(mlData)?mlData:[]).map(r=>({...r,canal:'ml'}));
-  // Yampi já vem normalizado do server com CMV BR do banco
-  const yampiItems = (Array.isArray(yampiData)?yampiData:[]).map(r=>({...r,canal:r.canal||'yampi'}));
-const data = [...mlItems, ...yampiItems];
+    const [mlData, yampiData, shopeeData] = await Promise.all([
+      fetch(SRV+'/api/db/listings').then(r=>r.json()).catch(()=>[]),
+      fetch(SRV+'/api/db/yampi-listings').then(r=>r.json()).catch(()=>[]),
+      fetch(SRV+'/api/db/shopee-listings').then(r=>r.json()).catch(()=>[])
+    ]);
+    const mlItems    = (Array.isArray(mlData)?mlData:[]).map(r=>({...r,canal:'ml'}));
+    const yampiItems = (Array.isArray(yampiData)?yampiData:[]).map(r=>({...r,canal:r.canal||'yampi'}));
+    const shopeeItems= (Array.isArray(shopeeData)?shopeeData:[]).map(r=>({
+      ...r, canal:'shopee', cmv: r.cmv||r.cmv_pr||0, sale_fee:0
+    }));
+    const data = [...mlItems, ...yampiItems, ...shopeeItems];
     _all=Array.isArray(data)?data:[];
     calcAll();stats();filtrar();
-    document.getElementById('lbl-s').textContent=_all.length+' anúncios carregados';
+    document.getElementById('lbl-s').textContent=_all.length+' anúncios carregados'
+      +(shopeeItems.length?' ('+shopeeItems.length+' Shopee)':'');
   }catch(e){document.getElementById('v-cards').innerHTML=`<div class="loading" style="color:#ef4444">Erro: ${e.message}</div>`;}
 }
 

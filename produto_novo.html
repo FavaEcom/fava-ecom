@@ -763,10 +763,13 @@ function salvarTodos(){
     var pML=calcPreco(f.cmvBr,mg,TAXA_ML_CL,FRETE_ML,DIFAL+IBS,ICMS_SAIDA);
     var pSH=calcPreco(f.cmvBr,mg,TAXA_SHOPEE,FRETE_SHOPEE,DIFAL+IBS,ICMS_SAIDA);
     var pBL=calcPreco(f.cmvPr,mg,0,0,0,f.temST?0:ICMS_PR);
+    var cprod = f.codigo || '';  // código do produto no fornecedor (cProd da NF)
     fetch(RAILWAY+'/api/db/cadastro',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({sku:f.sku,nome:f.nome,fornecedor:dadosNF?dadosNF.fornecedor:'',
-        codigo_fornecedor:f.codigo,ncm:f.ncm,cst:f.cst,cfop:f.cfop,
+      body:JSON.stringify({sku:f.sku,nome:f.nome,
+        fornecedor: cprod,                              // cprod = código do item no fornecedor
+        codigo_fornecedor: cprod,
+        ncm:f.ncm,cst:f.cst,cfop:f.cfop,
         ipi:f.ipiPct,tem_st:f.temST?1:0,custo:f.custoNF,custo_br:f.cmvBr,custo_pr:f.cmvPr,
         peso:f.peso,ean:f.ean,familia:f.familia,categoria:f.familia,
         titulo_ml:f.titulo_ml||f.nome.slice(0,60),
@@ -775,13 +778,30 @@ function salvarTodos(){
         preco_ml_classico:pML,preco_shopee:pSH,preco_balcao:pBL,
         status_cadastro:'cadastrado'})
     }).then(function(r){
-      if(r.ok){ ok++; log.innerHTML+='<div style="font-size:11px;color:#166534;padding:2px 0">SKU '+f.sku+' - '+f.nome.slice(0,50)+'</div>'; }
-      else { erros++; log.innerHTML+='<div style="font-size:11px;color:#dc2626;padding:2px 0">ERRO SKU '+f.sku+'</div>'; }
+      if(r.ok){
+        ok++;
+        // Verificar se custo subiu vs. banco (alerta reposição com custo maior)
+        r.json().then(function(res){
+          var cmvAnterior = res && res.cmv_anterior ? parseFloat(res.cmv_anterior) : 0;
+          if(cmvAnterior > 0 && f.cmvBr > cmvAnterior * 1.02){
+            var delta = ((f.cmvBr/cmvAnterior-1)*100).toFixed(1);
+            log.innerHTML+='<div style="font-size:11px;color:#f59e0b;padding:2px 0;font-weight:700">⚠️ SKU '+f.sku+' — CMV subiu '+delta+'% (era R$ '+cmvAnterior.toFixed(2)+' → agora R$ '+f.cmvBr.toFixed(2)+'). Verifique anúncios e kits!</div>';
+          } else {
+            log.innerHTML+='<div style="font-size:11px;color:#166534;padding:2px 0">✅ SKU '+f.sku+' - '+f.nome.slice(0,50)+'</div>';
+          }
+        }).catch(function(){ log.innerHTML+='<div style="font-size:11px;color:#166534;padding:2px 0">✅ SKU '+f.sku+' - '+f.nome.slice(0,50)+'</div>'; });
+      }
+      else { erros++; log.innerHTML+='<div style="font-size:11px;color:#dc2626;padding:2px 0">❌ ERRO SKU '+f.sku+'</div>'; }
+      // Salvar cprod_map (cprod → SKU) — permite retomar NF depois
+      if(cprod && f.sku){
+        fetch(RAILWAY+'/api/db/cprod-map',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({cprod:cprod,sku:f.sku,nome:f.nome,cmv_br:f.cmvBr,cmv_pr:f.cmvPr})});
+      }
       // Atualiza CMV cache
       var payload={}; payload[f.sku]={cmv:f.cmvBr,cmvPr:f.cmvPr,nome:f.nome};
       fetch(RAILWAY+'/api/cmv-cache',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
       setTimeout(salvarProximo,100);
-    }).catch(function(e){ erros++; log.innerHTML+='<div style="font-size:11px;color:#dc2626;padding:2px 0">ERRO SKU '+f.sku+': '+e.message+'</div>'; setTimeout(salvarProximo,100); });
+    }).catch(function(e){ erros++; log.innerHTML+='<div style="font-size:11px;color:#dc2626;padding:2px 0">❌ ERRO SKU '+f.sku+': '+e.message+'</div>'; setTimeout(salvarProximo,100); });
   }
   salvarProximo();
 }
