@@ -108,7 +108,9 @@ def criar_tabelas():
                 vtot REAL DEFAULT 0, ipi_p REAL DEFAULT 0, ipi_un REAL DEFAULT 0,
                 icms_p REAL DEFAULT 0, cred_pc REAL DEFAULT 0, custo_r REAL DEFAULT 0,
                 cmv_br REAL DEFAULT 0, cmv_pr REAL DEFAULT 0, ncm TEXT, cfop TEXT,
+                v_st REAL DEFAULT 0,
                 created_at TIMESTAMP DEFAULT NOW())""",
+            """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS v_st REAL DEFAULT 0""",
             """CREATE TABLE IF NOT EXISTS nf_entrada (
                 chave TEXT PRIMARY KEY, nf TEXT, fornecedor TEXT, cnpj TEXT,
                 emissao TEXT, valor REAL DEFAULT 0, created_at TIMESTAMP DEFAULT NOW())""",
@@ -1583,7 +1585,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     pr = prod_por_fornecedor[cprod]
                     sku_real   = str(pr['sku'])
                     familia_real = str(pr.get('familia') or '')
-                    peso_real  = 0.0
+                    peso_real  = float(pr.get('peso') or 0)
 
                 # 3. Matching por CMV (tolerância 3%) como fallback
                 if not sku_real:
@@ -1598,7 +1600,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                         if not str(pr.get('nome','')):  # prefer unnamed (recently created)
                                             sku_real = str(pr['sku'])
                                             familia_real = str(pr.get('familia') or '')
-                                            peso_real = 0.0
+                                            peso_real = float(pr.get('peso') or 0)
                                             break
                                     if sku_real: break
                             if sku_real: break
@@ -1611,11 +1613,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         if not peso_real:    peso_real    = float(pr_full.get('peso') or 0)
                         if pr_full.get('nome'): nome_real = str(pr_full['nome'])
 
-                # Calcular stUn = custo_r - vunit - ipiUn (o que sobra é ST)
+                # ST por unidade: v_st (total ST da linha) / qtd — igual ao IPI
                 _vunit   = float(it.get('vunit',0) or 0)
                 _ipiUn   = float(it.get('ipi_un',0) or 0)
                 _custoR  = float(it.get('custo_r',0) or 0)
-                _stUn    = max(0.0, round(_custoR - _vunit - _ipiUn, 4))
+                _qtd     = float(it.get('qtd',1) or 1)
+                _vSt     = float(it.get('v_st',0) or 0)
+                # Preferir v_st direto; fallback: custo_r - vunit - ipi_un se > 0
+                if _vSt > 0:
+                    _stUn = round(_vSt / _qtd, 4)
+                else:
+                    _stUn = max(0.0, round(_custoR - _vunit - _ipiUn, 4))
                 _ipiPct  = float(it.get('ipi_p',0) or 0)
                 if _ipiPct > 1: _ipiPct = _ipiPct / 100.0
                 # Icms
@@ -1650,6 +1658,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     'ipiUn':         _ipiUn,
                     'ipiPct':        _ipiPct,
                     'stUn':          _stUn,
+                    'vSt':           _vSt,
                     'temST':         _temST,
                     'cmvBr':         float(it.get('cmv_br',0) or 0),
                     'cmvPr':         float(it.get('cmv_pr',0) or 0),
@@ -2472,27 +2481,31 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             payload = self._body()
             if isinstance(payload, dict): payload = [payload]
             n=0
-            ignore = 'ON CONFLICT DO NOTHING' if IS_PG else ''
             for row in payload:
                 try:
-                    sql = (f"INSERT {'OR IGNORE ' if not IS_PG else ''}INTO historico_compras "
-                           f"(nf,fornecedor,data_emissao,sku,nome,qtd,vunit,vtot,ipi_p,ipi_un,icms_p,cred_pc,custo_r,cmv_br,cmv_pr,ncm,cfop) "
-                           f"VALUES ({qmark(17)}) {ignore if IS_PG else ''}")
-                    exe(sql, (row.get('nf'), row.get('fornecedor'), row.get('data_emissao'),
-                         row.get('sku',''), row.get('nome',''),
-                         float(row.get('qtd',0)), float(row.get('vunit',0)), float(row.get('vtot',0)),
-                         float(row.get('ipi_p',0)), float(row.get('ipi_un',0)),
-                         float(row.get('icms_p',0)), float(row.get('cred_pc',0)),
-                         float(row.get('custo_r',0)), float(row.get('cmv_br',0)),
-                         float(row.get('cmv_pr',0)), row.get('ncm',''), row.get('cfop','')))
-                    sku = row.get('sku','').strip()
-                    cmv_br = float(row.get('cmv_br',0))
-                    if sku and cmv_br>0:
-                        prod_atual = exe(f"SELECT custo_br FROM produtos WHERE sku={'%s' if IS_PG else '?'}",
-                                        (sku,), fetchone=True)
-                        if not prod_atual or not prod_atual.get('custo_br'):
-                            upsert_produto(sku, row.get('nome',''), custo=cmv_br, custo_br=cmv_br,
-                                           custo_pr=float(row.get('cmv_pr',cmv_br)))
+                    nf   = row.get('nf','')
+                    cprod= row.get('sku','')  # campo sku = cprod do fornecedor
+                    v_st = float(row.get('v_st',0))
+                    # Verificar se já existe registro
+                    existe = exe("SELECT id FROM historico_compras WHERE nf=%s AND sku=%s LIMIT 1",
+                                 (nf, cprod), fetchone=True)
+                    if existe:
+                        # Atualizar v_st (e outros campos que podem ter mudado)
+                        exe("UPDATE historico_compras SET v_st=%s, custo_r=%s, cmv_br=%s, cmv_pr=%s WHERE nf=%s AND sku=%s",
+                            (v_st, float(row.get('custo_r',0)), float(row.get('cmv_br',0)),
+                             float(row.get('cmv_pr',0)), nf, cprod))
+                    else:
+                        exe(f"INSERT INTO historico_compras "
+                            f"(nf,fornecedor,data_emissao,sku,nome,qtd,vunit,vtot,ipi_p,ipi_un,icms_p,cred_pc,custo_r,cmv_br,cmv_pr,ncm,cfop,v_st) "
+                            f"VALUES ({qmark(18)})",
+                            (nf, row.get('fornecedor',''), row.get('data_emissao',''),
+                             cprod, row.get('nome',''),
+                             float(row.get('qtd',0)), float(row.get('vunit',0)), float(row.get('vtot',0)),
+                             float(row.get('ipi_p',0)), float(row.get('ipi_un',0)),
+                             float(row.get('icms_p',0)), float(row.get('cred_pc',0)),
+                             float(row.get('custo_r',0)), float(row.get('cmv_br',0)),
+                             float(row.get('cmv_pr',0)), row.get('ncm',''), row.get('cfop',''),
+                             v_st))
                     n+=1
                 except Exception as e: print(f'[HIST] {e}')
             self._ok({'ok':True,'inseridos':n})

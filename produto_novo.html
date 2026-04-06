@@ -1423,6 +1423,26 @@ function salvarTodos(){
           });
         }
 
+        // 3b. Salvar no historico_compras com v_st (ST real da nota)
+        if(dadosNF && dadosNF.nf && cprod){
+          var vStTotal = parseFloat(f.vSt||0) || (parseFloat(f.stUn||0) * parseFloat(f.qtd||1));
+          fetch(RAILWAY+'/api/db/historico', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify([{
+              nf: dadosNF.nf, fornecedor: dadosNF.fornecedor||'', data_emissao: dadosNF.data||'',
+              sku: cprod,  // cprod do fornecedor — campo sku da tabela
+              nome: f.nome, qtd: f.qtd||1,
+              vunit: f.custoNF||0, vtot: (f.custoNF||0)*(f.qtd||1),
+              ipi_p: (f.ipiPct||0)*100, ipi_un: f.ipiUn||0,
+              icms_p: (f.icmsPct||0)*100, cred_pc: f.credPisCof||0.0925,
+              custo_r: f.custoEntrada||f.custoNF||0,
+              cmv_br: f.cmvBr||0, cmv_pr: f.cmvPr||f.cmvBr||0,
+              ncm: f.ncm||'', cfop: f.cfop||'',
+              v_st: vStTotal  // ST total da linha (não por unidade)
+            }])
+          });
+        }
+
         // 4. Salvar anúncios ML em ml_listings
         var mlAnuncios = anuncios.filter(function(an){ return an.canal==='ml_cl'||an.canal==='ml_pr'; });
         if(mlAnuncios.length){
@@ -1754,7 +1774,7 @@ async function salvarRascunho(status, silencioso){
           sku: f.sku, nome: f.nome, codigo: f.codigo, ncm: f.ncm,
           familia: f.familia, peso: f.peso, ean: f.ean,
           cmvBr: f.cmvBr, cmvPr: f.cmvPr, custoNF: f.custoNF,
-          ipiUn: f.ipiUn, stUn: f.stUn, custoEntrada: f.custoEntrada,
+          ipiUn: f.ipiUn, stUn: f.stUn, vSt: f.vSt||0, custoEntrada: f.custoEntrada,
           ipiPct: f.ipiPct, temST: f.temST, monofasico: f.monofasico,
           qtd: f.qtd, existe: f.existe,
           titulo_ml: f.titulo_ml, titulo_shopee: f.titulo_shopee,
