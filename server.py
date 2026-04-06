@@ -1061,6 +1061,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/produto':            self._post_produto,
             '/api/db/produtos/update-fiscal': self._post_produtos_update_fiscal,
             '/api/db/historico':          self._post_historico,
+            '/api/db/limpar-nf':          self._post_limpar_nf,
             '/api/db/nf':                 self._post_nf,
             '/api/db/listing':            self._post_listing,
             '/api/sync/lucro':            self._sync_lucro,
@@ -1548,15 +1549,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             nf_num = p.get('nf', [''])[0].strip()
             if not nf_num: self._err(400, 'nf obrigatorio'); return
 
-            # ORDER BY id ASC = ordem original da NF
-            itens = exe("""SELECT DISTINCT ON (sku) * FROM historico_compras
-                           WHERE nf=%s ORDER BY sku, id ASC""", (nf_num,), fetchall=True) or []
+            # Subquery: DISTINCT ON por cProd, depois reordena pelo id original (ordem da NF)
+            itens = exe("""SELECT * FROM (
+                            SELECT DISTINCT ON (sku) * FROM historico_compras
+                            WHERE nf=%s ORDER BY sku, id ASC
+                          ) t ORDER BY id ASC""", (nf_num,), fetchall=True) or []
 
             header = exe("SELECT * FROM nf_entrada WHERE nf=%s ORDER BY emissao DESC LIMIT 1", (nf_num,), fetchone=True)
 
             if not itens and not header:
-                itens = exe("""SELECT DISTINCT ON (sku) * FROM historico_compras
-                               WHERE nf LIKE %s ORDER BY sku, id ASC""", (f'%{nf_num}%',), fetchall=True) or []
+                itens = exe("""SELECT * FROM (
+                                SELECT DISTINCT ON (sku) * FROM historico_compras
+                                WHERE nf LIKE %s ORDER BY sku, id ASC
+                              ) t ORDER BY id ASC""", (f'%{nf_num}%',), fetchall=True) or []
                 header = exe("SELECT * FROM nf_entrada WHERE nf LIKE %s ORDER BY emissao DESC LIMIT 1", (f'%{nf_num}%',), fetchone=True)
 
             # SEM match por CMV — só match exato por cprod_map e fornecedor
@@ -2463,6 +2468,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 int(d.get('estoque',0)), float(d.get('ipi',0)), float(d.get('cred_icms',0)),
                 d.get('fornecedor',''), float(d.get('preco_venda',0)))
             self._ok({'ok':True,'sku':sku})
+        except Exception as e: self._err(500, str(e))
+
+    def _post_limpar_nf(self):
+        """POST /api/db/limpar-nf — apaga todos os registros de uma NF do historico_compras"""
+        try:
+            d = self._body()
+            nf = str(d.get('nf',''))
+            if not nf: self._err(400,'nf obrigatorio'); return
+            result = exe("DELETE FROM historico_compras WHERE nf=%s", (nf,))
+            self._ok({'ok':True,'nf':nf})
         except Exception as e: self._err(500, str(e))
 
     def _post_historico(self):
