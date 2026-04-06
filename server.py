@@ -1009,6 +1009,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/listings':          self._get_listings,
             '/api/db/yampi-listings':   self._get_yampi_listings,
             '/api/db/shopee-listings':  self._get_shopee_listings,
+            '/api/db/shopee-listing':   self._post_shopee_listing,
+            '/api/db/yampi-listing':    self._post_yampi_listing,
             '/api/db/nf-rascunho':      self._get_nf_rascunho,
             '/api/shopee/autorizar':    self._shopee_autorizar,
             '/api/shopee/callback':     self._shopee_callback,
@@ -1030,6 +1032,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/sync/now':             self._sync_now,
             '/api/sync/bling-anuncios':  self._sync_bling_anuncios,
             '/api/sync/yampi':           self._sync_yampi,
+            '/api/db/limpar-ml':         self._post_limpar_ml,
             '/api/sync/shopee':          self._sync_shopee,
             '/api/db/nf-rascunho':      self._post_nf_rascunho,
             '/api/shopee/status':        self._get_shopee_status,
@@ -1608,21 +1611,46 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         if not peso_real:    peso_real    = float(pr_full.get('peso') or 0)
                         if pr_full.get('nome'): nome_real = str(pr_full['nome'])
 
+                # Calcular stUn = custo_r - vunit - ipiUn (o que sobra é ST)
+                _vunit   = float(it.get('vunit',0) or 0)
+                _ipiUn   = float(it.get('ipi_un',0) or 0)
+                _custoR  = float(it.get('custo_r',0) or 0)
+                _stUn    = max(0.0, round(_custoR - _vunit - _ipiUn, 4))
+                _ipiPct  = float(it.get('ipi_p',0) or 0)
+                if _ipiPct > 1: _ipiPct = _ipiPct / 100.0
+                # Icms
+                _icmsP   = float(it.get('icms_p',0) or 0)
+                if _icmsP > 1: _icmsP = _icmsP / 100.0
+                # Crédito ICMS — só credita se icms_p > 0 e cfop não é de ST retido
+                _cfop    = str(it.get('cfop','') or '')
+                _st_cfop = _cfop.endswith('03') or _cfop.endswith('04')
+                _temST   = _stUn > 0.001 or _st_cfop
+                # CST inferido do CFOP
+                _cst = ''
+                if _cfop in ('6403','5403','6403'): _cst = '10'
+                elif _cfop in ('6404','5404'):       _cst = '60'
+                elif _cfop in ('6102','5102','6101','5101','6108','5108'): _cst = '00'
+                elif _st_cfop: _cst = '10'
+                # credita ICMS se CST 00 ou 20 (não credita em CST 40,41,50,60,10 com ST retido)
+                _credICMS = _icmsP if _cst in ('00','20') else 0.0
+                _credPC   = float(it.get('cred_pc',0) or 0)
                 fichas.append({
                     'codigo':        cprod,
                     'nome':          nome_real,
                     'ncm':           str(it.get('ncm','') or ''),
-                    'cfop':          str(it.get('cfop','') or ''),
+                    'cfop':          _cfop,
+                    'cst':           _cst,
                     'qtd':           float(it.get('qtd',1) or 1),
+                    'vtot':          float(it.get('vtot',0) or 0),
                     'sku':           sku_real,
                     'existe':        bool(sku_real),
                     '_auto':         bool(sku_real),
-                    'custoNF':       float(it.get('vunit',0) or 0),
-                    'custoEntrada':  float(it.get('custo_r',0) or 0),
-                    'ipiUn':         float(it.get('ipi_un',0) or 0),
-                    'ipiPct':        float(it.get('ipi_p',0) or 0),
-                    'stUn':          0,
-                    'temST':         False,
+                    'custoNF':       _vunit,
+                    'custoEntrada':  _custoR,
+                    'ipiUn':         _ipiUn,
+                    'ipiPct':        _ipiPct,
+                    'stUn':          _stUn,
+                    'temST':         _temST,
                     'cmvBr':         float(it.get('cmv_br',0) or 0),
                     'cmvPr':         float(it.get('cmv_pr',0) or 0),
                     'monofasico':    False,
@@ -1631,9 +1659,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     'titulo_ml':     '',
                     'titulo_shopee': '',
                     'sel':           not bool(sku_real),
-                    'creditoICMS_pct': float(it.get('icms_p',0) or 0) / 100.0 if float(it.get('icms_p',0) or 0) > 1 else float(it.get('icms_p',0) or 0),
-                    'icmsPct':       float(it.get('icms_p',0) or 0) / 100.0 if float(it.get('icms_p',0) or 0) > 1 else float(it.get('icms_p',0) or 0),
-                    'credPisCof':    float(it.get('cred_pc',0) or 0),
+                    'creditoICMS_pct': _credICMS,
+                    'icmsPct':       _icmsP,
+                    'credPisCof':    _credPC,
                 })
 
             self._ok({
@@ -1935,6 +1963,40 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     self._ok({'ok': True, 'id': row['id'] if row else None})
         except Exception as e: self._err(500, str(e))
 
+    def _post_shopee_listing(self):
+        """POST /api/db/shopee-listing — salva/atualiza anúncio Shopee"""
+        try:
+            d = self._body()
+            sku   = str(d.get('sku','') or '')
+            titulo= str(d.get('titulo','') or '')
+            preco = float(d.get('preco',0) or 0)
+            status= str(d.get('status','active') or 'active')
+            anuncio_id = str(d.get('id','') or '')
+            if not anuncio_id: anuncio_id = 'SHP-'+sku+'-'+str(int(__import__('time').time()))
+            c_pg = ("ON CONFLICT(id) DO UPDATE SET sku=EXCLUDED.sku, titulo=EXCLUDED.titulo, "
+                    "preco=EXCLUDED.preco, status=EXCLUDED.status") if IS_PG else ""
+            exe(f"INSERT INTO shopee_listings (id, sku, titulo, preco, status) VALUES (%s,%s,%s,%s,%s) {c_pg}",
+                (anuncio_id, sku, titulo, preco, status))
+            self._ok({'ok':True,'id':anuncio_id,'sku':sku,'preco':preco})
+        except Exception as e: self._err(500, str(e))
+
+    def _post_yampi_listing(self):
+        """POST /api/db/yampi-listing — salva/atualiza anúncio Yampi"""
+        try:
+            d = self._body()
+            sku   = str(d.get('sku','') or '')
+            titulo= str(d.get('titulo','') or '')
+            preco = float(d.get('preco',0) or 0)
+            status= str(d.get('status','active') or 'active')
+            anuncio_id = str(d.get('id','') or '')
+            if not anuncio_id: anuncio_id = 'YMP-'+sku+'-'+str(int(__import__('time').time()))
+            c_pg = ("ON CONFLICT(id) DO UPDATE SET sku=EXCLUDED.sku, titulo=EXCLUDED.titulo, "
+                    "preco=EXCLUDED.preco, status=EXCLUDED.status") if IS_PG else ""
+            exe(f"INSERT INTO yampi_listings (id, sku, titulo, preco, status) VALUES (%s,%s,%s,%s,%s) {c_pg}",
+                (anuncio_id, sku, titulo, preco, status))
+            self._ok({'ok':True,'id':anuncio_id,'sku':sku,'preco':preco})
+        except Exception as e: self._err(500, str(e))
+
     def _get_shopee_listings(self):
         """GET /api/db/shopee-listings — retorna anúncios Shopee do banco"""
         try:
@@ -2076,6 +2138,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 LEFT JOIN cprod_map cm ON cm.sku = l.sku
                 LEFT JOIN ult_camp ch ON ch.mlb_id = l.id
                 WHERE l.id IS NOT NULL
+                  AND l.id NOT LIKE 'YMP%'
+                  AND l.id NOT LIKE 'ymp%'
+                  AND l.id LIKE 'MLB%'
                 ORDER BY l.titulo
             """, fetchall=True)
             self._ok(rows)
@@ -2137,6 +2202,59 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 marg = (lucro/pf*100) if pf>0 else 0
                 exe("UPDATE ml_listings SET lucro_estimado=%s,margem_real=%s WHERE id=%s",(round(lucro,2),round(marg,2),r["id"]))
             self._ok({"ok":True,"updated":len(rows)})
+        except Exception as e: self._err(500, str(e))
+
+    def _post_limpar_ml(self):
+        """POST /api/db/limpar-ml — remove YMP e lixo da tabela ml_listings,
+        migra YMP para yampi_listings, corrige SKUs inválidos"""
+        try:
+            # 1. Contar YMP em ml_listings
+            ymp_count = exe("SELECT COUNT(*) as n FROM ml_listings WHERE id LIKE 'YMP%' OR id LIKE 'ymp%'", fetchone=True)['n']
+            nao_mlb   = exe("SELECT COUNT(*) as n FROM ml_listings WHERE id NOT LIKE 'MLB%' AND id NOT LIKE 'ymp%' AND id NOT LIKE 'YMP%'", fetchone=True)['n']
+
+            # 2. Mover YMP para yampi_listings
+            ymp_rows = exe("SELECT id, sku, titulo, preco, status FROM ml_listings WHERE id LIKE 'YMP%' OR id LIKE 'ymp%'", fetchall=True) or []
+            migrados = 0
+            c_pg = "ON CONFLICT(id) DO UPDATE SET titulo=EXCLUDED.titulo, preco=EXCLUDED.preco, status=EXCLUDED.status"
+            for r in ymp_rows:
+                # SKU válido = 4 dígitos
+                sku = str(r.get('sku','') or '')
+                sku_valido = sku if sku and len(sku) <= 6 and sku.isdigit() and int(sku) <= 9999 else ''
+                try:
+                    exe(f"INSERT INTO yampi_listings (id, sku, titulo, preco, status) VALUES (%s,%s,%s,%s,%s) {c_pg}",
+                        (str(r['id']), sku_valido, str(r.get('titulo','') or ''), float(r.get('preco',0) or 0), str(r.get('status','active') or 'active')))
+                    migrados += 1
+                except: pass
+
+            # 3. Remover YMP da ml_listings
+            exe("DELETE FROM ml_listings WHERE id LIKE 'YMP%' OR id LIKE 'ymp%'")
+
+            # 4. Remover registros sem ID MLB válido
+            removidos_invalidos = 0
+            try:
+                exe("DELETE FROM ml_listings WHERE id NOT LIKE 'MLB%'")
+                removidos_invalidos = nao_mlb
+            except: pass
+
+            # 5. Corrigir SKUs inválidos em ml_listings (SKU > 9999 = ID Yampi, não SKU Fava)
+            sku_invalidos = exe("""SELECT id, sku FROM ml_listings
+                WHERE sku IS NOT NULL AND sku != ''
+                AND (LENGTH(sku) > 6 OR sku !~ '^[0-9-]+$')""", fetchall=True) or []
+            sku_corrigidos = 0
+            for r in sku_invalidos:
+                # Verificar se existe no banco de produtos
+                prod = exe("SELECT sku FROM produtos WHERE sku=%s LIMIT 1", (str(r['sku']),), fetchone=True)
+                if not prod:
+                    exe("UPDATE ml_listings SET sku=NULL WHERE id=%s", (r['id'],))
+                    sku_corrigidos += 1
+
+            self._ok({
+                'ok': True,
+                'ymp_encontrados': ymp_count,
+                'ymp_migrados_yampi': migrados,
+                'invalidos_removidos': removidos_invalidos,
+                'sku_corrigidos': sku_corrigidos,
+            })
         except Exception as e: self._err(500, str(e))
 
     def _sync_yampi(self):

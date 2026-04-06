@@ -74,12 +74,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
 </nav>
 <div class="steps">
   <div class="step ativo" id="step-1"><span class="n">1</span> Upload / Buscar NF</div>
-  <div class="step" id="step-2"><span class="n">2</span> Revisar Impostos + SKU</div>
-  <div class="step" id="step-3"><span class="n">3</span> Salvar no Banco</div>
-</div>
-  <div class="step" id="step-2"><span class="n">2</span> ✔ Impostos &amp; SKU</div>
-  <div class="step" id="step-3"><span class="n">3</span> 📢 Anúncios</div>
-  <div class="step" id="step-4"><span class="n">4</span> Salvar &amp; Criar</div>
+  <div class="step" id="step-2"><span class="n">2</span> Impostos &amp; SKU</div>
+  <div class="step" id="step-3"><span class="n">3</span> Títulos &amp; Anúncios</div>
+  <div class="step" id="step-4"><span class="n">4</span> Precificar &amp; Criar</div>
 </div>
 
 <!-- STEP 1 -->
@@ -132,6 +129,25 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
 
 <!-- STEP 2 -->
 <div id="view-2" class="pg" style="display:none">
+
+  <!-- CAPA DA NOTA -->
+  <div id="capa-nf" style="display:none;background:#0f172a;border:1px solid #334155;border-radius:8px;margin-bottom:10px;padding:12px 16px">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div style="font-size:18px">🧾</div>
+      <div>
+        <div id="capa-forn" style="font-size:14px;font-weight:700;color:#e2e8f0"></div>
+        <div id="capa-cnpj" style="font-size:10px;color:#64748b;font-family:monospace"></div>
+      </div>
+      <div style="display:flex;gap:20px;margin-left:16px;flex-wrap:wrap">
+        <div style="text-align:center"><div style="font-size:9px;color:#64748b;text-transform:uppercase">NF</div><div id="capa-num" style="font-size:13px;font-weight:700;color:#60a5fa"></div></div>
+        <div style="text-align:center"><div style="font-size:9px;color:#64748b;text-transform:uppercase">Data</div><div id="capa-data" style="font-size:12px;color:#e2e8f0"></div></div>
+        <div style="text-align:center"><div style="font-size:9px;color:#64748b;text-transform:uppercase">Valor Total</div><div id="capa-total" style="font-size:13px;font-weight:700;color:#10b981"></div></div>
+        <div style="text-align:center"><div style="font-size:9px;color:#64748b;text-transform:uppercase">Itens</div><div id="capa-itens" style="font-size:13px;font-weight:700;color:#e2e8f0"></div></div>
+      </div>
+      <div id="capa-status" style="margin-left:auto;font-size:11px;color:#64748b"></div>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-h">
       <span>&#128203;</span><h2>Revisão de Produtos</h2>
@@ -150,29 +166,32 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
       <div class="st" id="st-2" style="margin:10px"></div>
       <table class="rev-table" id="rev-table">
         <thead>
-        <tr style="position:sticky;top:0;z-index:10;background:#1F3864">
+        <tr style="position:sticky;top:0;z-index:10;background:#1F3864;color:#fff;font-size:10px;white-space:nowrap">
           <th style="width:28px"><input type="checkbox" id="sel-all" onchange="selAll(this.checked)" style="accent-color:#fff"></th>
           <th>Status</th>
-          <th title="Codigo do produto no fornecedor (cProd)">Cod.Forn</th>
+          <th title="cProd do fornecedor">Cod.Forn</th>
           <th style="min-width:66px">SKU</th>
           <th style="min-width:190px">Nome</th>
-          <th title="NCM">NCM</th>
+          <th>NCM</th>
           <th title="CST / CSOSN">CST</th>
-          <th title="Substituicao Tributaria">ST</th>
-          <th style="min-width:116px">Familia</th>
-          <th title="Custo unit. sem IPI (vUnCom)">Custo NF</th>
-          <th title="Aliquota IPI" style="color:#f97316">IPI%</th>
-          <th title="IPI por unidade = vIPI/qtd" style="color:#f97316">IPI R$/un</th>
-          <th title="ST por unidade = vST/qtd" style="color:#f59e0b">ST R$/un</th>
-          <th title="Custo Total = Custo NF + IPI + ST" style="color:#60a5fa;font-weight:900">Custo Total</th>
-          <th title="Aliquota ICMS da nota" style="color:#10b981">ICMS%</th>
+          <th title="CFOP">CFOP</th>
+          <th title="Unidade">UN</th>
+          <th title="Quantidade">Qtd</th>
+          <th title="Valor unitario sem IPI">Vl.Unit</th>
+          <th title="Valor total da linha">Vl.Total</th>
+          <th title="Aliquota IPI" style="color:#fbbf24">IPI%</th>
+          <th title="IPI por unidade" style="color:#fbbf24">IPI R$/un</th>
+          <th title="Badge ST" style="color:#f59e0b">ST</th>
+          <th title="ICMS ST por unidade — calculado custo_r - vunit - ipi" style="color:#f59e0b">ST R$/un</th>
+          <th title="Custo total = vUnit + IPI + ST  — use este para cadastrar no Bling" style="background:#1e3a5f;color:#60a5fa;font-weight:900">Custo Total</th>
+          <th title="Aliquota ICMS" style="color:#10b981">ICMS%</th>
           <th title="Credito ICMS por unidade" style="color:#10b981">Cr.ICMS</th>
-          <th title="Credito PIS+COFINS por unidade" style="color:#60a5fa">Cr.PIS/COF</th>
-          <th title="Total creditos (ICMS+PIS+COF)" style="color:#a855f7">Total Cred.</th>
-          <th title="CMV Brasil editavel" style="background:#0f172a;color:#93c5fd">CMV BR</th>
-          <th title="CMV Parana editavel" style="background:#0f172a;color:#93c5fd">CMV PR</th>
-          <th title="Peso kg">Peso</th>
-          <th title="Monofasico PIS/COFINS">Mono</th>
+          <th title="Credito PIS+COFINS" style="color:#60a5fa">Cr.PIS/COF</th>
+          <th title="CMV Brasil = CustoTotal - Creditos" style="background:#0f172a;color:#93c5fd">CMV BR</th>
+          <th title="CMV Parana" style="background:#0f172a;color:#93c5fd">CMV PR</th>
+          <th style="min-width:56px">Peso</th>
+          <th style="min-width:116px">Familia</th>
+          <th title="Monofasico">M</th>
           <th style="min-width:80px">EAN</th>
         </tr>
         </thead>
@@ -194,45 +213,51 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
 <div id="view-3" class="pg" style="display:none">
   <div class="card">
     <div class="card-h">
-      <span>📢</span><h2>Configuração de Anúncios por Produto</h2>
-      <select id="mg-anuncio" style="margin-left:auto;border:1px solid #334155;background:#0f172a;color:#e2e8f0;padding:4px 8px;border-radius:6px;font-size:12px" onchange="renderAnuncios()">
-        <option value="30">Margem 30%</option>
-        <option value="35">Margem 35%</option>
-        <option value="40" selected>Margem 40%</option>
-        <option value="45">Margem 45%</option>
-        <option value="50">Margem 50%</option>
-      </select>
-      <button onclick="aplicarDescontoGlobal()" style="background:#7c3aed;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:700">% Desconto Global</button>
+      <span>&#128226;</span><h2>Títulos, Descrição &amp; Categorização</h2>
+      <button onclick="gerarTudoIA()" style="margin-left:auto;background:#059669;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700">✨ Gerar tudo com IA</button>
+      <button onclick="buscarPesoBlingTodos()" style="background:#0891b2;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700">⚖️ Puxar Peso Bling</button>
     </div>
-    <div class="card-b" style="padding:0">
-      <div id="anuncio-lista" style="padding:10px"></div>
+    <div class="card-b" style="padding:10px">
+      <div id="st-3" class="st" style="margin-bottom:8px"></div>
+      <div id="lista-anuncios" style="display:flex;flex-direction:column;gap:10px"></div>
     </div>
     <div class="card-b" style="border-top:1px solid #e2e8f0">
       <div class="btn-wrap">
         <button class="btn btn-cinza" onclick="irStep(2)">&larr; Voltar</button>
-        <button class="btn btn-azul" onclick="irStep(4)">Salvar &amp; Criar &rarr;</button>
+        <button class="btn btn-verde" onclick="salvarTodos()" id="btn-salvar-p3">&#128190; Salvar no banco</button>
+        <button class="btn btn-azul" onclick="irStep(4)">Precificar &amp; Criar &rarr;</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- STEP 4 — SALVAR -->
+<!-- STEP 4 — PRECIFICAÇÃO E CRIAÇÃO DOS ANÚNCIOS -->
 <div id="view-4" class="pg" style="display:none">
   <div class="card">
-    <div class="card-h"><span>&#128640;</span><h2>Salvar &amp; Gerar Anúncios</h2></div>
-    <div class="card-b">
-      <div class="st" id="st-3"></div>
-      <div id="resumo-salvar" style="margin-bottom:14px"></div>
+    <div class="card-h">
+      <span>&#128200;</span><h2>Precificar &amp; Criar Anúncios</h2>
+      <select id="mg-global" style="margin-left:auto;background:#0f172a;color:#e2e8f0;border:1px solid #334155;padding:5px 8px;border-radius:6px;font-size:12px" onchange="renderPrecificacao()">
+        <option value="25">Margem 25%</option>
+        <option value="30" selected>Margem 30%</option>
+        <option value="35">Margem 35%</option>
+        <option value="40">Margem 40%</option>
+      </select>
+    </div>
+    <div class="card-b" style="padding:10px">
+      <div id="st-4" class="st" style="margin-bottom:8px"></div>
+      <div id="lista-precif" style="display:flex;flex-direction:column;gap:14px"></div>
+    </div>
+    <div class="card-b" style="border-top:1px solid #e2e8f0">
       <div class="btn-wrap">
-        <button class="btn btn-verde" onclick="salvarTodos()" id="btn-salvar">&#128190; Salvar no banco</button>
-        <button onclick="salvarRascunho('parcial')" style="background:#0891b2;color:#fff;border:none;padding:8px 14px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700">💾 Salvar Rascunho</button>
-        <button class="btn btn-roxo" onclick="gerarAnunciosBling()" id="btn-anuncios" disabled>&#128226; Gerar anúncios ML via Bling</button>
         <button class="btn btn-cinza" onclick="irStep(3)">&larr; Voltar</button>
+        <button class="btn btn-verde" onclick="salvarTodos()" id="btn-salvar-p4">&#128190; Salvar no banco</button>
+        <button class="btn btn-roxo" onclick="criarAnunciosML()" id="btn-criar-ml">&#128226; Criar anúncios no ML</button>
       </div>
-      <div id="log-ops" style="margin-top:14px;max-height:400px;overflow-y:auto;font-family:monospace"></div>
     </div>
   </div>
 </div>
+
+
 
 
 <script>
@@ -314,9 +339,9 @@ function irStep(n){
     var s=document.getElementById('step-'+i);
     if(s) s.className='step'+(i===n?' ativo':i<n?' done':'');
   });
-  if(n===2) carregarBanco();
-  if(n===3) renderResumoSalvar();
-  if(n===4) renderResumoSalvar();
+  if(n===2){ carregarBanco(); setTimeout(atualizarCapaNF,800); }
+  if(n===3){ atualizarCapaNF(); renderParte3(); }
+  if(n===4){ renderPrecificacao(); }
 }
 
 
@@ -664,7 +689,9 @@ function gerarTodosEAN(){fichas.forEach(function(f,i){if(!f.ean)gerarEAN(i);});}
 
 function renderTabela(){
   var novos=fichas.filter(function(f){return !f.existe;}).length;
-  var _bn=document.getElementById('badge-novos'); if(_bn) _bn.textContent=novos+' novos';
+  var vinc=fichas.filter(function(f){return f.existe;}).length;
+  var _bn=document.getElementById('badge-novos');
+  if(_bn) _bn.textContent=vinc+' vinculados | '+novos+' novos';
   var html='';
   fichas.forEach(function(f,i){
     var famOpts='<option value="">-- familia --</option>'+FAMILIAS.map(function(fm){
@@ -672,47 +699,86 @@ function renderTabela(){
     }).join('');
     var nome   = String(f.nome||'').replace(/"/g,'&#39;');
     var cst    = String(f.cst||'');
+    var cfop   = String(f.cfop||'');
     var ncm    = String(f.ncm||'');
-    // Custos e impostos
+    var qtd    = parseFloat(f.qtd||1);
+    // Valores fiscais
     var custoNF  = parseFloat(f.custoNF||0);
     var ipiPct   = parseFloat(f.ipiPct||f.ipi||0);
     var ipiUn    = parseFloat(f.ipiUn||0);
     var stUn     = parseFloat(f.stUn||0);
-    var custoTotal = custoNF + ipiUn + stUn; // Custo Total = NF + IPI + ST
+    var vtot     = parseFloat(f.vtot||custoNF*qtd);
+    // CUSTO TOTAL por unidade = NF + IPI + ST  (valor para cadastrar no Bling)
+    var custoTotal = custoNF + ipiUn + stUn;
+    // Creditos
     var icmsPct    = parseFloat(f.icmsPct||0);
     var credICMS   = parseFloat(f.creditoICMS_pct||0) * custoNF;
-    var credPisCof = f.monofasico ? 0 : parseFloat(f.credPisCof||0.0925) * custoNF;
-    var totalCred  = credICMS + credPisCof;
+    var credPC     = f.monofasico ? 0 : parseFloat(f.credPisCof||0.0925) * custoNF;
+    var totalCred  = credICMS + credPC;
+    // CMV
+    var cmvBr = parseFloat(f.cmvBr||0) || (custoTotal - totalCred);
+    var cmvPr = parseFloat(f.cmvPr||0) || cmvBr;
 
     html += '<tr class="'+(f.existe?'exist':'novo')+'" id="tr-'+i+'">';
     html += '<td><input type="checkbox"'+(f.sel?' checked':'')+' onchange="fichas['+i+'].sel=this.checked" style="accent-color:#1F3864"></td>';
-    html += '<td>'+(f.existe?'<span class="pill pill-exist">Existe</span>':'<span class="pill pill-novo">Novo</span>')+'</td>';
+    // Status
+    html += '<td>'+(f.existe
+      ?'<span class="pill pill-exist" title="SKU: '+f.sku+'">Existe</span>'
+      :'<span class="pill pill-novo">Novo</span>')+'</td>';
+    // Cod.Forn
     html += '<td style="font-size:10px;color:#64748b;font-family:monospace">'+f.codigo+'</td>';
-    html += '<td><input class="rev-input" value="'+f.sku+'" onchange="fichas['+i+'].sku=this.value" style="width:66px" placeholder="SKU"></td>';
-    html += '<td><input class="rev-input" value="'+nome+'" onchange="fichas['+i+'].nome=this.value" style="min-width:190px"></td>';
+    // SKU
+    html += '<td><input class="rev-input" value="'+f.sku+'" onchange="fichas['+i+'].sku=this.value" style="width:64px" placeholder="SKU"></td>';
+    // Nome
+    html += '<td><input class="rev-input" value="'+nome+'" onchange="fichas['+i+'].nome=this.value" style="min-width:188px"></td>';
+    // NCM
     html += '<td style="font-size:10px;color:#94a3b8;font-family:monospace">'+ncm+'</td>';
-    html += '<td style="text-align:center;font-size:11px;font-weight:700;color:'+(cst?'#e2e8f0':'#ef4444')+'">'+( cst||'!' )+'</td>';
-    html += '<td style="text-align:center">'+(f.temST?'<span class="pill pill-st">ST</span>':'-')+'</td>';
-    html += '<td><select class="rev-select" onchange="fichas['+i+'].familia=this.value" style="width:116px">'+famOpts+'</select></td>';
-    // Colunas fiscais na ordem correta
-    html += '<td style="text-align:right;font-weight:700">R$ '+fmt(custoNF)+'</td>';
-    html += '<td style="text-align:right;font-size:11px;color:#f97316">'+(ipiPct>0?(ipiPct*100).toFixed(1)+'%':'-')+'</td>';
-    html += '<td style="text-align:right;font-size:11px;color:#f97316">'+(ipiUn>0?'R$ '+fmt(ipiUn):'-')+'</td>';
-    html += '<td style="text-align:right;font-size:11px;color:#f59e0b">'+(stUn>0?'<b>R$ '+fmt(stUn)+'</b>':'-')+'</td>';
-    html += '<td style="text-align:right;font-weight:700;color:#60a5fa;background:#0f172a">R$ '+fmt(custoTotal)+'</td>';
-    html += '<td style="text-align:right;font-size:11px;color:'+(icmsPct>0?'#10b981':'#475569')+'">'+(icmsPct>0?(icmsPct*100).toFixed(0)+'%':'-')+'</td>';
-    html += '<td style="text-align:right;font-size:11px;color:'+(credICMS>0?'#10b981':'#475569')+'">'+(credICMS>0?'R$ '+fmt(credICMS):'-')+'</td>';
-    html += '<td style="text-align:right;font-size:11px;color:'+(credPisCof>0?'#60a5fa':'#475569')+'">'+(f.monofasico?'Mono':(credPisCof>0?'R$ '+fmt(credPisCof):'-'))+'</td>';
-    html += '<td style="text-align:right;font-size:11px;color:#a855f7;font-weight:700">'+(totalCred>0?'R$ '+fmt(totalCred):'-')+'</td>';
-    html += '<td style="background:#0f172a"><input class="rev-input" type="number" value="'+parseFloat(f.cmvBr||0).toFixed(4)+'" onchange="fichas['+i+'].cmvBr=parseFloat(this.value)||0" style="width:74px;text-align:right;background:#0f172a;color:#93c5fd;border:1px solid #3b82f6"></td>';
-    html += '<td style="background:#0f172a"><input class="rev-input" type="number" value="'+parseFloat(f.cmvPr||0).toFixed(4)+'" onchange="fichas['+i+'].cmvPr=parseFloat(this.value)||0" style="width:74px;text-align:right;background:#0f172a;color:#93c5fd;border:1px solid #1d4ed8"></td>';
-    html += '<td><input class="rev-input" type="number" value="'+(f.peso||'')+'" placeholder="kg" onchange="fichas['+i+'].peso=parseFloat(this.value)||0" style="width:56px"></td>';
+    // CST — destaque se falta
+    var cstCor = cst ? (cst==='10'||cst==='60'?'#f59e0b':'#e2e8f0') : '#ef4444';
+    html += '<td style="text-align:center;font-size:10px;font-weight:700;color:'+cstCor+'" title="CST">'+( cst||'?' )+'</td>';
+    // CFOP
+    html += '<td style="font-size:10px;color:#94a3b8;text-align:center">'+cfop+'</td>';
+    // UN e Qtd
+    html += '<td style="font-size:10px;text-align:center;color:#94a3b8">'+(f.uCom||'UN')+'</td>';
+    html += '<td style="font-size:10px;text-align:right;color:#e2e8f0">'+qtd.toFixed(qtd%1?2:0)+'</td>';
+    // Vl.Unit
+    html += '<td style="text-align:right;font-weight:700;white-space:nowrap">R$ '+fmt(custoNF)+'</td>';
+    // Vl.Total
+    html += '<td style="text-align:right;font-size:11px;color:#94a3b8;white-space:nowrap">R$ '+fmt(vtot)+'</td>';
+    // IPI% e IPI R$/un
+    html += '<td style="text-align:right;font-size:11px;color:#fbbf24">'+(ipiPct>0?(ipiPct*100).toFixed(1)+'%':'-')+'</td>';
+    html += '<td style="text-align:right;font-size:11px;color:#fbbf24">'+(ipiUn>0?'R$ '+fmt(ipiUn):'-')+'</td>';
+    // ST badge
+    html += '<td style="text-align:center">'+(f.temST
+      ?'<span class="pill pill-st" title="Tem ST — CST '+cst+'">ST</span>'
+      :'<span style="color:#334155;font-size:11px">-</span>')+'</td>';
+    // ST R$/un — DESTAQUE se tem ST
+    html += '<td style="text-align:right;font-size:11px;'+(stUn>0?'color:#f59e0b;font-weight:700':'color:#334155')+'">'
+           +(stUn>0?'R$ '+fmt(stUn):'-')+'</td>';
+    // CUSTO TOTAL — coluna principal destacada em azul
+    html += '<td style="text-align:right;font-weight:700;color:#60a5fa;background:#0f172a;white-space:nowrap" title="Custo Total = NF + IPI + ST — use este no Bling">R$ '+fmt(custoTotal)+'</td>';
+    // ICMS%
+    html += '<td style="text-align:right;font-size:11px;color:'+(icmsPct>0?'#10b981':'#334155')+'">'+(icmsPct>0?(icmsPct*100).toFixed(0)+'%':'-')+'</td>';
+    // Cr.ICMS
+    html += '<td style="text-align:right;font-size:11px;color:'+(credICMS>0?'#10b981':'#334155')+'">'+(credICMS>0?'R$ '+fmt(credICMS):'-')+'</td>';
+    // Cr.PIS/COF
+    html += '<td style="text-align:right;font-size:11px;color:'+(credPC>0?'#60a5fa':'#334155')+'">'+(f.monofasico?'<span title="Mono">M</span>':(credPC>0?'R$ '+fmt(credPC):'-'))+'</td>';
+    // CMV BR e PR — editaveis, em destaque escuro
+    html += '<td style="background:#0f172a"><input class="rev-input" type="number" value="'+cmvBr.toFixed(4)+'" onchange="fichas['+i+'].cmvBr=parseFloat(this.value)||0" style="width:72px;text-align:right;background:#0f172a;color:#93c5fd;border:1px solid #3b82f6"></td>';
+    html += '<td style="background:#0f172a"><input class="rev-input" type="number" value="'+cmvPr.toFixed(4)+'" onchange="fichas['+i+'].cmvPr=parseFloat(this.value)||0" style="width:72px;text-align:right;background:#0f172a;color:#93c5fd;border:1px solid #1d4ed8"></td>';
+    // Peso
+    html += '<td><input class="rev-input" type="number" value="'+(f.peso||'')+'" placeholder="kg" onchange="fichas['+i+'].peso=parseFloat(this.value)||0" style="width:54px"></td>';
+    // Familia
+    html += '<td><select class="rev-select" onchange="fichas['+i+'].familia=this.value" style="width:114px">'+famOpts+'</select></td>';
+    // Mono
     html += '<td style="text-align:center;font-size:10px">'+(f.monofasico?'<b style="color:#60a5fa">M</b>':'-')+'</td>';
-    html += '<td><div style="display:flex;gap:2px"><input class="rev-input" id="ean-'+i+'" value="'+(f.ean||'')+'" onchange="fichas['+i+'].ean=this.value" style="width:76px;font-size:10px" placeholder="EAN"><button onclick="gerarEAN('+i+')" style="background:#2563eb;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:10px;padding:1px 4px">EAN</button></div></td>';
+    // EAN
+    html += '<td><div style="display:flex;gap:2px"><input class="rev-input" id="ean-'+i+'" value="'+(f.ean||'')+'" onchange="fichas['+i+'].ean=this.value" style="width:74px;font-size:10px" placeholder="EAN"><button onclick="gerarEAN('+i+')" style="background:#2563eb;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:10px;padding:1px 4px">EAN</button></div></td>';
     html += '</tr>';
   });
   var _tb=document.getElementById('rev-tbody'); if(_tb) _tb.innerHTML=html;
 }
+
 function atualizarPrecos(i){
   var f=fichas[i];
   var mg=(parseFloat(document.getElementById('margem-sel').value)||40)/100;
@@ -958,6 +1024,266 @@ function aplicarDescontoGlobal(){
 }
 
 
+
+// ── CAPA DA NOTA ─────────────────────────────────────────────────────────────
+function atualizarCapaNF(){
+  var d=dadosNF; if(!d) return;
+  var el; var show=document.getElementById('capa-nf');
+  if(show) show.style.display='';
+  el=document.getElementById('capa-forn');  if(el) el.textContent=d.fornecedor||d.forn||'';
+  el=document.getElementById('capa-cnpj');  if(el) el.textContent='CNPJ: '+(d.cnpj||'');
+  el=document.getElementById('capa-num');   if(el) el.textContent='NF '+d.nf;
+  el=document.getElementById('capa-data');  if(el) el.textContent=d.data||d.data_nf||'';
+  el=document.getElementById('capa-total'); if(el) el.textContent='R$ '+(d.valor||0).toFixed(2);
+  el=document.getElementById('capa-itens'); if(el) el.textContent=fichas.length+' produtos';
+  // status vinculados
+  var vinc=fichas.filter(function(f){return f.sku&&f.sku!='';}).length;
+  var novos=fichas.filter(function(f){return !f.sku||f.sku=='';}).length;
+  el=document.getElementById('capa-status');
+  if(el) el.innerHTML='<span style="color:#10b981">'+vinc+' vinculados</span>'+(novos?' | <span style="color:#f59e0b">'+novos+' novos</span>':'');
+}
+
+// ── PARTE 3: TÍTULOS, DESCRIÇÃO, CATEGORIZAÇÃO ───────────────────────────────
+function renderParte3(){
+  var lista=document.getElementById('lista-anuncios'); if(!lista) return;
+  var selecionados=fichas.filter(function(f){return f.sel;});
+  if(!selecionados.length){
+    lista.innerHTML='<p style="color:#64748b">Nenhum produto selecionado. Volte e selecione os produtos.</p>';
+    return;
+  }
+  var html='';
+  selecionados.forEach(function(f,i){
+    var nome=(f.nome||'').replace(/"/g,'&#39;');
+    html+='<div style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px">';
+    // Header do produto
+    html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #334155">';
+    html+='<span style="background:#1F3864;color:#93c5fd;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">SKU '+f.sku+'</span>';
+    html+='<span style="font-weight:700;color:#e2e8f0;font-size:13px">'+nome.slice(0,60)+'</span>';
+    html+='<span style="font-size:10px;color:#64748b">CMV BR: R$ '+fmt(f.cmvBr)+' | CMV PR: R$ '+fmt(f.cmvPr||f.cmvBr)+'</span>';
+    html+='<button onclick="gerarTitulosIAProduto(\''+f.sku+'\')" style="margin-left:auto;background:#059669;color:#fff;border:none;padding:3px 10px;border-radius:5px;cursor:pointer;font-size:11px">✨ IA</button>';
+    html+='</div>';
+    // Categoria / Família / Peso
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 80px;gap:8px;margin-bottom:8px">';
+    html+='<div><label style="font-size:10px;color:#64748b">Família</label><br><select onchange="f_sel(\''+f.sku+'\',\'familia\',this.value)" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:4px;padding:4px;font-size:11px">'
+         +'<option value="">-- familia --</option>'
+         +FAMILIAS.map(function(fm){return '<option'+(f.familia===fm?' selected':'')+' value="'+fm+'">'+fm+'</option>';}).join('')
+         +'</select></div>';
+    html+='<div><label style="font-size:10px;color:#64748b">Categoria ML</label><br><input value="'+(f.categoria||'')+'" onchange="f_sel(\''+f.sku+'\',\'categoria\',this.value)" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:4px;padding:4px;font-size:11px" placeholder="ex: MLB12345"></div>';
+    html+='<div><label style="font-size:10px;color:#64748b">Tipo produto</label><br><input id="tipo-'+f.sku+'" value="'+(f.tipo_produto||'')+'" onchange="f_sel(\''+f.sku+'\',\'tipo_produto\',this.value)" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:4px;padding:4px;font-size:11px" placeholder="Ferramenta, Peça..."></div>';
+    html+='<div><label style="font-size:10px;color:#64748b">Peso (kg)</label><br><input type="number" value="'+(f.peso||'')+'" onchange="f_sel(\''+f.sku+'\',\'peso\',parseFloat(this.value)||0)" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:4px;padding:4px;font-size:11px" placeholder="0.000"><button onclick="buscarPesoBling(\''+f.sku+'\')" title="Buscar peso no Bling" style="background:#0891b2;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:10px;padding:2px 6px;margin-top:2px">Bling</button></div>';
+    html+='</div>';
+    // Títulos
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">';
+    html+='<div><label style="font-size:10px;color:#64748b">Título ML (60 car)</label><br><input id="tit-ml-'+f.sku+'" value="'+(f.titulo_ml||'').replace(/"/g,'&#39;')+'" onchange="f_sel(\''+f.sku+'\',\'titulo_ml\',this.value)" maxlength="60" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #3b82f6;border-radius:4px;padding:4px;font-size:11px" placeholder="Título para ML..."></div>';
+    html+='<div><label style="font-size:10px;color:#64748b">Título Shopee (120 car)</label><br><input id="tit-sh-'+f.sku+'" value="'+(f.titulo_shopee||'').replace(/"/g,'&#39;')+'" onchange="f_sel(\''+f.sku+'\',\'titulo_shopee\',this.value)" maxlength="120" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:4px;padding:4px;font-size:11px" placeholder="Título para Shopee..."></div>';
+    html+='<div><label style="font-size:10px;color:#64748b">Título Yampi</label><br><input id="tit-ym-'+f.sku+'" value="'+(f.titulo_yampi||'').replace(/"/g,'&#39;')+'" onchange="f_sel(\''+f.sku+'\',\'titulo_yampi\',this.value)" maxlength="120" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:4px;padding:4px;font-size:11px" placeholder="Título para Yampi..."></div>';
+    html+='</div>';
+    html+='</div>';
+  });
+  lista.innerHTML=html;
+}
+
+function f_sel(sku, campo, valor){
+  var f=fichas.find(function(x){return x.sku===sku||x.codigo===sku;});
+  if(f) f[campo]=valor;
+}
+
+async function buscarPesoBling(sku){
+  if(!sku) return;
+  try{
+    var r=await fetch(RAILWAY+'/api/db/bling-buscar-produto',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({sku:sku})
+    }).then(function(x){return x.json();});
+    if(r && r.found && r.peso>0){
+      var f=fichas.find(function(x){return x.sku===sku;});
+      if(f){ f.peso=r.peso; renderParte3(); }
+    }
+  }catch(e){}
+}
+function buscarPesoBlingTodos(){
+  fichas.filter(function(f){return f.sel&&f.sku&&!f.peso;}).forEach(function(f){buscarPesoBling(f.sku);});
+}
+
+async function gerarTitulosIAProduto(sku){
+  var f=fichas.find(function(x){return x.sku===sku||x.codigo===sku;});
+  if(!f||!f.nome) return;
+  var key=(document.getElementById('claude-key')||{}).value||localStorage.getItem('claude_api_key')||'';
+  if(!key){alert('Coloque a API Key do Claude no campo acima');return;}
+  try{
+    var res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,
+        messages:[{role:'user',content:'Produto: '+f.nome+(f.ncm?' NCM '+f.ncm:'')+'. Familia: '+(f.familia||'').
+          +'\nGere (responda APENAS JSON, sem markdown):\n{"titulo_ml":"(ate 60 car, completo, com marca/modelo)","titulo_shopee":"(ate 120 car)","titulo_yampi":"(ate 120 car)","tipo":"(tipo do produto em 2-3 palavras)"}'}]})
+    }).then(function(x){return x.json();});
+    var txt=(res.content||[]).map(function(b){return b.text||'';}).join('');
+    var j=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    if(j.titulo_ml){ f.titulo_ml=j.titulo_ml; var el=document.getElementById('tit-ml-'+sku); if(el) el.value=j.titulo_ml; }
+    if(j.titulo_shopee){ f.titulo_shopee=j.titulo_shopee; var el=document.getElementById('tit-sh-'+sku); if(el) el.value=j.titulo_shopee; }
+    if(j.titulo_yampi){ f.titulo_yampi=j.titulo_yampi; var el=document.getElementById('tit-ym-'+sku); if(el) el.value=j.titulo_yampi; }
+    if(j.tipo){ f.tipo_produto=j.tipo; var el=document.getElementById('tipo-'+sku); if(el) el.value=j.tipo; }
+  }catch(e){ alert('Erro IA: '+e.message); }
+}
+function gerarTudoIA(){
+  var sels=fichas.filter(function(f){return f.sel&&f.sku;});
+  sels.forEach(function(f,i){ setTimeout(function(){gerarTitulosIAProduto(f.sku);},i*800); });
+}
+
+// ── PARTE 4: PRECIFICAÇÃO ─────────────────────────────────────────────────────
+// Tabela frete Full Super ML (peso → faixa de preço → R$)
+var FRETE_FS_P4=[[0.3,[1.25,1.50,2.00,3.00,4.00,6.00,20.95]],[0.5,[1.25,1.50,2.00,3.00,4.00,6.00,22.55]],
+  [1.0,[1.25,1.50,2.00,3.00,4.00,6.00,23.65]],[2.0,[1.75,2.00,2.50,3.50,4.50,6.50,24.65]],
+  [3.0,[2.00,2.50,3.00,4.00,5.00,7.00,26.25]],[5.0,[2.50,3.50,4.00,5.00,6.00,7.50,30.75]],
+  [7.0,[4.00,5.00,5.50,6.50,7.00,7.50,44.05]],[10.0,[5.00,6.00,6.50,7.00,7.50,8.00,49.35]],
+  [9999,[5.00,6.00,6.50,7.00,7.50,8.00,110.75]]];
+
+function calcFreteFS(peso,preco){
+  if(!peso||peso<=0) return 0;
+  var fi=preco>=199?6:preco>=99?5:preco>=79?4:preco>=49?3:preco>=29?2:preco>=19?1:0;
+  for(var k=0;k<FRETE_FS_P4.length;k++){ if(peso<=FRETE_FS_P4[k][0]) return FRETE_FS_P4[k][1][fi]; }
+  return 8;
+}
+
+// precificacao por produto: [{canal, taxa, freteTipo, freteVal, desconto, preco_base}]
+var _precif={};
+
+function precifPadrao(f){
+  var peso=parseFloat(f.peso||0);
+  return [
+    {canal:'ml_cl',  label:'ML Clássico',  icon:'🛒', taxa:0.17, freteTipo:'full',  freteVal:0, desconto:0, preco_base:0, difal:0.0581, icms_s:0.12},
+    {canal:'ml_pr',  label:'ML Premium',   icon:'⭐', taxa:0.19, freteTipo:'full',  freteVal:0, desconto:0, preco_base:0, difal:0.0581, icms_s:0.12},
+    {canal:'balcao', label:'Balcão',        icon:'🏪', taxa:0,    freteTipo:'none', freteVal:0, desconto:0, preco_base:0, difal:0,      icms_s:0.12},
+  ];
+}
+
+function calcPrecif(cmvBr, cmvPr, peso, temST, monoF, canal, taxa, freteTipo, freteVal, desconto, precoBase, difal, icms_s){
+  var PIS=0.0165, COF=0.076, PC=PIS+COF;
+  var cmv = (canal==='balcao') ? parseFloat(cmvPr||cmvBr||0) : parseFloat(cmvBr||0);
+  var pf = parseFloat(precoBase||0) * (1-(parseFloat(desconto||0)/100));
+  if(pf<=0) return null;
+  // Frete
+  var fr=0;
+  if(freteTipo==='full')   fr=calcFreteFS(peso,pf)||parseFloat(freteVal||0)||7;
+  else if(freteTipo==='fixo') fr=parseFloat(freteVal||0);
+  else if(freteTipo==='rapido') fr=parseFloat(freteVal||0)||12;
+  // Shopee: taxa fixa baseada no preço
+  var txFixaShopee=0;
+  if(canal==='shopee'){ var sh=calcTaxaShopeeP4(pf); taxa=sh.pct; txFixaShopee=sh.fixo; fr=sh.fixo; }
+  // Deduções sobre venda
+  var dedTaxa  = pf*taxa;
+  var dedFrete  = (freteTipo==='gratis') ? fr : 0;  // se frete grátis, absorve
+  var dedPis   = pf*PIS;
+  var dedCof   = pf*COF;
+  var dedIcmsS = (canal==='balcao') ? (temST?0:pf*0.12) : pf*icms_s;
+  var dedDifal  = (canal==='balcao') ? 0 : pf*(difal||0);
+  // Créditos de entrada
+  var cIcms = temST ? 0 : cmv*(canal==='balcao'?0.12:0.12);
+  var cPC   = monoF ? 0 : cmv*PC;
+  var cFr   = (freteTipo!=='gratis') ? fr : 0;   // crédito de frete (taxa = crédito no ML)
+  // Receita líquida
+  var recBruta = pf;
+  var totalDed = dedTaxa+dedFrete+dedPis+dedCof+dedIcmsS+dedDifal+txFixaShopee;
+  var totalCred= cIcms+cPC;
+  var frCusto  = (freteTipo!=='gratis') ? fr : 0;
+  var lucro    = recBruta - totalDed - cmv + totalCred - frCusto;
+  var margem   = pf>0 ? lucro/pf*100 : 0;
+  return {pf,fr,frCusto,dedTaxa,dedPis,dedCof,dedIcmsS,dedDifal,cIcms,cPC,totalDed,totalCred,lucro,margem,cmv};
+}
+
+function calcTaxaShopeeP4(preco){
+  if(preco<80)  return {pct:0.20,fixo:4.00};
+  if(preco<100) return {pct:0.14,fixo:16.00};
+  if(preco<200) return {pct:0.14,fixo:20.00};
+  if(preco<500) return {pct:0.14,fixo:26.00};
+  return {pct:0.14,fixo:28.00};
+}
+
+function initPrecif(){
+  fichas.filter(function(f){return f.sel;}).forEach(function(f){
+    var k=f.sku||f.codigo;
+    if(!_precif[k]) _precif[k]=precifPadrao(f);
+    // Calcular preço base sugerido se não definido
+    var mg=(parseFloat(document.getElementById('mg-global')?.value||30))/100;
+    _precif[k].forEach(function(an){
+      if(!an.preco_base||an.preco_base<=0){
+        var cmv=(an.canal==='balcao')?(f.cmvPr||f.cmvBr):f.cmvBr;
+        var denom=Math.max(1-an.taxa-0.0925-an.icms_s-(an.difal||0)-mg,0.05);
+        var fr=an.freteTipo==='full'?calcFreteFS(f.peso||0,100):0;
+        an.preco_base=Math.ceil((cmv+fr)/denom*100)/100;
+      }
+    });
+  });
+}
+
+function renderPrecificacao(){
+  initPrecif();
+  var lista=document.getElementById('lista-precif'); if(!lista) return;
+  var mg=(parseFloat(document.getElementById('mg-global')?.value||30))/100;
+  var html='';
+  fichas.filter(function(f){return f.sel;}).forEach(function(f){
+    var k=f.sku||f.codigo;
+    var anuncios=_precif[k]||[];
+    html+='<div style="background:#1e293b;border:1px solid #334155;border-radius:8px;overflow:hidden">';
+    // Header produto
+    html+='<div style="background:#0f172a;padding:10px 14px;display:flex;align-items:center;gap:10px">';
+    html+='<span style="background:#1F3864;color:#93c5fd;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">SKU '+f.sku+'</span>';
+    html+='<span style="font-weight:700;color:#e2e8f0;font-size:13px">'+(f.nome||'').slice(0,55)+'</span>';
+    html+='<span style="font-size:10px;color:#64748b;margin-left:4px">CMV BR: R$ '+fmt(f.cmvBr)+' | CMV PR: R$ '+fmt(f.cmvPr||f.cmvBr)+' | Peso: '+(f.peso||'?')+'kg</span>';
+    html+='<button onclick="adicionarAnuncio(\''+k+'\')" style="margin-left:auto;background:#0891b2;color:#fff;border:none;padding:4px 10px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:700">+ Anúncio</button>';
+    html+='</div>';
+    // Anúncios
+    anuncios.forEach(function(an,ai){
+      var res=calcPrecif(f.cmvBr,f.cmvPr||f.cmvBr,f.peso||0,f.temST,f.monofasico,
+        an.canal,an.taxa,an.freteTipo,an.freteVal,an.desconto,an.preco_base,an.difal,an.icms_s);
+      if(!res) return;
+      var cor=res.margem>=20?'#10b981':res.margem>=10?'#f59e0b':'#ef4444';
+      var freteOpts=['full','fixo','rapido','gratis','none','combinar'].map(function(t){
+        var label={'full':'Full Super','fixo':'Taxa Fixa','rapido':'Frete Rápido','gratis':'Grátis (absorve)','none':'Sem frete','combinar':'A Combinar'}[t]||t;
+        return '<option value="'+t+'"'+(an.freteTipo===t?' selected':'')+'>'+label+'</option>';
+      }).join('');
+      html+='<div style="padding:10px 14px;border-top:1px solid #1e293b">';
+      html+='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">';
+      html+='<span style="font-size:13px">'+({'ml_cl':'🛒','ml_pr':'⭐','shopee':'🛍️','yampi':'🌐','balcao':'🏪'}[an.canal]||'📦')+'</span>';
+      html+='<input value="'+an.label+'" onchange="_precif[\''+k+'\']['+ai+'].label=this.value" style="background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:4px;padding:3px 6px;font-size:12px;width:120px">';
+      html+='<select onchange="_precif[\''+k+'\']['+ai+'].freteTipo=this.value;_precif[\''+k+'\']['+ai+'].preco_base=0;renderPrecificacao()" style="background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:4px;padding:3px;font-size:11px">'+freteOpts+'</select>';
+      html+='<input type="number" value="'+(an.freteVal||0)+'" placeholder="Vl.Frete" onchange="_precif[\''+k+'\']['+ai+'].freteVal=parseFloat(this.value)||0;renderPrecificacao()" style="width:70px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:4px;padding:3px;font-size:11px">';
+      html+='<label style="font-size:11px;color:#94a3b8">Taxa%</label><input type="number" value="'+(an.taxa*100).toFixed(1)+'" onchange="_precif[\''+k+'\']['+ai+'].taxa=parseFloat(this.value)/100;renderPrecificacao()" style="width:55px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:4px;padding:3px;font-size:11px">';
+      html+='<label style="font-size:11px;color:#94a3b8">Desc%</label><input type="number" value="'+(an.desconto||0)+'" onchange="_precif[\''+k+'\']['+ai+'].desconto=parseFloat(this.value)||0;renderPrecificacao()" style="width:50px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:4px;padding:3px;font-size:11px">';
+      html+='<label style="font-size:11px;color:#fbbf24">Preço base:</label><input type="number" value="'+parseFloat(an.preco_base||0).toFixed(2)+'" onchange="_precif[\''+k+'\']['+ai+'].preco_base=parseFloat(this.value)||0;renderPrecificacao()" style="width:80px;background:#0f172a;color:#fbbf24;border:1px solid #f59e0b;border-radius:4px;padding:3px;font-size:12px;font-weight:700">';
+      html+='<span style="font-size:14px;font-weight:700;color:#f9fafb">→ R$ '+fmt(res.pf)+'</span>';
+      html+='<span style="font-weight:700;font-size:14px;color:'+cor+'">'+res.margem.toFixed(1)+'%</span>';
+      html+='<button onclick="removerAnuncioP4(\''+k+'\','+ai+')" style="background:#7f1d1d;color:#fca5a5;border:none;border-radius:3px;cursor:pointer;font-size:10px;padding:2px 6px;margin-left:auto">✕</button>';
+      html+='</div>';
+      // Detalhe fiscal
+      html+='<div style="display:flex;gap:16px;font-size:10px;color:#64748b;flex-wrap:wrap;background:#0a0f1a;padding:6px 8px;border-radius:4px">';
+      html+='<span>CMV: <b style="color:#e2e8f0">R$ '+fmt(res.cmv)+'</b></span>';
+      html+='<span>Frete: <b style="color:#e2e8f0">R$ '+fmt(res.frCusto)+'</b></span>';
+      html+='<span>Taxa '+(an.taxa*100).toFixed(0)+'%: <b style="color:#f97316">-R$ '+fmt(res.dedTaxa)+'</b></span>';
+      html+='<span>PIS/COF: <b style="color:#f97316">-R$ '+fmt(res.dedPis+res.dedCof)+'</b></span>';
+      html+='<span>ICMS '+(an.icms_s*100).toFixed(0)+'%: <b style="color:#f97316">-R$ '+fmt(res.dedIcmsS)+'</b></span>';
+      if(res.dedDifal>0) html+='<span>DIFAL: <b style="color:#f97316">-R$ '+fmt(res.dedDifal)+'</b></span>';
+      if(res.cIcms>0) html+='<span>Cr.ICMS: <b style="color:#10b981">+R$ '+fmt(res.cIcms)+'</b></span>';
+      if(res.cPC>0)   html+='<span>Cr.PIS/COF: <b style="color:#10b981">+R$ '+fmt(res.cPC)+'</b></span>';
+      html+='<span style="margin-left:auto">Lucro: <b style="color:'+(res.lucro>=0?'#10b981':'#ef4444')+'">R$ '+res.lucro.toFixed(2)+'</b></span>';
+      html+='</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+  lista.innerHTML=html||'<p style="color:#64748b;padding:20px">Nenhum produto selecionado. Volte ao passo anterior.</p>';
+}
+
+function adicionarAnuncio(k){
+  if(!_precif[k]) _precif[k]=[];
+  _precif[k].push({canal:'ml_cl',label:'ML Clássico',taxa:0.17,freteTipo:'full',freteVal:0,desconto:0,preco_base:0,difal:0.0581,icms_s:0.12});
+  renderPrecificacao();
+}
+function removerAnuncioP4(k,ai){
+  if(_precif[k]) _precif[k].splice(ai,1);
+  renderPrecificacao();
+}
+
 function renderResumoSalvar(){  var selecionados=fichas.filter(function(f){return f.sel;});
   var mg=(parseFloat(document.getElementById('margem-sel').value)||40)/100;
   var html='<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px;margin-bottom:12px">';
@@ -992,83 +1318,223 @@ function limparParaNovoCadastro(){
 }
 
 function salvarTodos(){
-  var selecionados=fichas.filter(function(f){return f.sel;});
-  if(!selecionados.length){ mostrarSt('st-3','Nenhum produto selecionado.','err'); return; }
-  var mg=(parseFloat(document.getElementById('margem-sel').value)||40)/100;
-  var btn=document.getElementById('btn-salvar');
-  btn.disabled=true; btn.textContent='Salvando...';
-  var log=document.getElementById('log-ops');
-  log.innerHTML='';
+  var selecionados = fichas.filter(function(f){ return f.sel && f.sku; });
+  if(!selecionados.length){ mostrarSt('st-3','Nenhum produto com SKU selecionado.','err'); return; }
+
+  // Botões
+  ['btn-salvar','btn-salvar-p3','btn-salvar-p4'].forEach(function(id){
+    var b=document.getElementById(id); if(b){b.disabled=true;b.textContent='Salvando...';}
+  });
+  var log = document.getElementById('log-ops'); if(log) log.innerHTML='';
   var ok=0, erros=0, idx=0;
 
-  function salvarProximo(){
-    if(idx>=selecionados.length){
-      btn.disabled=false; btn.textContent='Salvar no banco';
-      mostrarSt('st-3',ok+' produtos salvos'+(erros?' | '+erros+' erros':''),ok>0?'ok':'err');
-      if(ok>0) salvarRascunho('completo', true); // Marcar NF como completa
-      if(ok>0){
-        document.getElementById('btn-anuncios').disabled=false;
-        // Mostra botão Novo Cadastro
-        var btnNovo=document.getElementById('btn-novo-cad');
-        if(!btnNovo){
-          btnNovo=document.createElement('button');
-          btnNovo.id='btn-novo-cad';
-          btnNovo.className='btn';
-          btnNovo.style.cssText='background:#7c3aed;color:#fff;margin-top:8px;width:100%';
-          btnNovo.textContent='➕ Novo Cadastro';
-          btnNovo.onclick=limparParaNovoCadastro;
-          document.getElementById('log-ops').after(btnNovo);
-        }
-        btnNovo.style.display='';
-      }
-      return;
+  function logMsg(msg, cor){ var l=document.getElementById('log-ops');
+    if(l) l.innerHTML+='<div style="font-size:11px;color:'+(cor||'#94a3b8')+';padding:2px 0">'+msg+'</div>'; }
+
+  function finalizar(){
+    ['btn-salvar','btn-salvar-p3','btn-salvar-p4'].forEach(function(id){
+      var b=document.getElementById(id); if(b){b.disabled=false;b.textContent='Salvar no banco';}
+    });
+    mostrarSt('st-3', ok+' salvos'+(erros?' | '+erros+' erros':''), ok>0?'ok':'err');
+    if(ok>0){
+      var btnCriar=document.getElementById('btn-criar-ml');
+      if(btnCriar) btnCriar.disabled=false;
+      if(salvarRascunho) salvarRascunho('completo', true);
     }
-    var f=selecionados[idx]; idx++;
-    var pML=calcPreco(f.cmvBr,mg,TAXA_ML_CL,FRETE_ML,DIFAL+IBS,ICMS_SAIDA);
-    var pSH=calcPreco(f.cmvBr,mg,TAXA_SHOPEE,FRETE_SHOPEE,DIFAL+IBS,ICMS_SAIDA);
-    var pBL=calcPreco(f.cmvPr,mg,0,0,0,f.temST?0:ICMS_PR);
-    var cprod = f.codigo || '';  // código do produto no fornecedor (cProd da NF)
-    fetch(RAILWAY+'/api/db/cadastro',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({sku:f.sku,nome:f.nome,
-        fornecedor: cprod,                              // cprod = código do item no fornecedor
-        codigo_fornecedor: cprod,
-        ncm:f.ncm,cst:f.cst,cfop:f.cfop,
-        ipi:f.ipiPct,tem_st:f.temST?1:0,custo:f.custoNF,custo_br:f.cmvBr,custo_pr:f.cmvPr,
-        peso:f.peso,ean:f.ean,familia:f.familia,categoria:f.familia,
-        titulo_ml:f.titulo_ml||f.nome.slice(0,60),
-        titulo_shopee:f.titulo_shopee||f.nome.slice(0,120),
-        titulo_yampi:f.titulo_yampi||f.nome.slice(0,120),
-        preco_ml_classico:pML,preco_shopee:pSH,preco_balcao:pBL,
-        status_cadastro:'cadastrado'})
-    }).then(function(r){
-      if(r.ok){
+  }
+
+  function salvarProximo(){
+    if(idx>=selecionados.length){ finalizar(); return; }
+    var f = selecionados[idx]; idx++;
+
+    // Pegar preços definidos no step 4 (_precif)
+    var k = f.sku || f.codigo;
+    var anuncios = (_precif && _precif[k]) ? _precif[k] : [];
+
+    // Extrair preços por canal
+    var pML_CL=0, pML_PR=0, pSH=0, pYM=0, pBL=0, pAT=0;
+    var txML=0.17, frML=0, descML=0;
+    anuncios.forEach(function(an){
+      var pb=parseFloat(an.preco_base||0);
+      var pf=pb*(1-(parseFloat(an.desconto||0)/100));
+      if(an.canal==='ml_cl')  { pML_CL=pf; txML=an.taxa||0.17; frML=an.freteVal||0; descML=an.desconto||0; }
+      if(an.canal==='ml_pr')  { pML_PR=pf; }
+      if(an.canal==='shopee') { pSH=pf; }
+      if(an.canal==='yampi')  { pYM=pf; }
+      if(an.canal==='balcao') { pBL=pf; }
+      if(an.canal==='atacado'){ pAT=pf; }
+    });
+
+    var cprod = f.codigo||'';
+    var payload = {
+      sku: f.sku, nome: f.nome,
+      fornecedor: cprod, codigo_fornecedor: cprod,
+      ncm: f.ncm, cst: f.cst, cfop: f.cfop,
+      ipi: f.ipiPct||0, tem_st: f.temST?1:0,
+      custo: f.custoNF||0, custo_br: f.cmvBr||0, custo_pr: f.cmvPr||f.cmvBr||0,
+      peso: f.peso||0, ean: f.ean||'',
+      familia: f.familia||'', categoria: f.familia||'',
+      titulo_ml:    f.titulo_ml||f.nome.slice(0,60),
+      titulo_shopee:f.titulo_shopee||f.nome.slice(0,120),
+      titulo_yampi: f.titulo_yampi||f.nome.slice(0,120),
+      tipo_produto: f.tipo_produto||'',
+      preco_ml_classico: pML_CL,
+      preco_ml_premium:  pML_PR||pML_CL,
+      preco_shopee:      pSH||pML_CL,
+      preco_yampi:       pYM||pML_CL,
+      preco_balcao:      pBL,
+      preco_atacado:     pAT,
+      status_cadastro:   'cadastrado'
+    };
+
+    // 1. Salvar em produto_cadastro
+    fetch(RAILWAY+'/api/db/cadastro', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if(res && res.ok){
         ok++;
-        // Verificar se custo subiu vs. banco (alerta reposição com custo maior)
-        r.json().then(function(res){
-          var cmvAnterior = res && res.cmv_anterior ? parseFloat(res.cmv_anterior) : 0;
-          if(cmvAnterior > 0 && f.cmvBr > cmvAnterior * 1.02){
-            var delta = ((f.cmvBr/cmvAnterior-1)*100).toFixed(1);
-            log.innerHTML+='<div style="font-size:11px;color:#f59e0b;padding:2px 0;font-weight:700">⚠️ SKU '+f.sku+' — CMV subiu '+delta+'% (era R$ '+cmvAnterior.toFixed(2)+' → agora R$ '+f.cmvBr.toFixed(2)+'). Verifique anúncios e kits!</div>';
-          } else {
-            log.innerHTML+='<div style="font-size:11px;color:#166534;padding:2px 0">✅ SKU '+f.sku+' - '+f.nome.slice(0,50)+'</div>';
-          }
-        }).catch(function(){ log.innerHTML+='<div style="font-size:11px;color:#166534;padding:2px 0">✅ SKU '+f.sku+' - '+f.nome.slice(0,50)+'</div>'; });
+        var aviso='';
+        if(res.cmv_anterior>0 && f.cmvBr>res.cmv_anterior*1.02){
+          var d=((f.cmvBr/res.cmv_anterior-1)*100).toFixed(1);
+          aviso=' <span style="color:#f59e0b">⚠️ CMV subiu '+d+'%</span>';
+        }
+        logMsg('✅ SKU '+f.sku+' — '+f.nome.slice(0,45)+aviso+(pML_CL?' | ML R$'+pML_CL.toFixed(2):'')+(pBL?' | Balcão R$'+pBL.toFixed(2):''), '#10b981');
+
+        // 2. Salvar preços no produtos (CMV atualizado)
+        fetch(RAILWAY+'/api/cmv-cache', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify( (function(){ var o={}; o[f.sku]={cmv:f.cmvBr,cmvPr:f.cmvPr||f.cmvBr,nome:f.nome}; return o; })() )
+        });
+
+        // 3. Salvar cprod_map
+        if(cprod && f.sku){
+          fetch(RAILWAY+'/api/db/cprod-map', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({cprod:cprod, sku:f.sku, nome:f.nome, cmv_br:f.cmvBr, cmv_pr:f.cmvPr||f.cmvBr})
+          });
+        }
+
+        // 4. Salvar anúncios ML em ml_listings
+        var mlAnuncios = anuncios.filter(function(an){ return an.canal==='ml_cl'||an.canal==='ml_pr'; });
+        if(mlAnuncios.length){
+          var listings = mlAnuncios.map(function(an,ai){
+            var pf=parseFloat(an.preco_base||0)*(1-(parseFloat(an.desconto||0)/100));
+            return {
+              id: 'NOVO-'+f.sku+'-'+(an.canal==='ml_pr'?'PR':'CL')+'-'+Date.now(),
+              sku: f.sku, titulo: payload.titulo_ml, preco: pf,
+              sale_fee: an.taxa||0.17,
+              listing_type: an.canal==='ml_pr'?'gold_pro':'gold_special',
+              free_shipping: an.freteTipo==='gratis'?1:0,
+              status: 'pending',
+              frete_medio: an.freteVal||0,
+              desconto: an.desconto||0,
+              cmv_br: f.cmvBr
+            };
+          });
+          fetch(RAILWAY+'/api/db/listings-batch', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({listings:listings})
+          });
+        }
+
+        // 5. Salvar Shopee em shopee_listings
+        var shAnuncio = anuncios.find(function(an){ return an.canal==='shopee'; });
+        if(shAnuncio && pSH>0){
+          fetch(RAILWAY+'/api/db/shopee-listing', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({sku:f.sku, titulo:payload.titulo_shopee, preco:pSH, status:'active', canal:'shopee'})
+          }).catch(function(){});
+        }
+
+        // 6. Salvar Yampi em yampi_listings
+        var ymAnuncio = anuncios.find(function(an){ return an.canal==='yampi'; });
+        if(ymAnuncio && pYM>0){
+          fetch(RAILWAY+'/api/db/yampi-listing', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({sku:f.sku, titulo:payload.titulo_yampi, preco:pYM, status:'active', canal:'yampi'})
+          }).catch(function(){});
+        }
+
+      } else {
+        erros++;
+        logMsg('❌ ERRO SKU '+f.sku+': '+(res.error||'erro desconhecido'), '#ef4444');
       }
-      else { erros++; log.innerHTML+='<div style="font-size:11px;color:#dc2626;padding:2px 0">❌ ERRO SKU '+f.sku+'</div>'; }
-      // Salvar cprod_map (cprod → SKU) — permite retomar NF depois
-      if(cprod && f.sku){
-        fetch(RAILWAY+'/api/db/cprod-map',{method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({cprod:cprod,sku:f.sku,nome:f.nome,cmv_br:f.cmvBr,cmv_pr:f.cmvPr})});
-      }
-      // Atualiza CMV cache
-      var payload={}; payload[f.sku]={cmv:f.cmvBr,cmvPr:f.cmvPr,nome:f.nome};
-      fetch(RAILWAY+'/api/cmv-cache',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-      setTimeout(salvarProximo,100);
-    }).catch(function(e){ erros++; log.innerHTML+='<div style="font-size:11px;color:#dc2626;padding:2px 0">❌ ERRO SKU '+f.sku+': '+e.message+'</div>'; setTimeout(salvarProximo,100); });
+      setTimeout(salvarProximo, 120);
+    })
+    .catch(function(e){ erros++; logMsg('❌ ERRO SKU '+f.sku+': '+e.message,'#ef4444'); setTimeout(salvarProximo,120); });
   }
   salvarProximo();
 }
+
+async function criarAnunciosML(){
+  // Cria/atualiza anúncios diretamente na API do ML para cada produto selecionado
+  var selecionados = fichas.filter(function(f){ return f.sel && f.sku; });
+  if(!selecionados.length){ alert('Nenhum produto selecionado'); return; }
+  var btn=document.getElementById('btn-criar-ml');
+  if(btn){ btn.disabled=true; btn.textContent='Criando...'; }
+  var log=document.getElementById('log-ops'); if(log) log.innerHTML+='<hr style="border-color:#334155">';
+  var ok=0, erros=0;
+
+  for(var fi=0; fi<selecionados.length; fi++){
+    var f = selecionados[fi];
+    var k = f.sku||f.codigo;
+    var anuncios = (_precif&&_precif[k]) ? _precif[k] : [];
+    var mlAns = anuncios.filter(function(an){ return an.canal==='ml_cl'||an.canal==='ml_pr'; });
+
+    for(var ai=0; ai<mlAns.length; ai++){
+      var an=mlAns[ai];
+      var pb=parseFloat(an.preco_base||0);
+      var pf=pb*(1-(parseFloat(an.desconto||0)/100));
+      if(pf<=0) continue;
+      try{
+        // Usa endpoint do Bling para criar anúncio ML (integração já existente)
+        var r = await fetch(RAILWAY+'/api/ml/criar-anuncio', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            sku: f.sku,
+            titulo: f.titulo_ml||f.nome.slice(0,60),
+            preco: pf,
+            desconto: an.desconto||0,
+            listing_type: an.canal==='ml_pr'?'gold_pro':'gold_special',
+            free_shipping: an.freteTipo==='gratis',
+            peso: f.peso||0,
+            ean: f.ean||'',
+            categoria: f.categoria||'',
+          })
+        }).then(function(x){return x.json();});
+
+        if(r && (r.id||r.ok)){
+          ok++;
+          var mlbNovo = r.id||r.mlb||'';
+          var logEl = document.getElementById('log-ops');
+          if(logEl) logEl.innerHTML+='<div style="font-size:11px;color:#10b981">✅ ML criado: '+(mlbNovo||'OK')+' | SKU '+f.sku+' | R$ '+pf.toFixed(2)+'</div>';
+          // Atualizar o ID na ml_listings
+          if(mlbNovo){
+            fetch(RAILWAY+'/api/db/listings-batch',{method:'POST',headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({listings:[{id:mlbNovo,sku:f.sku,titulo:f.titulo_ml,preco:pf,
+                sale_fee:an.taxa||0.17,listing_type:an.canal==='ml_pr'?'gold_pro':'gold_special',
+                free_shipping:an.freteTipo==='gratis'?1:0,status:'active',desconto:an.desconto||0}]})
+            });
+          }
+        } else {
+          erros++;
+          var logEl=document.getElementById('log-ops');
+          if(logEl) logEl.innerHTML+='<div style="font-size:11px;color:#ef4444">❌ Erro ML SKU '+f.sku+': '+(r.message||r.error||JSON.stringify(r).slice(0,80))+'</div>';
+        }
+      } catch(e){
+        erros++;
+        var logEl=document.getElementById('log-ops');
+        if(logEl) logEl.innerHTML+='<div style="font-size:11px;color:#ef4444">❌ Erro SKU '+f.sku+': '+e.message+'</div>';
+      }
+    }
+  }
+  if(btn){ btn.disabled=false; btn.textContent='Criar anúncios no ML'; }
+  mostrarSt('st-4', ok+' anúncios criados no ML'+(erros?' | '+erros+' erros':''), ok>0?'ok':'err');
+}
+
 
 function gerarAnunciosBling(){
   if(!blingToken){
