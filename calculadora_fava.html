@@ -246,15 +246,6 @@ header h1{font-size:14px;font-weight:700;flex:1}
   <button onclick="forcarRenovacaoBling()" style="padding:4px 10px;background:rgba(251,146,60,.3);border:1px solid rgba(251,146,60,.5);border-radius:5px;color:#fff;font-size:11px;font-weight:700;cursor:pointer" title="Renovar token Bling expirado">🔑 Renovar Bling</button>
 </header>
 
-<nav style="background:#162040;padding:0 18px;display:flex;gap:2px;border-bottom:2px solid #0f1f3a;flex-wrap:wrap">
-  <a href="https://web-production-5aa0f.up.railway.app/painel_fava.html" style="padding:6px 12px;color:#9ca3af;font-size:11px;font-weight:700;text-decoration:none">🏠 Painel</a>
-  <a href="https://web-production-5aa0f.up.railway.app/base_produtos.html" style="padding:6px 12px;color:#9ca3af;font-size:11px;font-weight:700;text-decoration:none">📦 Base</a>
-  <a href="https://web-production-5aa0f.up.railway.app/gestor_anuncios.html" style="padding:6px 12px;color:#9ca3af;font-size:11px;font-weight:700;text-decoration:none">📢 Gestor</a>
-  <a href="https://web-production-5aa0f.up.railway.app/balcao_fava.html" style="padding:6px 12px;color:#9ca3af;font-size:11px;font-weight:700;text-decoration:none">🏪 Balcão</a>
-  <a href="https://web-production-5aa0f.up.railway.app/cotacao_fava.html" style="padding:6px 12px;color:#9ca3af;font-size:11px;font-weight:700;text-decoration:none">📋 Cotação</a>
-  <a href="https://web-production-5aa0f.up.railway.app/calculadora_fava.html" style="padding:6px 12px;color:#93c5fd;border-bottom:2px solid #60a5fa;font-size:11px;font-weight:700;text-decoration:none">🧮 Calculadora</a>
-</nav>
-
 <div class="tabs">
   <div class="tab ativo" onclick="switchTab('unitario')">Produto único</div>
   <div class="tab" onclick="switchTab('massa')">Precificação em massa (NF)</div>
@@ -779,7 +770,10 @@ header h1{font-size:14px;font-weight:700;flex:1}
     <div class="sec">Blocos do anúncio</div>
     <div id="an-chks" style="margin-bottom:8px"></div>
 
-    <button class="btn btn-blue" id="an-btn-gerar" onclick="anGerar()">✨ Gerar com IA</button>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+      <button class="btn btn-blue" id="an-btn-gerar" onclick="anGerar()">✨ Gerar com IA</button>
+      <button class="btn" style="background:#475569" onclick="anModoManual()">✏️ Preencher Manual</button>
+    </div>
 
     <div class="sec" style="margin-top:10px">NF → Anúncios</div>
     <div id="an-massa-lista" style="font-size:11px;color:#6b7280;margin-bottom:6px">
@@ -1967,7 +1961,14 @@ function calcCenario(k, cmvBr, cmvPr, pesoKg){
   const pis_r=preco*PIS, cof_r=preco*COFINS, tx_r=preco*taxa, icms_r=preco*ICMS_SAIDA_MED;
   const difal_tmp=preco*difalEfetivo;
   const ibscbs_r=preco*ibsCbsEf;
-  const lucro=preco-custo-pis_r-cof_r-icms_r-tx_r-frete_custo-difal_tmp-ibscbs_r;
+
+  // Crédito de frete: PIS+COFINS (9,25%) sobre o frete
+  // Geram crédito: Frete Grátis, Frete Rápido, Full Super, Premium
+  // NÃO geram: Taxa Fixa (mlcl_fx), A Combinar (sem frete)
+  const tem_cred_frete = (k==='mlcl_fg'||k==='mlcl_fr'||k==='mlpr');
+  const cred_frete = tem_cred_frete ? frete_custo*(PIS+COFINS) : 0;
+
+  const lucro=preco-custo-pis_r-cof_r-icms_r-tx_r-frete_custo+cred_frete-difal_tmp-ibscbs_r;
   const mgliq=preco>0?lucro/preco:0;
   const mc=mgliq;
 
@@ -1981,7 +1982,7 @@ function calcCenario(k, cmvBr, cmvPr, pesoKg){
   if(k==='mlpr'&&preco<FRETE_GRATIS_LIMITE){aplicavel=false;obs='ML Premium exige preço ≥ R$79';}
 
   const difal_r=preco*difalEfetivo;
-  return{preco,precoMin,pis_r,cof_r,icms_r,tx_r,frete_custo,lucro,mgliq,custo,taxa,aplicavel,obs,difal_r,difalEfetivo,ibscbs_r};
+  return{preco,precoMin,pis_r,cof_r,icms_r,tx_r,frete_custo,cred_frete,lucro,mgliq,custo,taxa,aplicavel,obs,difal_r,difalEfetivo,ibscbs_r};
 }
 
 function calcAll(){
@@ -3307,46 +3308,25 @@ function irParaAnuncio(){
 const MENEGOTTI_PECAS = {"29113346": {"descricao": "Carenagem de Sustentação", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "C", "categoria": "Estrutura"}, "29113326": {"descricao": "Abraçadeira de Fixação", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "C", "categoria": "Fixação"}, "29113325": {"descricao": "KIT Abraçadeira de Fixação", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "C", "categoria": "Fixação"}, "29117366": {"descricao": "Bucha do Eixo", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "B", "categoria": "Transmissão"}, "29117127": {"descricao": "Carretel", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "B", "categoria": "Carretel / Cabo"}, "32541122": {"descricao": "Cabo de Aço Galv. Ø3mm - 18x7 AF - 12,5m", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "A", "categoria": "Carretel / Cabo"}, "29113291": {"descricao": "Contrapeso", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "C", "categoria": "Carretel / Cabo"}, "29117367": {"descricao": "Luva de Alumínio", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "B", "categoria": "Carretel / Cabo"}, "21080050": {"descricao": "Sapatilha para Cabo de Aço 1/8\"", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "B", "categoria": "Carretel / Cabo"}, "29113290": {"descricao": "Gancho 150Kg", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "A", "categoria": "Gancho / Moitão"}, "29117368": {"descricao": "Eixo do Carretel Ø16 com Chaveta", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "A", "categoria": "Transmissão"}, "29116454": {"descricao": "Batente Fim de Curso + Chapa do Batente", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "29117200": {"descricao": "Mola da Chave Fim de Curso", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "29114043": {"descricao": "Caixa do Redutor", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "C", "categoria": "Redutor"}, "29114044": {"descricao": "Pinhão e Engrenagem", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "A", "categoria": "Redutor"}, "29114045": {"descricao": "Engrenagem 44 Dentes Ø60,4", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "A", "categoria": "Redutor"}, "29113263": {"descricao": "Junta de Vedação", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "B", "categoria": "Redutor"}, "29114046": {"descricao": "Tampa Frontal do Redutor", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "C", "categoria": "Redutor"}, "22020532": {"descricao": "Rolamento 6200RS Ø30xØ10x09mm", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "A", "categoria": "Rolamentos"}, "29114028": {"descricao": "Rotor 127/220V", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "C", "categoria": "Motor Elétrico"}, "29114029": {"descricao": "Carcaça e Estator 127V", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "C", "categoria": "Motor Elétrico"}, "29114030": {"descricao": "Carcaça e Estator 220V", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "C", "categoria": "Motor Elétrico"}, "29113269": {"descricao": "Mola de Compressão (Freio)", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "B", "categoria": "Freio"}, "29113270": {"descricao": "Freio", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "A", "categoria": "Freio"}, "29114047": {"descricao": "Proteção do Freio", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "C", "categoria": "Freio"}, "29113335": {"descricao": "Proteção da Ventoinha", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "C", "categoria": "Motor Elétrico"}, "29114048": {"descricao": "Ventoinha", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "B", "categoria": "Motor Elétrico"}, "29114049": {"descricao": "Caixa de Ligações", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "C", "categoria": "Elétrica / Controle"}, "29113337": {"descricao": "Tomada 3P 10A c/ Chicote", "modelos": ["Guincho Prime V2 150|300Kg", "Guincho Prime V2 300|600Kg", "Guincho Prime V2 500|1000Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "29113338": {"descricao": "Cj Chicote da Botoeira", "modelos": ["Guincho Prime V2 150|300Kg", "Guincho Prime V2 300|600Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "29114050": {"descricao": "Chicote da Chave Fim de Curso", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "29114051": {"descricao": "Caixa da Chave Fim de Curso", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "C", "categoria": "Elétrica / Controle"}, "29113399": {"descricao": "Chave Fim de Curso", "modelos": ["Guincho Prime V2 150|300Kg", "Guincho Prime V2 300|600Kg", "Guincho Prime V2 500|1000Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "29113340": {"descricao": "Cj Moitão", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "B", "categoria": "Gancho / Moitão"}, "29114031": {"descricao": "Botão Sobe/Desce", "modelos": ["Guincho Prime V2 150|300Kg", "Guincho Prime V2 300|600Kg"], "desgaste": "A", "categoria": "Elétrica / Controle"}, "29113278": {"descricao": "Carenagem da Botoeira", "modelos": ["Guincho Prime V2 150|300Kg", "Guincho Prime V2 300|600Kg"], "desgaste": "C", "categoria": "Elétrica / Controle"}, "29114032": {"descricao": "Capacitor 127V 55uF", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "29114033": {"descricao": "Capacitor 220V 16uF", "modelos": ["Guincho Prime V2 150|300Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "29113279": {"descricao": "Botão de Emergência", "modelos": ["Guincho Prime V2 150|300Kg", "Guincho Prime V2 300|600Kg", "Guincho Prime V2 500|1000Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "29113661": {"descricao": "Cj Botoeira de Comando (150/300 e 300/600Kg)", "modelos": ["Guincho Prime V2 150|300Kg", "Guincho Prime V2 300|600Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "29117874": {"descricao": "Relé Térmico", "modelos": ["Guincho Prime V2 150|300Kg", "Guincho Prime V2 300|600Kg", "Guincho Prime V2 500|1000Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "21090229": {"descricao": "Mola de Compressão", "modelos": ["Guincho Prime V2 150|300Kg", "Guincho Prime V2 300|600Kg", "Guincho Prime V2 500|1000Kg"], "desgaste": "C", "categoria": "Estrutura"}, "29113348": {"descricao": "Carenagem de Sustentação", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "C", "categoria": "Estrutura"}, "29113352": {"descricao": "Abraçadeira de Fixação", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "C", "categoria": "Fixação"}, "29113350": {"descricao": "KIT Abraçadeira de Fixação", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "C", "categoria": "Fixação"}, "29117049": {"descricao": "Bucha do Eixo", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "B", "categoria": "Transmissão"}, "29117118": {"descricao": "Carretel", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "B", "categoria": "Carretel / Cabo"}, "32541125": {"descricao": "Cabo de Aço Galv. Ø4mm - 17x7 AF - 12,5m", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "A", "categoria": "Carretel / Cabo"}, "29113426": {"descricao": "Contrapeso", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "C", "categoria": "Carretel / Cabo"}, "29117657": {"descricao": "Luva de Alumínio", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "B", "categoria": "Carretel / Cabo"}, "21080051": {"descricao": "Sapatilha para Cabo de Aço 3/16\"", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "B", "categoria": "Carretel / Cabo"}, "29113418": {"descricao": "Gancho 300Kg", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "A", "categoria": "Gancho / Moitão"}, "29116933": {"descricao": "Eixo do Carretel Ø18x148,5 com Chaveta", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "A", "categoria": "Transmissão"}, "29116455": {"descricao": "Batente Fim de Curso", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "29114529": {"descricao": "Mola da Chave Fim de Curso", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg", "Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "29114052": {"descricao": "Caixa do Redutor", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "C", "categoria": "Redutor"}, "29114053": {"descricao": "Pinhão e Engrenagem", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "A", "categoria": "Redutor"}, "29114054": {"descricao": "Engrenagem 57 Dentes Ø89", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "A", "categoria": "Redutor"}, "29113364": {"descricao": "Junta de Vedação", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "B", "categoria": "Redutor"}, "22020208": {"descricao": "Rolamento 6201 2RS", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "A", "categoria": "Rolamentos"}, "29114055": {"descricao": "Tampa Frontal do Redutor", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "C", "categoria": "Redutor"}, "29114034": {"descricao": "Rotor 127/220V", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "C", "categoria": "Motor Elétrico"}, "29114035": {"descricao": "Carcaça e Estator 127V", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "C", "categoria": "Motor Elétrico"}, "29114036": {"descricao": "Carcaça e Estator 220V", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "C", "categoria": "Motor Elétrico"}, "21090214": {"descricao": "Mola de Compressão (Freio)", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "B", "categoria": "Freio"}, "29113386": {"descricao": "Freio", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "A", "categoria": "Freio"}, "29114056": {"descricao": "Proteção do Freio", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "C", "categoria": "Freio"}, "29113392": {"descricao": "Proteção da Ventoinha", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "C", "categoria": "Motor Elétrico"}, "29113390": {"descricao": "Ventoinha", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "B", "categoria": "Motor Elétrico"}, "29114057": {"descricao": "Caixa de Ligações", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "C", "categoria": "Elétrica / Controle"}, "29113408": {"descricao": "Cj Moitão", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "B", "categoria": "Gancho / Moitão"}, "29114037": {"descricao": "Capacitor 127V 130uF", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "26100498": {"descricao": "Capacitor 220V 35uF", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "29113349": {"descricao": "Carenagem de Sustentação", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "C", "categoria": "Estrutura"}, "29113353": {"descricao": "Abraçadeira de Fixação", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "C", "categoria": "Fixação"}, "29113351": {"descricao": "KIT Abraçadeira de Fixação", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "C", "categoria": "Fixação"}, "29113650": {"descricao": "Rolamento 6203 2RS", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg", "Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Rolamentos"}, "29117140": {"descricao": "Bucha do Eixo", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Transmissão"}, "29113431": {"descricao": "Carretel", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Carretel / Cabo"}, "32541126": {"descricao": "Cabo de Aço Galv. Ø6mm - 17x7 AF - 12,5m", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Carretel / Cabo"}, "29113427": {"descricao": "Contrapeso", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "C", "categoria": "Carretel / Cabo"}, "29117194": {"descricao": "Luva de Alumínio", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Carretel / Cabo"}, "29751077": {"descricao": "Sapatilha para Cabo de Aço 1/4\"", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Carretel / Cabo"}, "29113419": {"descricao": "Gancho 500Kg", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Gancho / Moitão"}, "29113357": {"descricao": "Eixo do Carretel", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Transmissão"}, "29113423": {"descricao": "Batente Fim de Curso + Chapa do Batente", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "29114058": {"descricao": "Caixa do Redutor", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "C", "categoria": "Redutor"}, "29114059": {"descricao": "Pinhão e Engrenagem", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Redutor"}, "29113363": {"descricao": "Engrenagem 54 Dentes Ø124", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Redutor"}, "29751181": {"descricao": "Rolamento 6202 2RS", "modelos": ["Guincho Prime V2 150|300Kg", "Guincho Prime V2 300|600Kg", "Guincho Prime c/Trole 300|600Kg", "Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Rolamentos"}, "29113365": {"descricao": "Junta de Vedação", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Redutor"}, "29111528": {"descricao": "Rolamento 6201 ZZ", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Rolamentos"}, "29113367": {"descricao": "Tampa Frontal do Redutor", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "C", "categoria": "Redutor"}, "29114038": {"descricao": "Rotor 127/220V", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "C", "categoria": "Motor Elétrico"}, "29114039": {"descricao": "Carcaça e Estator 127V", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "C", "categoria": "Motor Elétrico"}, "29114040": {"descricao": "Carcaça e Estator 220V", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "C", "categoria": "Motor Elétrico"}, "21090215": {"descricao": "Mola de Compressão (Freio)", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Freio"}, "29113387": {"descricao": "Freio", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Freio"}, "29114060": {"descricao": "Proteção do Freio", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "C", "categoria": "Freio"}, "29113686": {"descricao": "Parafuso Cabeça Sextavada M6x210", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "C", "categoria": "Fixação"}, "29113393": {"descricao": "Proteção da Ventoinha", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "C", "categoria": "Motor Elétrico"}, "29114061": {"descricao": "Ventoinha", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Motor Elétrico"}, "29114062": {"descricao": "Caixa de Ligações", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "C", "categoria": "Elétrica / Controle"}, "29113407": {"descricao": "Cj Chicote da Botoeira", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "29113409": {"descricao": "Cj Moitão", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Gancho / Moitão"}, "29113675": {"descricao": "Botão Sobe/Desce", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Elétrica / Controle"}, "29113673": {"descricao": "Carenagem do Controle", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "C", "categoria": "Elétrica / Controle"}, "29114041": {"descricao": "Capacitor 127V 220uF", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "29114042": {"descricao": "Capacitor 220V 60uF", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "29113339": {"descricao": "Cj Botoeira de Comando 500|1000Kg", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "29118811": {"descricao": "Motor do Trole 220V", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "C", "categoria": "Trole Elétrico"}, "29118812": {"descricao": "Motor do Trole 127V", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "C", "categoria": "Trole Elétrico"}, "29118786": {"descricao": "Pino 4x6 do Trole", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Trole Elétrico"}, "29118817": {"descricao": "Bloco de Fixação do Trole", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Trole Elétrico"}, "29118818": {"descricao": "Rolamento do Trole", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Trole Elétrico"}, "29118819": {"descricao": "Bucha do Trole", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Trole Elétrico"}, "29118820": {"descricao": "Eixo do Trole", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Trole Elétrico"}, "29118821": {"descricao": "Roda do Trole", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Trole Elétrico"}, "29118822": {"descricao": "Junta de Vedação do Trole", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Trole Elétrico"}, "29118823": {"descricao": "Bloco de Fixação Externo do Trole", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Trole Elétrico"}, "29118824": {"descricao": "Estrutura de Suporte do Trole", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "C", "categoria": "Trole Elétrico"}, "29118826": {"descricao": "Defletor do Rolamento", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Trole Elétrico"}, "29118827": {"descricao": "Anel de Retenção do Trole", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Trole Elétrico"}, "29118828": {"descricao": "Roda Engrenada do Trole", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Trole Elétrico"}, "29118829": {"descricao": "Suporte do Trole", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Trole Elétrico"}, "29118830": {"descricao": "Pinhão Motriz do Trole", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Trole Elétrico"}, "29118831": {"descricao": "Engrenagem da Roda do Trole", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Trole Elétrico"}, "29118832": {"descricao": "Pinhão Motor do Trole", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Trole Elétrico"}, "29118833": {"descricao": "Pino do Trole", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Trole Elétrico"}, "29118834": {"descricao": "Rolamento do Trole (Pinhão)", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Trole Elétrico"}, "29118835": {"descricao": "Caixa de Engrenagem do Trole", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "C", "categoria": "Trole Elétrico"}, "29118810": {"descricao": "Cj. Botoeira de Comando com Trole 300|600 e 500|1000Kg", "modelos": ["Guincho Prime c/Trole 300|600Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "B", "categoria": "Trole Elétrico"}, "29113684": {"descricao": "Parafuso Phillips Cab. Abaulada Flangeado M4x6", "modelos": ["Guincho Prime V2 150|300Kg", "Guincho Prime V2 300|600Kg", "Guincho Prime V2 500|1000Kg"], "desgaste": "C", "categoria": "Fixação"}, "21015416": {"descricao": "Parafuso Phillips M4x8", "modelos": ["Guincho Prime V2 300|600Kg", "Guincho Prime V2 500|1000Kg"], "desgaste": "C", "categoria": "Fixação"}, "26120101": {"descricao": "Conector Sindal 4mm", "modelos": ["Guincho Prime V2 150|300Kg", "Guincho Prime V2 300|600Kg", "Guincho Prime V2 500|1000Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "26140166": {"descricao": "Terminal Prensa Cabos PG9 Preto", "modelos": ["Guincho Prime V2 150|300Kg", "Guincho Prime V2 300|600Kg", "Guincho Prime V2 500|1000Kg"], "desgaste": "B", "categoria": "Elétrica / Controle"}, "21011671": {"descricao": "Parafuso Cab. Cil. Sext. Inter. M8x45", "modelos": ["Guincho Prime V2 150|300Kg", "Guincho Prime V2 300|600Kg", "Guincho Prime V2 500|1000Kg"], "desgaste": "C", "categoria": "Fixação"}, "22020536": {"descricao": "Rolamento 6204 2RS", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Rolamentos"}, "29751084": {"descricao": "Rolamento 6205 2RS", "modelos": ["Guincho Prime V2 500|1000Kg", "Guincho Prime c/Trole 500|1000Kg"], "desgaste": "A", "categoria": "Rolamentos"}};
 
 
-// ── Lookup automático de peças Menegotti + banco por cProd ───────────
+// ── Lookup automático de peças Menegotti ──────────────────────────────
 function lookupMenegotti(codigo){
   const info = document.getElementById('an-menegotti-info');
   if(!info) return;
   const cod = (codigo||'').trim();
-  if(!cod){ info.style.display='none'; return; }
-
-  // Busca no banco via cprod_map → pega SKU + peso
-  fetch(`${RAILWAY}/api/db/cprod-lookup?cprods=${encodeURIComponent(cod)}`)
-    .then(r=>r.json()).then(data=>{
-      const match = data && (data[cod] || data[cod.replace(/[.\-\s]/g,'')]);
-      if(match && match.sku){
-        const skuEl = document.getElementById('an-sku-fava');
-        const pesoEl = document.getElementById('an-peso');
-        if(skuEl && !skuEl.value) skuEl.value = match.sku;
-        if(pesoEl && !pesoEl.value && match.peso) pesoEl.value = parseFloat(match.peso).toFixed(3);
-        // Mostrar badge de vínculo
-        const badge = `<div style="margin-top:4px;padding:3px 7px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;font-size:10px;color:#166534">
-          🔗 SKU Fava: <strong>${match.sku}</strong>${match.peso?` | Peso: <strong>${parseFloat(match.peso).toFixed(3)}kg</strong>`:''}
-          <button onclick="anLookupBanco('${match.sku}')" style="margin-left:6px;padding:1px 6px;font-size:10px;border:1px solid #16a34a;border-radius:3px;background:#f0fdf4;color:#166534;cursor:pointer">↩ Puxar dados</button>
-        </div>`;
-        info.style.display='block';
-        // Adicionar badge ao conteúdo existente ou exibir sozinho
-        const existing = info.innerHTML;
-        if(!existing.includes('SKU Fava')) info.innerHTML = badge + existing;
-      }
-    }).catch(()=>{});
-
-  // Lookup Menegotti local
   const peca = MENEGOTTI_PECAS[cod];
-  if(!peca){ if(!info.innerHTML) info.style.display='none'; return; }
+  if(!peca){
+    info.style.display = 'none';
+    return;
+  }
   const desgasteLabel = {A:'🔴 Desgaste maior', B:'🟡 Desgaste intermediário', C:'🟢 Desgaste menor'};
-  const pecaHtml = `<strong>${peca.descricao}</strong><br>
+  info.style.display = 'block';
+  info.innerHTML = `
+    <strong>${peca.descricao}</strong><br>
     ${desgasteLabel[peca.desgaste]||''} · ${peca.categoria}<br>
     <span style="color:#6b7280">Modelos: ${peca.modelos.join(' | ')}</span>
     <button onclick="aplicarMenegotti('${cod}')" style="display:block;margin-top:4px;padding:2px 8px;font-size:10px;font-weight:700;background:#1F3864;color:#fff;border:none;border-radius:4px;cursor:pointer">
       ↓ Preencher campos do anúncio
     </button>`;
-  info.style.display='block';
-  info.innerHTML = info.innerHTML + pecaHtml;
 }
 
 function aplicarMenegotti(codigo){
@@ -3563,6 +3543,121 @@ Ficha tecnica resumida:`:''}
 ${bl.includes('alertas_int')?`--- ALERTAS INTERNOS PARA EQUIPE (nao aparecem no anuncio) ---
 Gere alertas sobre: ST, IPI, risco de devolucao, compatibilidade, instalacao tecnica
 Formato: ALERTA: [descrição]`:''}`;
+}
+
+function anModoManual(){
+  const panel = document.getElementById('an-painel');
+  const nome = document.getElementById('an-nome')?.value || '';
+  panel.innerHTML = `
+  <div class="card" style="margin-bottom:10px">
+    <div class="card-head" style="padding:8px 12px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between">
+      <strong style="font-size:11px;color:#6b7280;text-transform:uppercase">✏️ Títulos — Manual</strong>
+    </div>
+    <div style="padding:10px 12px;display:grid;gap:8px">
+      <div>
+        <div style="font-size:10px;color:#6b7280;margin-bottom:3px">Título curto ≤60 caracteres (ML, Shopee)</div>
+        <input type="text" id="man-titulo-60" maxlength="120" oninput="anManContador(this,'man-c60',60)"
+          style="width:100%;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px"
+          placeholder="Ex: Eixo Central Betoneira Menegotti 500L Original" value="${(nome).substring(0,60)}">
+        <div style="font-size:10px;color:#9ca3af;margin-top:2px"><span id="man-c60">0</span>/60 caracteres</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:#6b7280;margin-bottom:3px">Título longo ≤120 caracteres (Yampi/Site)</div>
+        <input type="text" id="man-titulo-120" maxlength="160" oninput="anManContador(this,'man-c120',120)"
+          style="width:100%;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px"
+          placeholder="Ex: Eixo Central Original Betoneira Menegotti 500L Rental-Max 3114095 R5" value="${nome.substring(0,120)}">
+        <div style="font-size:10px;color:#9ca3af;margin-top:2px"><span id="man-c120">0</span>/120 caracteres</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head" style="padding:8px 12px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between">
+      <strong style="font-size:11px;color:#6b7280;text-transform:uppercase">Descrição — Manual</strong>
+      <div style="display:flex;gap:5px">
+        <button class="copy-btn-an" onclick="anManCopiar('man-titulo-60')">Copiar título 60</button>
+        <button class="copy-btn-an" onclick="anManCopiar('man-titulo-120')">Copiar título 120</button>
+        <button class="copy-btn-an" onclick="anManCopiarDesc()">Copiar descrição</button>
+      </div>
+    </div>
+    <div style="padding:10px 12px">
+      <textarea id="man-descricao" rows="18"
+        style="width:100%;border:1px solid #d1d5db;border-radius:5px;padding:7px 9px;font-size:12px;font-family:system-ui;resize:vertical;line-height:1.6"
+        placeholder="Cole ou escreva a descrição completa do produto aqui...
+
+Dica: use ✅ no início das linhas para bullet points, === para separadores de seção.
+
+Exemplo:
+=== CARACTERÍSTICAS ===
+✅ Original e com garantia
+✅ Envio rápido para todo o Brasil"></textarea>
+      <div style="font-size:10px;color:#9ca3af;margin-top:4px;display:flex;justify-content:space-between">
+        <span id="man-chars">0 caracteres</span>
+        <button class="btn-sm" onclick="anManGerarIA()" style="background:#1F3864;color:#fff;border:none;border-radius:4px;padding:3px 8px;cursor:pointer;font-size:10px">✨ Gerar descrição com IA</button>
+      </div>
+    </div>
+  </div>`;
+  // Inicializar contadores
+  setTimeout(()=>{
+    const t60 = document.getElementById('man-titulo-60');
+    const t120 = document.getElementById('man-titulo-120');
+    if(t60) anManContador(t60,'man-c60',60);
+    if(t120) anManContador(t120,'man-c120',120);
+    const desc = document.getElementById('man-descricao');
+    if(desc) desc.oninput = ()=>{
+      const el=document.getElementById('man-chars');
+      if(el) el.textContent = desc.value.length+' caracteres';
+    };
+  },50);
+}
+
+function anManContador(inp, idSpan, max){
+  const el = document.getElementById(idSpan);
+  if(!el) return;
+  const n = inp.value.length;
+  el.textContent = n;
+  el.style.color = n > max ? '#ef4444' : n > max*0.9 ? '#f59e0b' : '#9ca3af';
+}
+
+function anManCopiar(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  navigator.clipboard.writeText(el.value).then(()=>{ alert('✅ Copiado: '+el.value.substring(0,40)+'...'); });
+}
+
+function anManCopiarDesc(){
+  const el = document.getElementById('man-descricao');
+  if(!el) return;
+  navigator.clipboard.writeText(el.value).then(()=>{ alert('✅ Descrição copiada!'); });
+}
+
+async function anManGerarIA(){
+  // Gera apenas a descrição com IA, mantendo os títulos manuais
+  const p = {
+    sku:    document.getElementById('an-sku')?.value||'',
+    nome:   document.getElementById('an-nome')?.value||'',
+    marca:  document.getElementById('an-marca')?.value||'',
+    familia:document.getElementById('an-familia')?.value||'',
+    compat: document.getElementById('an-compat')?.value||'',
+    ficha:  document.getElementById('an-ficha')?.value||'',
+    peso:   document.getElementById('an-peso')?.value||'',
+    tipo:   document.getElementById('an-tipo')?.value||'',
+    extra:  document.getElementById('an-extra')?.value||'',
+  };
+  if(!p.nome){alert('Informe o nome do produto');return;}
+  const btn = document.querySelector('button[onclick="anManGerarIA()"]');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Gerando...';}
+  try{
+    const txt = await chamarClaudeAn(anMontarPrompt(p));
+    // Extrai só a descrição, sem os títulos
+    const descEl = document.getElementById('man-descricao');
+    if(descEl){
+      // Remove linhas de título do resultado
+      const linhas = txt.split('\n').filter(l=>!l.match(/^---.*TÍTULO|^3 TÍTULOS/i));
+      descEl.value = linhas.join('\n').trim();
+      descEl.dispatchEvent(new Event('input'));
+    }
+  }catch(e){alert('Erro: '+e.message);}
+  finally{if(btn){btn.disabled=false;btn.textContent='✨ Gerar descrição com IA';}}
 }
 
 async function anGerar(){

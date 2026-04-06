@@ -1166,28 +1166,33 @@ function calcPrecif(cmvBr, cmvPr, peso, temST, monoF, canal, taxa, freteTipo, fr
   if(freteTipo==='full')   fr=calcFreteFS(peso,pf)||parseFloat(freteVal||0)||7;
   else if(freteTipo==='fixo') fr=parseFloat(freteVal||0);
   else if(freteTipo==='rapido') fr=parseFloat(freteVal||0)||12;
+  else if(freteTipo==='gratis') fr=calcFreteFS(peso,pf)||parseFloat(freteVal||0)||7;
   // Shopee: taxa fixa baseada no preço
   var txFixaShopee=0;
   if(canal==='shopee'){ var sh=calcTaxaShopeeP4(pf); taxa=sh.pct; txFixaShopee=sh.fixo; fr=sh.fixo; }
   // Deduções sobre venda
   var dedTaxa  = pf*taxa;
-  var dedFrete  = (freteTipo==='gratis') ? fr : 0;  // se frete grátis, absorve
   var dedPis   = pf*PIS;
   var dedCof   = pf*COF;
   var dedIcmsS = (canal==='balcao') ? (temST?0:pf*0.12) : pf*icms_s;
   var dedDifal  = (canal==='balcao') ? 0 : pf*(difal||0);
+  // Crédito de frete: PIS+COFINS (9,25%) sobre o frete
+  // Geram crédito: full, gratis, rapido — NÃO geram: fixo, combinar, none
+  var tem_cred_fr = (freteTipo==='full'||freteTipo==='gratis'||freteTipo==='rapido');
+  var credFrete = tem_cred_fr ? fr*PC : 0;
+  // Se frete grátis: seller absorve o frete (é custo), mas ganha o crédito
+  // Se full/rapido: buyer paga o frete, seller ganha o crédito
+  var frCusto = (freteTipo==='gratis') ? fr : 0;  // só grátis é custo direto
   // Créditos de entrada
   var cIcms = temST ? 0 : cmv*(canal==='balcao'?0.12:0.12);
   var cPC   = monoF ? 0 : cmv*PC;
-  var cFr   = (freteTipo!=='gratis') ? fr : 0;   // crédito de frete (taxa = crédito no ML)
   // Receita líquida
-  var recBruta = pf;
-  var totalDed = dedTaxa+dedFrete+dedPis+dedCof+dedIcmsS+dedDifal+txFixaShopee;
-  var totalCred= cIcms+cPC;
-  var frCusto  = (freteTipo!=='gratis') ? fr : 0;
-  var lucro    = recBruta - totalDed - cmv + totalCred - frCusto;
+  var totalDed = dedTaxa+frCusto+dedPis+dedCof+dedIcmsS+dedDifal+txFixaShopee;
+  var totalCred= cIcms+cPC+credFrete;
+  var lucro    = pf - totalDed - cmv + totalCred;
   var margem   = pf>0 ? lucro/pf*100 : 0;
-  return {pf,fr,frCusto,dedTaxa,dedPis,dedCof,dedIcmsS,dedDifal,cIcms,cPC,totalDed,totalCred,lucro,margem,cmv};
+  var cor      = margem>=20?'#10b981':margem>=10?'#f59e0b':'#ef4444';
+  return {pf,fr,frCusto,credFrete,dedTaxa,dedPis,dedCof,dedIcmsS,dedDifal,cIcms,cPC,totalDed,totalCred,lucro,margem,cor,cmv};
 }
 
 function calcTaxaShopeeP4(preco){
@@ -1257,13 +1262,14 @@ function renderPrecificacao(){
       // Detalhe fiscal
       html+='<div style="display:flex;gap:16px;font-size:10px;color:#64748b;flex-wrap:wrap;background:#0a0f1a;padding:6px 8px;border-radius:4px">';
       html+='<span>CMV: <b style="color:#e2e8f0">R$ '+fmt(res.cmv)+'</b></span>';
-      html+='<span>Frete: <b style="color:#e2e8f0">R$ '+fmt(res.frCusto)+'</b></span>';
+      html+='<span>Frete: <b style="color:#e2e8f0">R$ '+fmt(res.fr)+'</b></span>';
       html+='<span>Taxa '+(an.taxa*100).toFixed(0)+'%: <b style="color:#f97316">-R$ '+fmt(res.dedTaxa)+'</b></span>';
       html+='<span>PIS/COF: <b style="color:#f97316">-R$ '+fmt(res.dedPis+res.dedCof)+'</b></span>';
       html+='<span>ICMS '+(an.icms_s*100).toFixed(0)+'%: <b style="color:#f97316">-R$ '+fmt(res.dedIcmsS)+'</b></span>';
       if(res.dedDifal>0) html+='<span>DIFAL: <b style="color:#f97316">-R$ '+fmt(res.dedDifal)+'</b></span>';
       if(res.cIcms>0) html+='<span>Cr.ICMS: <b style="color:#10b981">+R$ '+fmt(res.cIcms)+'</b></span>';
       if(res.cPC>0)   html+='<span>Cr.PIS/COF: <b style="color:#10b981">+R$ '+fmt(res.cPC)+'</b></span>';
+      if(res.credFrete>0) html+='<span>Cr.Frete 9,25%: <b style="color:#10b981">+R$ '+fmt(res.credFrete)+'</b></span>';
       html+='<span style="margin-left:auto">Lucro: <b style="color:'+(res.lucro>=0?'#10b981':'#ef4444')+'">R$ '+res.lucro.toFixed(2)+'</b></span>';
       html+='</div>';
       html+='</div>';
