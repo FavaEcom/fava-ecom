@@ -510,10 +510,11 @@ function lerXML(file){
         });
       });
 
-      document.getElementById('nf-forn').textContent=forn.nome;
-      document.getElementById('nf-num').textContent='NF '+dadosNF.nf;
-      document.getElementById('nf-data').textContent=dadosNF.data;
-      document.getElementById('nf-total').textContent='R$ '+(dadosNF.valor||0).toFixed(2);
+      var _el; 
+      _el=document.getElementById('nf-forn'); if(_el) _el.textContent=forn.nome;
+      _el=document.getElementById('nf-num');  if(_el) _el.textContent='NF '+dadosNF.nf;
+      _el=document.getElementById('nf-data'); if(_el) _el.textContent=dadosNF.data;
+      _el=document.getElementById('nf-total');if(_el) _el.textContent='R$ '+(dadosNF.valor||0).toFixed(2);
       var cnpjEl=document.getElementById('nf-cnpj'); if(cnpjEl) cnpjEl.textContent=dadosNF.cnpjRaw||dadosNF.cnpj||'';
       var cardNF=document.getElementById('card-nf'); if(cardNF) cardNF.style.display='';
       var nfResumo=document.getElementById('nf-resumo'); if(nfResumo) nfResumo.textContent=itensNF.length+' iten(s) na nota';
@@ -530,7 +531,7 @@ function lerXML(file){
 }
 
 function carregarBanco(){
-  document.getElementById('hd-st').textContent='Carregando banco...';
+  var _hd=document.getElementById('hd-st'); if(_hd) _hd.textContent='Carregando banco...';
   fetch(RAILWAY+'/api/db/produtos').then(function(r){return r.json();}).then(function(prods){
     var skus=prods.map(function(p){return parseInt(p.sku);}).filter(function(n){return !isNaN(n);});
     proxSKU=(skus.length?Math.max.apply(null,skus):3500)+1;
@@ -540,8 +541,8 @@ function carregarBanco(){
       return Object.assign({},it,{sku:it.existe?it.codigo:String(proxSKU+i),titulo_ml:'',titulo_shopee:'',titulo_yampi:'',familia:'',peso:0,sel:!it.existe});
     });
     var novos=itensNF.filter(function(x){return !x.existe;}).length;
-    document.getElementById('hd-st').textContent=novos+' novos | '+itensNF.filter(function(x){return x.existe;}).length+' existentes';
-  }).catch(function(e){ document.getElementById('hd-st').textContent='Erro banco: '+e.message; });
+    var _hd2=document.getElementById('hd-st'); if(_hd2) _hd2.textContent=novos+' novos | '+itensNF.filter(function(x){return x.existe;}).length+' existentes';
+  }).catch(function(e){ var _hd3=document.getElementById('hd-st'); if(_hd3) _hd3.textContent='Erro banco: '+e.message; });
 }
 
 function calcPreco(cmv,mg,taxa,frete,difal,icms){
@@ -564,9 +565,9 @@ function gerarEAN(idx){
 function gerarTodosEAN(){fichas.forEach(function(f,i){if(!f.ean)gerarEAN(i);});}
 
 function renderTabela(){
-  var mg=(parseFloat(document.getElementById('margem-sel').value)||40)/100;
+  var mg=(parseFloat((document.getElementById('margem-sel')||{value:'40'}).value)||40)/100;
   var novos=fichas.filter(function(f){return !f.existe;}).length;
-  document.getElementById('badge-novos').textContent=novos+' novos';
+  var _bn=document.getElementById('badge-novos'); if(_bn) _bn.textContent=novos+' novos';
   var html='';
   fichas.forEach(function(f,i){
     var pML=calcPreco(f.cmvBr,mg,TAXA_ML_CL,FRETE_ML,DIFAL+IBS,ICMS_SAIDA);
@@ -601,7 +602,7 @@ function renderTabela(){
     html+='<td><input class="rev-input" value="'+(f.titulo_shopee||'').replace(/"/g,'&#39;')+'" onchange="fichas['+i+'].titulo_shopee=this.value" style="width:200px" placeholder="Titulo Shopee..."></td>';
     html+='</tr>';
   });
-  document.getElementById('rev-tbody').innerHTML=html;
+  var _tb=document.getElementById('rev-tbody'); if(_tb) _tb.innerHTML=html;
 }
 
 function atualizarPrecos(i){
