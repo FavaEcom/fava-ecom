@@ -2760,42 +2760,24 @@ function initPromocoes(){ if(promoData.length) renderPromoTabela(promoDataFiltra
 async function fetchPedidosML(de,ate){
   setDot('ml','wait','ML carregando...');
   try{
-    const pedidos=[];
-    let offset=0,total=999;
-    while(offset<total&&offset<300){
-      const r=await mlGet(`orders/search?seller=537714337&order.date_created.from=${de}T00:00:00.000-03:00&order.date_created.to=${ate}T23:59:59.000-03:00&sort=date_desc&limit=50&offset=${offset}`);
-      if(!r||!r.results)break;
-      total=r.paging?.total||0;
-      if(!r.results.length)break;
-
-      for(const o of r.results){
-        const itens=o.order_items?.map(it=>({
-          mlb:it.item?.id,
-          titulo:it.item?.title||'',
-          sku:it.item?.seller_sku||'',
-          qtd:it.quantity||1,
-          preco:parseFloat(it.unit_price||0),
-          listing_type:it.listing_type_id||'gold_special',
-        }))||[];
-
-        pedidos.push({
-          id:o.id,
-          data:o.date_created?.substring(0,10),
-          status:o.status,
-          total:parseFloat(o.total_amount||0),
-          valor_pago:parseFloat(o.paid_amount||0),
-          uf:o.shipping?.receiver_address?.state?.id||'XX',
-          canal:'ML',
-          frete:parseFloat(o.shipping_cost||0)||0,
-          itens,
-        });
-      }
-      offset+=50;
-      await new Promise(r=>setTimeout(r,100));
-      if(offset>=total)break;
-    }
-
-    setDot('ml','ok',`ML ✓ (${pedidos.length} pedidos)`);
+    // Buscar do banco (mais rápido e confiável)
+    const r = await fetch('/api/db/pedidos-nf?dias=30');
+    if(!r.ok) throw new Error('banco '+r.status);
+    const lista = await r.json();
+    const pedidos = lista
+      .filter(p=>p.canal&&(p.canal.includes('ML')||p.canal.includes('Mercado')))
+      .map(p=>({
+        id: p.id,
+        data: (p.data||'').substring(0,10),
+        status: p.status||'',
+        total: parseFloat(p.total||0),
+        valor_pago: parseFloat(p.total||0),
+        uf: p.uf||'XX',
+        canal: 'ML',
+        frete: parseFloat(p.frete||0),
+        itens: (() => { try{ return JSON.parse(p.itens||'[]'); }catch(e){ return []; } })(),
+      }));
+    setDot('ml','ok','ML ✓ (banco)');
     return pedidos;
   }catch(e){setDot('ml','err','ML ✗');console.error('ML erro:',e);return[];}
 }
@@ -6138,14 +6120,13 @@ function renderAnuncios(){
     tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:20px;color:#9ca3af">Nenhum anúncio encontrado</td></tr>';
     return;
   }
-  // Limitar a 500 para não travar o browser
+  // Mostrar 200 por página para não travar o browser
   const paginaAtual = window._anuncPagina || 0;
-  const POR_PAG = 500;
+  const POR_PAG = 200;
   const listaPage = lista.slice(paginaAtual * POR_PAG, (paginaAtual + 1) * POR_PAG);
-  // Atualizar info de paginação
   const totalPags = Math.ceil(lista.length / POR_PAG);
   const infoEl = document.getElementById('anunc-pag-info');
-  if(infoEl) infoEl.textContent = `Mostrando ${listaPage.length} de ${lista.length} anúncios (pág ${paginaAtual+1}/${totalPags})`;
+  if(infoEl) infoEl.textContent = lista.length + ' anúncios | pág ' + (paginaAtual+1) + '/' + totalPags;
   tbody.innerHTML = listaPage.map(a=>{
     const mc = a.margem_atual;
     const mgCor = mc===null?'#9ca3af':mc>=.20?'#16a34a':mc>=.10?'#d97706':'#dc2626';
@@ -6206,9 +6187,9 @@ function renderAnuncios(){
 }
 
 let anunciosFiltroStatus = 'todos';
-function filtrarAnuncios(){ renderAnuncios(); }
+function filtrarAnuncios(){ window._anuncPagina=0; renderAnuncios(); }
 function filtrarAnuncioStatus(s,btn){
-  anunciosFiltroStatus=s;
+  anunciosFiltroStatus=s; window._anuncPagina=0;
   document.querySelectorAll('[id^="fb-"]').forEach(b=>b.classList.remove('a'));
   if(btn) btn.classList.add('a');
   renderAnuncios();
