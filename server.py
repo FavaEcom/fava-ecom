@@ -559,7 +559,7 @@ def sync_pedidos():
 def sync_frete_por_anuncio():
     print('[SYNC] Calculando frete médio por anúncio...')
     try:
-        pedidos = exe("SELECT itens FROM pedidos WHERE canal LIKE '%ML%' OR canal LIKE '%Mercado%'", fetchall=True)
+        pedidos = exe("SELECT itens FROM pedidos WHERE canal LIKE '%%ML%%' OR canal LIKE '%%Mercado%%'", fetchall=True)
         frete_map = {}
         for p in pedidos:
             if not p.get('itens'): continue
@@ -2142,9 +2142,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 FROM ml_listings l
                 LEFT JOIN produtos p ON p.sku = l.sku
                 WHERE l.id IS NOT NULL
-                  AND l.id NOT LIKE 'YMP%'
-                  AND l.id NOT LIKE 'ymp%'
-                  AND l.id LIKE 'MLB%'
+                  AND l.id NOT LIKE 'YMP%%'
+                  AND l.id NOT LIKE 'ymp%%'
+                  AND l.id LIKE 'MLB%%'
                 ORDER BY l.titulo
             """, fetchall=True)
             # Adicionar campanha separadamente para não quebrar a query principal
@@ -2229,11 +2229,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         migra YMP para yampi_listings, corrige SKUs inválidos"""
         try:
             # 1. Contar YMP em ml_listings
-            ymp_count = exe("SELECT COUNT(*) as n FROM ml_listings WHERE id LIKE 'YMP%' OR id LIKE 'ymp%'", fetchone=True)['n']
-            nao_mlb   = exe("SELECT COUNT(*) as n FROM ml_listings WHERE id NOT LIKE 'MLB%' AND id NOT LIKE 'ymp%' AND id NOT LIKE 'YMP%'", fetchone=True)['n']
+            ymp_count = exe("SELECT COUNT(*) as n FROM ml_listings WHERE id LIKE 'YMP%%' OR id LIKE 'ymp%%'", fetchone=True)['n']
+            nao_mlb   = exe("SELECT COUNT(*) as n FROM ml_listings WHERE id NOT LIKE 'MLB%%' AND id NOT LIKE 'ymp%%' AND id NOT LIKE 'YMP%%'", fetchone=True)['n']
 
             # 2. Mover YMP para yampi_listings
-            ymp_rows = exe("SELECT id, sku, titulo, preco, status FROM ml_listings WHERE id LIKE 'YMP%' OR id LIKE 'ymp%'", fetchall=True) or []
+            ymp_rows = exe("SELECT id, sku, titulo, preco, status FROM ml_listings WHERE id LIKE 'YMP%%' OR id LIKE 'ymp%%'", fetchall=True) or []
             migrados = 0
             c_pg = "ON CONFLICT(id) DO UPDATE SET titulo=EXCLUDED.titulo, preco=EXCLUDED.preco, status=EXCLUDED.status"
             for r in ymp_rows:
@@ -2247,12 +2247,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 except: pass
 
             # 3. Remover YMP da ml_listings
-            exe("DELETE FROM ml_listings WHERE id LIKE 'YMP%' OR id LIKE 'ymp%'")
+            exe("DELETE FROM ml_listings WHERE id LIKE 'YMP%%' OR id LIKE 'ymp%%'")
 
             # 4. Remover registros sem ID MLB válido
             removidos_invalidos = 0
             try:
-                exe("DELETE FROM ml_listings WHERE id NOT LIKE 'MLB%'")
+                exe("DELETE FROM ml_listings WHERE id NOT LIKE 'MLB%%'")
                 removidos_invalidos = nao_mlb
             except: pass
 
