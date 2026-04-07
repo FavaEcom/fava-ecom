@@ -6188,7 +6188,7 @@ function renderAnuncios(){
     <div class="kpi"><div class="kl">Margem média</div><div class="kv" style="color:${mgMed===null?'var(--muted)':mgMed>=.20?'var(--verde)':mgMed>=.10?'var(--amarelo)':'var(--vermelho)'}">${mgMed!==null?(mgMed*100).toFixed(1)+'%':'—'}</div></div>
     <div class="kpi"><div class="kl">Margem &lt; 10%</div><div class="kv" style="color:var(--vermelho)">${comMargem.filter(a=>a.margem_atual<.10).length}</div></div>
     <div class="kpi"><div class="kl">Sem frete</div><div class="kv" style="color:${lista.filter(a=>a.frete===0).length?'var(--amarelo)':'var(--verde)'}">${lista.filter(a=>a.frete===0).length}</div></div>
-    <div class="kpi"><div class="kl">🆕 Novos 48h</div><div class="kv" style="color:var(--azul2)">${lista.filter(a=>a.isNovo).length}</div></div>\`;
+    <div class="kpi"><div class="kl">🆕 Novos 48h</div><div class="kv" style="color:var(--azul2)">${lista.filter(a=>a.isNovo).length}</div></div>`;
 }
 
 let anunciosFiltroStatus = 'todos';
