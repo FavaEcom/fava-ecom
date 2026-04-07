@@ -517,8 +517,9 @@ def sync_produtos():
                 p_ph = '%s' if IS_PG else '?'
                 hist = exe(f"SELECT AVG(cmv_br) as media FROM historico_compras WHERE sku={p_ph} AND cmv_br>0",
                            (s,), fetchone=True)
-                if hist and hist.get('media',0)>0:
-                    exe(f"UPDATE produtos SET custo_br={hist['media']}, custo={hist['media']} WHERE sku='{s}'")
+                media_val = float(hist.get('media') or 0)
+                if media_val > 0:
+                    exe(f"UPDATE produtos SET custo_br={media_val}, custo={media_val} WHERE sku='{s}'" )
         print(f'[SYNC] CMV complementado do historico')
     except Exception as e:
         print(f'[SYNC] CMV complemento erro: {e}')
@@ -819,20 +820,23 @@ def ml_get(path):
 
 def sync_ml_listings():
     if not _ml_token.get('access'): return 0
-    print('[SYNC] Anúncios ML...')
+    print('[SYNC] Anúncios ML — coletando todos os IDs...')
     all_ids = []
     scroll = None
-    for _ in range(30):
-        path = f'users/537714337/items/search?status=active&limit=50'
+    pagina = 0
+    while True:
+        pagina += 1
+        path = 'users/537714337/items/search?status=active&limit=50'
         if scroll: path += f'&scroll_id={scroll}'
         d = ml_get(path)
         if not d: break
-        ids = d.get('results',[])
+        ids = d.get('results', [])
         if not ids: break
         all_ids += ids
         scroll = d.get('scroll_id')
+        print(f'[ML] Página {pagina}: +{len(ids)} IDs (total {len(all_ids)})')
         if len(ids) < 50 or not scroll: break
-        time.sleep(0.2)
+        time.sleep(0.3)
     if not all_ids:
         print('[ML] Nenhum anúncio encontrado'); return 0
     print(f'[ML] {len(all_ids)} anúncios — buscando detalhes...')
@@ -1087,7 +1091,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/pedidos-pc':         self._get_pedidos_pc,
             '/api/cmv-cache':            self._get_cmv_compat,
             '/api/sync/now':             self._sync_now,
-            '/api/sync/ml-titulos':      self._sync_ml_titulos,
             '/api/sync/bling-anuncios':  self._sync_bling_anuncios,
             '/api/sync/yampi':           self._sync_yampi,
             '/api/db/limpar-ml':         self._post_limpar_ml,
@@ -1119,6 +1122,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/nf':                 self._post_nf,
             '/api/db/listing':            self._post_listing,
             '/api/sync/lucro':            self._sync_lucro,
+            '/api/sync/ml-titulos':      self._sync_ml_titulos,
+            '/api/sync/fix-status':      self._sync_fix_status,
+            '/api/db/listings-novos':    self._get_listings_novos,
             '/api/db/campanha':           self._post_campanha,
             '/api/db/cprod-map':          self._post_cprod_map,
             '/api/db/listings-batch':     self._post_listings_batch,
