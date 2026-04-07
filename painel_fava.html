@@ -6160,7 +6160,7 @@ function renderAnuncios(){
       : '<span style="font-size:16px">🛒</span>';
     const row = '<tr style="border-bottom:1px solid #f9fafb">'
       +'<td style="padding:4px 6px">'+thumb+'</td>'
-      +'<td style="padding:4px 8px;overflow:hidden;max-width:0" title="'+a.titulo.replace(/"/g,\'&quot;\')+'">'
+      +'<td style="padding:4px 8px;overflow:hidden;max-width:0" title="'+a.titulo.replace(/"/g,'&quot;')+'">'
         +'<div style="font-size:11px;font-weight:600;color:#1F3864;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+a.titulo+novoBadge+'</div>'
         +'<div style="font-size:10px;color:var(--muted)">'+(a.id?'<a href="https://www.mercadolivre.com.br/p/'+a.id+'" target="_blank" style="color:#3b82f6;text-decoration:none">'+a.id+'</a>':'')+'</div>'
       +'</td>'
