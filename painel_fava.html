@@ -1658,7 +1658,7 @@ async function fixStatusPedidos(el){
   const orig = el.textContent;
   el.textContent='⏳...'; el.disabled=true;
   try {
-    const r = await fetch(`${RAILWAY}/api/sync/fix-status`,{method:'POST',headers:{'Authorization':'Bearer '+tokens.server}});
+    const r = await fetch('/api/sync/fix-status',{method:'POST',headers:{'Authorization':'Bearer '+tokens.server}});
     const d = await r.json();
     el.textContent='✓ Rodando!';
     setTimeout(()=>{el.textContent=orig;el.disabled=false;},3000);
@@ -1669,7 +1669,7 @@ async function carregarListingsNovos(){
   const wrap=document.getElementById('listings-novos-wrap');
   wrap.innerHTML='<div style="padding:12px;font-size:12px;color:var(--muted);text-align:center">⏳ Carregando...</div>';
   try {
-    const r=await fetch(`${RAILWAY}/api/db/listings-novos?horas=24`,{headers:{'Authorization':'Bearer '+tokens.server}});
+    const r=await fetch('/api/db/listings-novos?horas=24');
     const d=await r.json();
     const lista=d.listings||[];
     if(!lista.length){wrap.innerHTML='<div style="padding:12px;font-size:12px;color:var(--muted);text-align:center">Nenhum anúncio novo nas últimas 24h</div>';return;}
@@ -1687,7 +1687,7 @@ async function fixTitulosML(el){
   const orig = el.textContent;
   el.textContent = '⏳ Aguarde...'; el.disabled = true;
   try {
-    const r = await fetch(`${RAILWAY}/api/sync/ml-titulos`, {method:'POST', headers:{'Authorization':'Bearer '+tokens.server}});
+    const r = await fetch('/api/sync/ml-titulos', {method:'POST', headers:{'Authorization':'Bearer '+tokens.server}});
     const d = await r.json();
     el.textContent = '✓ Rodando!';
     setTimeout(()=>{el.textContent=orig;el.disabled=false;}, 3000);
