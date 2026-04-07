@@ -5461,6 +5461,20 @@ function setView(v){
   if(v==='perguntas'){ const k=localStorage.getItem('fava_claude_key')||''; safe('perg-apikey',el=>el.value=k); }
 }
 
+// ── Fix automático: garantir altura do container de views na abertura ──────
+(function fixContainerAltura(){
+  const vd = document.getElementById('view-dashboard');
+  if(!vd) return;
+  const parent = vd.parentElement;
+  if(parent){
+    parent.style.minHeight = 'calc(100vh - 150px)';
+    parent.style.display   = 'block';
+  }
+  // Garantir que view-tabs não estica verticalmente
+  const vt = document.querySelector('.view-tabs');
+  if(vt){ vt.style.alignItems = 'flex-start'; vt.style.flexShrink = '0'; }
+})();
+
 // ══════════════════════════════════════════════════════════════════════
 // FINANCEIRO
 // ══════════════════════════════════════════════════════════════════════
