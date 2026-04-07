@@ -660,6 +660,9 @@ function salvarCfg(){
     <div class="anunc-kpis" id="anunc-kpis"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
       <input type="text" id="anunc-search" placeholder="Buscar produto, SKU, MLB..." oninput="filtrarAnuncios()" style="border:1px solid var(--borda);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:240px">
+      <span id="anunc-pag-info" style="font-size:11px;color:var(--muted)"></span>
+      <button onclick="window._anuncPagina=Math.max(0,(window._anuncPagina||0)-1);renderAnuncios()" style="padding:4px 8px;font-size:12px;background:#f3f4f6;border:1px solid var(--borda);border-radius:5px;cursor:pointer">◀</button>
+      <button onclick="window._anuncPagina=(window._anuncPagina||0)+1;renderAnuncios()" style="padding:4px 8px;font-size:12px;background:#f3f4f6;border:1px solid var(--borda);border-radius:5px;cursor:pointer">▶</button>
       <button class="filter-btn a" id="fb-todos"   onclick="filtrarAnuncioStatus('todos',this)">Todos</button>
       <button class="filter-btn"   id="fb-alerta"  onclick="filtrarAnuncioStatus('alerta',this)">⚠️ Alertas</button>
       <button class="filter-btn"   id="fb-promo"   onclick="filtrarAnuncioStatus('promo',this)">🏷️ Promoções</button>
@@ -6135,7 +6138,15 @@ function renderAnuncios(){
     tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:20px;color:#9ca3af">Nenhum anúncio encontrado</td></tr>';
     return;
   }
-  tbody.innerHTML = lista.map(a=>{
+  // Limitar a 500 para não travar o browser
+  const paginaAtual = window._anuncPagina || 0;
+  const POR_PAG = 500;
+  const listaPage = lista.slice(paginaAtual * POR_PAG, (paginaAtual + 1) * POR_PAG);
+  // Atualizar info de paginação
+  const totalPags = Math.ceil(lista.length / POR_PAG);
+  const infoEl = document.getElementById('anunc-pag-info');
+  if(infoEl) infoEl.textContent = `Mostrando ${listaPage.length} de ${lista.length} anúncios (pág ${paginaAtual+1}/${totalPags})`;
+  tbody.innerHTML = listaPage.map(a=>{
     const mc = a.margem_atual;
     const mgCor = mc===null?'#9ca3af':mc>=.20?'#16a34a':mc>=.10?'#d97706':'#dc2626';
     const mgBg  = mc===null?'#f3f4f6':mc>=.20?'#dcfce7':mc>=.10?'#fef9c3':'#fee2e2';
