@@ -329,6 +329,9 @@ def criar_tabelas():
     try:
         exe("ALTER TABLE ml_listings ADD COLUMN IF NOT EXISTS margem_real REAL DEFAULT 0")
     except: pass
+    try:
+        exe("ALTER TABLE ml_listings ADD COLUMN IF NOT EXISTS data_criacao TIMESTAMP")
+    except: pass
     # Migração: peso, dimensões, fiscal
     for col, tipo in [('peso','REAL DEFAULT 0'),('largura','REAL DEFAULT 0'),('altura','REAL DEFAULT 0'),
                       ('comprimento','REAL DEFAULT 0'),('st','INTEGER DEFAULT 0'),
@@ -836,7 +839,7 @@ def sync_ml_listings():
     salvos = 0
     for i in range(0, len(all_ids), 20):
         lote = ','.join(all_ids[i:i+20])
-        d = ml_get(f'items?ids={lote}&attributes=id,title,price,seller_sku,listing_type_id,status,sale_fee,shipping,shipping_dimensions')
+        d = ml_get(f'items?ids={lote}&attributes=id,title,price,seller_sku,listing_type_id,status,sale_fee,shipping,shipping_dimensions,start_time')
         if not d: continue
         for x in (d if isinstance(d, list) else []):
             if x.get('code') != 200: continue
@@ -851,6 +854,7 @@ def sync_ml_listings():
             shp       = it.get('shipping',{}) or {}
             free_ship = 1 if (shp.get('free_shipping') or ltype in ('gold_pro','gold_premium')) else 0
             status_it = it.get('status','')
+            start_time = (it.get('start_time','') or '')[:19].replace('T',' ')
             # Dimensões e peso
             dims = it.get('shipping_dimensions') or {}
             peso_kg  = float((dims.get('weight') or {}).get('value') or 0) / 1000 if isinstance((dims.get('weight') or {}), dict) and (dims.get('weight') or {}).get('unit','') == 'g' else float((dims.get('weight') or {}).get('value') or 0)
@@ -866,8 +870,14 @@ def sync_ml_listings():
                      'preco=excluded.preco,sale_fee=excluded.sale_fee,listing_type=excluded.listing_type,'
                      'free_shipping=excluded.free_shipping,status=excluded.status,'
                      'peso=excluded.peso,largura=excluded.largura,altura=excluded.altura,comprimento=excluded.comprimento')
-                exe(f"INSERT INTO ml_listings (id,sku,titulo,preco,sale_fee,listing_type,free_shipping,status,peso,largura,altura,comprimento) VALUES ({qmark(12)}) {c}",
-                    (iid,sku,titulo,preco,sale_fee,ltype,free_ship,status_it,peso_kg,larg_cm,alt_cm,comp_cm))
+                dt_val = start_time if start_time else None
+                if IS_PG:
+                    c2 = c + ',data_criacao=COALESCE(ml_listings.data_criacao,EXCLUDED.data_criacao)'
+                    exe(f"INSERT INTO ml_listings (id,sku,titulo,preco,sale_fee,listing_type,free_shipping,status,peso,largura,altura,comprimento,data_criacao) VALUES ({qmark(13)}) {c2}",
+                        (iid,sku,titulo,preco,sale_fee,ltype,free_ship,status_it,peso_kg,larg_cm,alt_cm,comp_cm,dt_val))
+                else:
+                    exe(f"INSERT INTO ml_listings (id,sku,titulo,preco,sale_fee,listing_type,free_shipping,status,peso,largura,altura,comprimento) VALUES ({qmark(12)}) {c}",
+                        (iid,sku,titulo,preco,sale_fee,ltype,free_ship,status_it,peso_kg,larg_cm,alt_cm,comp_cm))
                 salvos += 1
             except Exception as e:
                 print(f'[ML] listing {iid}: {e}')
@@ -2313,6 +2323,68 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 'sku_corrigidos': sku_corrigidos,
             })
         except Exception as e: self._err(500, str(e))
+
+    def _sync_fix_status(self):
+        """POST /api/sync/fix-status — busca status real no Bling para pedidos com status vazio"""
+        def _run():
+            rows = exe("SELECT id FROM pedidos WHERE status IS NULL OR status=''", fetchall=True) or []
+            if not rows:
+                print('[FIX-STATUS] Nenhum pedido sem status'); return
+            print(f'[FIX-STATUS] {len(rows)} pedidos sem status...')
+            _MAP = {0:'Em aberto',3:'Em andamento',4:'Verificado',9:'Atendido',
+                    10:'Cancelado',11:'Em digitação',12:'Em projeto',
+                    15:'Aguardando confirmação',17:'Em produção',19:'Aguardando NF',
+                    21:'NF Emitida',23:'Faturado',26:'Em transporte',27:'Entregue'}
+            ok = 0
+            for r in rows:
+                pid = r['id']
+                try:
+                    d = bling_get(f'pedidos/vendas/{pid}')
+                    if not d: continue
+                    dados = d.get('data') or d
+                    _sit = dados.get('situacao') or {}
+                    if isinstance(_sit, dict):
+                        status = _sit.get('valor') or _sit.get('nome') or ''
+                        if not status:
+                            status = _MAP.get(int(_sit.get('id', 0)), '')
+                    elif isinstance(_sit, (int, str)):
+                        status = _MAP.get(int(_sit), str(_sit))
+                    else:
+                        status = ''
+                    if status:
+                        exe("UPDATE pedidos SET status=%s WHERE id=%s", (status, pid))
+                        ok += 1
+                    time.sleep(0.15)
+                except Exception as e:
+                    print(f'[FIX-STATUS] {pid}: {e}')
+            print(f'[FIX-STATUS] {ok}/{len(rows)} atualizados')
+        threading.Thread(target=_run, daemon=True).start()
+        self._ok({'ok': True, 'msg': 'Fix status iniciado em background'})
+
+    def _get_listings_novos(self):
+        """GET /api/db/listings-novos?horas=24 — anúncios criados nas últimas N horas"""
+        try:
+            from urllib.parse import parse_qs, urlparse
+            qs = parse_qs(urlparse(self.path).query)
+            horas = int((qs.get('horas') or ['24'])[0])
+            if IS_PG:
+                rows = exe("""
+                    SELECT l.id, l.sku, COALESCE(NULLIF(l.titulo,''), p.nome, l.sku) as titulo,
+                           l.preco, l.status, l.data_criacao
+                    FROM ml_listings l
+                    LEFT JOIN produtos p ON p.sku = l.sku
+                    WHERE l.data_criacao >= NOW() - INTERVAL '%s hours'
+                      AND l.id LIKE 'MLB%%'
+                    ORDER BY l.data_criacao DESC
+                """, (horas,), fetchall=True) or []
+            else:
+                rows = []
+            for r in rows:
+                if r.get('data_criacao'):
+                    r['data_criacao'] = str(r['data_criacao'])
+            self._ok({'total': len(rows), 'horas': horas, 'listings': rows})
+        except Exception as e:
+            self._err(500, str(e))
 
     def _sync_yampi(self):
         """POST /api/sync/yampi — sincroniza anúncios Yampi para yampi_listings"""

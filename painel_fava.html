@@ -521,6 +521,8 @@ function salvarCfg(){
   <button class="btn-reload" id="btn-renovar-ml" onclick="forcarRenovacaoML()" style="background:rgba(239,68,68,.3);border-color:rgba(239,68,68,.5)" title="Renovar token ML expirado">🔑 Renovar ML</button>
   <button class="btn-reload" id="btn-renovar-bling" onclick="forcarRenovacaoBling()" style="background:rgba(251,146,60,.3);border-color:rgba(251,146,60,.5)" title="Renovar token Bling expirado (401)">🔑 Renovar Bling</button>
   <button class="btn-reload" onclick="sincBlingAnuncios(this)" style="background:rgba(99,102,241,.3);border-color:rgba(99,102,241,.5)" title="Baixar todos os anúncios ML do Bling para o banco">📥 Sync Anúncios</button>
+  <button class="btn-reload" onclick="fixTitulosML(this)" style="background:rgba(234,179,8,.3);border-color:rgba(234,179,8,.5)" title="Rebuscar título real do ML para todos os anúncios">🔤 Fix Títulos</button>
+  <button class="btn-reload" onclick="fixStatusPedidos(this)" style="background:rgba(16,185,129,.3);border-color:rgba(16,185,129,.5)" title="Corrigir pedidos sem status (busca detalhe no Bling)">🔧 Fix Status</button>
   <button class="btn-reload" id="btn-db-status" onclick="mostrarStatusDB()" title="Status do banco de dados">🗄️ DB</button>
   <button class="btn-reload" onclick="document.getElementById('modal-cfg').style.display='flex'">⚙️</button>
 </header>
@@ -624,6 +626,21 @@ function salvarCfg(){
       </div>
     </div>
 
+    <!-- Anuncios Novos + Gerador EAN -->
+    <div class="grid2">
+      <div class="card">
+        <div class="card-head">
+          <h3>🆕 Anúncios Novos (24h)</h3>
+          <button class="btn-fin" onclick="carregarListingsNovos()">🔄</button>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div id="listings-novos-wrap">
+            <div style="padding:12px;font-size:12px;color:var(--muted);text-align:center">Clique em 🔄 para verificar</div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="align-self:start">
+
     <!-- Gerador EAN -->
     <div class="card" style="max-width:340px">
       <div class="card-head"><h3>🏷️ Gerador EAN-13</h3></div>
@@ -631,6 +648,7 @@ function salvarCfg(){
         <div id="ean-display" style="font-family:monospace;font-size:20px;font-weight:700;letter-spacing:3px;color:var(--text);flex:1">—</div>
         <button onclick="copiarEAN()" title="Copiar" style="padding:5px 9px;background:#f3f4f6;border:1px solid var(--borda);border-radius:6px;cursor:pointer;font-size:14px">📋</button>
         <button onclick="gerarEAN()" title="Novo EAN" style="padding:5px 9px;background:#1F3864;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px">↻</button>
+      </div>
       </div>
     </div>
   </div>
@@ -1625,6 +1643,49 @@ async function mostrarStatusDB(){
 
 // Força renovação manual do token ML
 
+async function fixStatusPedidos(el){
+  const orig = el.textContent;
+  el.textContent='⏳...'; el.disabled=true;
+  try {
+    const r = await fetch(`${RAILWAY}/api/sync/fix-status`,{method:'POST',headers:{'Authorization':'Bearer '+tokens.server}});
+    const d = await r.json();
+    el.textContent='✓ Rodando!';
+    setTimeout(()=>{el.textContent=orig;el.disabled=false;},3000);
+    alert('Fix status rodando em background.\nAguarde ~1min — os pedidos sem status serão atualizados.');
+  } catch(e){ el.textContent=orig; el.disabled=false; alert('Erro: '+e.message); }
+}
+async function carregarListingsNovos(){
+  const wrap=document.getElementById('listings-novos-wrap');
+  wrap.innerHTML='<div style="padding:12px;font-size:12px;color:var(--muted);text-align:center">⏳ Carregando...</div>';
+  try {
+    const r=await fetch(`${RAILWAY}/api/db/listings-novos?horas=24`,{headers:{'Authorization':'Bearer '+tokens.server}});
+    const d=await r.json();
+    const lista=d.listings||[];
+    if(!lista.length){wrap.innerHTML='<div style="padding:12px;font-size:12px;color:var(--muted);text-align:center">Nenhum anúncio novo nas últimas 24h</div>';return;}
+    let html='<table class="tbl"><thead><tr><th>MLB</th><th>Título</th><th class="num">Preço</th></tr></thead><tbody>';
+    lista.forEach(l=>{
+      const titulo=(l.titulo||l.sku||'').substring(0,40);
+      const preco=l.preco?(l.preco).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'—';
+      html+=`<tr><td style="font-size:10px"><a href="https://www.mercadolivre.com.br/anuncio/${l.id}" target="_blank" style="color:var(--accent)">${l.id}</a></td><td style="font-size:11px">${titulo}</td><td class="num" style="font-size:11px">${preco}</td></tr>`;
+    });
+    html+=`</tbody></table><div style="padding:6px 12px;font-size:11px;color:var(--muted)">${lista.length} anúncio(s) nas últimas 24h</div>`;
+    wrap.innerHTML=html;
+  } catch(e){ wrap.innerHTML=`<div style="padding:12px;font-size:12px;color:var(--red)">${e.message}</div>`; }
+}
+async function fixTitulosML(el){
+  const orig = el.textContent;
+  el.textContent = '⏳ Aguarde...'; el.disabled = true;
+  try {
+    const r = await fetch(`${RAILWAY}/api/sync/ml-titulos`, {method:'POST', headers:{'Authorization':'Bearer '+tokens.server}});
+    const d = await r.json();
+    el.textContent = '✓ Rodando!';
+    setTimeout(()=>{el.textContent=orig;el.disabled=false;}, 3000);
+    alert('Atualização de títulos rodando em background.\nAguarde ~2min e recarregue os anúncios.');
+  } catch(e) {
+    el.textContent = orig; el.disabled = false;
+    alert('Erro: ' + e.message);
+  }
+}
 async function sincBlingAnuncios(el){
   if(el){el.textContent='Baixando...';el.disabled=true;}
   try{
