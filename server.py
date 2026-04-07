@@ -2121,18 +2121,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def _get_listings(self):
         try:
             rows = exe("""
-                WITH ult_camp AS (
-                    SELECT DISTINCT ON (mlb_id)
-                        mlb_id, campanha as camp_nome, desconto as camp_desconto,
-                        data_aplicacao as camp_data, status as camp_status
-                    FROM campanha_historico
-                    ORDER BY mlb_id, data_aplicacao DESC
-                )
-                SELECT l.id, l.sku, COALESCE(NULLIF(l.titulo,''), p.nome, l.sku) as titulo, l.preco,
-                       l.sale_fee, l.listing_type, l.free_shipping, l.status,
+                SELECT l.id, l.sku,
+                       COALESCE(NULLIF(l.titulo,''), p.nome, l.sku) as titulo,
+                       l.preco, l.sale_fee, l.listing_type,
+                       l.free_shipping, l.status,
                        l.margem_minima, l.frete_medio, l.desconto,
-                       COALESCE(p.custo_br, cm.cmv_br, 0) as cmv,
-                       COALESCE(p.custo_pr, cm.cmv_pr, 0) as cmv_pr,
+                       COALESCE(p.custo_br, 0) as cmv,
+                       COALESCE(p.custo_pr, 0) as cmv_pr,
                        COALESCE(l.peso, 0) as peso,
                        COALESCE(l.largura, 0) as largura,
                        COALESCE(l.altura, 0) as altura,
@@ -2140,17 +2135,32 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                        COALESCE(l.st, 0) as st,
                        COALESCE(l.st_imposto, 0) as st_imposto,
                        COALESCE(l.monofasico, 0) as monofasico,
-                       ch.camp_nome, ch.camp_desconto, ch.camp_data, ch.camp_status
+                       NULL as camp_nome, 0 as camp_desconto,
+                       NULL as camp_data, NULL as camp_status
                 FROM ml_listings l
                 LEFT JOIN produtos p ON p.sku = l.sku
-                LEFT JOIN cprod_map cm ON cm.sku = l.sku
-                LEFT JOIN ult_camp ch ON ch.mlb_id = l.id
                 WHERE l.id IS NOT NULL
                   AND l.id NOT LIKE 'YMP%'
                   AND l.id NOT LIKE 'ymp%'
                   AND l.id LIKE 'MLB%'
                 ORDER BY l.titulo
             """, fetchall=True)
+            # Adicionar campanha separadamente para não quebrar a query principal
+            try:
+                camps = exe("""
+                    SELECT DISTINCT ON (mlb_id) mlb_id,
+                           campanha as camp_nome, desconto as camp_desconto,
+                           data_aplicacao as camp_data
+                    FROM campanha_historico
+                    ORDER BY mlb_id, data_aplicacao DESC
+                """, fetchall=True) or []
+                camp_map = {r['mlb_id']: r for r in camps}
+                for r in rows:
+                    ch = camp_map.get(r['id'], {})
+                    r['camp_nome']     = ch.get('camp_nome')
+                    r['camp_desconto'] = ch.get('camp_desconto', 0)
+                    r['camp_data']     = str(ch.get('camp_data','')) if ch.get('camp_data') else None
+            except: pass
             self._ok(rows)
         except Exception as e: self._err(500, str(e))
 
