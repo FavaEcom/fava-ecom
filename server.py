@@ -1117,6 +1117,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         clean = self.path.split('?')[0]
         routes = {
             '/api/db/produto':            self._post_produto,
+            '/api/db/produtos/batch':    self._post_produtos_batch,
             '/api/db/produtos/update-fiscal': self._post_produtos_update_fiscal,
             '/api/db/historico':          self._post_historico,
             '/api/db/limpar-nf':          self._post_limpar_nf,
@@ -2663,6 +2664,50 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._ok({'ok':True,'n':n})
             print(f'[CMV] {n} SKUs recebidos')
         except Exception as e: self._err(500, str(e))
+
+    def _post_produtos_batch(self):
+        """POST /api/db/produtos/batch — importa lista de produtos da planilha BASE_DADOS_V2"""
+        try:
+            lista = self._body()
+            if not isinstance(lista, list): lista = [lista]
+            inseridos = 0
+            for p in lista:
+                sku = str(p.get('sku','')).strip()
+                if not sku: continue
+                try:
+                    exe("""INSERT INTO produtos
+                        (sku,nome,marca,familia,fornecedor,custo,custo_br,custo_pr,
+                         ipi,cred_icms,st,st_imposto,monofasico,
+                         ncm,peso,largura,altura,comprimento,estoque)
+                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,0)
+                        ON CONFLICT(sku) DO UPDATE SET
+                          nome=COALESCE(NULLIF(EXCLUDED.nome,''),produtos.nome),
+                          marca=COALESCE(NULLIF(EXCLUDED.marca,''),produtos.marca),
+                          familia=COALESCE(NULLIF(EXCLUDED.familia,''),produtos.familia),
+                          fornecedor=COALESCE(NULLIF(EXCLUDED.fornecedor,''),produtos.fornecedor),
+                          custo_br=CASE WHEN EXCLUDED.custo_br>0 THEN EXCLUDED.custo_br ELSE produtos.custo_br END,
+                          custo_pr=CASE WHEN EXCLUDED.custo_pr>0 THEN EXCLUDED.custo_pr ELSE produtos.custo_pr END,
+                          custo=CASE WHEN EXCLUDED.custo>0 THEN EXCLUDED.custo ELSE produtos.custo END,
+                          ipi=EXCLUDED.ipi, cred_icms=EXCLUDED.cred_icms,
+                          st=EXCLUDED.st, st_imposto=EXCLUDED.st_imposto,
+                          monofasico=EXCLUDED.monofasico,
+                          ncm=COALESCE(NULLIF(EXCLUDED.ncm,''),produtos.ncm),
+                          peso=CASE WHEN EXCLUDED.peso>0 THEN EXCLUDED.peso ELSE produtos.peso END,
+                          largura=CASE WHEN EXCLUDED.largura>0 THEN EXCLUDED.largura ELSE produtos.largura END,
+                          altura=CASE WHEN EXCLUDED.altura>0 THEN EXCLUDED.altura ELSE produtos.altura END,
+                          comprimento=CASE WHEN EXCLUDED.comprimento>0 THEN EXCLUDED.comprimento ELSE produtos.comprimento END
+                    """, (sku, p.get('nome',''), p.get('marca',''), p.get('familia',''),
+                             p.get('fornecedor',''), p.get('custo',0), p.get('custo_br',0),
+                             p.get('custo_pr',0), p.get('ipi',0), p.get('cred_icms',0),
+                             int(p.get('st',0)), p.get('st_imposto',0), int(p.get('monofasico',0)),
+                             p.get('ncm',''), p.get('peso',0), p.get('largura',0),
+                             p.get('altura',0), p.get('comprimento',0)))
+                    inseridos += 1
+                except Exception as e:
+                    print(f'[BATCH] sku {sku}: {e}')
+            self._ok({'inseridos': inseridos, 'total': len(lista)})
+        except Exception as e:
+            self._err(500, str(e))
 
     def _post_produto(self):
         try:
