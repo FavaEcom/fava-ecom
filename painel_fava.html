@@ -6136,47 +6136,49 @@ function renderAnuncios(){
   }
   tbody.innerHTML = lista.map(a=>{
     const mc = a.margem_atual;
-    const mgCor = mc===null?'var(--muted)':mc>=.20?'#16a34a':mc>=.10?'#d97706':'#dc2626';
+    const mgCor = mc===null?'#9ca3af':mc>=.20?'#16a34a':mc>=.10?'#d97706':'#dc2626';
     const mgBg  = mc===null?'#f3f4f6':mc>=.20?'#dcfce7':mc>=.10?'#fef9c3':'#fee2e2';
     const mgStr = mc!==null ? (mc*100).toFixed(1)+'%' : '—';
     const taxaTxt = a.taxa>0 ? (a.taxa*100).toFixed(0)+'%' : '—';
     const freteLiq = a.freteL>0 ? 'R$'+(a.freteL).toFixed(0) : (a.frete>0?'R$'+a.frete.toFixed(0):'—');
-    // Badges
     const novoBadge  = a.isNovo ? '<span style="background:#dbeafe;color:#1e40af;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700;margin-left:3px">NOVO</span>' : '';
-    const freteBadge = a.free_shipping ? '<span style="background:#dcfce7;color:#15803d;font-size:9px;padding:1px 5px;border-radius:4px">Grátis</span>' : '<span style="background:#f3f4f6;color:#6b7280;font-size:9px;padding:1px 5px;border-radius:4px">Comprador</span>';
-    let statusBadge  = '';
-    if(mc===null)          statusBadge='<span style="background:#fef9c3;color:#92400e;font-size:9px;padding:1px 5px;border-radius:4px">Sem CMV</span>';
-    else if(mc<0)          statusBadge='<span style="background:#fee2e2;color:#dc2626;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">Neg.</span>';
-    else if(mc<.10)        statusBadge='<span style="background:#fee2e2;color:#dc2626;font-size:9px;padding:1px 5px;border-radius:4px">&lt;10%</span>';
-    else if(mc<.20)        statusBadge='<span style="background:#fef9c3;color:#92400e;font-size:9px;padding:1px 5px;border-radius:4px">&lt;20%</span>';
-    else                   statusBadge='<span style="background:#dcfce7;color:#15803d;font-size:9px;padding:1px 5px;border-radius:4px">✓ OK</span>';
-    // Foto (thumb via ML CDN pattern)
-    const thumb = a.id
-      ? '<a href="https://www.mercadolivre.com.br/p/'+a.id+'" target="_blank">'
-        +'<img src="https://http2.mlstatic.com/D_NQ_NP_'+a.id+'-F.webp" '
-        +'onerror="this.onerror=null;this.src=\'\';this.parentNode.innerHTML=\'🛒\'" '
-        +'style="width:32px;height:32px;object-fit:contain;border-radius:4px;border:1px solid #e5e7eb" loading="lazy">'
-        +'</a>'
+    const freteBadge = a.free_shipping
+      ? '<span style="background:#dcfce7;color:#15803d;font-size:9px;padding:1px 5px;border-radius:4px">Grátis</span>'
+      : '<span style="background:#f3f4f6;color:#6b7280;font-size:9px;padding:1px 5px;border-radius:4px">Comprador</span>';
+    let statusBadge = '';
+    if(mc===null)   statusBadge='<span style="background:#fef9c3;color:#92400e;font-size:9px;padding:1px 5px;border-radius:4px">Sem CMV</span>';
+    else if(mc<0)   statusBadge='<span style="background:#fee2e2;color:#dc2626;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">Neg.</span>';
+    else if(mc<.10) statusBadge='<span style="background:#fee2e2;color:#dc2626;font-size:9px;padding:1px 5px;border-radius:4px">&lt;10%</span>';
+    else if(mc<.20) statusBadge='<span style="background:#fef9c3;color:#92400e;font-size:9px;padding:1px 5px;border-radius:4px">&lt;20%</span>';
+    else            statusBadge='<span style="background:#dcfce7;color:#15803d;font-size:9px;padding:1px 5px;border-radius:4px">OK</span>';
+    const imgSrc = a.id ? 'https://http2.mlstatic.com/D_NQ_NP_'+a.id+'-F.webp' : '';
+    const thumb = imgSrc
+      ? '<a href="https://www.mercadolivre.com.br/p/'+a.id+'" target="_blank"><img src="'+imgSrc+'" width="32" height="32" style="object-fit:contain;border-radius:4px;border:1px solid #e5e7eb;display:block" onerror="this.remove()"></a>'
       : '<span style="font-size:16px">🛒</span>';
-    const row = '<tr style="border-bottom:1px solid #f9fafb">'
-      +'<td style="padding:4px 6px">'+thumb+'</td>'
-      +'<td style="padding:4px 8px;overflow:hidden;max-width:0" title="'+a.titulo.replace(/"/g,'&quot;')+'">'
-        +'<div style="font-size:11px;font-weight:600;color:#1F3864;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+a.titulo+novoBadge+'</div>'
-        +'<div style="font-size:10px;color:var(--muted)">'+(a.id?'<a href="https://www.mercadolivre.com.br/p/'+a.id+'" target="_blank" style="color:#3b82f6;text-decoration:none">'+a.id+'</a>':'')+'</div>'
-      +'</td>'
-      +'<td style="padding:4px 8px;font-size:11px;font-weight:700;color:#1F3864">'+(a.sku||'—')+'</td>'
-      +'<td style="padding:4px 8px;font-size:10px;color:var(--muted)">'+(a.id||'—')+'</td>'
-      +'<td style="padding:4px 8px;text-align:right;font-weight:700;font-size:12px">R$'+(a.preco||0).toFixed(2)+'</td>'
-      +'<td style="padding:4px 8px;text-align:right;font-size:11px;color:var(--muted)">'+(a.cmv>0?'R$'+a.cmv.toFixed(2):'<span style=\"color:#f59e0b\">—</span>')+'</td>'
-      +'<td style="padding:4px 8px;text-align:right;font-size:11px;color:var(--muted)">'+taxaTxt+'</td>'
-      +'<td style="padding:4px 8px;text-align:right;font-size:11px">'+freteLiq+'</td>'
-      +'<td style="padding:4px 8px;text-align:right"><span style="background:'+mgBg+';color:'+mgCor+';font-weight:700;font-size:12px;padding:2px 7px;border-radius:5px">'+mgStr+'</span></td>'
-      +'<td style="padding:4px 8px">'+freteBadge+' '+statusBadge+'</td>'
-      +'</tr>';
-    return row;
+    const tituloSafe = (a.titulo||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const cmvStr = a.cmv>0 ? 'R$'+a.cmv.toFixed(2) : '<span style="color:#f59e0b">—</span>';
+    const mlbLink = a.id ? '<a href="https://www.mercadolivre.com.br/p/'+a.id+'" target="_blank" style="color:#3b82f6;text-decoration:none;font-size:10px">'+a.id+'</a>' : '';
+    return [
+      '<tr style="border-bottom:1px solid #f9fafb">',
+      '<td style="padding:4px 6px">'+thumb+'</td>',
+      '<td style="padding:4px 8px;overflow:hidden;max-width:0" title="'+tituloSafe+'">',
+        '<div style="font-size:11px;font-weight:600;color:#1F3864;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+a.titulo+novoBadge+'</div>',
+        '<div style="font-size:10px;color:var(--muted)">'+mlbLink+'</div>',
+      '</td>',
+      '<td style="padding:4px 8px;font-size:11px;font-weight:700;color:#1F3864">'+(a.sku||'—')+'</td>',
+      '<td style="padding:4px 8px;font-size:10px;color:var(--muted)">'+(a.id||'—')+'</td>',
+      '<td style="padding:4px 8px;text-align:right;font-weight:700;font-size:12px">R$'+(a.preco||0).toFixed(2)+'</td>',
+      '<td style="padding:4px 8px;text-align:right;font-size:11px;color:var(--muted)">'+cmvStr+'</td>',
+      '<td style="padding:4px 8px;text-align:right;font-size:11px;color:var(--muted)">'+taxaTxt+'</td>',
+      '<td style="padding:4px 8px;text-align:right;font-size:11px">'+freteLiq+'</td>',
+      '<td style="padding:4px 8px;text-align:right"><span style="background:'+mgBg+';color:'+mgCor+';font-weight:700;font-size:12px;padding:2px 7px;border-radius:5px">'+mgStr+'</span></td>',
+      '<td style="padding:4px 8px">'+freteBadge+' '+statusBadge+'</td>',
+      '</tr>'
+    ].join('');
   }).join('');
 
   // KPIs
+
   const total=lista.length, comCmv=lista.filter(a=>a.cmv>0).length;
   const comMargem = lista.filter(a=>a.margem_atual!==null && !isNaN(a.margem_atual));
   const mgMed = comMargem.length ? comMargem.reduce((s,a)=>s+a.margem_atual,0)/comMargem.length : null;
