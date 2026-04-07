@@ -110,9 +110,11 @@ def criar_tabelas():
                 cmv_br REAL DEFAULT 0, cmv_pr REAL DEFAULT 0, ncm TEXT, cfop TEXT,
                 v_st REAL DEFAULT 0,
                 cred_icms REAL DEFAULT 0,
+                det_num INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT NOW())""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS v_st REAL DEFAULT 0""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS cred_icms REAL DEFAULT 0""",
+            """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS det_num INTEGER DEFAULT 0""",
             # Deduplicar antes de criar o índice único
             """DELETE FROM historico_compras WHERE id NOT IN (
                 SELECT MIN(id) FROM historico_compras GROUP BY nf, sku
@@ -1554,19 +1556,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             nf_num = p.get('nf', [''])[0].strip()
             if not nf_num: self._err(400, 'nf obrigatorio'); return
 
-            # Subquery: DISTINCT ON por cProd, depois reordena pelo id original (ordem da NF)
+            # Subquery: DISTINCT ON por cProd, ordena por det_num (posição real na NF)
             itens = exe("""SELECT * FROM (
                             SELECT DISTINCT ON (sku) * FROM historico_compras
-                            WHERE nf=%s ORDER BY sku, id ASC
-                          ) t ORDER BY id ASC""", (nf_num,), fetchall=True) or []
+                            WHERE nf=%s ORDER BY sku, det_num ASC, id ASC
+                          ) t ORDER BY det_num ASC, id ASC""", (nf_num,), fetchall=True) or []
 
             header = exe("SELECT * FROM nf_entrada WHERE nf=%s ORDER BY emissao DESC LIMIT 1", (nf_num,), fetchone=True)
 
             if not itens and not header:
                 itens = exe("""SELECT * FROM (
                                 SELECT DISTINCT ON (sku) * FROM historico_compras
-                                WHERE nf LIKE %s ORDER BY sku, id ASC
-                              ) t ORDER BY id ASC""", (f'%{nf_num}%',), fetchall=True) or []
+                                WHERE nf LIKE %s ORDER BY sku, det_num ASC, id ASC
+                              ) t ORDER BY det_num ASC, id ASC""", (f'%{nf_num}%',), fetchall=True) or []
                 header = exe("SELECT * FROM nf_entrada WHERE nf LIKE %s ORDER BY emissao DESC LIMIT 1", (f'%{nf_num}%',), fetchone=True)
 
             # SEM match por CMV — só match exato por cprod_map e fornecedor
@@ -2514,10 +2516,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                             cred_icms = round(v_icms / vtot_r, 6)
                     # DELETE antigo + INSERT novo — sem precisar de índice único
                     exe("DELETE FROM historico_compras WHERE nf=%s AND sku=%s", (nf, cprod))
+                    det_num = int(row.get('det_num', 0) or 0)
                     exe("""INSERT INTO historico_compras
                             (nf,fornecedor,data_emissao,sku,nome,qtd,vunit,vtot,
-                             ipi_p,ipi_un,icms_p,cred_pc,custo_r,cmv_br,cmv_pr,ncm,cfop,v_st,cred_icms)
-                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                             ipi_p,ipi_un,icms_p,cred_pc,custo_r,cmv_br,cmv_pr,ncm,cfop,v_st,cred_icms,det_num)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                         (nf, row.get('fornecedor',''), row.get('data_emissao',''),
                          cprod, row.get('nome',''),
                          float(row.get('qtd',0)), float(row.get('vunit',0)), float(row.get('vtot',0)),
@@ -2525,7 +2528,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                          float(row.get('icms_p',0)), float(row.get('cred_pc',0)),
                          float(row.get('custo_r',0)), float(row.get('cmv_br',0)),
                          float(row.get('cmv_pr',0)), row.get('ncm',''), row.get('cfop',''),
-                         v_st, cred_icms))
+                         v_st, cred_icms, det_num))
                     n += 1
                 except Exception as e: print(f'[HIST] {e}')
             self._ok({'ok':True,'inseridos':n})

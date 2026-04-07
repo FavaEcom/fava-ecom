@@ -183,6 +183,7 @@ def parse_xml(path):
 
         itens.append(dict(
             cod=cod, nome=nome, qtd=qtd, vunit=vunit, vtot=vtot,
+            det_num=len(itens)+1,  # posição na NF
             ipi_p=ipi_p, ipi_r=ipi_r, ipi_un=ipi_un,
             icms_p=icms_p, icms_r=icms_r, icms_un=icms_un, st_r=st_r, st_un=st_un,
             pis_r=pis_r, cof_r=cof_r, cred_pc=cred_pc,
@@ -300,17 +301,22 @@ def enviar_painel(url, dados_nf_list, historico_list, cmv_dict):
         except Exception as e:
             resultados.append(f'nf_err: {e}')
 
-    # 2. Envia histórico de compras (todos os itens de todas as NFs)
+    # 2. Envia histórico em lotes de 100 (evita timeout com 2000+ itens)
     if historico_list:
-        try:
-            payload = json.dumps(historico_list, default=str).encode('utf-8')
-            req = urllib.request.Request(f'{url}/api/db/historico', data=payload,
-                headers={'Content-Type': 'application/json'}, method='POST')
-            with urllib.request.urlopen(req, timeout=60) as r:
-                d = json.loads(r.read())
-                resultados.append(f'historico={d.get("inseridos",0)}')
-        except Exception as e:
-            resultados.append(f'historico_err: {e}')
+        total_ins = 0
+        LOTE = 100
+        for i in range(0, len(historico_list), LOTE):
+            lote = historico_list[i:i+LOTE]
+            try:
+                payload = json.dumps(lote, default=str).encode('utf-8')
+                req = urllib.request.Request(f'{url}/api/db/historico', data=payload,
+                    headers={'Content-Type': 'application/json'}, method='POST')
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    d = json.loads(r.read())
+                    total_ins += d.get('inseridos',0)
+            except Exception as e:
+                resultados.append(f'historico_err_lote{i//LOTE}: {e}')
+        resultados.append(f'historico={total_ins}')
 
     # 3. Envia CMV (compatibilidade)
     if cmv_dict:
@@ -478,7 +484,18 @@ def main():
                         'icms_r': it['icms_r'],
                         'icms_un': it['icms_un'],
                         'cred_icms': it['cred_icms'],
+                        'det_num': it.get('det_num', 0),
                     })
+
+        # Deduplicar hist_list por (nf, cProd) — mesma nota+produto = 1 registro
+        seen = set()
+        hist_dedup = []
+        for it in hist_list:
+            key = (str(it['nf']), str(it['sku']))
+            if key not in seen:
+                seen.add(key)
+                hist_dedup.append(it)
+        hist_list = hist_dedup
 
         print(f'\n  📡 Enviando dados para o banco no Railway...')
         print(f'     {len(dados_nf_list)} NFs | {len(hist_list)} itens histórico | {len(cmv_total)} CMVs')
