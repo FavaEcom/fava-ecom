@@ -2377,7 +2377,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             for r in rows:
                 pid = r['id']
                 try:
-                    d = bling_get(f'pedidos/vendas/{pid}')
+                    d = None
+                    for _try in range(3):
+                        d = bling_get(f'pedidos/vendas/{pid}')
+                        if d: break
+                        time.sleep(2.0)
                     if not d: continue
                     dados = d.get('data') or d
                     _sit = dados.get('situacao') or {}
@@ -2392,7 +2396,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     if status:
                         exe("UPDATE pedidos SET status=%s WHERE id=%s", (status, pid))
                         ok += 1
-                    time.sleep(0.15)
+                    time.sleep(0.45)
                 except Exception as e:
                     print(f'[FIX-STATUS] {pid}: {e}')
             print(f'[FIX-STATUS] {ok}/{len(rows)} atualizados')
@@ -2764,6 +2768,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                             print(f'[WEBHOOK] Estoque SKU {sku}: {saldo_fisico}')
                         except Exception as e:
                             print(f'[WEBHOOK] Estoque erro: {e}')
+
+            # ── PRODUTO FORNECEDOR ───────────────────────────────────────────
+            elif recurso == 'product_supplier':
+                cod   = str(data.get('codigo') or data.get('sku') or '')
+                custo = float(data.get('custo') or data.get('precoCusto') or 0)
+                if cod and custo > 0:
+                    try:
+                        exe("UPDATE produtos SET custo_br=%s, custo=%s WHERE sku=%s", (custo, custo, cod))
+                        print(f'[WEBHOOK] product_supplier SKU {cod} CMV → {custo}')
+                    except Exception as e:
+                        print(f'[WEBHOOK] product_supplier erro: {e}')
 
             # ── NOTA FISCAL ───────────────────────────────────────────────────
             elif recurso in ('invoice', 'consumer_invoice'):

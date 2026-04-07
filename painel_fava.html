@@ -659,34 +659,45 @@ function salvarCfg(){
   <div class="main">
     <div class="anunc-kpis" id="anunc-kpis"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-      <input type="text" id="anunc-search" placeholder="Buscar produto, SKU, MLB..." oninput="filtrarAnuncios()" style="border:1px solid var(--borda);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:260px">
-      <button class="filter-btn a" id="fb-todos" onclick="filtrarAnuncioStatus('todos',this)">Todos</button>
-      <button class="filter-btn" id="fb-alerta" onclick="filtrarAnuncioStatus('alerta',this)">Alertas</button>
-      <button class="filter-btn" id="fb-promo" onclick="filtrarAnuncioStatus('promo',this)">Promoções</button>
+      <input type="text" id="anunc-search" placeholder="Buscar produto, SKU, MLB..." oninput="filtrarAnuncios()" style="border:1px solid var(--borda);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:240px">
+      <button class="filter-btn a" id="fb-todos"   onclick="filtrarAnuncioStatus('todos',this)">Todos</button>
+      <button class="filter-btn"   id="fb-alerta"  onclick="filtrarAnuncioStatus('alerta',this)">⚠️ Alertas</button>
+      <button class="filter-btn"   id="fb-promo"   onclick="filtrarAnuncioStatus('promo',this)">🏷️ Promoções</button>
+      <button class="filter-btn"   id="fb-novos"   onclick="filtrarAnuncioStatus('novos',this)">🆕 Novos (48h)</button>
+      <button class="filter-btn"   id="fb-semcmv"  onclick="filtrarAnuncioStatus('semcmv',this)">❓ Sem CMV</button>
+      <select id="anunc-sort" onchange="sortAnuncios(this.value)" style="border:1px solid var(--borda);border-radius:6px;padding:5px 8px;font-size:12px;background:#fff">
+        <option value="">Ordenar...</option>
+        <option value="margem_atual">Margem ↑</option>
+        <option value="preco">Preço ↓</option>
+        <option value="cmv">CMV ↓</option>
+        <option value="titulo">A-Z</option>
+      </select>
     </div>
     <div class="anunc-table-wrap" style="overflow-x:auto">
       <table class="anunc-table" style="table-layout:fixed;width:100%">
         <colgroup>
-          <col style="width:28%"><!-- Produto -->
-          <col style="width:7%"> <!-- SKU -->
-          <col style="width:13%"><!-- MLB -->
-          <col style="width:8%"> <!-- Preço -->
-          <col style="width:8%"> <!-- CMV -->
-          <col style="width:6%"> <!-- Taxa -->
-          <col style="width:8%"> <!-- Frete liq -->
-          <col style="width:8%"> <!-- Margem -->
-          <col style="width:14%"><!-- Frete tipo -->
+          <col style="width:36px">  <!-- Foto -->
+          <col style="width:22%">   <!-- Produto -->
+          <col style="width:7%">    <!-- SKU -->
+          <col style="width:11%">   <!-- MLB -->
+          <col style="width:8%">    <!-- Preço -->
+          <col style="width:7%">    <!-- CMV -->
+          <col style="width:6%">    <!-- Taxa -->
+          <col style="width:7%">    <!-- Frete -->
+          <col style="width:9%">    <!-- Margem -->
+          <col style="width:10%">   <!-- Status -->
         </colgroup>
         <thead><tr>
+          <th></th>
+          <th onclick="sortAnuncios('titulo')" style="cursor:pointer">Produto ↕</th>
           <th onclick="sortAnuncios('sku')" style="cursor:pointer">SKU ↕</th>
           <th>MLB</th>
-          <th onclick="sortAnuncios('titulo')" style="cursor:pointer">Produto ↕</th>
           <th class="num" onclick="sortAnuncios('preco')" style="cursor:pointer">Preço ↕</th>
           <th class="num" onclick="sortAnuncios('cmv')" style="cursor:pointer">CMV ↕</th>
           <th class="num">Taxa</th>
-          <th class="num">Frete (bruto→liq)</th>
+          <th class="num">Frete liq.</th>
           <th class="num" onclick="sortAnuncios('margem_atual')" style="cursor:pointer">Margem ↕</th>
-          <th>Frete tipo</th>
+          <th>Status</th>
         </tr></thead>
         <tbody id="anunc-tbody"></tbody>
       </table>
@@ -6007,6 +6018,9 @@ async function carregarAnuncios(){
       }
       const tituloDb = String(l.titulo||'').trim();
       const tituloFallback = tituloDb || dados.cmvCache[sku]?.nome || cmvInfo?.nome || '';
+      const dcStr = l.data_criacao ? String(l.data_criacao) : '';
+      const dcDate = dcStr ? new Date(dcStr) : null;
+      const isNovo = dcDate && (Date.now() - dcDate.getTime()) < 48*3600*1000;
       return {
         id: l.id||'', sku, titulo: tituloFallback, preco,
         taxa, frete: freteReal, freteL,
@@ -6015,6 +6029,7 @@ async function carregarAnuncios(){
         free_shipping: parseInt(l.free_shipping||0),
         sale_fee: sfRaw, status: l.status||'',
         margem_minima: parseFloat(l.margem_minima)||0,
+        data_criacao: dcDate, isNovo,
       };
     });
 
@@ -6096,8 +6111,10 @@ function renderAnuncios(){
   const filtro = anunciosFiltroStatus||'todos';
   let lista = [...anunciosData].filter(a=>{
     if(q && !a.titulo.toLowerCase().includes(q) && !a.sku.toLowerCase().includes(q) && !a.id.toLowerCase().includes(q)) return false;
-    if(filtro==='alerta' && (a.margem_atual===null || a.margem_atual>=.20)) return false;
-    if(filtro==='promo' && a.free_shipping!==1) return false;
+    if(filtro==='alerta'  && (a.margem_atual===null || a.margem_atual>=.20)) return false;
+    if(filtro==='promo'   && a.free_shipping!==1) return false;
+    if(filtro==='novos'   && !a.isNovo) return false;
+    if(filtro==='semcmv'  && a.cmv>0) return false;
     return true;
   });
 
@@ -6113,25 +6130,43 @@ function renderAnuncios(){
     tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:#9ca3af">Nenhum anúncio encontrado</td></tr>';
     return;
   }
+  if(!lista.length){
+    tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:20px;color:#9ca3af">Nenhum anúncio encontrado</td></tr>';
+    return;
+  }
   tbody.innerHTML = lista.map(a=>{
-    const mgCor = a.margem_atual===null?'var(--muted)':a.margem_atual>=.20?'var(--verde)':a.margem_atual>=.10?'var(--amarelo)':'var(--vermelho)';
-    const mgStr = a.margem_atual!==null ? (a.margem_atual*100).toFixed(1)+'%' : (a.cmv>0?'—':'<span style="color:#f59e0b;font-size:9px">sem CMV</span>');
-    const freteTxt = a.frete>0 
-      ? `<strong>R$${a.frete.toFixed(2)}</strong><span style="font-size:9px;color:#9ca3af"> → liq R$${(a.freteL||0).toFixed(2)}</span>` 
-      : '<span style="color:#9ca3af">—</span>';
+    const mc = a.margem_atual;
+    const mgCor = mc===null?'var(--muted)':mc>=.20?'#16a34a':mc>=.10?'#d97706':'#dc2626';
+    const mgBg  = mc===null?'#f3f4f6':mc>=.20?'#dcfce7':mc>=.10?'#fef9c3':'#fee2e2';
+    const mgStr = mc!==null ? (mc*100).toFixed(1)+'%' : '—';
     const taxaTxt = a.taxa>0 ? (a.taxa*100).toFixed(0)+'%' : '—';
-    const mlbLink = a.id ? `<a href="https://www.mercadolivre.com.br/p/${a.id}" target="_blank" style="font-size:9px;color:var(--azul2);text-decoration:none">${a.id}</a>` : '—';
-    return `<tr style="border-bottom:1px solid #f9fafb">
-      <td style="padding:5px 8px;font-weight:700;color:#1F3864;font-size:11px">${a.sku||'—'}</td>
-      <td style="padding:5px 8px;font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${mlbLink}</td>
-      <td style="padding:5px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px" title="${a.titulo}">${a.titulo}</td>
-      <td style="padding:5px 8px;text-align:right;font-weight:700">R$${(a.preco||0).toFixed(2)}</td>
-      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${a.cmv>0?'R$'+a.cmv.toFixed(2):'<span style="color:#f59e0b;font-size:9px">sem CMV</span>'}</td>
-      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${taxaTxt}</td>
-      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${freteTxt}</td>
-      <td style="padding:5px 8px;text-align:right;font-weight:700;color:${mgCor}">${mgStr}</td>
-      <td style="padding:5px 8px;text-align:center"><span class="pill ${a.free_shipping?'pill-g':'pill-b'}" style="font-size:9px">${a.free_shipping?'Grátis':'Comprador'}</span></td>
-    </tr>`;
+    const freteLiq = a.freteL>0 ? 'R$'+(a.freteL).toFixed(0) : (a.frete>0?'R$'+a.frete.toFixed(0):'—');
+    // Badges
+    const novoBadge  = a.isNovo ? '<span style="background:#dbeafe;color:#1e40af;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700;margin-left:3px">NOVO</span>' : '';
+    const freteBadge = a.free_shipping ? '<span style="background:#dcfce7;color:#15803d;font-size:9px;padding:1px 5px;border-radius:4px">Grátis</span>' : '<span style="background:#f3f4f6;color:#6b7280;font-size:9px;padding:1px 5px;border-radius:4px">Comprador</span>';
+    let statusBadge  = '';
+    if(mc===null)          statusBadge='<span style="background:#fef9c3;color:#92400e;font-size:9px;padding:1px 5px;border-radius:4px">Sem CMV</span>';
+    else if(mc<0)          statusBadge='<span style="background:#fee2e2;color:#dc2626;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">Neg.</span>';
+    else if(mc<.10)        statusBadge='<span style="background:#fee2e2;color:#dc2626;font-size:9px;padding:1px 5px;border-radius:4px">&lt;10%</span>';
+    else if(mc<.20)        statusBadge='<span style="background:#fef9c3;color:#92400e;font-size:9px;padding:1px 5px;border-radius:4px">&lt;20%</span>';
+    else                   statusBadge='<span style="background:#dcfce7;color:#15803d;font-size:9px;padding:1px 5px;border-radius:4px">✓ OK</span>';
+    // Foto (thumb via ML CDN pattern)
+    const thumb = a.id ? `<a href="https://www.mercadolivre.com.br/p/${a.id}" target="_blank"><img src="https://http2.mlstatic.com/D_NQ_NP_${a.id}-F.webp" onerror="this.style.display='none';this.nextSibling.style.display='flex'" style="width:32px;height:32px;object-fit:contain;border-radius:4px;border:1px solid #e5e7eb" loading="lazy"><span style="display:none;width:32px;height:32px;align-items:center;justify-content:center;background:#f3f4f6;border-radius:4px;font-size:16px">🛒</span></a>` : '<span style="font-size:16px">🛒</span>';
+    return \`<tr style="border-bottom:1px solid #f9fafb">
+      <td style="padding:4px 6px">\${thumb}</td>
+      <td style="padding:4px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="\${a.titulo}">
+        <div style="font-size:11px;font-weight:600;color:#1F3864;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${a.titulo}\${novoBadge}</div>
+        <div style="font-size:10px;color:var(--muted)">\${a.id?'<a href="https://www.mercadolivre.com.br/p/'+a.id+'" target="_blank" style="color:#3b82f6;text-decoration:none">'+a.id+'</a>':''}</div>
+      </td>
+      <td style="padding:4px 8px;font-size:11px;font-weight:700;color:#1F3864">\${a.sku||'—'}</td>
+      <td style="padding:4px 8px;font-size:10px;color:var(--muted)">\${a.id||'—'}</td>
+      <td style="padding:4px 8px;text-align:right;font-weight:700;font-size:12px">R$\${(a.preco||0).toFixed(2)}</td>
+      <td style="padding:4px 8px;text-align:right;font-size:11px;color:var(--muted)">\${a.cmv>0?'R$'+a.cmv.toFixed(2):'<span style="color:#f59e0b">—</span>'}</td>
+      <td style="padding:4px 8px;text-align:right;font-size:11px;color:var(--muted)">\${taxaTxt}</td>
+      <td style="padding:4px 8px;text-align:right;font-size:11px">\${freteLiq}</td>
+      <td style="padding:4px 8px;text-align:right"><span style="background:\${mgBg};color:\${mgCor};font-weight:700;font-size:12px;padding:2px 7px;border-radius:5px">\${mgStr}</span></td>
+      <td style="padding:4px 8px">\${freteBadge} \${statusBadge}</td>
+    </tr>\`;
   }).join('');
 
   // KPIs
@@ -6145,7 +6180,8 @@ function renderAnuncios(){
     <div class="kpi"><div class="kl">Sem CMV</div><div class="kv" style="color:${total-comCmv>0?'var(--amarelo)':'var(--verde)'}">${total-comCmv}</div></div>
     <div class="kpi"><div class="kl">Margem média</div><div class="kv" style="color:${mgMed===null?'var(--muted)':mgMed>=.20?'var(--verde)':mgMed>=.10?'var(--amarelo)':'var(--vermelho)'}">${mgMed!==null?(mgMed*100).toFixed(1)+'%':'—'}</div></div>
     <div class="kpi"><div class="kl">Margem &lt; 10%</div><div class="kv" style="color:var(--vermelho)">${comMargem.filter(a=>a.margem_atual<.10).length}</div></div>
-    <div class="kpi"><div class="kl">Sem frete</div><div class="kv" style="color:${lista.filter(a=>a.frete===0).length?'var(--amarelo)':'var(--verde)'}">${lista.filter(a=>a.frete===0).length}</div></div>`;
+    <div class="kpi"><div class="kl">Sem frete</div><div class="kv" style="color:${lista.filter(a=>a.frete===0).length?'var(--amarelo)':'var(--verde)'}">${lista.filter(a=>a.frete===0).length}</div></div>
+    <div class="kpi"><div class="kl">🆕 Novos 48h</div><div class="kv" style="color:var(--azul2)">${lista.filter(a=>a.isNovo).length}</div></div>\`;
 }
 
 let anunciosFiltroStatus = 'todos';
