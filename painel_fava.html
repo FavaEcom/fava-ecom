@@ -6040,7 +6040,8 @@ async function carregarAnuncios(){
 
     // Busca taxa real do ML em background — sempre, a cada carregamento
     taxasAtualizadas = false;
-    if(tokens.ml && anunciosData.length > 0){
+    // Busca de frete real desativada (usa frete_medio do banco)
+    if(false && tokens.ml && anunciosData.length > 0){
       atualizarTaxasReaisML();
     }
 
