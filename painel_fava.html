@@ -518,6 +518,7 @@ function salvarCfg(){
   </div>
   <span class="last-update" id="last-update"></span>
   <button class="btn-reload" onclick="recarregar()">↻ Atualizar</button>
+  <button class="btn-reload" id="btn-taxas-ml" onclick="importarTaxasML(this)" style="background:rgba(59,130,246,.3);border-color:rgba(59,130,246,.5)" title="Busca taxa real do ML uma única vez e salva permanentemente">📊 Taxas ML</button>
   <button class="btn-reload" id="btn-renovar-ml" onclick="forcarRenovacaoML()" style="background:rgba(239,68,68,.3);border-color:rgba(239,68,68,.5)" title="Renovar token ML expirado">🔑 Renovar ML</button>
   <button class="btn-reload" id="btn-renovar-bling" onclick="forcarRenovacaoBling()" style="background:rgba(251,146,60,.3);border-color:rgba(251,146,60,.5)" title="Renovar token Bling expirado (401)">🔑 Renovar Bling</button>
   <button class="btn-reload" onclick="sincBlingAnuncios(this)" style="background:rgba(99,102,241,.3);border-color:rgba(99,102,241,.5)" title="Baixar todos os anúncios ML do Bling para o banco">📥 Sync Anúncios</button>
@@ -3175,6 +3176,18 @@ function showLoading(msg){const _l=document.getElementById('loading');if(_l)_l.s
 function hideLoading(){(document.getElementById('loading')||{style:{}}).style.display ='none';}
 function setDot(a,s,l){const d=document.getElementById(`dot-${a}`);const lb=document.getElementById(`lbl-${a}`);if(d)d.className=`dot ${s}`;if(lb)lb.textContent=l;}
 function recarregar(){dados.cmvCache={};carregarTudo();}
+async function importarTaxasML(el){
+  const orig=el.textContent;
+  el.textContent='⏳ Buscando...'; el.disabled=true;
+  try{
+    const r=await fetch('/api/sync/taxas-ml',{method:'POST'});
+    const d=await r.json();
+    el.textContent='✅ Rodando!';
+    el.style.background='rgba(34,197,94,.3)';
+    setTimeout(()=>{el.textContent='✅ Taxas OK';},3000);
+    alert('Taxas do ML sendo atualizadas em background (~3 min).\nDepois clique em Atualizar para ver os valores reais.');
+  }catch(e){el.textContent=orig;el.disabled=false;alert('Erro: '+e.message);}
+}
 function fmt(v){return(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtK(v){return v>=1000?`${(v/1000).toFixed(1)}k`:fmt(v);}
 

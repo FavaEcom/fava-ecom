@@ -1125,6 +1125,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/sync/lucro':            self._sync_lucro,
             '/api/sync/ml-titulos':      self._sync_ml_titulos,
             '/api/sync/fix-status':      self._sync_fix_status,
+            '/api/sync/taxas-ml':         self._sync_taxas_ml,
             '/api/db/campanha':           self._post_campanha,
             '/api/db/cprod-map':          self._post_cprod_map,
             '/api/db/listings-batch':     self._post_listings_batch,
@@ -2361,6 +2362,43 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             print(f'[ML-TITULOS] {atualizados} títulos atualizados')
         threading.Thread(target=_run, daemon=True).start()
         self._ok({'ok': True, 'msg': 'Atualização de títulos iniciada em background'})
+
+    def _sync_taxas_ml(self):
+        """POST /api/sync/taxas-ml — busca sale_fee real do ML para todos os anúncios e salva no banco"""
+        def _run():
+            if not _ml_token.get('access'):
+                print('[TAXAS-ML] Sem token'); return
+            # Buscar todos os MLBs com taxa zero ou nula
+            rows = exe(
+                "SELECT id FROM ml_listings WHERE id LIKE 'MLB%' AND (sale_fee IS NULL OR sale_fee=0) ORDER BY id",
+                fetchall=True) or []
+            if not rows:
+                # Se todos já têm taxa, atualizar mesmo assim para garantir
+                rows = exe("SELECT id FROM ml_listings WHERE id LIKE 'MLB%' ORDER BY id", fetchall=True) or []
+            ids = [r['id'] for r in rows]
+            print(f'[TAXAS-ML] Atualizando taxa de {len(ids)} anúncios...')
+            atualizados = 0
+            for i in range(0, len(ids), 20):
+                lote = ','.join(ids[i:i+20])
+                d = ml_get(f'items?ids={lote}&attributes=id,sale_fee,listing_type_id')
+                if not d: continue
+                for x in (d if isinstance(d, list) else []):
+                    if x.get('code') != 200: continue
+                    it = x.get('body', {})
+                    iid = it.get('id', '')
+                    sale_fee = float(it.get('sale_fee') or 0)
+                    ltype    = it.get('listing_type_id', '')
+                    if not iid: continue
+                    try:
+                        exe("UPDATE ml_listings SET sale_fee=%s, listing_type=%s WHERE id=%s",
+                            (sale_fee, ltype, iid))
+                        atualizados += 1
+                    except Exception as e:
+                        print(f'[TAXAS-ML] {iid}: {e}')
+                time.sleep(0.25)
+            print(f'[TAXAS-ML] {atualizados} taxas atualizadas')
+        threading.Thread(target=_run, daemon=True).start()
+        self._ok({'ok': True, 'msg': f'Atualização de taxas iniciada em background'})
 
     def _sync_fix_status(self):
         """POST /api/sync/fix-status — busca status real no Bling para pedidos com status vazio"""
