@@ -29,7 +29,6 @@ header h1{font-size:15px;font-weight:700;flex:1}
 
 /* MAIN LAYOUT */
 .main{padding:14px 18px;display:flex;flex-direction:column;gap:12px}
-[id^="view-"]{min-height:calc(100vh - 150px)}
 
 /* KPI CARDS */
 .kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
@@ -656,7 +655,7 @@ function salvarCfg(){
 </div>
 
 <!-- ═══════════ VIEW: ANÚNCIOS ═══════════ -->
-<div id="view-anuncios" style="display:none;flex-direction:column;min-height:calc(100vh - 130px)">
+<div id="view-anuncios" style="display:none;flex-direction:column">
   <div class="main">
     <div class="anunc-kpis" id="anunc-kpis"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
@@ -5428,6 +5427,11 @@ let currentView = 'dashboard';
 function setView(v){
   currentView = v;
   const safe=(id,fn)=>{const el=document.getElementById(id);if(el)fn(el);};
+  // Garantir que o container pai tenha altura suficiente
+  const viewEl = document.getElementById('view-'+v);
+  if(viewEl && viewEl.parentElement){
+    viewEl.parentElement.style.minHeight = 'calc(100vh - 150px)';
+  }
   ['dashboard','anuncios','financeiro','conciliacao','precos','promocoes','difal','perguntas','ads','pedidos','historico','cmv','nf','central-prom'].forEach(name=>{
     safe('view-'+name, el=>el.style.display = v===name?'flex':'none');
   });
