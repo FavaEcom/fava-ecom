@@ -115,6 +115,17 @@ def criar_tabelas():
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS v_st REAL DEFAULT 0""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS cred_icms REAL DEFAULT 0""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS det_num INTEGER DEFAULT 0""",
+            """CREATE TABLE IF NOT EXISTS webhook_log (
+                id SERIAL PRIMARY KEY,
+                event_id TEXT,
+                evento TEXT,
+                recurso TEXT,
+                acao TEXT,
+                payload TEXT,
+                processado BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT NOW()
+            )""",
+            """CREATE UNIQUE INDEX IF NOT EXISTS idx_webhook_event_id ON webhook_log(event_id)""",
             # Deduplicar antes de criar o índice único
             """DELETE FROM historico_compras WHERE id NOT IN (
                 SELECT MIN(id) FROM historico_compras GROUP BY nf, sku
@@ -1108,6 +1119,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/auth/tokens':           self._post_tokens,
             '/api/bling/set-token':         self._bling_set_token,
             '/api/cmv-cache':             self._post_cmv,
+            '/webhook/bling':             self._post_webhook_bling,
         }
         if clean in routes: routes[clean]()
         elif clean.startswith('/api/'): self._proxy('POST')
@@ -2511,6 +2523,163 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 d.get('fornecedor',''), float(d.get('preco_venda',0)))
             self._ok({'ok':True,'sku':sku})
         except Exception as e: self._err(500, str(e))
+
+    def _post_webhook_bling(self):
+        """POST /webhook/bling — recebe eventos do Bling em tempo real.
+        Valida assinatura HMAC, processa: order, product, stock, invoice.
+        URL para configurar no Bling: https://web-production-5aa0f.up.railway.app/webhook/bling
+        """
+        try:
+            body = self.rfile.read(int(self.headers.get('Content-Length', 0)))
+
+            # Validar assinatura HMAC
+            sig_header = self.headers.get('X-Bling-Signature-256', '')
+            if sig_header:
+                expected = 'sha256=' + hmac.new(
+                    BLING_SECRET.encode('utf-8'),
+                    body,
+                    hashlib.sha256
+                ).hexdigest()
+                if not hmac.compare_digest(sig_header, expected):
+                    print('[WEBHOOK] Assinatura inválida')
+                    self.send_response(401)
+                    self.end_headers()
+                    return
+
+            try:
+                payload = json.loads(body.decode('utf-8'))
+            except:
+                self.send_response(400)
+                self.end_headers()
+                return
+
+            event_id = payload.get('eventId', '')
+            evento   = payload.get('event', '')
+            data     = payload.get('data', {})
+
+            # Idempotência: ignorar evento já processado
+            if event_id:
+                ja_existe = exe("SELECT id FROM webhook_log WHERE event_id=%s LIMIT 1", (event_id,), fetchone=True)
+                if ja_existe:
+                    self._ok({'ok': True, 'msg': 'already processed'})
+                    return
+
+            # Registrar no log
+            partes = evento.split('.')
+            recurso = partes[0] if partes else ''
+            acao    = partes[1] if len(partes) > 1 else ''
+            try:
+                exe("INSERT INTO webhook_log (event_id,evento,recurso,acao,payload) VALUES (%s,%s,%s,%s,%s)",
+                    (event_id, evento, recurso, acao, json.dumps(payload)))
+            except: pass
+
+            print(f'[WEBHOOK] {evento} | id={event_id}')
+
+            # ── PEDIDO DE VENDA ─────────────────────────────────────────────
+            if recurso == 'order':
+                pid = str(data.get('id', ''))
+                if pid and acao in ('created', 'updated'):
+                    num_loja = str(data.get('numeroLoja') or data.get('numeroPedidoLoja') or '')
+                    total    = float(data.get('total') or data.get('totalProdutos') or 0)
+                    data_p   = (data.get('data') or '')[:10]
+                    _sit     = data.get('situacao') or {}
+                    if isinstance(_sit, dict):
+                        status = _sit.get('valor') or _sit.get('nome') or ''
+                    else:
+                        status = str(_sit)
+                    # Canal pelo numero da loja
+                    canal = 'Bling'
+                    if num_loja:
+                        nu = num_loja.upper()
+                        if nu.startswith('MLB') or 'MERCADO' in nu: canal = 'Mercado Livre'
+                        elif 'SHOPEE' in nu or nu.startswith('SH'):  canal = 'Shopee'
+                        elif 'YAMPI'  in nu:                          canal = 'Yampi'
+                    # UF do contato
+                    contato = data.get('contato') or {}
+                    _uf = ''
+                    if isinstance(contato, dict):
+                        end = contato.get('endereco') or contato.get('address') or {}
+                        if isinstance(end, dict):
+                            _uf = (end.get('uf') or end.get('state') or '').upper()
+                    _uf = _uf or 'PR'
+                    # Itens
+                    raw_itens = data.get('itens') or []
+                    itens_json = json.dumps([{
+                        'sku':   str(i.get('codigo') or i.get('sku') or ''),
+                        'nome':  str(i.get('descricao') or i.get('nome') or ''),
+                        'qtd':   float(i.get('quantidade') or i.get('qtd') or 1),
+                        'preco': float(i.get('valor') or i.get('preco') or 0),
+                    } for i in raw_itens])
+                    frete = float(data.get('frete') or 0)
+                    conflict = 'ON CONFLICT(id) DO UPDATE SET status=EXCLUDED.status,uf=EXCLUDED.uf,canal=EXCLUDED.canal,itens=EXCLUDED.itens,total=EXCLUDED.total,numero_loja=EXCLUDED.numero_loja'
+                    try:
+                        exe(f"INSERT INTO pedidos (id,canal,data,status,total,uf,frete,itens,numero_loja) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) {conflict}",
+                            (pid, canal, data_p, status, total, _uf, frete, itens_json, num_loja))
+                        print(f'[WEBHOOK] Pedido {pid} salvo — {canal} {_uf}')
+                    except Exception as e:
+                        print(f'[WEBHOOK] Pedido erro: {e}')
+
+            # ── PRODUTO ──────────────────────────────────────────────────────
+            elif recurso == 'product':
+                pid  = str(data.get('id', ''))
+                nome = data.get('nome') or data.get('name') or ''
+                cod  = data.get('codigo') or data.get('code') or ''
+                preco = float(data.get('preco') or data.get('price') or 0)
+                if pid and acao in ('created', 'updated') and cod:
+                    try:
+                        exe("""INSERT INTO produtos (sku,nome,preco_venda) VALUES (%s,%s,%s)
+                               ON CONFLICT(sku) DO UPDATE SET nome=EXCLUDED.nome,preco_venda=EXCLUDED.preco_venda""",
+                            (cod, nome, preco))
+                        print(f'[WEBHOOK] Produto {cod} atualizado')
+                    except Exception as e:
+                        print(f'[WEBHOOK] Produto erro: {e}')
+
+            # ── ESTOQUE ───────────────────────────────────────────────────────
+            elif recurso in ('stock', 'virtual_stock'):
+                prod = data.get('produto') or {}
+                pid  = str(prod.get('id', ''))
+                saldo_fisico  = float(data.get('saldoFisicoTotal') or 0)
+                saldo_virtual = float(data.get('saldoVirtualTotal') or 0)
+                if pid:
+                    # Buscar SKU pelo ID Bling
+                    prod_db = exe("SELECT sku FROM produtos WHERE fornecedor=%s OR bling_id=%s LIMIT 1",
+                                  (pid, pid), fetchone=True)
+                    if not prod_db:
+                        prod_db = exe("SELECT sku FROM produtos WHERE sku=%s LIMIT 1", (pid,), fetchone=True)
+                    if prod_db:
+                        sku = prod_db['sku']
+                        try:
+                            exe("UPDATE produtos SET estoque=%s WHERE sku=%s",
+                                (int(saldo_fisico), sku))
+                            print(f'[WEBHOOK] Estoque SKU {sku}: {saldo_fisico}')
+                        except Exception as e:
+                            print(f'[WEBHOOK] Estoque erro: {e}')
+
+            # ── NOTA FISCAL ───────────────────────────────────────────────────
+            elif recurso in ('invoice', 'consumer_invoice'):
+                nf_id  = str(data.get('id', ''))
+                numero = str(data.get('numero') or '')
+                sit    = int(data.get('situacao') or 0)
+                # situacao 9 = autorizada; 2 = cancelada
+                if nf_id and numero and sit == 9:
+                    print(f'[WEBHOOK] NF {numero} autorizada (id={nf_id})')
+                    # Marcar pedido correspondente como faturado
+                    contato = data.get('contato') or {}
+                    loja    = data.get('loja') or {}
+                    try:
+                        exe("UPDATE pedidos SET status='NF Emitida' WHERE id=%s", (nf_id,))
+                    except: pass
+
+            # Marcar como processado
+            if event_id:
+                try:
+                    exe("UPDATE webhook_log SET processado=TRUE WHERE event_id=%s", (event_id,))
+                except: pass
+
+            self._ok({'ok': True, 'evento': evento})
+        except Exception as e:
+            print(f'[WEBHOOK] Erro: {e}')
+            self._ok({'ok': True})  # sempre 200 para o Bling não retentar
 
     def _post_limpar_nf(self):
         """POST /api/db/limpar-nf — apaga todos os registros de uma NF do historico_compras"""
