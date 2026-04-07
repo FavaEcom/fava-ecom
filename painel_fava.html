@@ -299,7 +299,7 @@ header h1{font-size:15px;font-weight:700;flex:1}
 .upload-xlsx:hover{border-color:var(--azul2);background:#f0f7ff}
 
 /* VIEW TABS */
-.view-tabs{display:flex;background:#fff;border-bottom:2px solid var(--borda);padding:0 18px;align-items:flex-start;flex-shrink:0}
+.view-tabs{display:flex;background:#fff;border-bottom:2px solid var(--borda);padding:0 18px}
 .vtab{padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s;white-space:nowrap}
 .vtab.a{color:var(--azul);border-bottom-color:var(--azul)}
 
@@ -520,16 +520,18 @@ function salvarCfg(){
   <button class="btn-reload" onclick="recarregar()">↻ Atualizar</button>
   <button class="btn-reload" id="btn-renovar-ml" onclick="forcarRenovacaoML()" style="background:rgba(239,68,68,.3);border-color:rgba(239,68,68,.5)" title="Renovar token ML expirado">🔑 Renovar ML</button>
   <button class="btn-reload" id="btn-renovar-bling" onclick="forcarRenovacaoBling()" style="background:rgba(251,146,60,.3);border-color:rgba(251,146,60,.5)" title="Renovar token Bling expirado (401)">🔑 Renovar Bling</button>
+  <button class="btn-reload" onclick="sincBlingAnuncios(this)" style="background:rgba(99,102,241,.3);border-color:rgba(99,102,241,.5)" title="Baixar todos os anúncios ML do Bling para o banco">📥 Sync Anúncios</button>
   <button class="btn-reload" id="btn-db-status" onclick="mostrarStatusDB()" title="Status do banco de dados">🗄️ DB</button>
   <button class="btn-reload" onclick="document.getElementById('modal-cfg').style.display='flex'">⚙️</button>
 </header>
-<nav id="nav-fava" style="background:#162040;padding:0 18px;display:flex;gap:2px;border-bottom:2px solid #0f1f3a"><a href="https://web-production-5aa0f.up.railway.app/painel_fava.html" style="padding:7px 13px;color:#93c5fd;font-size:12px;font-weight:700;text-decoration:none;border-bottom:2px solid #60a5fa;margin-bottom:-2px">Painel</a><a href="https://web-production-5aa0f.up.railway.app/balcao_fava.html" style="padding:7px 13px;color:#9ca3af;font-size:12px;font-weight:700;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px">Balcao</a><a href="https://web-production-5aa0f.up.railway.app/produto_novo.html" style="padding:7px 13px;color:#9ca3af;font-size:12px;font-weight:700;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px">Produto Novo</a><a href="https://web-production-5aa0f.up.railway.app/gestor_anuncios.html" style="padding:7px 13px;color:#9ca3af;font-size:12px;font-weight:700;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px">Gestor</a><a href="https://web-production-5aa0f.up.railway.app/calculadora_fava.html" style="padding:7px 13px;color:#9ca3af;font-size:12px;font-weight:700;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px">Calculadora</a></nav>
+<nav id="nav-fava" style="background:#162040;padding:0 18px;display:flex;gap:2px;border-bottom:2px solid #0f1f3a"><a href="https://web-production-5aa0f.up.railway.app/painel_fava.html" style="padding:7px 13px;color:#93c5fd;font-size:12px;font-weight:700;text-decoration:none;border-bottom:2px solid #60a5fa;margin-bottom:-2px">Painel</a><a href="https://web-production-5aa0f.up.railway.app/balcao_fava.html" style="padding:7px 13px;color:#9ca3af;font-size:12px;font-weight:700;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px">Balcao</a><a href="https://web-production-5aa0f.up.railway.app/produto_novo.html" style="padding:7px 13px;color:#9ca3af;font-size:12px;font-weight:700;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px">Produto Novo</a><a href="https://web-production-5aa0f.up.railway.app/gestor_anuncios.html" style="padding:7px 13px;color:#9ca3af;font-size:12px;font-weight:700;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px">Gestor</a><a href="https://web-production-5aa0f.up.railway.app/calculadora_fava.html" style="padding:7px 13px;color:#9ca3af;font-size:12px;font-weight:700;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px">Calculadora</a><a href="https://web-production-5aa0f.up.railway.app/pedidos_fava.html" style="padding:7px 13px;color:#9ca3af;font-size:12px;font-weight:700;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px">Pedidos</a></nav>
 <nav style="background:#162040;padding:0 18px;display:flex;gap:4px;border-bottom:2px solid #0f1f3a">
   <a href="https://web-production-5aa0f.up.railway.app/painel_fava.html"    style="padding:7px 14px;color:#93c5fd;font-size:12px;font-weight:600;text-decoration:none;border-bottom:2px solid #60a5fa;margin-bottom:-2px">🏠 Painel</a>
   <a href="https://web-production-5aa0f.up.railway.app/balcao_fava.html"    style="padding:7px 14px;color:#9ca3af;font-size:12px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#9ca3af'">🏪 Balcão</a>
   <a href="https://web-production-5aa0f.up.railway.app/produto_novo.html"   style="padding:7px 14px;color:#9ca3af;font-size:12px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#9ca3af'">➕ Produto Novo</a>
   <a href="https://web-production-5aa0f.up.railway.app/gestor_anuncios.html" style="padding:7px 14px;color:#9ca3af;font-size:12px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#9ca3af'">📢 Gestor Anúncios</a>
   <a href="https://web-production-5aa0f.up.railway.app/calculadora_fava.html" style="padding:7px 14px;color:#9ca3af;font-size:12px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#9ca3af'">🧮 Calculadora</a>
+  <a href="https://web-production-5aa0f.up.railway.app/pedidos_fava.html" style="padding:7px 14px;color:#9ca3af;font-size:12px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#9ca3af'">📦 Pedidos</a>
 </nav>
 
 <!-- ABAS DE NAVEGAÇÃO -->
@@ -622,32 +624,6 @@ function salvarCfg(){
         </div>
       </div>
     </div>
-
-    <!-- Anuncios Novos + Gerador EAN -->
-    <div class="grid2">
-      <div class="card">
-        <div class="card-head">
-          <h3>🆕 Anúncios Novos (24h)</h3>
-          <button class="btn-fin" onclick="carregarListingsNovos()">🔄</button>
-        </div>
-        <div class="card-body" style="padding:0">
-          <div id="listings-novos-wrap">
-            <div style="padding:12px;font-size:12px;color:var(--muted);text-align:center">Clique em 🔄 para verificar</div>
-          </div>
-        </div>
-      </div>
-      <div class="card" style="align-self:start">
-
-    <!-- Gerador EAN -->
-    <div class="card" style="max-width:340px">
-      <div class="card-head"><h3>🏷️ Gerador EAN-13</h3></div>
-      <div class="card-body" style="display:flex;align-items:center;gap:10px;padding:12px 14px">
-        <div id="ean-display" style="font-family:monospace;font-size:20px;font-weight:700;letter-spacing:3px;color:var(--text);flex:1">—</div>
-        <button onclick="copiarEAN()" title="Copiar" style="padding:5px 9px;background:#f3f4f6;border:1px solid var(--borda);border-radius:6px;cursor:pointer;font-size:14px">📋</button>
-        <button onclick="gerarEAN()" title="Novo EAN" style="padding:5px 9px;background:#1F3864;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px">↻</button>
-      </div>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -656,48 +632,34 @@ function salvarCfg(){
   <div class="main">
     <div class="anunc-kpis" id="anunc-kpis"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-      <input type="text" id="anunc-search" placeholder="Buscar produto, SKU, MLB..." oninput="filtrarAnuncios()" style="border:1px solid var(--borda);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:240px">
-      <span id="anunc-pag-info" style="font-size:11px;color:var(--muted)"></span>
-      <button onclick="window._anuncPagina=Math.max(0,(window._anuncPagina||0)-1);renderAnuncios()" style="padding:4px 8px;font-size:12px;background:#f3f4f6;border:1px solid var(--borda);border-radius:5px;cursor:pointer">◀</button>
-      <button onclick="window._anuncPagina=(window._anuncPagina||0)+1;renderAnuncios()" style="padding:4px 8px;font-size:12px;background:#f3f4f6;border:1px solid var(--borda);border-radius:5px;cursor:pointer">▶</button>
-      <button class="filter-btn a" id="fb-todos"   onclick="filtrarAnuncioStatus('todos',this)">Todos</button>
-      <button class="filter-btn"   id="fb-alerta"  onclick="filtrarAnuncioStatus('alerta',this)">⚠️ Alertas</button>
-      <button class="filter-btn"   id="fb-promo"   onclick="filtrarAnuncioStatus('promo',this)">🏷️ Promoções</button>
-      <button class="filter-btn"   id="fb-novos"   onclick="filtrarAnuncioStatus('novos',this)">🆕 Novos (48h)</button>
-      <button class="filter-btn"   id="fb-semcmv"  onclick="filtrarAnuncioStatus('semcmv',this)">❓ Sem CMV</button>
-      <select id="anunc-sort" onchange="sortAnuncios(this.value)" style="border:1px solid var(--borda);border-radius:6px;padding:5px 8px;font-size:12px;background:#fff">
-        <option value="">Ordenar...</option>
-        <option value="margem_atual">Margem ↑</option>
-        <option value="preco">Preço ↓</option>
-        <option value="cmv">CMV ↓</option>
-        <option value="titulo">A-Z</option>
-      </select>
+      <input type="text" id="anunc-search" placeholder="Buscar produto, SKU, MLB..." oninput="filtrarAnuncios()" style="border:1px solid var(--borda);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:260px">
+      <button class="filter-btn a" id="fb-todos" onclick="filtrarAnuncioStatus('todos',this)">Todos</button>
+      <button class="filter-btn" id="fb-alerta" onclick="filtrarAnuncioStatus('alerta',this)">Alertas</button>
+      <button class="filter-btn" id="fb-promo" onclick="filtrarAnuncioStatus('promo',this)">Promoções</button>
     </div>
     <div class="anunc-table-wrap" style="overflow-x:auto">
       <table class="anunc-table" style="table-layout:fixed;width:100%">
         <colgroup>
-          <col style="width:36px">  <!-- Foto -->
-          <col style="width:22%">   <!-- Produto -->
-          <col style="width:7%">    <!-- SKU -->
-          <col style="width:11%">   <!-- MLB -->
-          <col style="width:8%">    <!-- Preço -->
-          <col style="width:7%">    <!-- CMV -->
-          <col style="width:6%">    <!-- Taxa -->
-          <col style="width:7%">    <!-- Frete -->
-          <col style="width:9%">    <!-- Margem -->
-          <col style="width:10%">   <!-- Status -->
+          <col style="width:28%"><!-- Produto -->
+          <col style="width:7%"> <!-- SKU -->
+          <col style="width:13%"><!-- MLB -->
+          <col style="width:8%"> <!-- Preço -->
+          <col style="width:8%"> <!-- CMV -->
+          <col style="width:6%"> <!-- Taxa -->
+          <col style="width:8%"> <!-- Frete liq -->
+          <col style="width:8%"> <!-- Margem -->
+          <col style="width:14%"><!-- Frete tipo -->
         </colgroup>
         <thead><tr>
-          <th></th>
-          <th onclick="sortAnuncios('titulo')" style="cursor:pointer">Produto ↕</th>
           <th onclick="sortAnuncios('sku')" style="cursor:pointer">SKU ↕</th>
           <th>MLB</th>
+          <th onclick="sortAnuncios('titulo')" style="cursor:pointer">Produto ↕</th>
           <th class="num" onclick="sortAnuncios('preco')" style="cursor:pointer">Preço ↕</th>
           <th class="num" onclick="sortAnuncios('cmv')" style="cursor:pointer">CMV ↕</th>
           <th class="num">Taxa</th>
-          <th class="num">Frete liq.</th>
+          <th class="num">Frete (bruto→liq)</th>
           <th class="num" onclick="sortAnuncios('margem_atual')" style="cursor:pointer">Margem ↕</th>
-          <th>Status</th>
+          <th>Frete tipo</th>
         </tr></thead>
         <tbody id="anunc-tbody"></tbody>
       </table>
@@ -1654,49 +1616,6 @@ async function mostrarStatusDB(){
 
 // Força renovação manual do token ML
 
-async function fixStatusPedidos(el){
-  const orig = el.textContent;
-  el.textContent='⏳...'; el.disabled=true;
-  try {
-    const r = await fetch('/api/sync/fix-status',{method:'POST',headers:{'Authorization':'Bearer '+tokens.server}});
-    const d = await r.json();
-    el.textContent='✓ Rodando!';
-    setTimeout(()=>{el.textContent=orig;el.disabled=false;},3000);
-    alert('Fix status rodando em background.\nAguarde ~1min — os pedidos sem status serão atualizados.');
-  } catch(e){ el.textContent=orig; el.disabled=false; alert('Erro: '+e.message); }
-}
-async function carregarListingsNovos(){
-  const wrap=document.getElementById('listings-novos-wrap');
-  wrap.innerHTML='<div style="padding:12px;font-size:12px;color:var(--muted);text-align:center">⏳ Carregando...</div>';
-  try {
-    const r=await fetch('/api/db/listings-novos?horas=24');
-    const d=await r.json();
-    const lista=d.listings||[];
-    if(!lista.length){wrap.innerHTML='<div style="padding:12px;font-size:12px;color:var(--muted);text-align:center">Nenhum anúncio novo nas últimas 24h</div>';return;}
-    let html='<table class="tbl"><thead><tr><th>MLB</th><th>Título</th><th class="num">Preço</th></tr></thead><tbody>';
-    lista.forEach(l=>{
-      const titulo=(l.titulo||l.sku||'').substring(0,40);
-      const preco=l.preco?(l.preco).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'—';
-      html+=`<tr><td style="font-size:10px"><a href="https://www.mercadolivre.com.br/anuncio/${l.id}" target="_blank" style="color:var(--accent)">${l.id}</a></td><td style="font-size:11px">${titulo}</td><td class="num" style="font-size:11px">${preco}</td></tr>`;
-    });
-    html+=`</tbody></table><div style="padding:6px 12px;font-size:11px;color:var(--muted)">${lista.length} anúncio(s) nas últimas 24h</div>`;
-    wrap.innerHTML=html;
-  } catch(e){ wrap.innerHTML=`<div style="padding:12px;font-size:12px;color:var(--red)">${e.message}</div>`; }
-}
-async function fixTitulosML(el){
-  const orig = el.textContent;
-  el.textContent = '⏳ Aguarde...'; el.disabled = true;
-  try {
-    const r = await fetch('/api/sync/ml-titulos', {method:'POST', headers:{'Authorization':'Bearer '+tokens.server}});
-    const d = await r.json();
-    el.textContent = '✓ Rodando!';
-    setTimeout(()=>{el.textContent=orig;el.disabled=false;}, 3000);
-    alert('Atualização de títulos rodando em background.\nAguarde ~2min e recarregue os anúncios.');
-  } catch(e) {
-    el.textContent = orig; el.disabled = false;
-    alert('Erro: ' + e.message);
-  }
-}
 async function sincBlingAnuncios(el){
   if(el){el.textContent='Baixando...';el.disabled=true;}
   try{
@@ -2757,24 +2676,42 @@ function initPromocoes(){ if(promoData.length) renderPromoTabela(promoDataFiltra
 async function fetchPedidosML(de,ate){
   setDot('ml','wait','ML carregando...');
   try{
-    // Buscar do banco (mais rápido e confiável)
-    const r = await fetch('/api/db/pedidos-nf?dias=30');
-    if(!r.ok) throw new Error('banco '+r.status);
-    const lista = await r.json();
-    const pedidos = lista
-      .filter(p=>p.canal&&(p.canal.includes('ML')||p.canal.includes('Mercado')))
-      .map(p=>({
-        id: p.id,
-        data: (p.data||'').substring(0,10),
-        status: p.status||'',
-        total: parseFloat(p.total||0),
-        valor_pago: parseFloat(p.total||0),
-        uf: p.uf||'XX',
-        canal: 'ML',
-        frete: parseFloat(p.frete||0),
-        itens: (() => { try{ return JSON.parse(p.itens||'[]'); }catch(e){ return []; } })(),
-      }));
-    setDot('ml','ok','ML ✓ (banco)');
+    const pedidos=[];
+    let offset=0,total=999;
+    while(offset<total&&offset<300){
+      const r=await mlGet(`orders/search?seller=537714337&order.date_created.from=${de}T00:00:00.000-03:00&order.date_created.to=${ate}T23:59:59.000-03:00&sort=date_desc&limit=50&offset=${offset}`);
+      if(!r||!r.results)break;
+      total=r.paging?.total||0;
+      if(!r.results.length)break;
+
+      for(const o of r.results){
+        const itens=o.order_items?.map(it=>({
+          mlb:it.item?.id,
+          titulo:it.item?.title||'',
+          sku:it.item?.seller_sku||'',
+          qtd:it.quantity||1,
+          preco:parseFloat(it.unit_price||0),
+          listing_type:it.listing_type_id||'gold_special',
+        }))||[];
+
+        pedidos.push({
+          id:o.id,
+          data:o.date_created?.substring(0,10),
+          status:o.status,
+          total:parseFloat(o.total_amount||0),
+          valor_pago:parseFloat(o.paid_amount||0),
+          uf:o.shipping?.receiver_address?.state?.id||'XX',
+          canal:'ML',
+          frete:parseFloat(o.shipping_cost||0)||0,
+          itens,
+        });
+      }
+      offset+=50;
+      await new Promise(r=>setTimeout(r,100));
+      if(offset>=total)break;
+    }
+
+    setDot('ml','ok',`ML ✓ (${pedidos.length} pedidos)`);
     return pedidos;
   }catch(e){setDot('ml','err','ML ✗');console.error('ML erro:',e);return[];}
 }
@@ -3238,8 +3175,6 @@ function showLoading(msg){const _l=document.getElementById('loading');if(_l)_l.s
 function hideLoading(){(document.getElementById('loading')||{style:{}}).style.display ='none';}
 function setDot(a,s,l){const d=document.getElementById(`dot-${a}`);const lb=document.getElementById(`lbl-${a}`);if(d)d.className=`dot ${s}`;if(lb)lb.textContent=l;}
 function recarregar(){dados.cmvCache={};carregarTudo();}
-function gerarEAN(){var d=Array.from({length:12},function(){return Math.floor(Math.random()*10)});var s=d.reduce(function(acc,x,i){return acc+x*(i%2===0?1:3)},0);var c=(10-(s%10))%10;document.getElementById("ean-display").textContent=d.concat([c]).join("");}
-function copiarEAN(){var v=document.getElementById("ean-display").textContent;if(v==="---"||v==="—")return;navigator.clipboard.writeText(v).then(function(){var el=document.getElementById("ean-display");var orig=el.textContent;el.textContent="✓ Copiado!";setTimeout(function(){el.textContent=orig;},1200);});}
 function fmt(v){return(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtK(v){return v>=1000?`${(v/1000).toFixed(1)}k`:fmt(v);}
 
@@ -5424,12 +5359,6 @@ let currentView = 'dashboard';
 function setView(v){
   currentView = v;
   const safe=(id,fn)=>{const el=document.getElementById(id);if(el)fn(el);};
-  // Garantir que o container pai tenha altura suficiente
-  const viewEl = document.getElementById('view-'+v);
-  if(viewEl && viewEl.parentElement){
-    viewEl.parentElement.style.minHeight = 'calc(100vh - 150px)';
-    viewEl.parentElement.style.display = 'block';
-  }
   ['dashboard','anuncios','financeiro','conciliacao','precos','promocoes','difal','perguntas','ads','pedidos','historico','cmv','nf','central-prom'].forEach(name=>{
     safe('view-'+name, el=>el.style.display = v===name?'flex':'none');
   });
@@ -5460,20 +5389,6 @@ function setView(v){
   if(v==='central-prom') {} // carrega só quando clicar Atualizar
   if(v==='perguntas'){ const k=localStorage.getItem('fava_claude_key')||''; safe('perg-apikey',el=>el.value=k); }
 }
-
-// ── Fix automático: garantir altura do container de views na abertura ──────
-(function fixContainerAltura(){
-  const vd = document.getElementById('view-dashboard');
-  if(!vd) return;
-  const parent = vd.parentElement;
-  if(parent){
-    parent.style.minHeight = 'calc(100vh - 150px)';
-    parent.style.display   = 'block';
-  }
-  // Garantir que view-tabs não estica verticalmente
-  const vt = document.querySelector('.view-tabs');
-  if(vt){ vt.style.alignItems = 'flex-start'; vt.style.flexShrink = '0'; }
-})();
 
 // ══════════════════════════════════════════════════════════════════════
 // FINANCEIRO
@@ -6020,9 +5935,6 @@ async function carregarAnuncios(){
       }
       const tituloDb = String(l.titulo||'').trim();
       const tituloFallback = tituloDb || dados.cmvCache[sku]?.nome || cmvInfo?.nome || '';
-      const dcStr = l.data_criacao ? String(l.data_criacao) : '';
-      const dcDate = dcStr ? new Date(dcStr) : null;
-      const isNovo = dcDate && (Date.now() - dcDate.getTime()) < 48*3600*1000;
       return {
         id: l.id||'', sku, titulo: tituloFallback, preco,
         taxa, frete: freteReal, freteL,
@@ -6031,7 +5943,6 @@ async function carregarAnuncios(){
         free_shipping: parseInt(l.free_shipping||0),
         sale_fee: sfRaw, status: l.status||'',
         margem_minima: parseFloat(l.margem_minima)||0,
-        data_criacao: dcDate, isNovo,
       };
     });
 
@@ -6042,7 +5953,6 @@ async function carregarAnuncios(){
 
     // Busca taxa real do ML em background — sempre, a cada carregamento
     taxasAtualizadas = false;
-    // Busca de frete real desativada (usa frete_medio do banco)
     if(false && tokens.ml && anunciosData.length > 0){
       atualizarTaxasReaisML();
     }
@@ -6114,10 +6024,8 @@ function renderAnuncios(){
   const filtro = anunciosFiltroStatus||'todos';
   let lista = [...anunciosData].filter(a=>{
     if(q && !a.titulo.toLowerCase().includes(q) && !a.sku.toLowerCase().includes(q) && !a.id.toLowerCase().includes(q)) return false;
-    if(filtro==='alerta'  && (a.margem_atual===null || a.margem_atual>=.20)) return false;
-    if(filtro==='promo'   && a.free_shipping!==1) return false;
-    if(filtro==='novos'   && !a.isNovo) return false;
-    if(filtro==='semcmv'  && a.cmv>0) return false;
+    if(filtro==='alerta' && (a.margem_atual===null || a.margem_atual>=.20)) return false;
+    if(filtro==='promo' && a.free_shipping!==1) return false;
     return true;
   });
 
@@ -6133,62 +6041,28 @@ function renderAnuncios(){
     tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:#9ca3af">Nenhum anúncio encontrado</td></tr>';
     return;
   }
-  if(!lista.length){
-    tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:20px;color:#9ca3af">Nenhum anúncio encontrado</td></tr>';
-    return;
-  }
-  // Mostrar 200 por página para não travar o browser
-  const paginaAtual = window._anuncPagina || 0;
-  const POR_PAG = 200;
-  const listaPage = lista.slice(paginaAtual * POR_PAG, (paginaAtual + 1) * POR_PAG);
-  const totalPags = Math.ceil(lista.length / POR_PAG);
-  const infoEl = document.getElementById('anunc-pag-info');
-  if(infoEl) infoEl.textContent = lista.length + ' anúncios | pág ' + (paginaAtual+1) + '/' + totalPags;
-  tbody.innerHTML = listaPage.map(a=>{
-    const mc = a.margem_atual;
-    const mgCor = mc===null?'#9ca3af':mc>=.20?'#16a34a':mc>=.10?'#d97706':'#dc2626';
-    const mgBg  = mc===null?'#f3f4f6':mc>=.20?'#dcfce7':mc>=.10?'#fef9c3':'#fee2e2';
-    const mgStr = mc!==null ? (mc*100).toFixed(1)+'%' : '—';
+  tbody.innerHTML = lista.map(a=>{
+    const mgCor = a.margem_atual===null?'var(--muted)':a.margem_atual>=.20?'var(--verde)':a.margem_atual>=.10?'var(--amarelo)':'var(--vermelho)';
+    const mgStr = a.margem_atual!==null ? (a.margem_atual*100).toFixed(1)+'%' : (a.cmv>0?'—':'<span style="color:#f59e0b;font-size:9px">sem CMV</span>');
+    const freteTxt = a.frete>0 
+      ? `<strong>R$${a.frete.toFixed(2)}</strong><span style="font-size:9px;color:#9ca3af"> → liq R$${(a.freteL||0).toFixed(2)}</span>` 
+      : '<span style="color:#9ca3af">—</span>';
     const taxaTxt = a.taxa>0 ? (a.taxa*100).toFixed(0)+'%' : '—';
-    const freteLiq = a.freteL>0 ? 'R$'+(a.freteL).toFixed(0) : (a.frete>0?'R$'+a.frete.toFixed(0):'—');
-    const novoBadge  = a.isNovo ? '<span style="background:#dbeafe;color:#1e40af;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700;margin-left:3px">NOVO</span>' : '';
-    const freteBadge = a.free_shipping
-      ? '<span style="background:#dcfce7;color:#15803d;font-size:9px;padding:1px 5px;border-radius:4px">Grátis</span>'
-      : '<span style="background:#f3f4f6;color:#6b7280;font-size:9px;padding:1px 5px;border-radius:4px">Comprador</span>';
-    let statusBadge = '';
-    if(mc===null)   statusBadge='<span style="background:#fef9c3;color:#92400e;font-size:9px;padding:1px 5px;border-radius:4px">Sem CMV</span>';
-    else if(mc<0)   statusBadge='<span style="background:#fee2e2;color:#dc2626;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">Neg.</span>';
-    else if(mc<.10) statusBadge='<span style="background:#fee2e2;color:#dc2626;font-size:9px;padding:1px 5px;border-radius:4px">&lt;10%</span>';
-    else if(mc<.20) statusBadge='<span style="background:#fef9c3;color:#92400e;font-size:9px;padding:1px 5px;border-radius:4px">&lt;20%</span>';
-    else            statusBadge='<span style="background:#dcfce7;color:#15803d;font-size:9px;padding:1px 5px;border-radius:4px">OK</span>';
-    const imgSrc = a.id ? 'https://http2.mlstatic.com/D_NQ_NP_'+a.id+'-F.webp' : '';
-    const thumb = imgSrc
-      ? '<a href="https://www.mercadolivre.com.br/p/'+a.id+'" target="_blank"><img src="'+imgSrc+'" width="32" height="32" style="object-fit:contain;border-radius:4px;border:1px solid #e5e7eb;display:block" onerror="this.remove()"></a>'
-      : '<span style="font-size:16px">🛒</span>';
-    const tituloSafe = (a.titulo||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    const cmvStr = a.cmv>0 ? 'R$'+a.cmv.toFixed(2) : '<span style="color:#f59e0b">—</span>';
-    const mlbLink = a.id ? '<a href="https://www.mercadolivre.com.br/p/'+a.id+'" target="_blank" style="color:#3b82f6;text-decoration:none;font-size:10px">'+a.id+'</a>' : '';
-    return [
-      '<tr style="border-bottom:1px solid #f9fafb">',
-      '<td style="padding:4px 6px">'+thumb+'</td>',
-      '<td style="padding:4px 8px;overflow:hidden;max-width:0" title="'+tituloSafe+'">',
-        '<div style="font-size:11px;font-weight:600;color:#1F3864;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+a.titulo+novoBadge+'</div>',
-        '<div style="font-size:10px;color:var(--muted)">'+mlbLink+'</div>',
-      '</td>',
-      '<td style="padding:4px 8px;font-size:11px;font-weight:700;color:#1F3864">'+(a.sku||'—')+'</td>',
-      '<td style="padding:4px 8px;font-size:10px;color:var(--muted)">'+(a.id||'—')+'</td>',
-      '<td style="padding:4px 8px;text-align:right;font-weight:700;font-size:12px">R$'+(a.preco||0).toFixed(2)+'</td>',
-      '<td style="padding:4px 8px;text-align:right;font-size:11px;color:var(--muted)">'+cmvStr+'</td>',
-      '<td style="padding:4px 8px;text-align:right;font-size:11px;color:var(--muted)">'+taxaTxt+'</td>',
-      '<td style="padding:4px 8px;text-align:right;font-size:11px">'+freteLiq+'</td>',
-      '<td style="padding:4px 8px;text-align:right"><span style="background:'+mgBg+';color:'+mgCor+';font-weight:700;font-size:12px;padding:2px 7px;border-radius:5px">'+mgStr+'</span></td>',
-      '<td style="padding:4px 8px">'+freteBadge+' '+statusBadge+'</td>',
-      '</tr>'
-    ].join('');
+    const mlbLink = a.id ? `<a href="https://www.mercadolivre.com.br/p/${a.id}" target="_blank" style="font-size:9px;color:var(--azul2);text-decoration:none">${a.id}</a>` : '—';
+    return `<tr style="border-bottom:1px solid #f9fafb">
+      <td style="padding:5px 8px;font-weight:700;color:#1F3864;font-size:11px">${a.sku||'—'}</td>
+      <td style="padding:5px 8px;font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${mlbLink}</td>
+      <td style="padding:5px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px" title="${a.titulo}">${a.titulo}</td>
+      <td style="padding:5px 8px;text-align:right;font-weight:700">R$${(a.preco||0).toFixed(2)}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${a.cmv>0?'R$'+a.cmv.toFixed(2):'<span style="color:#f59e0b;font-size:9px">sem CMV</span>'}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${taxaTxt}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${freteTxt}</td>
+      <td style="padding:5px 8px;text-align:right;font-weight:700;color:${mgCor}">${mgStr}</td>
+      <td style="padding:5px 8px;text-align:center"><span class="pill ${a.free_shipping?'pill-g':'pill-b'}" style="font-size:9px">${a.free_shipping?'Grátis':'Comprador'}</span></td>
+    </tr>`;
   }).join('');
 
   // KPIs
-
   const total=lista.length, comCmv=lista.filter(a=>a.cmv>0).length;
   const comMargem = lista.filter(a=>a.margem_atual!==null && !isNaN(a.margem_atual));
   const mgMed = comMargem.length ? comMargem.reduce((s,a)=>s+a.margem_atual,0)/comMargem.length : null;
@@ -6199,14 +6073,13 @@ function renderAnuncios(){
     <div class="kpi"><div class="kl">Sem CMV</div><div class="kv" style="color:${total-comCmv>0?'var(--amarelo)':'var(--verde)'}">${total-comCmv}</div></div>
     <div class="kpi"><div class="kl">Margem média</div><div class="kv" style="color:${mgMed===null?'var(--muted)':mgMed>=.20?'var(--verde)':mgMed>=.10?'var(--amarelo)':'var(--vermelho)'}">${mgMed!==null?(mgMed*100).toFixed(1)+'%':'—'}</div></div>
     <div class="kpi"><div class="kl">Margem &lt; 10%</div><div class="kv" style="color:var(--vermelho)">${comMargem.filter(a=>a.margem_atual<.10).length}</div></div>
-    <div class="kpi"><div class="kl">Sem frete</div><div class="kv" style="color:${lista.filter(a=>a.frete===0).length?'var(--amarelo)':'var(--verde)'}">${lista.filter(a=>a.frete===0).length}</div></div>
-    <div class="kpi"><div class="kl">🆕 Novos 48h</div><div class="kv" style="color:var(--azul2)">${lista.filter(a=>a.isNovo).length}</div></div>`;
+    <div class="kpi"><div class="kl">Sem frete</div><div class="kv" style="color:${lista.filter(a=>a.frete===0).length?'var(--amarelo)':'var(--verde)'}">${lista.filter(a=>a.frete===0).length}</div></div>`;
 }
 
 let anunciosFiltroStatus = 'todos';
-function filtrarAnuncios(){ window._anuncPagina=0; renderAnuncios(); }
+function filtrarAnuncios(){ renderAnuncios(); }
 function filtrarAnuncioStatus(s,btn){
-  anunciosFiltroStatus=s; window._anuncPagina=0;
+  anunciosFiltroStatus=s;
   document.querySelectorAll('[id^="fb-"]').forEach(b=>b.classList.remove('a'));
   if(btn) btn.classList.add('a');
   renderAnuncios();
@@ -7894,6 +7767,16 @@ async function syncPC(full){
     bar.style.width='100%';bar.style.background='#2196f3';st.textContent='OK - '+saved+' pedidos salvos';
   }catch(e){bar.style.background='#f44336';st.textContent='Erro: '+e.message;}
 }
+// Fix automático: container das views
+(function(){
+  const vd = document.getElementById('view-dashboard');
+  if(vd && vd.parentElement){
+    vd.parentElement.style.minHeight = 'calc(100vh - 150px)';
+    vd.parentElement.style.display   = 'block';
+  }
+  const vt = document.querySelector('.view-tabs');
+  if(vt) vt.style.alignItems = 'flex-start';
+})();
 </script>
 </body>
 </html>
