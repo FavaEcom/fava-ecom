@@ -547,11 +547,36 @@ def sync_pedidos():
             total = float(p.get('totalProdutos',0) or p.get('total',0) or 0)
             data_p = (p.get('data','') or '')[:10]
             conflict = 'ON CONFLICT(id) DO UPDATE SET status=EXCLUDED.status' if IS_PG else 'ON CONFLICT(id) DO UPDATE SET status=excluded.status'
+            # UF real do cliente
+            contato = p.get('contato') or {}
+            _uf = ''
+            if isinstance(contato, dict):
+                end = contato.get('endereco') or contato.get('address') or {}
+                if isinstance(end, dict):
+                    _uf = (end.get('uf') or end.get('state') or '').upper()
+            if not _uf:
+                _uf = (p.get('uf') or p.get('state') or 'PR').upper()
+            # Frete real
+            _frete = float(p.get('frete',0) or p.get('shipping',0) or 0)
+            # Número da loja para identificar canal
+            num_loja = str(p.get('numeroLoja') or p.get('numeroPedidoLoja') or '')
+            if num_loja and canal == 'Bling':
+                if num_loja.upper().startswith('MLB') or 'MERCADO' in num_loja.upper():
+                    canal = 'Mercado Livre'
+                elif 'SHOPEE' in num_loja.upper() or num_loja.startswith('SH'):
+                    canal = 'Shopee'
+                elif 'YAMPI' in num_loja.upper():
+                    canal = 'Yampi'
             try:
-                exe(f"INSERT INTO pedidos (id,canal,data,status,total,uf,frete,itens) VALUES ({qmark(8)}) {conflict}",
-                    (pid,canal,data_p,status,total,'PR',0,itens))
+                exe(f"INSERT INTO pedidos (id,canal,data,status,total,uf,frete,itens,numero_loja) VALUES ({qmark(9)}) {conflict}",
+                    (pid,canal,data_p,status,total,_uf or 'PR',_frete,itens,num_loja))
                 n+=1
-            except Exception as e: print(f'[SYNC] ped {pid}: {e}')
+            except Exception as e:
+                try:
+                    exe(f"INSERT INTO pedidos (id,canal,data,status,total,uf,frete,itens) VALUES ({qmark(8)}) {conflict}",
+                        (pid,canal,data_p,status,total,_uf or 'PR',_frete,itens))
+                    n+=1
+                except Exception as e2: print(f'[SYNC] ped {pid}: {e2}')
         if len(items)<100: break
         pagina+=1; time.sleep(0.3)
     print(f'[SYNC] {n} pedidos'); return n

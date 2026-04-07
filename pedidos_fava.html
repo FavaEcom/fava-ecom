@@ -2,487 +2,497 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pedidos com NF — Fava Ecom</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pedidos — Fava Ecom</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;font-size:13px}
-nav{background:#1e293b;padding:0 16px;display:flex;gap:2px;border-bottom:2px solid #334155}
-nav a{padding:8px 14px;color:#64748b;font-size:12px;font-weight:700;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px}
-nav a.ativo{color:#60a5fa;border-bottom-color:#3b82f6}
-nav a:hover{color:#e2e8f0}
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #7d8590;
+    --green: #3fb950;
+    --red: #f85149;
+    --yellow: #d29922;
+    --blue: #58a6ff;
+    --purple: #bc8cff;
+    --orange: #f0883e;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px; }
 
-/* Toolbar */
-.toolbar{background:#1e293b;padding:10px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-bottom:1px solid #334155}
-.toolbar select,.toolbar input{background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:12px}
-.btn{background:#2563eb;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer}
-.btn:hover{background:#1d4ed8}
-.btn-verde{background:#059669}
-.btn-verde:hover{background:#047857}
+  /* NAV */
+  nav { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 16px; display: flex; align-items: center; gap: 4px; height: 44px; position: sticky; top: 0; z-index: 100; }
+  nav a { color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 13px; transition: all .15s; }
+  nav a:hover { color: var(--text); background: var(--bg3); }
+  nav a.active { color: var(--text); background: var(--bg3); }
+  nav .logo { color: var(--text); font-weight: 600; margin-right: 8px; font-size: 14px; }
 
-/* Filtros de período */
-.periodo-btns{display:flex;gap:4px}
-.p-btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer}
-.p-btn.ativo{background:#2563eb;border-color:#2563eb;color:#fff}
+  /* HEADER */
+  .header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .header h1 { font-size: 18px; font-weight: 600; flex: 1; }
 
-/* Stats */
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding:16px;background:#0f172a}
-.stat-card{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:14px 16px;position:relative;overflow:hidden}
-.stat-card.verde{border-color:#065f46}
-.stat-card.azul{border-color:#1e3a8a}
-.stat-card.roxo{border-color:#4c1d95}
-.stat-card.laranja{border-color:#7c2d12}
-.stat-card.vermelho{border-color:#7f1d1d}
-.stat-label{font-size:10px;font-weight:700;color:#64748b;letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px}
-.stat-val{font-size:22px;font-weight:900;color:#e2e8f0}
-.stat-sub{font-size:11px;color:#64748b;margin-top:3px}
-.stat-bar{position:absolute;bottom:0;left:0;height:3px;background:currentColor;border-radius:0 3px 3px 0}
+  /* STATS */
+  .stats { display: flex; gap: 1px; background: var(--border); border-bottom: 1px solid var(--border); }
+  .stat { flex: 1; background: var(--bg2); padding: 12px 16px; min-width: 120px; }
+  .stat .val { font-size: 20px; font-weight: 700; line-height: 1.2; }
+  .stat .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .stat .val.green { color: var(--green); }
+  .stat .val.red { color: var(--red); }
+  .stat .val.blue { color: var(--blue); }
+  .stat .val.yellow { color: var(--yellow); }
 
-/* Impostos breakdown */
-.impostos-row{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:0 16px 16px;background:#0f172a}
-.imp-item{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:10px 12px;text-align:center}
-.imp-label{font-size:10px;color:#64748b;font-weight:700}
-.imp-val{font-size:14px;font-weight:900;color:#f87171;margin-top:3px}
-.imp-pct{font-size:10px;color:#94a3b8;margin-top:1px}
+  /* FILTROS */
+  .filtros { padding: 10px 16px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid var(--border); background: var(--bg2); }
+  .filtros select, .filtros input { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 5px 10px; border-radius: 6px; font-size: 12px; height: 30px; }
+  .filtros select:focus, .filtros input:focus { outline: none; border-color: var(--blue); }
+  .btn { padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg3); color: var(--text); cursor: pointer; font-size: 12px; height: 30px; transition: all .15s; }
+  .btn:hover { background: var(--border); }
+  .btn.primary { background: var(--blue); border-color: var(--blue); color: #000; font-weight: 600; }
+  .btn.primary:hover { opacity: .85; }
 
-/* Lista de pedidos */
-.pedidos-wrap{overflow:auto;max-height:calc(100vh - 340px)}
-table{width:100%;border-collapse:collapse;min-width:1100px}
-thead th{background:#1e293b;padding:8px 10px;text-align:left;font-size:10px;color:#64748b;font-weight:900;letter-spacing:.5px;text-transform:uppercase;border-bottom:2px solid #334155;position:sticky;top:0;z-index:5;white-space:nowrap}
-thead th.n{text-align:right}
-tbody tr{border-bottom:1px solid #1e293b;cursor:pointer;transition:background .1s}
-tbody tr:hover{background:#1e293b88}
-tbody tr.aberto{background:#1e3a5f22}
-td{padding:7px 10px;font-size:12px;vertical-align:middle}
-td.n{text-align:right;font-family:monospace}
-.status-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;display:inline-block}
-.st-ok{background:#064e3b;color:#10b981}
-.st-pend{background:#1c1917;color:#d97706}
-.canal-ml{color:#ffe066;font-weight:700;font-size:11px}
-.canal-sh{color:#ff7700;font-weight:700;font-size:11px}
-.canal-ym{color:#60a5fa;font-weight:700;font-size:11px}
-.margem-ok{color:#10b981;font-weight:700}
-.margem-med{color:#f59e0b;font-weight:700}
-.margem-bad{color:#ef4444;font-weight:700}
+  /* TABELA */
+  .tabela-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { background: var(--bg2); padding: 8px 10px; text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid var(--border); position: sticky; top: 44px; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background .1s; }
+  tbody tr:hover { background: var(--bg2); }
+  tbody td { padding: 8px 10px; white-space: nowrap; }
+  .right { text-align: right; }
+  .center { text-align: center; }
 
-/* Detalhe expandido */
-.detalhe{background:#0f172a;border-top:1px solid #334155}
-.detalhe td{padding:0}
-.det-inner{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;padding:16px;gap:16px}
-.det-bloco{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:14px}
-.det-titulo{font-size:10px;font-weight:900;color:#60a5fa;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
-.det-row{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #1e293b}
-.det-row:last-child{border:none;font-weight:900;font-size:13px;padding-top:8px;margin-top:4px}
-.det-row .pos{color:#10b981}
-.det-row .neg{color:#f87171}
-.det-row .neu{color:#94a3b8}
-.itens-lista{margin-top:6px}
-.item-row{display:flex;justify-content:space-between;padding:3px 0;font-size:11px;color:#cbd5e1;border-bottom:1px solid #1e293b22}
+  /* BADGES */
+  .canal-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .canal-ML { background: #f0c040; color: #000; }
+  .canal-Shopee { background: #f05c00; color: #fff; }
+  .canal-Yampi { background: #5b4fcf; color: #fff; }
+  .canal-Bling { background: #0057a8; color: #fff; }
+  .canal-Balcão { background: #3fb950; color: #000; }
+  .canal-Balcao { background: #3fb950; color: #000; }
 
-/* UF badge */
-.uf-badge{font-size:10px;font-weight:700;background:#1e293b;border:1px solid #334155;padding:1px 6px;border-radius:4px;color:#94a3b8}
-.uf-difal{background:#451a03;border-color:#92400e;color:#f59e0b}
+  .uf-badge { display: inline-block; padding: 1px 5px; border-radius: 4px; font-size: 10px; font-weight: 700; background: var(--bg3); color: var(--muted); }
+  .uf-difal { background: rgba(248,81,73,.15); color: var(--red); }
 
-.loading-txt{text-align:center;padding:40px;color:#475569}
-.vazio{text-align:center;padding:60px;color:#475569}
+  .margem-tag { font-weight: 700; }
+  .margem-ok { color: var(--green); }
+  .margem-med { color: var(--yellow); }
+  .margem-ruim { color: var(--red); }
 
-/* Scroll suave */
-::-webkit-scrollbar{width:6px;height:6px}
-::-webkit-scrollbar-track{background:#0f172a}
-::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}
+  /* STATUS */
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+  .s-ok { background: var(--green); }
+  .s-pend { background: var(--yellow); }
+  .s-canc { background: var(--red); }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 200; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; width: 760px; max-width: 95vw; max-height: 90vh; overflow: auto; }
+  .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .modal-header h2 { font-size: 15px; font-weight: 600; }
+  .close-btn { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; padding: 2px 8px; border-radius: 4px; }
+  .close-btn:hover { color: var(--text); background: var(--bg3); }
+  .modal-body { padding: 20px; }
+
+  /* CARDS MODAL */
+  .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+  .info-card { background: var(--bg3); border-radius: 8px; padding: 12px; }
+  .info-card .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+  .info-card .val { font-size: 16px; font-weight: 700; }
+
+  /* FISCAL */
+  .fiscal-box { background: var(--bg3); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+  .fiscal-box h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 10px; }
+  .fiscal-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .fiscal-row:last-child { border-bottom: none; }
+  .fiscal-row .fiscal-lbl { color: var(--muted); font-size: 12px; }
+  .fiscal-row .fiscal-val { font-weight: 600; font-size: 13px; }
+  .fiscal-row.total-row { margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--border); border-bottom: none; }
+  .fiscal-row.total-row .fiscal-lbl { color: var(--text); font-weight: 600; }
+  .fiscal-row.total-row .fiscal-val { color: var(--red); font-size: 15px; }
+
+  /* ITENS */
+  .itens-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  .itens-table th { font-size: 10px; text-transform: uppercase; color: var(--muted); padding: 4px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+  .itens-table td { padding: 7px 8px; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .itens-table tr:last-child td { border-bottom: none; }
+
+  /* RESULT */
+  .result-box { background: var(--bg3); border-radius: 8px; padding: 14px; }
+  .result-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .result-item { text-align: center; padding: 8px; background: var(--bg2); border-radius: 6px; }
+  .result-item .r-lbl { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+  .result-item .r-val { font-size: 15px; font-weight: 700; }
+
+  .loading { text-align: center; padding: 40px; color: var(--muted); }
+  .empty { text-align: center; padding: 40px; color: var(--muted); }
+  .paginacao { padding: 12px 16px; display: flex; gap: 8px; align-items: center; justify-content: flex-end; border-top: 1px solid var(--border); }
 </style>
 </head>
 <body>
 
 <nav>
-  <a href="https://web-production-5aa0f.up.railway.app/painel_fava.html">🏠 Painel</a>
-  <a href="https://web-production-5aa0f.up.railway.app/gestor_anuncios.html">📢 Gestor</a>
-  <a href="https://web-production-5aa0f.up.railway.app/pedidos_fava.html" class="ativo">📦 Pedidos NF</a>
-  <a href="https://web-production-5aa0f.up.railway.app/calculadora_fava.html">🧮 Calculadora</a>
-  <a href="https://web-production-5aa0f.up.railway.app/cotacao_fava.html">📋 Cotação</a>
+  <span class="logo">🛒 Fava Ecom</span>
+  <a href="painel_fava.html">Painel</a>
+  <a href="gestor_anuncios.html">Gestor</a>
+  <a href="balcao_fava.html">Balcão</a>
+  <a href="calculadora_fava.html">Calculadora</a>
+  <a href="pedidos_fava.html" class="active">Pedidos</a>
 </nav>
 
-<div class="toolbar">
-  <div class="periodo-btns">
-    <button class="p-btn ativo" onclick="setPeriodo(7)" id="btn7">7 dias</button>
-    <button class="p-btn" onclick="setPeriodo(30)" id="btn30">30 dias</button>
-    <button class="p-btn" onclick="setPeriodo(60)" id="btn60">60 dias</button>
-    <button class="p-btn" onclick="setPeriodo(90)" id="btn90">90 dias</button>
-  </div>
+<div class="header">
+  <h1>📦 Pedidos</h1>
+  <button class="btn" onclick="sincronizar()">🔄 Sincronizar</button>
+</div>
 
-  <select id="f-canal" onchange="filtrar()">
-    <option value="">Canal: Todos</option>
+<!-- STATS -->
+<div class="stats" id="stats-bar">
+  <div class="stat"><div class="val blue" id="s-total">—</div><div class="lbl">Pedidos</div></div>
+  <div class="stat"><div class="val green" id="s-receita">—</div><div class="lbl">Receita</div></div>
+  <div class="stat"><div class="val" id="s-impostos" style="color:var(--red)">—</div><div class="lbl">Impostos</div></div>
+  <div class="stat"><div class="val" id="s-cmv" style="color:var(--orange)">—</div><div class="lbl">CMV</div></div>
+  <div class="stat"><div class="val green" id="s-lucro">—</div><div class="lbl">Lucro</div></div>
+  <div class="stat"><div class="val" id="s-margem">—</div><div class="lbl">Margem Média</div></div>
+  <div class="stat"><div class="val" id="s-difal" style="color:var(--purple)">—</div><div class="lbl">DIFAL Total</div></div>
+</div>
+
+<!-- FILTROS -->
+<div class="filtros">
+  <select id="f-dias" onchange="carregar()">
+    <option value="7">7 dias</option>
+    <option value="15">15 dias</option>
+    <option value="30" selected>30 dias</option>
+    <option value="60">60 dias</option>
+    <option value="90">90 dias</option>
+  </select>
+  <select id="f-canal" onchange="carregar()">
+    <option value="">Todos os canais</option>
     <option value="ml">Mercado Livre</option>
     <option value="shopee">Shopee</option>
     <option value="yampi">Yampi</option>
-    <option value="Bling">Balcão/Bling</option>
+    <option value="bling">Bling/Balcão</option>
   </select>
-
-  <select id="f-tipo" onchange="calcParams()">
-    <option value="PJ">PJ</option>
-    <option value="PF">PF</option>
-  </select>
-
-  <select id="f-ie" onchange="calcParams()">
-    <option value="sim">Com IE</option>
-    <option value="nao">Sem IE</option>
-  </select>
-
-  <select id="f-uf" onchange="calcParams()">
-    <option value="">UF: Todas</option>
+  <select id="f-uf" onchange="carregar()">
+    <option value="">Todos os estados</option>
+    <option value="PR">PR (sem DIFAL)</option>
     <option value="SP">SP</option>
-    <option value="RJ">RJ</option>
-    <option value="MG">MG</option>
     <option value="SC">SC</option>
     <option value="RS">RS</option>
-    <option value="PR">PR</option>
-    <option value="GO">GO</option>
-    <option value="BA">BA</option>
+    <option value="MG">MG</option>
+    <option value="RJ">RJ</option>
   </select>
-
-  <span id="lbl-count" style="font-size:12px;color:#64748b;margin-left:auto">—</span>
-  <button class="btn btn-verde" onclick="carregar()">🔄 Atualizar</button>
-  <button class="btn" onclick="exportCSV()">📥 CSV</button>
+  <select id="f-tipo" onchange="carregar()">
+    <option value="">Tipo cliente</option>
+    <option value="PF">PF (com DIFAL)</option>
+    <option value="PJ">PJ (sem DIFAL IE)</option>
+  </select>
+  <input type="text" id="f-busca" placeholder="Buscar pedido/canal..." oninput="filtrarLocal()" style="width:160px">
+  <span id="contador" style="color:var(--muted);margin-left:4px"></span>
 </div>
 
-<!-- Stats -->
-<div class="stats-grid">
-  <div class="stat-card azul">
-    <div class="stat-label">Total Vendido</div>
-    <div class="stat-val" id="s-total">R$ 0</div>
-    <div class="stat-sub" id="s-pedidos">0 pedidos</div>
-  </div>
-  <div class="stat-card verde">
-    <div class="stat-label">Lucro Líquido</div>
-    <div class="stat-val" id="s-lucro">R$ 0</div>
-    <div class="stat-sub" id="s-margem">Margem: 0%</div>
-  </div>
-  <div class="stat-card laranja">
-    <div class="stat-label">Impostos Totais</div>
-    <div class="stat-val" id="s-impostos">R$ 0</div>
-    <div class="stat-sub" id="s-impostos-pct">0% do faturamento</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">CMV Total</div>
-    <div class="stat-val" id="s-cmv">R$ 0</div>
-    <div class="stat-sub" id="s-cmv-pct">0% do faturamento</div>
-  </div>
-  <div class="stat-card vermelho">
-    <div class="stat-label">DIFAL Pago</div>
-    <div class="stat-val" id="s-difal">R$ 0</div>
-    <div class="stat-sub" id="s-difal-n">0 pedidos c/DIFAL</div>
-  </div>
-  <div class="stat-card roxo">
-    <div class="stat-label">Ticket Médio</div>
-    <div class="stat-val" id="s-ticket">R$ 0</div>
-    <div class="stat-sub">por pedido c/NF</div>
-  </div>
-</div>
-
-<!-- Impostos detalhados -->
-<div class="impostos-row">
-  <div class="imp-item">
-    <div class="imp-label">PIS (1,65%)</div>
-    <div class="imp-val" id="i-pis">R$ 0</div>
-    <div class="imp-pct" id="i-pis-p">0%</div>
-  </div>
-  <div class="imp-item">
-    <div class="imp-label">COFINS (7,6%)</div>
-    <div class="imp-val" id="i-cof">R$ 0</div>
-    <div class="imp-pct" id="i-cof-p">0%</div>
-  </div>
-  <div class="imp-item">
-    <div class="imp-label">ICMS Inter.</div>
-    <div class="imp-val" id="i-icms">R$ 0</div>
-    <div class="imp-pct" id="i-icms-p">0%</div>
-  </div>
-  <div class="imp-item">
-    <div class="imp-label">DIFAL</div>
-    <div class="imp-val" id="i-difal">R$ 0</div>
-    <div class="imp-pct" id="i-difal-p">0%</div>
-  </div>
-  <div class="imp-item">
-    <div class="imp-label">IBS (2%)</div>
-    <div class="imp-val" id="i-ibs">R$ 0</div>
-    <div class="imp-pct" id="i-ibs-p">0%</div>
-  </div>
-  <div class="imp-item">
-    <div class="imp-label">TOTAL IMPOSTOS</div>
-    <div class="imp-val" id="i-tot">R$ 0</div>
-    <div class="imp-pct" id="i-tot-p">0% do fat.</div>
-  </div>
-</div>
-
-<!-- Tabela de pedidos -->
-<div class="pedidos-wrap">
-  <table>
-    <thead><tr>
-      <th style="width:28px"></th>
-      <th>Pedido</th>
+<!-- TABELA -->
+<div class="tabela-wrap">
+<table>
+  <thead>
+    <tr>
       <th>Data</th>
+      <th>Pedido</th>
       <th>Canal</th>
       <th>UF</th>
-      <th>Status NF</th>
-      <th class="n">Faturado</th>
-      <th class="n">CMV</th>
-      <th class="n">PIS+COFINS</th>
-      <th class="n">ICMS</th>
-      <th class="n">DIFAL</th>
-      <th class="n">Impostos</th>
-      <th class="n">Lucro</th>
-      <th class="n">Margem</th>
-    </tr></thead>
-    <tbody id="tbody"></tbody>
-  </table>
-  <div class="loading-txt" id="loading">Carregando pedidos...</div>
+      <th class="right">Receita</th>
+      <th class="right">CMV</th>
+      <th class="right">Impostos</th>
+      <th class="right">DIFAL</th>
+      <th class="right">Lucro</th>
+      <th class="right">Margem</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody id="tbody">
+    <tr><td colspan="11" class="loading">Carregando...</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="paginacao" id="paginacao"></div>
+
+<!-- MODAL DETALHE -->
+<div class="modal-overlay" id="modal" onclick="fecharModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 id="modal-titulo">Detalhe do Pedido</h2>
+      <button class="close-btn" onclick="document.getElementById('modal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <div class="loading">Carregando...</div>
+    </div>
+  </div>
 </div>
 
 <script>
-const SRV = 'https://web-production-5aa0f.up.railway.app';
+const RAILWAY = 'https://web-production-5aa0f.up.railway.app';
+let todos = [];
+let filtrados = [];
+const POR_PAG = 50;
+let pagAtual = 0;
 
-// Tabela DIFAL por UF (origem PR)
-const DIFAL_UF = {
-  SP:{inter:0.12,difal:0.06},RJ:{inter:0.12,difal:0.08},MG:{inter:0.12,difal:0.06},
-  SC:{inter:0.12,difal:0.05},RS:{inter:0.12,difal:0.05},ES:{inter:0.07,difal:0.10},
-  GO:{inter:0.07,difal:0.12},DF:{inter:0.07,difal:0.11},MT:{inter:0.07,difal:0.12},
-  MS:{inter:0.07,difal:0.10},BA:{inter:0.07,difal:0.135},PE:{inter:0.07,difal:0.135},
-  CE:{inter:0.07,difal:0.13},RN:{inter:0.07,difal:0.11},PB:{inter:0.07,difal:0.11},
-  AL:{inter:0.07,difal:0.12},SE:{inter:0.07,difal:0.12},MA:{inter:0.07,difal:0.11},
-  PI:{inter:0.07,difal:0.11},PA:{inter:0.07,difal:0.12},AM:{inter:0.07,difal:0.13},
-  AC:{inter:0.07,difal:0.10},RO:{inter:0.07,difal:0.105},RR:{inter:0.07,difal:0.10},
-  AP:{inter:0.07,difal:0.11},TO:{inter:0.07,difal:0.11},
-  PR:{inter:0,difal:0}
-};
-const PIS=0.0165, COF=0.076, IBS=0.02;
+function fmt(v){ return 'R$ '+parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+function fmtPct(v){ return parseFloat(v||0).toFixed(1)+'%'; }
 
-let _dias=7, _all=[], _fil=[], _aberto=null;
-
-function fmt(v){return 'R$ '+parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
-function fmtK(v){v=parseFloat(v||0);if(Math.abs(v)>=1000)return 'R$ '+(v/1000).toFixed(1)+'k';return fmt(v);}
-function fmtPct(v){return parseFloat(v||0).toFixed(1)+'%';}
-
-function calcImpostos(p) {
-  const total = parseFloat(p.total||0);
-  const uf    = (p.uf||'SP').toUpperCase();
-  const tipo  = document.getElementById('f-tipo').value||'PJ';
-  const ie    = document.getElementById('f-ie').value==='sim';
-  const d     = DIFAL_UF[uf]||{inter:0.12,difal:0.06};
-  const geraDifal = uf!=='PR' && (tipo==='PF' || (tipo==='PJ'&&!ie));
-  const pis   = total*PIS;
-  const cof   = total*COF;
-  const icms  = total*d.inter;
-  const difal = geraDifal ? total*d.difal : 0;
-  const ibs   = total*IBS;
-  const tot   = pis+cof+icms+difal+ibs;
-  return {pis,cof,icms,difal,ibs,tot,geraDifal};
+function canalClass(canal){
+  const c = (canal||'').toLowerCase();
+  if(c.includes('mercado') || c.includes('ml') || c.includes('meli')) return 'ML';
+  if(c.includes('shopee')) return 'Shopee';
+  if(c.includes('yampi')) return 'Yampi';
+  if(c.includes('balcão') || c.includes('balcao')) return 'Balcao';
+  return 'Bling';
 }
 
-function setPeriodo(d) {
-  _dias=d;
-  document.querySelectorAll('.p-btn').forEach(b=>b.classList.remove('ativo'));
-  document.getElementById('btn'+d)?.classList.add('ativo');
-  carregar();
+function canalLabel(canal){
+  const cl = canalClass(canal);
+  if(cl==='ML') return 'Mercado Livre';
+  if(cl==='Shopee') return 'Shopee';
+  if(cl==='Yampi') return 'Yampi';
+  if(cl==='Balcao') return 'Balcão';
+  return canal || 'Bling';
 }
 
-async function carregar() {
-  document.getElementById('loading').style.display='block';
-  document.getElementById('tbody').innerHTML='';
-  const canal = document.getElementById('f-canal').value;
-  const uf    = document.getElementById('f-uf').value;
+function margemClass(m){
+  m = parseFloat(m||0);
+  if(m >= 15) return 'margem-ok';
+  if(m >= 8) return 'margem-med';
+  return 'margem-ruim';
+}
+
+function statusDot(s){
+  const sl = (s||'').toLowerCase();
+  if(sl.includes('cancel')) return '<span class="status-dot s-canc"></span>';
+  if(sl.includes('entregue') || sl.includes('atendido') || sl.includes('faturado')) return '<span class="status-dot s-ok"></span>';
+  return '<span class="status-dot s-pend"></span>';
+}
+
+async function carregar(){
+  const dias = document.getElementById('f-dias').value;
+  document.getElementById('tbody').innerHTML = '<tr><td colspan="11" class="loading">Carregando pedidos...</td></tr>';
   try {
-    const url = `${SRV}/api/db/pedidos-nf?dias=${_dias}` +
-                (uf ? `&uf=${uf}` : '') +
-                `&tipo=${document.getElementById('f-tipo').value}` +
-                `&ie=${document.getElementById('f-ie').value}`;
-    const data = await fetch(url).then(r=>r.json());
-    _all = Array.isArray(data) ? data : [];
-    filtrar();
+    const res = await fetch(`${RAILWAY}/api/db/pedidos-nf?dias=${dias}`);
+    const d = await res.json();
+    todos = d.pedidos || d || [];
+    filtrarLocal();
+    atualizarStats(todos);
   } catch(e) {
-    document.getElementById('loading').textContent='Erro: '+e.message;
+    document.getElementById('tbody').innerHTML = '<tr><td colspan="11" class="empty">Erro ao carregar</td></tr>';
   }
 }
 
-function calcParams() { filtrar(); }
+function filtrarLocal(){
+  const canal = document.getElementById('f-canal').value.toLowerCase();
+  const uf = document.getElementById('f-uf').value.toUpperCase();
+  const tipo = document.getElementById('f-tipo').value.toUpperCase();
+  const busca = (document.getElementById('f-busca').value||'').toLowerCase();
 
-function filtrar() {
-  const fc = document.getElementById('f-canal').value;
-  _fil = _all.filter(p => {
-    if(fc) { const c=(p.canal||'').toLowerCase(); if(!c.includes(fc.toLowerCase()))return false; }
+  filtrados = todos.filter(p => {
+    const cl = canalClass(p.canal).toLowerCase();
+    if(canal === 'ml' && !cl.includes('ml')) return false;
+    if(canal === 'shopee' && !cl.includes('shopee')) return false;
+    if(canal === 'yampi' && !cl.includes('yampi')) return false;
+    if(canal === 'bling' && (cl.includes('ml')||cl.includes('shopee')||cl.includes('yampi'))) return false;
+    if(uf && (p.uf||'').toUpperCase() !== uf) return false;
+    if(busca && !(String(p.id).includes(busca) || (p.canal||'').toLowerCase().includes(busca))) return false;
     return true;
   });
-  renderStats();
-  renderTabela();
+
+  pagAtual = 0;
+  renderizarPagina();
+  document.getElementById('contador').textContent = filtrados.length + ' pedidos';
 }
 
-function renderStats() {
-  let totFat=0, totLuc=0, totCmv=0, totImp=0;
-  let totPis=0, totCof=0, totIcms=0, totDifal=0, totIbs=0;
-  let nDifal=0;
+function atualizarStats(lista){
+  const receita = lista.reduce((s,p)=>s+parseFloat(p.total||0),0);
+  const impostos = lista.reduce((s,p)=>s+parseFloat(p.impostos||0),0);
+  const cmv = lista.reduce((s,p)=>s+parseFloat(p.cmv||0),0);
+  const lucro = lista.reduce((s,p)=>s+parseFloat(p.lucro||0),0);
+  const difal = lista.reduce((s,p)=>s+parseFloat(p.difal||0),0);
+  const margem = receita > 0 ? lucro/receita*100 : 0;
 
-  _fil.forEach(p => {
-    const total=parseFloat(p.total||0);
-    const imp=calcImpostos(p);
-    const cmv=parseFloat(p.cmv||0);
-    const luc=total-imp.tot-cmv-parseFloat(p.frete||0);
-    totFat  += total;
-    totCmv  += cmv;
-    totImp  += imp.tot;
-    totPis  += imp.pis;
-    totCof  += imp.cof;
-    totIcms += imp.icms;
-    totDifal+= imp.difal;
-    totIbs  += imp.ibs;
-    totLuc  += luc;
-    if(imp.geraDifal && imp.difal>0) nDifal++;
-  });
-
-  const n=_fil.length||1;
-  const ticket=totFat/n;
-  const margem=totFat>0?totLuc/totFat*100:0;
-  const impPct=totFat>0?totImp/totFat*100:0;
-  const cmvPct=totFat>0?totCmv/totFat*100:0;
-
-  document.getElementById('s-total').textContent=fmtK(totFat);
-  document.getElementById('s-pedidos').textContent=_fil.length+' pedidos com NF';
-  document.getElementById('s-lucro').textContent=fmtK(totLuc);
-  document.getElementById('s-lucro').style.color=margem>=15?'#10b981':margem>=5?'#f59e0b':'#ef4444';
-  document.getElementById('s-margem').textContent='Margem: '+fmtPct(margem);
-  document.getElementById('s-impostos').textContent=fmtK(totImp);
-  document.getElementById('s-impostos-pct').textContent=fmtPct(impPct)+' do faturamento';
-  document.getElementById('s-cmv').textContent=fmtK(totCmv);
-  document.getElementById('s-cmv-pct').textContent=fmtPct(cmvPct)+' do faturamento';
-  document.getElementById('s-difal').textContent=fmtK(totDifal);
-  document.getElementById('s-difal-n').textContent=nDifal+' pedidos c/DIFAL';
-  document.getElementById('s-ticket').textContent=fmtK(ticket);
-  document.getElementById('lbl-count').textContent=_fil.length+' pedidos | '+_dias+' dias';
-
-  // Impostos detalhados
-  document.getElementById('i-pis').textContent=fmtK(totPis);
-  document.getElementById('i-pis-p').textContent=fmtPct(totFat?totPis/totFat*100:0);
-  document.getElementById('i-cof').textContent=fmtK(totCof);
-  document.getElementById('i-cof-p').textContent=fmtPct(totFat?totCof/totFat*100:0);
-  document.getElementById('i-icms').textContent=fmtK(totIcms);
-  document.getElementById('i-icms-p').textContent=fmtPct(totFat?totIcms/totFat*100:0);
-  document.getElementById('i-difal').textContent=fmtK(totDifal);
-  document.getElementById('i-difal-p').textContent=fmtPct(totFat?totDifal/totFat*100:0);
-  document.getElementById('i-ibs').textContent=fmtK(totIbs);
-  document.getElementById('i-ibs-p').textContent=fmtPct(totFat?totIbs/totFat*100:0);
-  document.getElementById('i-tot').textContent=fmtK(totImp);
-  document.getElementById('i-tot-p').textContent=fmtPct(impPct)+' do fat.';
+  document.getElementById('s-total').textContent = lista.length;
+  document.getElementById('s-receita').textContent = fmt(receita);
+  document.getElementById('s-impostos').textContent = fmt(impostos);
+  document.getElementById('s-cmv').textContent = fmt(cmv);
+  document.getElementById('s-lucro').textContent = fmt(lucro);
+  const mel = document.getElementById('s-margem');
+  mel.textContent = fmtPct(margem);
+  mel.className = 'val ' + margemClass(margem);
+  document.getElementById('s-difal').textContent = fmt(difal);
 }
 
-function renderTabela() {
-  const tb=document.getElementById('tbody');
-  document.getElementById('loading').style.display='none';
-  if(!_fil.length){tb.innerHTML='<tr><td colspan="14" class="vazio">Nenhum pedido com NF emitida</td></tr>';return;}
+function renderizarPagina(){
+  const inicio = pagAtual * POR_PAG;
+  const pagina = filtrados.slice(inicio, inicio + POR_PAG);
+  const tbody = document.getElementById('tbody');
 
-  tb.innerHTML=_fil.map((p,i) => {
-    const total=parseFloat(p.total||0);
-    const imp=calcImpostos(p);
-    const cmv=parseFloat(p.cmv||0);
-    const luc=total-imp.tot-cmv-parseFloat(p.frete||0);
-    const mar=total>0?luc/total*100:0;
-    const marCol=mar>=20?'margem-ok':mar>=8?'margem-med':'margem-bad';
-    const uf=(p.uf||'SP').toUpperCase();
-    const difBadge=imp.geraDifal?'class="uf-badge uf-difal"':'class="uf-badge"';
-    const canal=(p.canal||'').toLowerCase();
-    const canalCls=canal.includes('ml')?'canal-ml':canal.includes('shopee')?'canal-sh':'canal-ym';
-    return `<tr onclick="toggleDetalhe(${i},event)">
-      <td style="color:#475569;font-size:11px">▶</td>
-      <td style="font-weight:700;color:#93c5fd">${p.id||'—'}</td>
-      <td style="color:#94a3b8;font-size:11px">${(p.data||'').substring(0,10)}</td>
-      <td><span class="${canalCls}">${p.canal||'—'}</span></td>
-      <td><span ${difBadge}>${uf}${imp.geraDifal?'*':''}</span></td>
-      <td><span class="status-badge st-ok">${p.status||'—'}</span></td>
-      <td class="n">${fmt(total)}</td>
-      <td class="n" style="color:#94a3b8">${cmv>0?fmt(cmv):'—'}</td>
-      <td class="n" style="color:#f87171;font-size:11px">${fmt(imp.pis+imp.cof)}</td>
-      <td class="n" style="color:#f87171;font-size:11px">${fmt(imp.icms)}</td>
-      <td class="n" style="color:${imp.difal>0?'#f59e0b':'#334155'};font-size:11px">${imp.difal>0?fmt(imp.difal):'—'}</td>
-      <td class="n" style="color:#f87171;font-weight:700">${fmt(imp.tot)}</td>
-      <td class="n" style="color:${luc>=0?'#10b981':'#ef4444'};font-weight:700">${fmt(luc)}</td>
-      <td class="n"><span class="${marCol}">${fmtPct(mar)}</span></td>
-    </tr>
-    <tr class="detalhe" id="det-${i}" style="display:none">
-      <td colspan="14">${renderDetalhe(p,imp,cmv,luc,mar)}</td>
+  if(!pagina.length){
+    tbody.innerHTML = '<tr><td colspan="11" class="empty">Nenhum pedido encontrado</td></tr>';
+    document.getElementById('paginacao').innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = pagina.map(p => {
+    const cl = canalClass(p.canal);
+    const ufBadge = p.difal > 0 ? `<span class="uf-badge uf-difal">${p.uf||'?'}</span>` : `<span class="uf-badge">${p.uf||'?'}</span>`;
+    const mgClass = margemClass(p.margem);
+    return `<tr onclick="abrirModal('${p.id}')">
+      <td>${(p.data||'').slice(0,10)}</td>
+      <td style="color:var(--blue);font-family:monospace">${p.id}</td>
+      <td><span class="canal-badge canal-${cl}">${canalLabel(p.canal)}</span></td>
+      <td>${ufBadge}</td>
+      <td class="right">${fmt(p.total)}</td>
+      <td class="right" style="color:var(--orange)">${p.cmv>0?fmt(p.cmv):'<span style="color:var(--muted)">—</span>'}</td>
+      <td class="right" style="color:var(--red)">${fmt(p.impostos)}</td>
+      <td class="right" style="color:var(--purple)">${p.difal>0?fmt(p.difal):'<span style="color:var(--muted)">—</span>'}</td>
+      <td class="right"><b style="color:${parseFloat(p.lucro)>0?'var(--green)':'var(--red)'}">${fmt(p.lucro)}</b></td>
+      <td class="right"><span class="margem-tag ${mgClass}">${fmtPct(p.margem)}</span></td>
+      <td>${statusDot(p.status)}${p.status||'—'}</td>
     </tr>`;
   }).join('');
+
+  // Paginação
+  const total_pags = Math.ceil(filtrados.length / POR_PAG);
+  if(total_pags > 1){
+    let pag = `<span style="color:var(--muted)">Pág ${pagAtual+1}/${total_pags}</span>`;
+    if(pagAtual > 0) pag += ` <button class="btn" onclick="irPag(${pagAtual-1})">← Anterior</button>`;
+    if(pagAtual < total_pags-1) pag += ` <button class="btn" onclick="irPag(${pagAtual+1})">Próxima →</button>`;
+    document.getElementById('paginacao').innerHTML = pag;
+  } else {
+    document.getElementById('paginacao').innerHTML = '';
+  }
 }
 
-function renderDetalhe(p, imp, cmv, luc, mar) {
-  const total=parseFloat(p.total||0);
-  const itens=Array.isArray(p.itens)?p.itens:[];
-  return `<div class="det-inner">
+function irPag(p){ pagAtual = p; renderizarPagina(); window.scrollTo(0,0); }
 
-    <div class="det-bloco">
-      <div class="det-titulo">💰 Resultado Financeiro</div>
-      <div class="det-row"><span>Faturado</span><span class="pos">${fmt(total)}</span></div>
-      <div class="det-row"><span>(-) CMV Produtos</span><span class="neg">${cmv>0?fmt(-cmv):'—'}</span></div>
-      <div class="det-row"><span>(-) Frete Cobrado</span><span class="neg">${fmt(-parseFloat(p.frete||0))}</span></div>
-      <div class="det-row"><span>(-) Total Impostos</span><span class="neg">${fmt(-imp.tot)}</span></div>
-      <div class="det-row"><span>Lucro Líquido</span><span class="${luc>=0?'pos':'neg'}">${fmt(luc)}</span></div>
-      <div class="det-row"><span>Margem</span><span class="${mar>=15?'pos':mar>=5?'':'neg'}">${fmtPct(mar)}</span></div>
-    </div>
+function abrirModal(id){
+  const p = todos.find(x=>String(x.id)===String(id));
+  if(!p) return;
+  document.getElementById('modal-titulo').textContent = `Pedido #${p.id} — ${(p.data||'').slice(0,10)}`;
+  const cl = canalClass(p.canal);
+  const itens = p.itens || [];
+  const temItens = itens.length > 0;
 
-    <div class="det-bloco">
-      <div class="det-titulo">🧾 Impostos Detalhados</div>
-      <div class="det-row"><span>PIS (1,65%)</span><span class="neg">${fmt(-imp.pis)}</span></div>
-      <div class="det-row"><span>COFINS (7,60%)</span><span class="neg">${fmt(-imp.cof)}</span></div>
-      <div class="det-row"><span>ICMS Interestadual</span><span class="neg">${fmt(-imp.icms)}</span></div>
-      <div class="det-row"><span>DIFAL ${imp.geraDifal?'(aplica)':'(PJ c/ IE — não aplica)'}</span>
-        <span class="${imp.difal>0?'neg':'neu'}">${imp.difal>0?fmt(-imp.difal):'R$ 0,00'}</span></div>
-      <div class="det-row"><span>IBS (2%)</span><span class="neg">${fmt(-imp.ibs)}</span></div>
-      <div class="det-row"><span>Total Impostos</span><span class="neg">${fmt(-imp.tot)}</span></div>
-    </div>
-
-    <div class="det-bloco">
-      <div class="det-titulo">📦 Itens do Pedido</div>
-      <div class="itens-lista">
-        ${itens.length?itens.map(it=>`
-          <div class="item-row">
-            <span style="max-width:200px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">
-              ${it.nome||it.sku||'—'}</span>
-            <span style="margin-left:8px;white-space:nowrap">
-              ${it.qtd||1}× ${fmt(it.preco||0)}</span>
-          </div>`).join('')
-        :'<div style="color:#475569;font-size:11px">Itens não disponíveis</div>'}
+  // Montar corpo do modal
+  const body = `
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="lbl">Canal</div>
+        <div class="val"><span class="canal-badge canal-${cl}">${canalLabel(p.canal)}</span></div>
       </div>
-      <div class="det-row" style="margin-top:8px">
-        <span>UF Destino</span><span style="color:#94a3b8">${p.uf||'—'}</span>
+      <div class="info-card">
+        <div class="lbl">Estado (UF)</div>
+        <div class="val">${p.uf||'?'} ${p.difal>0?'<span style="color:var(--red);font-size:11px">DIFAL</span>':''}</div>
       </div>
-      <div class="det-row">
-        <span>Canal</span><span style="color:#94a3b8">${p.canal||'—'}</span>
+      <div class="info-card">
+        <div class="lbl">Status</div>
+        <div class="val">${statusDot(p.status)}${p.status||'—'}</div>
       </div>
     </div>
-  </div>`;
+
+    <div class="fiscal-box">
+      <h3>💰 Receita</h3>
+      <div class="fiscal-row">
+        <span class="fiscal-lbl">Valor dos produtos</span>
+        <span class="fiscal-val">${fmt(p.total)}</span>
+      </div>
+      ${p.frete>0?`<div class="fiscal-row"><span class="fiscal-lbl">Frete recebido</span><span class="fiscal-val">${fmt(p.frete)}</span></div>`:''}
+    </div>
+
+    <div class="fiscal-box">
+      <h3>📋 Impostos — Lucro Real</h3>
+      <div class="fiscal-row">
+        <span class="fiscal-lbl">PIS (1,65%)</span>
+        <span class="fiscal-val" style="color:var(--red)">- ${fmt(p.pis)}</span>
+      </div>
+      <div class="fiscal-row">
+        <span class="fiscal-lbl">COFINS (7,6%)</span>
+        <span class="fiscal-val" style="color:var(--red)">- ${fmt(p.cofins)}</span>
+      </div>
+      ${p.icms>0?`<div class="fiscal-row">
+        <span class="fiscal-lbl">ICMS Interestadual</span>
+        <span class="fiscal-val" style="color:var(--red)">- ${fmt(p.icms)}</span>
+      </div>`:''}
+      ${p.difal>0?`<div class="fiscal-row">
+        <span class="fiscal-lbl">DIFAL (${p.uf})</span>
+        <span class="fiscal-val" style="color:var(--purple)">- ${fmt(p.difal)}</span>
+      </div>`:''}
+      ${p.ibs>0?`<div class="fiscal-row">
+        <span class="fiscal-lbl">IBS/CBS (2%)</span>
+        <span class="fiscal-val" style="color:var(--red)">- ${fmt(p.ibs)}</span>
+      </div>`:''}
+      <div class="fiscal-row total-row">
+        <span class="fiscal-lbl">Total Impostos</span>
+        <span class="fiscal-val">- ${fmt(p.impostos)}</span>
+      </div>
+    </div>
+
+    ${temItens ? `
+    <div class="fiscal-box">
+      <h3>📦 Itens do Pedido</h3>
+      <table class="itens-table">
+        <thead><tr><th>SKU</th><th>Produto</th><th class="right">Qtd</th><th class="right">Preço</th><th class="right">CMV un.</th><th class="right">Total</th></tr></thead>
+        <tbody>
+          ${itens.map(it=>`<tr>
+            <td style="color:var(--blue);font-family:monospace">${it.sku||'—'}</td>
+            <td>${(it.nome||'').slice(0,40)}</td>
+            <td class="right">${it.qtd||1}</td>
+            <td class="right">${fmt(it.preco)}</td>
+            <td class="right" style="color:var(--orange)">${it.cmv_br?fmt(it.cmv_br):'—'}</td>
+            <td class="right">${fmt((it.preco||0)*(it.qtd||1))}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>` : `<div class="fiscal-box" style="text-align:center;color:var(--muted);padding:20px">
+      <p>Itens não disponíveis — execute Sincronizar para puxar os itens do Bling</p>
+    </div>`}
+
+    <div class="result-box">
+      <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:12px">📊 Resultado Final</h3>
+      <div class="result-grid">
+        <div class="result-item">
+          <div class="r-lbl">Receita</div>
+          <div class="r-val" style="color:var(--blue)">${fmt(p.total)}</div>
+        </div>
+        <div class="result-item">
+          <div class="r-lbl">Impostos</div>
+          <div class="r-val" style="color:var(--red)">- ${fmt(p.impostos)}</div>
+        </div>
+        <div class="result-item">
+          <div class="r-lbl">CMV</div>
+          <div class="r-val" style="color:var(--orange)">- ${p.cmv>0?fmt(p.cmv):'N/D'}</div>
+        </div>
+        <div class="result-item">
+          <div class="r-lbl">Lucro / Margem</div>
+          <div class="r-val ${margemClass(p.margem)}">${fmt(p.lucro)} <small>(${fmtPct(p.margem)})</small></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('modal').classList.add('open');
 }
 
-function toggleDetalhe(i, e) {
-  const row=document.getElementById('det-'+i);
-  if(!row)return;
-  const vis=row.style.display!=='none';
-  // Fechar todos
-  document.querySelectorAll('.detalhe').forEach(r=>r.style.display='none');
-  if(!vis) row.style.display='';
+function fecharModal(e){
+  if(e.target === document.getElementById('modal'))
+    document.getElementById('modal').classList.remove('open');
 }
 
-function exportCSV() {
-  const cols=['id','data','canal','uf','status','total','cmv','pis','cof','icms','difal','ibs','impostos','lucro','margem'];
-  const rows=_fil.map(p=>{
-    const imp=calcImpostos(p);
-    const total=parseFloat(p.total||0);
-    const cmv=parseFloat(p.cmv||0);
-    const luc=total-imp.tot-cmv;
-    const mar=total>0?luc/total*100:0;
-    return [p.id,p.data,p.canal,p.uf,p.status,
-      total.toFixed(2),(cmv).toFixed(2),imp.pis.toFixed(2),imp.cof.toFixed(2),
-      imp.icms.toFixed(2),imp.difal.toFixed(2),imp.ibs.toFixed(2),imp.tot.toFixed(2),
-      luc.toFixed(2),mar.toFixed(1)].join(';');
-  });
-  const csv=[cols.join(';'),...rows].join('\n');
-  const a=document.createElement('a');
-  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
-  a.download='pedidos_nf_'+_dias+'d.csv';a.click();
+async function sincronizar(){
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = '⏳ Sincronizando...';
+  try {
+    await fetch(`${RAILWAY}/api/sync/all`);
+    await carregar();
+  } catch(e){}
+  btn.disabled = false; btn.textContent = '🔄 Sincronizar';
 }
 
 // Iniciar
