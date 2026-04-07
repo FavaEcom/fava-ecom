@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador de Orçamento – Fava Ecom</title>
+<style>
+/* ── Reset & Base ─────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#F0F2F5;color:#222;font-size:14px}
+input,select,textarea{font-family:inherit;font-size:13px}
+button{cursor:pointer;font-family:inherit}
+
+/* ── Navbar ───────────────────────────────────────────────────── */
+.navbar{background:#1e1e1e;padding:0 20px;display:flex;align-items:center;gap:8px;height:50px;position:sticky;top:0;z-index:100;border-bottom:3px solid #E8531E}
+.navbar .brand{color:#E8531E;font-weight:700;font-size:16px;letter-spacing:.5px;margin-right:12px}
+.navbar a{color:#aaa;text-decoration:none;padding:6px 12px;border-radius:4px;font-size:13px;transition:.2s}
+.navbar a:hover{background:#333;color:#fff}
+.navbar a.active{background:#E8531E;color:#fff}
+
+/* ── Layout Principal ─────────────────────────────────────────── */
+.container{max-width:1100px;margin:24px auto;padding:0 16px}
+
+/* ── Tabs ─────────────────────────────────────────────────────── */
+.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid #ddd}
+.tab-btn{padding:10px 22px;border:none;background:none;font-size:14px;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;font-weight:500;transition:.2s}
+.tab-btn.active{color:#E8531E;border-bottom-color:#E8531E}
+.tab-btn:hover{color:#E8531E}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+
+/* ── Card ─────────────────────────────────────────────────────── */
+.card{background:#fff;border-radius:8px;border:1px solid #e0e0e0;margin-bottom:16px;overflow:hidden}
+.card-header{background:#2C2C2C;color:#fff;padding:10px 16px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;border-bottom:2px solid #E8531E}
+.card-header span.ico{font-size:15px}
+.card-body{padding:16px}
+
+/* ── Grid Form ────────────────────────────────────────────────── */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.form-grid.cols2{grid-template-columns:1fr 1fr}
+.form-grid.cols3{grid-template-columns:1fr 1fr 1fr}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:11px;font-weight:600;color:#E8531E;text-transform:uppercase;letter-spacing:.3px}
+.form-group input,.form-group select,.form-group textarea{
+  border:1px solid #ddd;border-radius:5px;padding:7px 10px;
+  transition:.2s;background:#fafafa;color:#222
+}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:#E8531E;background:#fff}
+.form-group.span2{grid-column:span 2}
+.form-group.span3{grid-column:span 3}
+
+/* ── Botões ───────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border:none;border-radius:5px;font-size:13px;font-weight:600;transition:.2s}
+.btn-primary{background:#E8531E;color:#fff}
+.btn-primary:hover{background:#c94415}
+.btn-dark{background:#2C2C2C;color:#fff}
+.btn-dark:hover{background:#444}
+.btn-outline{background:#fff;border:1.5px solid #ddd;color:#444}
+.btn-outline:hover{border-color:#E8531E;color:#E8531E}
+.btn-danger{background:#fff;border:1.5px solid #e74c3c;color:#e74c3c}
+.btn-danger:hover{background:#ffeaea}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-green{background:#27ae60;color:#fff}
+.btn-green:hover{background:#219150}
+
+/* ── Tabela de Produtos ───────────────────────────────────────── */
+.prod-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.prod-table th{background:#2C2C2C;color:#fff;padding:8px 6px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.prod-table th.r{text-align:right}
+.prod-table td{padding:6px 4px;border-bottom:1px solid #eee;vertical-align:middle}
+.prod-table td input,.prod-table td select{
+  width:100%;border:1px solid #e0e0e0;border-radius:4px;padding:5px 6px;
+  background:#fafafa;font-size:12px;color:#222
+}
+.prod-table td input:focus,.prod-table td select:focus{outline:none;border-color:#E8531E;background:#fff}
+.prod-table tr:hover td{background:#fffaf8}
+.prod-table .calc{background:#f9f9f9;color:#555;font-size:12px;text-align:right;padding-right:6px;min-width:70px}
+.prod-table .total-cell{font-weight:700;color:#E8531E;text-align:right}
+
+/* ── Totais ───────────────────────────────────────────────────── */
+.totais-box{background:#f9f9f9;border:1px solid #e0e0e0;border-radius:6px;padding:14px 20px;text-align:right}
+.totais-box .linha{display:flex;justify-content:flex-end;gap:30px;margin-bottom:6px;font-size:13px;color:#555}
+.totais-box .linha span:last-child{min-width:100px;font-weight:600;color:#222}
+.totais-box .total-geral{display:flex;justify-content:flex-end;gap:30px;margin-top:10px;padding-top:10px;border-top:2px solid #E8531E;font-size:16px;font-weight:700;color:#E8531E}
+
+/* ── Salvando ─────────────────────────────────────────────────── */
+.toast{position:fixed;bottom:24px;right:24px;background:#27ae60;color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+
+/* ══════════════════════════════════════════════════════════════════
+   IMPRESSÃO
+══════════════════════════════════════════════════════════════════ */
+@media print{
+  body{background:#fff !important;font-size:11pt}
+  .navbar,.tabs,.no-print,.card-header .btn,.btn-area,
+  .prod-table td input,.prod-table td select,.add-prod-row{display:none !important}
+  .card{border:none !important;margin:0 !important;border-radius:0}
+  .container{max-width:100%;margin:0;padding:0}
+  .tab-pane{display:block !important}
+  #tab-orc{display:block !important}
+  #tab-cfg{display:none !important}
+  .print-only{display:block !important}
+
+  /* Cabeçalho impresso */
+  .print-header{
+    display:flex !important;justify-content:space-between;align-items:flex-start;
+    background:#2C2C2C !important;color:#fff !important;
+    padding:14px 20px;margin-bottom:16px;
+    border-bottom:4px solid #E8531E;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact
+  }
+  .print-header .ph-left h1{font-size:18pt;color:#fff;margin-bottom:2px}
+  .print-header .ph-left p{font-size:8pt;color:#ccc;margin:1px 0}
+  .print-header .ph-right{text-align:right}
+  .print-header .ph-right .orc-num{font-size:15pt;font-weight:700;color:#fff}
+  .print-header .ph-right .orc-label{font-size:8pt;color:#E8531E;font-weight:700;text-transform:uppercase}
+  .print-header .ph-right p{font-size:8pt;color:#ccc;margin:1px 0}
+
+  /* Seções */
+  .print-section{margin-bottom:12px}
+  .print-section h3{font-size:8pt;color:#E8531E;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;border-bottom:1px solid #E8531E;padding-bottom:2px}
+
+  /* Grid cliente/condições impresso */
+  .print-grid{display:grid !important;grid-template-columns:1fr 1fr;gap:6px 20px}
+  .print-grid .pf{margin-bottom:3px}
+  .print-grid .pf .pl{font-size:7pt;color:#E8531E;font-weight:700;text-transform:uppercase;display:block}
+  .print-grid .pf .pv{font-size:9pt;color:#222}
+
+  /* Tabela itens impressa */
+  .print-table{width:100%;border-collapse:collapse;font-size:9pt;margin-top:4px}
+  .print-table th{background:#2C2C2C !important;color:#fff !important;padding:5px 8px;text-align:left;font-size:8pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .print-table th.r{text-align:right}
+  .print-table td{padding:5px 8px;border-bottom:1px solid #eee;font-size:9pt}
+  .print-table td.r{text-align:right}
+  .print-table tr:nth-child(even) td{background:#f9f9f9;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+  /* Totais impressos */
+  .print-totais{margin-top:8px;text-align:right}
+  .print-totais .tl{display:flex;justify-content:flex-end;gap:20px;font-size:9pt;color:#555;margin-bottom:3px}
+  .print-totais .tl span:last-child{min-width:90px;font-weight:600;color:#222}
+  .print-totais .tg{display:flex;justify-content:flex-end;gap:20px;font-size:12pt;font-weight:700;color:#E8531E;margin-top:6px;padding-top:6px;border-top:2px solid #E8531E}
+
+  /* Rodapé impresso */
+  .print-footer{margin-top:20px;border-top:1px solid #ccc;padding-top:8px;text-align:center;font-size:7.5pt;color:#666}
+  .print-obs{background:#fff8f5 !important;border:1px solid #E8531E;border-radius:4px;padding:8px 12px;font-size:8.5pt;color:#444;margin-bottom:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+.print-only{display:none}
+</style>
+</head>
+<body>
+
+<!-- ── Navbar ─────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <span class="brand">⚙ FAVA ECOM</span>
+  <a href="/painel_fava.html">Dashboard</a>
+  <a href="/gestor_anuncios.html">Anúncios</a>
+  <a href="/balcao_fava.html">Balcão</a>
+  <a href="/calculadora_fava.html">Calculadora</a>
+  <a href="/orcamento_fava.html" class="active">Orçamento</a>
+  <a href="/pedidos_fava.html">Pedidos</a>
+</nav>
+
+<div class="container">
+
+  <!-- ── Tabs ───────────────────────────────────────────────────── -->
+  <div class="tabs no-print">
+    <button class="tab-btn active" onclick="switchTab('orc')">📋 Novo Orçamento</button>
+    <button class="tab-btn" onclick="switchTab('cfg')">🏢 Dados da Empresa</button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TAB: ORÇAMENTO
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="tab-orc" class="tab-pane active">
+
+    <!-- Cabeçalho apenas para impressão -->
+    <div class="print-only print-header" id="print-header">
+      <div class="ph-left">
+        <h1 id="ph-fantasia"></h1>
+        <p id="ph-razao"></p>
+        <p id="ph-cnpj-ie"></p>
+        <p id="ph-end"></p>
+        <p id="ph-contato"></p>
+      </div>
+      <div class="ph-right">
+        <div class="orc-label">Orçamento</div>
+        <div class="orc-num" id="ph-num"></div>
+        <p id="ph-emissao"></p>
+        <p id="ph-validade"></p>
+      </div>
+    </div>
+
+    <!-- ── Número / Controle ─────────────────────────────────── -->
+    <div class="card no-print">
+      <div class="card-header"><span class="ico">📋</span> Dados do Orçamento</div>
+      <div class="card-body">
+        <div class="form-grid cols3">
+          <div class="form-group">
+            <label>Nº do Orçamento</label>
+            <input type="text" id="orc-num" value="ORC-001/2026" placeholder="ORC-001/2026">
+          </div>
+          <div class="form-group">
+            <label>Data de Emissão</label>
+            <input type="date" id="orc-data">
+          </div>
+          <div class="form-group">
+            <label>Validade</label>
+            <input type="text" id="orc-validade" value="7 dias corridos">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Cliente ────────────────────────────────────────────── -->
+    <div class="card">
+      <div class="card-header"><span class="ico">👤</span> Dados do Cliente</div>
+      <div class="card-body">
+
+        <!-- Tela (editável) -->
+        <div class="no-print">
+          <div class="form-grid">
+            <div class="form-group span2">
+              <label>Razão Social</label>
+              <input type="text" id="cli-razao" placeholder="Razão Social do cliente">
+            </div>
+            <div class="form-group">
+              <label>Nome Fantasia</label>
+              <input type="text" id="cli-fantasia" placeholder="Nome Fantasia">
+            </div>
+            <div class="form-group">
+              <label>CNPJ / CPF</label>
+              <input type="text" id="cli-cnpj" placeholder="00.000.000/0001-00">
+            </div>
+            <div class="form-group">
+              <label>Inscrição Estadual</label>
+              <input type="text" id="cli-ie" placeholder="IE (ou ISENTO)">
+            </div>
+            <div class="form-group">
+              <label>Contato</label>
+              <input type="text" id="cli-contato" placeholder="Nome do contato">
+            </div>
+            <div class="form-group">
+              <label>Telefone</label>
+              <input type="text" id="cli-tel" placeholder="(00) 00000-0000">
+            </div>
+            <div class="form-group">
+              <label>E-mail</label>
+              <input type="text" id="cli-email" placeholder="email@cliente.com.br">
+            </div>
+            <div class="form-group span2">
+              <label>Endereço</label>
+              <input type="text" id="cli-end" placeholder="Rua, Nº, Bairro">
+            </div>
+            <div class="form-group">
+              <label>Cidade / UF / CEP</label>
+              <input type="text" id="cli-cidade" placeholder="Cidade / UF – CEP 00000-000">
+            </div>
+          </div>
+        </div>
+
+        <!-- Impressão cliente -->
+        <div class="print-only print-section">
+          <h3>Dados do Cliente</h3>
+          <div class="print-grid">
+            <div class="pf"><span class="pl">Razão Social</span><span class="pv" id="p-cli-razao"></span></div>
+            <div class="pf"><span class="pl">Endereço</span><span class="pv" id="p-cli-end"></span></div>
+            <div class="pf"><span class="pl">CNPJ</span><span class="pv" id="p-cli-cnpj"></span></div>
+            <div class="pf"><span class="pl">Cidade / CEP</span><span class="pv" id="p-cli-cidade"></span></div>
+            <div class="pf"><span class="pl">Inscrição Estadual</span><span class="pv" id="p-cli-ie"></span></div>
+            <div class="pf"><span class="pl">Telefone</span><span class="pv" id="p-cli-tel"></span></div>
+            <div class="pf"><span class="pl">Contato</span><span class="pv" id="p-cli-contato"></span></div>
+            <div class="pf"><span class="pl">E-mail</span><span class="pv" id="p-cli-email"></span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Produtos ────────────────────────────────────────────── -->
+    <div class="card">
+      <div class="card-header">
+        <span class="ico">📦</span> Itens do Orçamento
+        <button class="btn btn-primary btn-sm no-print" onclick="addProduto()" style="margin-left:auto">+ Adicionar Produto</button>
+      </div>
+      <div class="card-body" style="padding:0">
+
+        <!-- Tabela editável (tela) -->
+        <div class="no-print" style="overflow-x:auto;padding:12px">
+          <table class="prod-table" id="prod-table">
+            <thead>
+              <tr>
+                <th style="width:28px">#</th>
+                <th style="min-width:220px">Descrição do Produto</th>
+                <th style="width:80px">Qtde</th>
+                <th style="width:80px">UN</th>
+                <th style="width:90px">Preço Forn.</th>
+                <th style="width:60px">IPI %</th>
+                <th style="width:70px">ICMS Ent.</th>
+                <th style="width:60px">MC %</th>
+                <th style="width:90px" class="r">PV Unit.</th>
+                <th style="width:90px" class="r">Total</th>
+                <th style="width:34px"></th>
+              </tr>
+            </thead>
+            <tbody id="prod-tbody">
+              <!-- linhas geradas por JS -->
+            </tbody>
+          </table>
+          <div class="add-prod-row" style="padding:8px 0">
+            <button class="btn btn-outline btn-sm" onclick="addProduto()">+ Produto</button>
+          </div>
+        </div>
+
+        <!-- Tabela impressa -->
+        <div class="print-only print-section" style="padding:0 16px 16px">
+          <table class="print-table" id="print-prod-table">
+            <thead>
+              <tr>
+                <th style="width:30px">Item</th>
+                <th>Descrição</th>
+                <th style="width:40px">UN</th>
+                <th style="width:50px" class="r">Qtde</th>
+                <th style="width:80px" class="r">VL. Unit.</th>
+                <th style="width:80px" class="r">Total</th>
+              </tr>
+            </thead>
+            <tbody id="print-prod-tbody"></tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Frete + Totais ─────────────────────────────────────── -->
+    <div class="card">
+      <div class="card-header"><span class="ico">💰</span> Frete &amp; Totais</div>
+      <div class="card-body">
+        <div class="no-print form-grid cols3" style="margin-bottom:14px">
+          <div class="form-group">
+            <label>Tipo de Frete</label>
+            <select id="frete-tipo">
+              <option value="A combinar">A combinar</option>
+              <option value="FOB (por conta do comprador)">FOB – por conta do comprador</option>
+              <option value="CIF (incluso no preço)">CIF – incluso no preço</option>
+              <option value="Incluso">Incluso no valor</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Valor Frete (R$)</label>
+            <input type="number" id="frete-valor" placeholder="0,00" step="0.01" oninput="calcTotais()" value="0">
+          </div>
+          <div class="form-group">
+            <label>Obs. Frete</label>
+            <input type="text" id="frete-obs" placeholder="ex: Normal ~R$35 | SEDEX ~R$80">
+          </div>
+        </div>
+
+        <!-- Totais tela -->
+        <div class="totais-box no-print" id="totais-box">
+          <div class="linha"><span>Subtotal produtos:</span><span id="tot-sub">R$ 0,00</span></div>
+          <div class="linha"><span>Frete:</span><span id="tot-frete">R$ 0,00</span></div>
+          <div class="total-geral"><span>TOTAL GERAL:</span><span id="tot-total">R$ 0,00</span></div>
+        </div>
+
+        <!-- Totais impressão -->
+        <div class="print-only print-totais">
+          <div class="tl"><span>Subtotal produtos:</span><span id="p-tot-sub"></span></div>
+          <div class="tl"><span>Frete:</span><span id="p-tot-frete"></span></div>
+          <div class="tg"><span>TOTAL GERAL:</span><span id="p-tot-total"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Condições ──────────────────────────────────────────── -->
+    <div class="card">
+      <div class="card-header"><span class="ico">📝</span> Condições Comerciais &amp; Observações</div>
+      <div class="card-body">
+        <div class="no-print form-grid cols2" style="margin-bottom:12px">
+          <div class="form-group">
+            <label>Condição de Pagamento</label>
+            <input type="text" id="cond-pgto" value="À vista (PIX / TED) ou boleto 30 dias">
+          </div>
+          <div class="form-group">
+            <label>Prazo de Entrega</label>
+            <input type="text" id="cond-entrega" value="Imediata após confirmação do pedido">
+          </div>
+          <div class="form-group span2">
+            <label>Observações</label>
+            <textarea id="cond-obs" rows="2" placeholder="Observações gerais para o cliente...">Preços em Real (BRL). Sujeito à emissão de NF-e. Produto sujeito à disponibilidade junto ao fornecedor.</textarea>
+          </div>
+        </div>
+
+        <!-- Condições impressão -->
+        <div class="print-only print-section">
+          <h3>Condições Comerciais</h3>
+          <div class="print-grid">
+            <div class="pf"><span class="pl">Condição de Pagamento</span><span class="pv" id="p-cond-pgto"></span></div>
+            <div class="pf"><span class="pl">Tipo de Frete</span><span class="pv" id="p-frete-tipo"></span></div>
+            <div class="pf"><span class="pl">Prazo de Entrega</span><span class="pv" id="p-cond-entrega"></span></div>
+            <div class="pf"><span class="pl">Obs. Frete</span><span class="pv" id="p-frete-obs"></span></div>
+            <div class="pf"><span class="pl">Validade da Proposta</span><span class="pv" id="p-orc-validade"></span></div>
+          </div>
+        </div>
+        <div class="print-only" style="margin-top:10px">
+          <div class="print-obs" id="p-cond-obs"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Botões de ação ─────────────────────────────────────── -->
+    <div class="btn-area no-print" style="display:flex;gap:10px;justify-content:flex-end;margin-bottom:30px">
+      <button class="btn btn-outline" onclick="limparOrcamento()">🗑 Limpar</button>
+      <button class="btn btn-dark" onclick="prepararImpressao()">🖨 Imprimir Orçamento</button>
+    </div>
+
+    <!-- Rodapé impressão -->
+    <div class="print-only print-footer" id="print-footer"></div>
+
+  </div><!-- /tab-orc -->
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TAB: DADOS DA EMPRESA
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="tab-cfg" class="tab-pane">
+    <div class="card">
+      <div class="card-header"><span class="ico">🏢</span> Dados Cadastrais – Fava Ecom</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:#888;margin-bottom:14px">Esses dados aparecem automaticamente em todos os orçamentos.</p>
+        <div class="form-grid">
+          <div class="form-group span2">
+            <label>Nome Fantasia</label>
+            <input type="text" id="cfg-fantasia" placeholder="FAVA ECOM">
+          </div>
+          <div class="form-group span2">
+            <label>Razão Social</label>
+            <input type="text" id="cfg-razao" placeholder="FV COMERCIO E SERVICOS LTDA">
+          </div>
+          <div class="form-group">
+            <label>CNPJ (Matriz – PR)</label>
+            <input type="text" id="cfg-cnpj" placeholder="48.328.969/0001-12">
+          </div>
+          <div class="form-group">
+            <label>IE (Inscrição Estadual)</label>
+            <input type="text" id="cfg-ie" placeholder="909.748.372-5">
+          </div>
+          <div class="form-group span2">
+            <label>Endereço</label>
+            <input type="text" id="cfg-end" placeholder="Rua Darcy Ribeiro, 40 – Cajuru">
+          </div>
+          <div class="form-group">
+            <label>Cidade / UF / CEP</label>
+            <input type="text" id="cfg-cidade" placeholder="Curitiba / PR – CEP 82920-110">
+          </div>
+          <div class="form-group">
+            <label>Telefone / WhatsApp</label>
+            <input type="text" id="cfg-tel" placeholder="(41) 9674-2592">
+          </div>
+          <div class="form-group">
+            <label>E-mail Principal</label>
+            <input type="text" id="cfg-email1" placeholder="favaecom@gmail.com">
+          </div>
+          <div class="form-group">
+            <label>E-mail Compras</label>
+            <input type="text" id="cfg-email2" placeholder="favaecom.compras@gmail.com">
+          </div>
+        </div>
+
+        <hr style="margin:20px 0;border:none;border-top:1px solid #eee">
+        <h4 style="font-size:13px;color:#444;margin-bottom:12px">⚙ Padrões de Cálculo</h4>
+        <div class="form-grid cols3">
+          <div class="form-group">
+            <label>ICMS Entrada padrão (%)</label>
+            <input type="number" id="cfg-icms-ent" placeholder="12" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>ICMS Saída padrão (%)</label>
+            <input type="number" id="cfg-icms-sai" placeholder="12" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>IPI padrão (%)</label>
+            <input type="number" id="cfg-ipi" placeholder="0" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>Margem padrão (%)</label>
+            <input type="number" id="cfg-mc" placeholder="30" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>PIS Entrada (fixo %)</label>
+            <input type="number" id="cfg-pis" value="1.65" step="0.01" readonly style="background:#f0f0f0;color:#888">
+          </div>
+          <div class="form-group">
+            <label>COFINS Entrada (fixo %)</label>
+            <input type="number" id="cfg-cofins" value="7.60" step="0.01" readonly style="background:#f0f0f0;color:#888">
+          </div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:10px">
+          <button class="btn btn-primary" onclick="salvarConfig()">💾 Salvar Dados</button>
+          <button class="btn btn-outline" onclick="carregarDefaults()">↺ Restaurar padrões Fava</button>
+        </div>
+      </div>
+    </div>
+  </div><!-- /tab-cfg -->
+
+</div><!-- /container -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// CONFIG PADRÃO FAVA ECOM
+// ═══════════════════════════════════════════════════════════════════
+const DEFAULTS = {
+  fantasia: 'FAVA ECOM',
+  razao:    'FV COMERCIO E SERVICOS LTDA',
+  cnpj:     '48.328.969/0001-12',
+  ie:       '909.748.372-5',
+  end:      'Rua Darcy Ribeiro, 40 – Cajuru',
+  cidade:   'Curitiba / PR – CEP 82920-110',
+  tel:      '(41) 9674-2592',
+  email1:   'favaecom@gmail.com',
+  email2:   'favaecom.compras@gmail.com',
+  icmsEnt:  12,
+  icmsSai:  12,
+  ipi:      0,
+  mc:       30,
+  pis:      1.65,
+  cofins:   7.60,
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════════════
+function switchTab(id){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',['orc','cfg'][i]===id));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DADOS DA EMPRESA
+// ═══════════════════════════════════════════════════════════════════
+function carregarDefaults(){
+  const d = DEFAULTS;
+  document.getElementById('cfg-fantasia').value = d.fantasia;
+  document.getElementById('cfg-razao').value    = d.razao;
+  document.getElementById('cfg-cnpj').value     = d.cnpj;
+  document.getElementById('cfg-ie').value       = d.ie;
+  document.getElementById('cfg-end').value      = d.end;
+  document.getElementById('cfg-cidade').value   = d.cidade;
+  document.getElementById('cfg-tel').value      = d.tel;
+  document.getElementById('cfg-email1').value   = d.email1;
+  document.getElementById('cfg-email2').value   = d.email2;
+  document.getElementById('cfg-icms-ent').value = d.icmsEnt;
+  document.getElementById('cfg-icms-sai').value = d.icmsSai;
+  document.getElementById('cfg-ipi').value      = d.ipi;
+  document.getElementById('cfg-mc').value       = d.mc;
+}
+
+function getCfg(){
+  const saved = localStorage.getItem('favaCfg');
+  return saved ? JSON.parse(saved) : DEFAULTS;
+}
+
+function salvarConfig(){
+  const cfg = {
+    fantasia: document.getElementById('cfg-fantasia').value || DEFAULTS.fantasia,
+    razao:    document.getElementById('cfg-razao').value    || DEFAULTS.razao,
+    cnpj:     document.getElementById('cfg-cnpj').value     || DEFAULTS.cnpj,
+    ie:       document.getElementById('cfg-ie').value       || DEFAULTS.ie,
+    end:      document.getElementById('cfg-end').value      || DEFAULTS.end,
+    cidade:   document.getElementById('cfg-cidade').value   || DEFAULTS.cidade,
+    tel:      document.getElementById('cfg-tel').value      || DEFAULTS.tel,
+    email1:   document.getElementById('cfg-email1').value   || DEFAULTS.email1,
+    email2:   document.getElementById('cfg-email2').value   || DEFAULTS.email2,
+    icmsEnt:  parseFloat(document.getElementById('cfg-icms-ent').value) || DEFAULTS.icmsEnt,
+    icmsSai:  parseFloat(document.getElementById('cfg-icms-sai').value) || DEFAULTS.icmsSai,
+    ipi:      parseFloat(document.getElementById('cfg-ipi').value)      || DEFAULTS.ipi,
+    mc:       parseFloat(document.getElementById('cfg-mc').value)       || DEFAULTS.mc,
+    pis:      1.65,
+    cofins:   7.60,
+  };
+  localStorage.setItem('favaCfg', JSON.stringify(cfg));
+  toast('✅ Dados da empresa salvos!');
+}
+
+function carregarCfgNaTela(){
+  const c = getCfg();
+  document.getElementById('cfg-fantasia').value  = c.fantasia;
+  document.getElementById('cfg-razao').value     = c.razao;
+  document.getElementById('cfg-cnpj').value      = c.cnpj;
+  document.getElementById('cfg-ie').value        = c.ie;
+  document.getElementById('cfg-end').value       = c.end;
+  document.getElementById('cfg-cidade').value    = c.cidade;
+  document.getElementById('cfg-tel').value       = c.tel;
+  document.getElementById('cfg-email1').value    = c.email1;
+  document.getElementById('cfg-email2').value    = c.email2;
+  document.getElementById('cfg-icms-ent').value  = c.icmsEnt;
+  document.getElementById('cfg-icms-sai').value  = c.icmsSai;
+  document.getElementById('cfg-ipi').value       = c.ipi;
+  document.getElementById('cfg-mc').value        = c.mc;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PRODUTOS
+// ═══════════════════════════════════════════════════════════════════
+let prodId = 0;
+
+function calcPV(forn, ipiPct, icmsEntPct, mcPct, icmsSaiPct){
+  // Créditos de entrada (Lucro Real não-cumulativo)
+  const credIcms   = forn * (icmsEntPct / 100);
+  const credPis    = forn * (1.65 / 100);
+  const credCofins = forn * (7.60 / 100);
+  const custoIpi   = forn * (ipiPct / 100);        // IPI custo (não creditável na revenda)
+  const cmvLiq     = forn + custoIpi - credIcms - credPis - credCofins;
+
+  // Impostos sobre saída
+  const impSaida = (icmsSaiPct / 100) + 0.0165 + 0.076;   // ICMS + PIS + COFINS saída
+  const divisor  = 1 - (mcPct / 100) - impSaida;
+
+  if(divisor <= 0) return 0;
+  return cmvLiq / divisor;
+}
+
+function addProduto(){
+  const cfg = getCfg();
+  const id  = ++prodId;
+  const tbody = document.getElementById('prod-tbody');
+  const tr = document.createElement('tr');
+  tr.id = 'prod-row-'+id;
+  tr.innerHTML = `
+    <td style="text-align:center;color:#aaa;font-size:12px">${id}</td>
+    <td><input type="text" id="p${id}-desc" placeholder="Descrição do produto" oninput="calcLinha(${id})"></td>
+    <td><input type="number" id="p${id}-qtd" placeholder="1" value="1" min="1" oninput="calcLinha(${id})"></td>
+    <td>
+      <select id="p${id}-un" onchange="calcLinha(${id})">
+        <option>PC</option><option>UN</option><option>CX</option><option>KG</option>
+        <option>MT</option><option>LT</option><option>PR</option><option>JG</option>
+      </select>
+    </td>
+    <td><input type="number" id="p${id}-forn" placeholder="0,00" step="0.01" oninput="calcLinha(${id})"></td>
+    <td><input type="number" id="p${id}-ipi" placeholder="${cfg.ipi}" value="${cfg.ipi}" step="0.1" oninput="calcLinha(${id})"></td>
+    <td><input type="number" id="p${id}-icmsent" placeholder="${cfg.icmsEnt}" value="${cfg.icmsEnt}" step="0.1" oninput="calcLinha(${id})"></td>
+    <td><input type="number" id="p${id}-mc" placeholder="${cfg.mc}" value="${cfg.mc}" step="0.1" oninput="calcLinha(${id})"></td>
+    <td class="calc" id="p${id}-pv">–</td>
+    <td class="total-cell" id="p${id}-total">–</td>
+    <td><button class="btn btn-danger btn-sm" onclick="removeProduto(${id})">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function calcLinha(id){
+  const cfg   = getCfg();
+  const forn  = parseFloat(document.getElementById(`p${id}-forn`)?.value)   || 0;
+  const ipi   = parseFloat(document.getElementById(`p${id}-ipi`)?.value)    ?? cfg.ipi;
+  const icms  = parseFloat(document.getElementById(`p${id}-icmsent`)?.value)?? cfg.icmsEnt;
+  const mc    = parseFloat(document.getElementById(`p${id}-mc`)?.value)     ?? cfg.mc;
+  const qtd   = parseFloat(document.getElementById(`p${id}-qtd`)?.value)    || 1;
+
+  const pv    = forn > 0 ? calcPV(forn, ipi, icms, mc, cfg.icmsSai) : 0;
+  const total = pv * qtd;
+
+  const pvEl    = document.getElementById(`p${id}-pv`);
+  const totEl   = document.getElementById(`p${id}-total`);
+  if(pvEl)  pvEl.textContent  = pv    > 0 ? fmtR(pv)    : '–';
+  if(totEl) totEl.textContent = total > 0 ? fmtR(total) : '–';
+
+  calcTotais();
+}
+
+function removeProduto(id){
+  document.getElementById('prod-row-'+id)?.remove();
+  calcTotais();
+}
+
+function calcTotais(){
+  let sub = 0;
+  document.querySelectorAll('#prod-tbody tr').forEach(tr=>{
+    const id = tr.id.replace('prod-row-','');
+    const qtd  = parseFloat(document.getElementById(`p${id}-qtd`)?.value)  || 0;
+    const forn = parseFloat(document.getElementById(`p${id}-forn`)?.value) || 0;
+    const ipi  = parseFloat(document.getElementById(`p${id}-ipi`)?.value)  ?? 0;
+    const icms = parseFloat(document.getElementById(`p${id}-icmsent`)?.value) ?? 12;
+    const mc   = parseFloat(document.getElementById(`p${id}-mc`)?.value)   ?? 30;
+    const cfg  = getCfg();
+    const pv   = forn > 0 ? calcPV(forn, ipi, icms, mc, cfg.icmsSai) : 0;
+    sub += pv * qtd;
+  });
+  const frete = parseFloat(document.getElementById('frete-valor')?.value) || 0;
+  const total = sub + frete;
+
+  document.getElementById('tot-sub').textContent   = fmtR(sub);
+  document.getElementById('tot-frete').textContent = fmtR(frete);
+  document.getElementById('tot-total').textContent = fmtR(total);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PREPARAR IMPRESSÃO
+// ═══════════════════════════════════════════════════════════════════
+function prepararImpressao(){
+  const cfg = getCfg();
+  const num      = document.getElementById('orc-num').value;
+  const dataVal  = document.getElementById('orc-data').value;
+  const validade = document.getElementById('orc-validade').value;
+
+  // Formata data
+  let dataFmt = '';
+  if(dataVal){
+    const [y,m,d] = dataVal.split('-');
+    dataFmt = `${d}/${m}/${y}`;
+  }
+
+  // Cabeçalho
+  document.getElementById('ph-fantasia').textContent = cfg.fantasia;
+  document.getElementById('ph-razao').textContent    = cfg.razao;
+  document.getElementById('ph-cnpj-ie').textContent  = `CNPJ ${cfg.cnpj}  |  IE ${cfg.ie}`;
+  document.getElementById('ph-end').textContent      = `${cfg.end}  –  ${cfg.cidade}`;
+  document.getElementById('ph-contato').textContent  = `${cfg.tel}  |  ${cfg.email1}  |  ${cfg.email2}`;
+  document.getElementById('ph-num').textContent      = num;
+  document.getElementById('ph-emissao').textContent  = `Emissão: ${dataFmt}`;
+  document.getElementById('ph-validade').textContent = `Válido por: ${validade}`;
+
+  // Cliente
+  const set = (el, val) => { const e = document.getElementById(el); if(e) e.textContent = val || '–'; };
+  set('p-cli-razao',   document.getElementById('cli-razao').value   || (document.getElementById('cli-fantasia').value));
+  set('p-cli-cnpj',    document.getElementById('cli-cnpj').value);
+  set('p-cli-ie',      document.getElementById('cli-ie').value);
+  set('p-cli-end',     document.getElementById('cli-end').value);
+  set('p-cli-cidade',  document.getElementById('cli-cidade').value);
+  set('p-cli-tel',     document.getElementById('cli-tel').value);
+  set('p-cli-contato', document.getElementById('cli-contato').value);
+  set('p-cli-email',   document.getElementById('cli-email').value);
+
+  // Itens
+  const printTbody = document.getElementById('print-prod-tbody');
+  printTbody.innerHTML = '';
+  let sub = 0;
+  let item = 0;
+  document.querySelectorAll('#prod-tbody tr').forEach(tr=>{
+    const id  = tr.id.replace('prod-row-','');
+    const desc = document.getElementById(`p${id}-desc`)?.value || '';
+    const qtd  = parseFloat(document.getElementById(`p${id}-qtd`)?.value) || 0;
+    const un   = document.getElementById(`p${id}-un`)?.value || 'PC';
+    const forn = parseFloat(document.getElementById(`p${id}-forn`)?.value) || 0;
+    const ipi  = parseFloat(document.getElementById(`p${id}-ipi`)?.value)  ?? 0;
+    const icms = parseFloat(document.getElementById(`p${id}-icmsent`)?.value) ?? 12;
+    const mc   = parseFloat(document.getElementById(`p${id}-mc`)?.value)   ?? 30;
+    const pv   = forn > 0 ? calcPV(forn, ipi, icms, mc, cfg.icmsSai) : 0;
+    const total = pv * qtd;
+    sub += total;
+    item++;
+    const row = `<tr>
+      <td>${item}</td>
+      <td>${desc}</td>
+      <td>${un}</td>
+      <td class="r">${qtd}</td>
+      <td class="r">${fmtR(pv)}</td>
+      <td class="r">${fmtR(total)}</td>
+    </tr>`;
+    printTbody.innerHTML += row;
+  });
+
+  // Totais
+  const frete = parseFloat(document.getElementById('frete-valor').value) || 0;
+  const freteObs = document.getElementById('frete-obs').value || '';
+  const total = sub + frete;
+  set('p-tot-sub',   fmtR(sub));
+  set('p-tot-frete', frete > 0 ? fmtR(frete) : (freteObs || 'A combinar'));
+  set('p-tot-total', fmtR(total));
+
+  // Condições
+  set('p-cond-pgto',    document.getElementById('cond-pgto').value);
+  set('p-cond-entrega', document.getElementById('cond-entrega').value);
+  set('p-orc-validade', validade + ' a partir da emissão');
+  set('p-frete-tipo',   document.getElementById('frete-tipo').value);
+  set('p-frete-obs',    freteObs || '–');
+  set('p-cond-obs',     document.getElementById('cond-obs').value);
+
+  // Rodapé
+  document.getElementById('print-footer').innerHTML =
+    `${cfg.fantasia} – ${cfg.razao}  |  CNPJ ${cfg.cnpj}  |  ${cfg.end} – ${cfg.cidade}<br>
+     ${cfg.tel}  |  ${cfg.email1}  |  ${cfg.email2}  |  ${num} – ${dataFmt}`;
+
+  window.print();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// UTIL
+// ═══════════════════════════════════════════════════════════════════
+function fmtR(v){
+  return 'R$ ' + v.toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+}
+
+function limparOrcamento(){
+  if(!confirm('Limpar todos os dados do orçamento?')) return;
+  document.getElementById('prod-tbody').innerHTML = '';
+  ['cli-razao','cli-fantasia','cli-cnpj','cli-ie','cli-contato','cli-tel','cli-email','cli-end','cli-cidade']
+    .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  document.getElementById('frete-valor').value = '0';
+  document.getElementById('frete-obs').value = '';
+  prodId = 0;
+  calcTotais();
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', ()=>{
+  carregarCfgNaTela();
+  // Data de hoje
+  const hoje = new Date();
+  const iso  = hoje.toISOString().split('T')[0];
+  document.getElementById('orc-data').value = iso;
+  // Adiciona 1 linha de produto já vazia pra facilitar
+  addProduto();
+});
+</script>
+</body>
+</html>
