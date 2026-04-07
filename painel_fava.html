@@ -299,7 +299,7 @@ header h1{font-size:15px;font-weight:700;flex:1}
 .upload-xlsx:hover{border-color:var(--azul2);background:#f0f7ff}
 
 /* VIEW TABS */
-.view-tabs{display:flex;background:#fff;border-bottom:2px solid var(--borda);padding:0 18px}
+.view-tabs{display:flex;background:#fff;border-bottom:2px solid var(--borda);padding:0 18px;align-items:flex-start;flex-shrink:0}
 .vtab{padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s;white-space:nowrap}
 .vtab.a{color:var(--azul);border-bottom-color:var(--azul)}
 
@@ -5431,6 +5431,7 @@ function setView(v){
   const viewEl = document.getElementById('view-'+v);
   if(viewEl && viewEl.parentElement){
     viewEl.parentElement.style.minHeight = 'calc(100vh - 150px)';
+    viewEl.parentElement.style.display = 'block';
   }
   ['dashboard','anuncios','financeiro','conciliacao','precos','promocoes','difal','perguntas','ads','pedidos','historico','cmv','nf','central-prom'].forEach(name=>{
     safe('view-'+name, el=>el.style.display = v===name?'flex':'none');
