@@ -323,6 +323,15 @@ def criar_tabelas():
     try:
         exe("CREATE INDEX IF NOT EXISTS idx_ch_mlb ON campanha_historico(mlb_id)")
     except: pass
+    # Migração: novas colunas em produtos
+    for col_p, tipo_p in [('ncm','TEXT'),('ean','TEXT'),('cfop','TEXT'),
+                           ('peso','REAL DEFAULT 0'),('largura','REAL DEFAULT 0'),
+                           ('altura','REAL DEFAULT 0'),('comprimento','REAL DEFAULT 0'),
+                           ('st','INTEGER DEFAULT 0'),('st_imposto','REAL DEFAULT 0'),
+                           ('monofasico','INTEGER DEFAULT 0'),('subcategoria','TEXT'),
+                           ('origem','TEXT')]:
+        try: exe(f"ALTER TABLE produtos ADD COLUMN IF NOT EXISTS {col_p} {tipo_p}")
+        except: pass
     try:
         exe("ALTER TABLE ml_listings ADD COLUMN IF NOT EXISTS lucro_estimado REAL DEFAULT 0")
     except: pass
