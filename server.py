@@ -1087,6 +1087,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/pedidos-pc':         self._get_pedidos_pc,
             '/api/cmv-cache':            self._get_cmv_compat,
             '/api/sync/now':             self._sync_now,
+            '/api/sync/ml-titulos':      self._sync_ml_titulos,
             '/api/sync/bling-anuncios':  self._sync_bling_anuncios,
             '/api/sync/yampi':           self._sync_yampi,
             '/api/db/limpar-ml':         self._post_limpar_ml,
@@ -2323,6 +2324,37 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 'sku_corrigidos': sku_corrigidos,
             })
         except Exception as e: self._err(500, str(e))
+
+    def _sync_ml_titulos(self):
+        """POST /api/sync/ml-titulos — rebusca título real ML para todos os anúncios do banco"""
+        def _run():
+            if not _ml_token.get('access'):
+                print('[ML-TITULOS] Sem token'); return
+            rows = exe("SELECT id FROM ml_listings WHERE id LIKE 'MLB%' ORDER BY id", fetchall=True) or []
+            ids = [r['id'] for r in rows]
+            print(f'[ML-TITULOS] Atualizando títulos de {len(ids)} anúncios...')
+            atualizados = 0
+            for i in range(0, len(ids), 20):
+                lote = ','.join(ids[i:i+20])
+                d = ml_get(f'items?ids={lote}&attributes=id,title,seller_sku')
+                if not d: continue
+                for x in (d if isinstance(d, list) else []):
+                    if x.get('code') != 200: continue
+                    it = x.get('body', {})
+                    iid = it.get('id', '')
+                    titulo = (it.get('title', '') or '').strip()
+                    sku = str(it.get('seller_sku', '') or '').strip()
+                    if not iid or not titulo: continue
+                    try:
+                        exe("UPDATE ml_listings SET titulo=%s, sku=COALESCE(NULLIF(%s,''), sku) WHERE id=%s",
+                            (titulo, sku, iid))
+                        atualizados += 1
+                    except Exception as e:
+                        print(f'[ML-TITULOS] {iid}: {e}')
+                time.sleep(0.3)
+            print(f'[ML-TITULOS] {atualizados} títulos atualizados')
+        threading.Thread(target=_run, daemon=True).start()
+        self._ok({'ok': True, 'msg': 'Atualização de títulos iniciada em background'})
 
     def _sync_fix_status(self):
         """POST /api/sync/fix-status — busca status real no Bling para pedidos com status vazio"""
