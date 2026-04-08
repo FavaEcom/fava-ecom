@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estoque Parado — Fava Ecom</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --bg2: #161b27;
+    --bg3: #1e2535;
+    --border: #2a3347;
+    --accent: #f97316;
+    --accent2: #3b82f6;
+    --accent3: #10b981;
+    --danger: #ef4444;
+    --warn: #eab308;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #475569;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 13px;
+  }
+
+  /* NAV */
+  nav {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  nav .logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+  nav a {
+    color: var(--text2);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 0;
+    border-bottom: 2px solid transparent;
+    transition: color .2s, border-color .2s;
+  }
+  nav a:hover { color: var(--text); }
+  nav a.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* HEADER */
+  .header {
+    padding: 24px 20px 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .header-left h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .header-left p {
+    color: var(--text2);
+    font-size: 12px;
+    margin-top: 2px;
+  }
+
+  /* FILTROS */
+  .filters {
+    padding: 16px 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .filter-label {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: var(--mono);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    margin-right: 4px;
+  }
+  .btn-filter {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .15s;
+    font-family: var(--sans);
+  }
+  .btn-filter:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-filter.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .filter-sep { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+
+  .search-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: var(--sans);
+    width: 200px;
+    transition: border-color .15s;
+    outline: none;
+  }
+  .search-box:focus { border-color: var(--accent2); }
+  .search-box::placeholder { color: var(--text3); }
+
+  .btn-refresh {
+    margin-left: auto;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 5px 14px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all .15s;
+    font-family: var(--sans);
+  }
+  .btn-refresh:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* STATS */
+  .stats-bar {
+    padding: 12px 20px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+  }
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .stat-item .val {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .stat-item .lbl {
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .val.red { color: var(--danger); }
+  .val.orange { color: var(--accent); }
+  .val.blue { color: var(--accent2); }
+  .val.green { color: var(--accent3); }
+
+  /* TABLE */
+  .table-wrap {
+    overflow-x: auto;
+    padding: 0 20px 80px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+  }
+  thead th {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  thead th:hover { color: var(--text2); }
+  thead th.sorted { color: var(--accent); }
+
+  tbody tr {
+    border-bottom: 1px solid var(--bg3);
+    transition: background .1s;
+  }
+  tbody tr:hover { background: var(--bg2); }
+  tbody tr.expanded { background: var(--bg2); }
+
+  td {
+    padding: 9px 10px;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  td.sku {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+  }
+  td.nome {
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  td.estoque {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  /* DIAS BADGE */
+  .dias-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .dias-badge.nunca { background: rgba(239,68,68,.15); color: var(--danger); }
+  .dias-badge.critico { background: rgba(239,68,68,.12); color: #f87171; }
+  .dias-badge.alto { background: rgba(249,115,22,.12); color: var(--accent); }
+  .dias-badge.medio { background: rgba(234,179,8,.12); color: var(--warn); }
+
+  /* CANAIS */
+  .canal-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    margin-right: 3px;
+  }
+  .canal-dot.on { background: var(--accent3); }
+  .canal-dot.off { background: var(--bg3); border: 1px solid var(--border); }
+  .canal-tag {
+    font-size: 10px;
+    color: var(--text3);
+    font-family: var(--mono);
+  }
+
+  /* AÇÕES */
+  .acoes {
+    display: flex;
+    gap: 4px;
+  }
+  .btn-acao {
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    font-family: var(--sans);
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .btn-acao.kit { background: rgba(59,130,246,.15); color: var(--accent2); border-color: rgba(59,130,246,.3); }
+  .btn-acao.kit:hover { background: rgba(59,130,246,.3); }
+  .btn-acao.preco { background: rgba(234,179,8,.1); color: var(--warn); border-color: rgba(234,179,8,.3); }
+  .btn-acao.preco:hover { background: rgba(234,179,8,.25); }
+  .btn-acao.anuncio { background: rgba(16,185,129,.1); color: var(--accent3); border-color: rgba(16,185,129,.3); }
+  .btn-acao.anuncio:hover { background: rgba(16,185,129,.25); }
+  .btn-acao.liquidar { background: rgba(239,68,68,.1); color: var(--danger); border-color: rgba(239,68,68,.3); }
+  .btn-acao.liquidar:hover { background: rgba(239,68,68,.25); }
+
+  /* KIT PANEL */
+  .kit-row td {
+    padding: 0;
+    border-bottom: none;
+  }
+  .kit-panel {
+    background: #0d1420;
+    border-left: 3px solid var(--accent2);
+    padding: 14px 16px;
+    margin: 0 10px 10px;
+    border-radius: 0 4px 4px 0;
+  }
+  .kit-panel h4 {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--accent2);
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  .kit-sugestoes {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .kit-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 12px;
+    min-width: 160px;
+    cursor: pointer;
+    transition: border-color .15s;
+  }
+  .kit-card:hover { border-color: var(--accent2); }
+  .kit-card .ksku { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+  .kit-card .knome { font-size: 12px; font-weight: 500; color: var(--text); margin: 2px 0; }
+  .kit-card .kest { font-family: var(--mono); font-size: 11px; color: var(--accent3); }
+  .kit-card .kcheck { font-size: 10px; color: var(--text3); margin-top: 4px; }
+  .kit-card.selected { border-color: var(--accent2); background: rgba(59,130,246,.08); }
+
+  .kit-action-bar {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .kit-action-bar input {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: var(--sans);
+    width: 280px;
+    outline: none;
+  }
+  .kit-action-bar input:focus { border-color: var(--accent2); }
+  .btn-criar-kit {
+    background: var(--accent2);
+    border: none;
+    color: #fff;
+    padding: 5px 14px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: opacity .15s;
+  }
+  .btn-criar-kit:hover { opacity: .85; }
+  .btn-fechar-kit {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text3);
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: var(--sans);
+  }
+  .btn-fechar-kit:hover { border-color: var(--text2); color: var(--text2); }
+
+  /* MODAL PREÇO */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.7);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    width: 380px;
+    max-width: 95vw;
+  }
+  .modal h3 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .modal p { font-size: 12px; color: var(--text2); margin-bottom: 16px; }
+  .modal label { font-size: 11px; color: var(--text3); display: block; margin-bottom: 4px; font-family: var(--mono); }
+  .modal input[type=range] { width: 100%; accent-color: var(--accent); }
+  .modal .range-val { font-family: var(--mono); font-size: 20px; font-weight: 600; color: var(--accent); text-align: center; margin: 8px 0; }
+  .modal-btns { display: flex; gap: 8px; margin-top: 16px; }
+  .btn-confirm { flex: 1; background: var(--accent); border: none; color: #fff; padding: 8px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--sans); }
+  .btn-cancel { background: transparent; border: 1px solid var(--border); color: var(--text2); padding: 8px 16px; border-radius: 4px; font-size: 13px; cursor: pointer; font-family: var(--sans); }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 13px;
+    z-index: 300;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    max-width: 320px;
+  }
+  .toast.show { display: flex; }
+  .toast.ok { border-left: 3px solid var(--accent3); }
+  .toast.err { border-left: 3px solid var(--danger); }
+
+  /* LOADING */
+  .loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    gap: 12px;
+  }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 2px solid var(--bg3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading p { color: var(--text3); font-size: 12px; font-family: var(--mono); }
+
+  /* EMPTY */
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text3);
+    font-size: 13px;
+  }
+  .empty span { font-size: 32px; display: block; margin-bottom: 10px; }
+
+  /* FAMÍLIA TAG */
+  .familia-tag {
+    font-size: 10px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text3);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: var(--mono);
+  }
+
+  /* PRECO */
+  .preco-val {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  /* TOGGLE ROW */
+  .toggle-btn {
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    transition: color .15s;
+  }
+  .toggle-btn:hover { color: var(--accent2); }
+
+  /* Seleção múltipla */
+  .sel-bar {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 12px 20px;
+    align-items: center;
+    gap: 12px;
+    z-index: 150;
+  }
+  .sel-bar.show { display: flex; }
+  .sel-bar .sel-count { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+  .sel-bar .sel-label { font-size: 12px; color: var(--text2); flex: 1; }
+
+  input[type=checkbox] { accent-color: var(--accent); cursor: pointer; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="logo">FAVA ECOM</span>
+  <a href="/painel_fava.html">Produtos</a>
+  <a href="/gestor_anuncios.html">Anúncios</a>
+  <a href="/pedidos_fava.html">Pedidos</a>
+  <a href="/estoque_parado.html" class="active">Estoque Parado</a>
+  <a href="/produto_novo.html">Cadastrar</a>
+  <a href="/calculadora_fava.html">Calculadora</a>
+  <a href="/balcao_fava.html">Balcão</a>
+</nav>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <h1>📦 Estoque Parado</h1>
+    <p>Produtos com estoque disponível sem venda no período selecionado</p>
+  </div>
+</div>
+
+<!-- FILTROS -->
+<div class="filters">
+  <span class="filter-label">PERÍODO</span>
+  <button class="btn-filter" data-dias="30" onclick="setDias(30,this)">30 dias</button>
+  <button class="btn-filter" data-dias="60" onclick="setDias(60,this)">60 dias</button>
+  <button class="btn-filter active" data-dias="90" onclick="setDias(90,this)">90 dias</button>
+  <button class="btn-filter" data-dias="180" onclick="setDias(180,this)">180 dias</button>
+  <button class="btn-filter" data-dias="365" onclick="setDias(365,this)">+1 ano</button>
+
+  <div class="filter-sep"></div>
+  <span class="filter-label">CANAIS</span>
+  <button class="btn-filter active" onclick="toggleFiltro('canal','todos',this)">Todos</button>
+  <button class="btn-filter" onclick="toggleFiltro('canal','sem_anuncio',this)">Sem anúncio</button>
+  <button class="btn-filter" onclick="toggleFiltro('canal','sem_ml',this)">Sem ML</button>
+
+  <div class="filter-sep"></div>
+  <input type="text" class="search-box" id="searchBox" placeholder="Buscar SKU ou nome..." oninput="filtrarTabela()">
+
+  <button class="btn-refresh" onclick="carregarDados()">↻ Atualizar</button>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar" id="statsBar">
+  <div class="stat-item"><span class="val orange" id="statTotal">—</span><span class="lbl">Produtos parados</span></div>
+  <div class="stat-item"><span class="val red" id="statNunca">—</span><span class="lbl">Nunca vendidos</span></div>
+  <div class="stat-item"><span class="val blue" id="statSemAnuncio">—</span><span class="lbl">Sem nenhum anúncio</span></div>
+  <div class="stat-item"><span class="val green" id="statEstoqueTotal">—</span><span class="lbl">Unidades paradas</span></div>
+</div>
+
+<!-- TABLE -->
+<div class="table-wrap">
+  <div id="loading" class="loading">
+    <div class="spinner"></div>
+    <p>Carregando estoque parado...</p>
+  </div>
+  <div id="empty" class="empty" style="display:none">
+    <span>✅</span>
+    Nenhum produto parado encontrado nesse período.
+  </div>
+  <table id="tabela" style="display:none">
+    <thead>
+      <tr>
+        <th><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
+        <th onclick="sortBy('sku')">SKU</th>
+        <th onclick="sortBy('nome')">NOME</th>
+        <th onclick="sortBy('familia')">FAMÍLIA</th>
+        <th onclick="sortBy('estoque')">ESTOQUE</th>
+        <th onclick="sortBy('dias_parado')">PARADO HÁ</th>
+        <th>ML</th>
+        <th>SHOPEE</th>
+        <th>YAMPI</th>
+        <th onclick="sortBy('preco_ml')">PREÇO ML</th>
+        <th>AÇÕES</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<!-- SELEÇÃO MÚLTIPLA -->
+<div class="sel-bar" id="selBar">
+  <span class="sel-count" id="selCount">0</span>
+  <span class="sel-label">produtos selecionados</span>
+  <button class="btn-acao preco" onclick="acaoLote('preco')">💰 Baixar Preço</button>
+  <button class="btn-acao liquidar" onclick="acaoLote('liquidar')">🔥 Liquidar</button>
+  <button class="btn-acao anuncio" onclick="acaoLote('anuncio')">📢 Criar Anúncio IA</button>
+</div>
+
+<!-- MODAL PREÇO -->
+<div class="modal-overlay" id="modalPreco">
+  <div class="modal">
+    <h3>💰 Baixar Preço</h3>
+    <p id="modalPrecoDesc">Ajuste o desconto para o produto selecionado</p>
+    <label>DESCONTO</label>
+    <input type="range" id="rangeDesc" min="5" max="50" value="15" step="5" oninput="updateRange()">
+    <div class="range-val" id="rangeVal">15%</div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:-4px">
+      <span>5%</span><span>50%</span>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmarDesconto()">Aplicar desconto</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const BASE = '';
+let diasFiltro = 90;
+let canalFiltro = 'todos';
+let dadosOriginais = [];
+let sortCol = 'dias_parado';
+let sortAsc = false;
+let modalSku = null;
+let kitAberto = null;
+
+async function carregarDados() {
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('tabela').style.display = 'none';
+  document.getElementById('empty').style.display = 'none';
+
+  try {
+    const r = await fetch(`${BASE}/api/estoque/parado?dias=${diasFiltro}`);
+    if (!r.ok) throw new Error('Erro ' + r.status);
+    const dados = await r.json();
+    dadosOriginais = dados;
+    renderTabela(dados);
+    atualizarStats(dados);
+  } catch(e) {
+    console.error(e);
+    mostrarToast('Erro ao carregar dados: ' + e.message, 'err');
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('empty').style.display = 'block';
+    document.getElementById('empty').innerHTML = '<span>⚠️</span>Erro ao carregar. Verifique se o servidor está rodando.';
+  }
+}
+
+function atualizarStats(dados) {
+  const nunca = dados.filter(d => d.dias_parado >= 9999).length;
+  const semAnuncio = dados.filter(d => !d.tem_anuncio_ml && !d.tem_anuncio_shopee && !d.tem_anuncio_yampi).length;
+  const totalEst = dados.reduce((s,d) => s + (d.estoque||0), 0);
+  document.getElementById('statTotal').textContent = dados.length;
+  document.getElementById('statNunca').textContent = nunca;
+  document.getElementById('statSemAnuncio').textContent = semAnuncio;
+  document.getElementById('statEstoqueTotal').textContent = totalEst;
+}
+
+function filtrarTabela() {
+  const q = document.getElementById('searchBox').value.toLowerCase().trim();
+  let dados = [...dadosOriginais];
+
+  if (canalFiltro === 'sem_anuncio') {
+    dados = dados.filter(d => !d.tem_anuncio_ml && !d.tem_anuncio_shopee && !d.tem_anuncio_yampi);
+  } else if (canalFiltro === 'sem_ml') {
+    dados = dados.filter(d => !d.tem_anuncio_ml);
+  }
+
+  if (q) {
+    dados = dados.filter(d =>
+      String(d.sku).toLowerCase().includes(q) ||
+      (d.nome||'').toLowerCase().includes(q) ||
+      (d.familia||'').toLowerCase().includes(q)
+    );
+  }
+
+  renderTabela(dados);
+}
+
+function renderTabela(dados) {
+  document.getElementById('loading').style.display = 'none';
+
+  // Sort
+  dados = [...dados].sort((a,b) => {
+    let va = a[sortCol], vb = b[sortCol];
+    if (va === null || va === undefined) va = sortAsc ? Infinity : -Infinity;
+    if (vb === null || vb === undefined) vb = sortAsc ? Infinity : -Infinity;
+    if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return sortAsc ? va - vb : vb - va;
+  });
+
+  if (dados.length === 0) {
+    document.getElementById('tabela').style.display = 'none';
+    document.getElementById('empty').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('empty').style.display = 'none';
+  document.getElementById('tabela').style.display = 'table';
+
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+
+  dados.forEach((d, i) => {
+    const diasStr = d.dias_parado >= 9999 ? 'Nunca' : d.dias_parado + 'd';
+    const diasClass = d.dias_parado >= 9999 ? 'nunca' :
+                      d.dias_parado >= 180 ? 'critico' :
+                      d.dias_parado >= 90 ? 'alto' : 'medio';
+
+    const preco = d.preco_ml ? 'R$ ' + Number(d.preco_ml).toFixed(2).replace('.',',') : '—';
+
+    const canais = `
+      <span class="canal-dot ${d.tem_anuncio_ml?'on':'off'}"></span>
+      <span class="canal-dot ${d.tem_anuncio_shopee?'on':'off'}"></span>
+      <span class="canal-dot ${d.tem_anuncio_yampi?'on':'off'}"></span>
+    `;
+
+    // Ações contextuais
+    let acoes = '';
+    if (!d.tem_anuncio_ml && !d.tem_anuncio_shopee && !d.tem_anuncio_yampi) {
+      acoes += `<button class="btn-acao anuncio" onclick="criarAnuncioIA('${d.sku}','${escHtml(d.nome||'')}')">📢 Criar Anúncio</button>`;
+    }
+    acoes += `<button class="btn-acao kit" onclick="abrirKit('${d.sku}', ${i})">🔧 Sugerir Kit</button>`;
+    acoes += `<button class="btn-acao preco" onclick="abrirPreco('${d.sku}','${escHtml(d.nome||'')}')">💰 Desconto</button>`;
+    if (d.dias_parado >= 180 || d.dias_parado >= 9999) {
+      acoes += `<button class="btn-acao liquidar" onclick="liquidar('${d.sku}')">🔥 Liquidar</button>`;
+    }
+
+    const tr = document.createElement('tr');
+    tr.id = `row-${d.sku}`;
+    tr.innerHTML = `
+      <td><input type="checkbox" class="row-check" value="${d.sku}" onchange="updateSel()"></td>
+      <td class="sku">${d.sku}</td>
+      <td class="nome" title="${escHtml(d.nome||'')}">${escHtml(d.nome||'—')}</td>
+      <td><span class="familia-tag">${escHtml(d.familia||'—')}</span></td>
+      <td class="estoque">${d.estoque}</td>
+      <td><span class="dias-badge ${diasClass}">${diasStr}</span></td>
+      <td><span class="canal-dot ${d.tem_anuncio_ml?'on':'off'}" title="${d.tem_anuncio_ml?'Tem anúncio ML':'Sem anúncio ML'}"></span></td>
+      <td><span class="canal-dot ${d.tem_anuncio_shopee?'on':'off'}" title="${d.tem_anuncio_shopee?'Tem anúncio Shopee':'Sem anúncio Shopee'}"></span></td>
+      <td><span class="canal-dot ${d.tem_anuncio_yampi?'on':'off'}" title="${d.tem_anuncio_yampi?'Tem anúncio Yampi':'Sem anúncio Yampi'}"></span></td>
+      <td class="preco-val">${preco}</td>
+      <td class="acoes">${acoes}</td>
+      <td><button class="toggle-btn" onclick="toggleKit('${d.sku}',${i})" title="Ver sugestões de kit">⊕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ---- KIT ----
+async function abrirKit(sku, i) {
+  await mostrarKitPanel(sku);
+}
+async function toggleKit(sku, i) {
+  await mostrarKitPanel(sku);
+}
+
+async function mostrarKitPanel(sku) {
+  // Remove anterior
+  document.querySelectorAll('.kit-row').forEach(r => r.remove());
+
+  if (kitAberto === sku) { kitAberto = null; return; }
+  kitAberto = sku;
+
+  const tr = document.getElementById(`row-${sku}`);
+  if (!tr) return;
+
+  const kitTr = document.createElement('tr');
+  kitTr.className = 'kit-row';
+  kitTr.id = `kit-${sku}`;
+  kitTr.innerHTML = `<td colspan="12"><div class="kit-panel"><h4>⟳ Carregando sugestões de kit...</h4></div></td>`;
+  tr.after(kitTr);
+
+  try {
+    const r = await fetch(`${BASE}/api/estoque/sugerir-kit?sku=${sku}`);
+    const data = await r.json();
+    const sugs = data.sugestoes || [];
+
+    let cards = '';
+    if (sugs.length === 0) {
+      cards = '<p style="color:var(--text3);font-size:12px">Nenhum produto parado da mesma família encontrado.</p>';
+    } else {
+      sugs.forEach(s => {
+        const canaisStr = [
+          s.tem_anuncio_ml ? 'ML' : null,
+          s.tem_anuncio_shopee ? 'Shopee' : null,
+          s.tem_anuncio_yampi ? 'Yampi' : null
+        ].filter(Boolean).join(' · ') || 'Sem anúncio';
+        cards += `
+          <div class="kit-card" id="kc-${s.sku}" onclick="selecionarKitCard(this,'${s.sku}')">
+            <div class="ksku">${s.sku}</div>
+            <div class="knome">${escHtml(s.nome||'—')}</div>
+            <div class="kest">Est: ${s.estoque}</div>
+            <div class="kcheck">${canaisStr}</div>
+          </div>
+        `;
+      });
+    }
+
+    kitTr.innerHTML = `<td colspan="12"><div class="kit-panel">
+      <h4>🔧 Sugestões de kit com SKU ${sku}</h4>
+      <div class="kit-sugestoes">${cards}</div>
+      <div class="kit-action-bar">
+        <input type="text" id="kit-nome-${sku}" placeholder="Nome do kit (ex: Kit Rotor + Filtro WAP)">
+        <button class="btn-criar-kit" onclick="criarKit('${sku}')">Criar Kit</button>
+        <button class="btn-fechar-kit" onclick="fecharKit()">Fechar</button>
+      </div>
+    </div></td>`;
+  } catch(e) {
+    kitTr.innerHTML = `<td colspan="12"><div class="kit-panel"><h4 style="color:var(--danger)">Erro ao buscar sugestões</h4></div></td>`;
+  }
+}
+
+let kitSelecionados = [];
+function selecionarKitCard(el, sku) {
+  el.classList.toggle('selected');
+  if (el.classList.contains('selected')) {
+    kitSelecionados.push(sku);
+  } else {
+    kitSelecionados = kitSelecionados.filter(s => s !== sku);
+  }
+}
+
+function fecharKit() {
+  document.querySelectorAll('.kit-row').forEach(r => r.remove());
+  kitAberto = null;
+  kitSelecionados = [];
+}
+
+async function criarKit(skuBase) {
+  const nomeEl = document.getElementById(`kit-nome-${skuBase}`);
+  const nome = nomeEl ? nomeEl.value.trim() : '';
+  if (!nome) { mostrarToast('Digite o nome do kit antes de criar', 'err'); return; }
+  if (kitSelecionados.length === 0) { mostrarToast('Selecione ao menos um produto para compor o kit', 'err'); return; }
+
+  const skus = [skuBase, ...kitSelecionados];
+  const skuKit = skus.join('-');
+  mostrarToast(`Kit ${skuKit} criado: "${nome}"`, 'ok');
+  fecharKit();
+}
+
+// ---- PREÇO ----
+function abrirPreco(sku, nome) {
+  modalSku = sku;
+  document.getElementById('modalPrecoDesc').textContent = `${sku} — ${nome}`;
+  document.getElementById('rangeDesc').value = 15;
+  updateRange();
+  document.getElementById('modalPreco').classList.add('open');
+}
+
+function updateRange() {
+  const v = document.getElementById('rangeDesc').value;
+  document.getElementById('rangeVal').textContent = v + '%';
+}
+
+function fecharModal() {
+  document.getElementById('modalPreco').classList.remove('open');
+  modalSku = null;
+}
+
+async function confirmarDesconto() {
+  const desc = parseInt(document.getElementById('rangeDesc').value);
+  if (!modalSku) return;
+  fecharModal();
+  mostrarToast(`Desconto de ${desc}% salvo para SKU ${modalSku}. Acesse o Gestor de Anúncios para publicar.`, 'ok');
+}
+
+// ---- ANÚNCIO IA ----
+function criarAnuncioIA(sku, nome) {
+  mostrarToast(`Abrindo criação de anúncio para SKU ${sku}...`, 'ok');
+  setTimeout(() => {
+    window.location.href = `/produto_novo.html?sku=${sku}`;
+  }, 1200);
+}
+
+function liquidar(sku) {
+  mostrarToast(`SKU ${sku} marcado para liquidação. Configure o desconto no Gestor de Anúncios.`, 'ok');
+}
+
+// ---- SELEÇÃO ----
+function toggleAll(cb) {
+  document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked);
+  updateSel();
+}
+
+function updateSel() {
+  const sel = document.querySelectorAll('.row-check:checked').length;
+  const bar = document.getElementById('selBar');
+  document.getElementById('selCount').textContent = sel;
+  if (sel > 0) bar.classList.add('show');
+  else bar.classList.remove('show');
+}
+
+function acaoLote(tipo) {
+  const selecionados = [...document.querySelectorAll('.row-check:checked')].map(c => c.value);
+  mostrarToast(`Ação "${tipo}" para ${selecionados.length} produtos. Em desenvolvimento.`, 'ok');
+}
+
+// ---- FILTROS ----
+function setDias(d, btn) {
+  diasFiltro = d;
+  document.querySelectorAll('[data-dias]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  fecharKit();
+  carregarDados();
+}
+
+function toggleFiltro(tipo, val, btn) {
+  document.querySelectorAll('.btn-filter:not([data-dias])').forEach(b => {
+    if (!b.dataset.dias) b.classList.remove('active');
+  });
+  btn.classList.add('active');
+  canalFiltro = val;
+  filtrarTabela();
+}
+
+function sortBy(col) {
+  if (sortCol === col) sortAsc = !sortAsc;
+  else { sortCol = col; sortAsc = false; }
+  filtrarTabela();
+}
+
+// ---- TOAST ----
+function mostrarToast(msg, tipo='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${tipo}`;
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// Init
+carregarDados();
+</script>
+</body>
+</html>
