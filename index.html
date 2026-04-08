@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fava Ecom — Menu</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;padding:24px 16px}
+h1{text-align:center;font-size:22px;margin-bottom:4px;color:#f1f5f9}
+.sub{text-align:center;color:#64748b;font-size:13px;margin-bottom:32px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;max-width:900px;margin:0 auto}
+a.card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px 16px;text-decoration:none;color:#e2e8f0;display:flex;flex-direction:column;align-items:center;gap:8px;transition:all .15s}
+a.card:hover{background:#1a3a5c;border-color:#3b82f6;transform:translateY(-2px)}
+a.card .icon{font-size:32px}
+a.card .nome{font-size:13px;font-weight:700;text-align:center}
+a.card .desc{font-size:11px;color:#64748b;text-align:center;line-height:1.4}
+.sec{font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1px;margin:20px auto 10px;max-width:900px}
+</style>
+</head>
+<body>
+<h1>🔧 Fava Ecom</h1>
+<p class="sub">Selecione o módulo que deseja acessar</p>
+
+<div class="sec">📦 Compras e Estoque</div>
+<div class="grid">
+  <a class="card" href="/entrada_nf.html">
+    <span class="icon">📄</span>
+    <span class="nome">Entrada de NF</span>
+    <span class="desc">Importar e conferir notas fiscais de compra</span>
+  </a>
+  <a class="card" href="/historico_compras.html">
+    <span class="icon">🔍</span>
+    <span class="nome">Histórico de Compras</span>
+    <span class="desc">Consultar por código do fornecedor ou SKU</span>
+  </a>
+  <a class="card" href="/base_produtos.html">
+    <span class="icon">📦</span>
+    <span class="nome">Base de Produtos</span>
+    <span class="desc">Catálogo completo com edição inline</span>
+  </a>
+  <a class="card" href="/estoque_parado.html">
+    <span class="icon">📉</span>
+    <span class="nome">Estoque Parado</span>
+    <span class="desc">Produtos sem venda — curva D</span>
+  </a>
+</div>
+
+<div class="sec">💰 Vendas e Preços</div>
+<div class="grid">
+  <a class="card" href="/calculadora_fava.html">
+    <span class="icon">🧮</span>
+    <span class="nome">Calculadora</span>
+    <span class="desc">Preços, orçamentos e recebimento de NF</span>
+  </a>
+  <a class="card" href="/balcao_fava.html">
+    <span class="icon">🏪</span>
+    <span class="nome">Balcão</span>
+    <span class="desc">Vendas presenciais e orçamentos</span>
+  </a>
+  <a class="card" href="/pedidos_fava.html">
+    <span class="icon">🛒</span>
+    <span class="nome">Pedidos</span>
+    <span class="desc">Pedidos ML, Shopee e Yampi</span>
+  </a>
+</div>
+
+<div class="sec">📢 Anúncios e Marketing</div>
+<div class="grid">
+  <a class="card" href="/gestor_anuncios.html">
+    <span class="icon">📢</span>
+    <span class="nome">Gestor de Anúncios</span>
+    <span class="desc">Descontos, margens e campanhas ML</span>
+  </a>
+  <a class="card" href="/fila_anuncios.html">
+    <span class="icon">🤖</span>
+    <span class="nome">Fila de Anúncios (IA)</span>
+    <span class="desc">Agente IA gera título e descrição</span>
+  </a>
+  <a class="card" href="/whatsapp.html">
+    <span class="icon">💬</span>
+    <span class="nome">WhatsApp</span>
+    <span class="desc">Atendimento automático via IA</span>
+  </a>
+</div>
+
+<div class="sec">⚙ Ferramentas</div>
+<div class="grid">
+  <a class="card" href="/painel_fava.html">
+    <span class="icon">🏠</span>
+    <span class="nome">Painel Principal</span>
+    <span class="desc">Dashboard geral da operação</span>
+  </a>
+  <a class="card" href="/ean.html">
+    <span class="icon">🏷️</span>
+    <span class="nome">Gerador EAN</span>
+    <span class="desc">Gera EAN-13 sequencial com 1 clique</span>
+  </a>
+  <a class="card" href="/tarefas.html">
+    <span class="icon">📋</span>
+    <span class="nome">Tarefas</span>
+    <span class="desc">Pendências automáticas e manuais</span>
+  </a>
+</div>
+</body>
+</html>
