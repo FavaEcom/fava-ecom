@@ -2349,7 +2349,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if not nf: self._err(400,'nf obrigatorio'); return
         p  = '%s' if IS_PG else '?'
         try:
-            itens = exe(f"""SELECT * FROM historico_compras WHERE nf={p}""", (nf,), fetchall=True) or []
+            itens = exe(f"""SELECT DISTINCT ON (det_num, COALESCE(cprod,'')) * FROM historico_compras WHERE nf={p} ORDER BY det_num, COALESCE(cprod,''), id DESC""", (nf,), fetchall=True) or []
             if not itens: self._ok({'nf': nf, 'erro': 'NF nao encontrada'}); return
             f = itens[0]
             # Totais
@@ -2404,17 +2404,20 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         p   = '%s' if IS_PG else '?'
         try:
             if nf:
-                rows = exe(f"""SELECT hc.*,
+                # DISTINCT ON deduplicar — pegar registro mais recente por (det_num, cprod)
+                rows = exe(f"""SELECT DISTINCT ON (hc.det_num, COALESCE(hc.cprod,'')) hc.*,
                     COALESCE(hc.cst,'') as cst,
                     COALESCE(hc.cest,'') as cest,
                     COALESCE(hc.tem_st,0) as tem_st,
                     COALESCE(hc.orig,0) as orig,
                     p.familia, p.peso,
-                    CASE WHEN p.sku IS NOT NULL THEN true ELSE false END as ja_cadastrado
+                    CASE WHEN p.sku IS NOT NULL THEN true ELSE false END as ja_cadastrado,
+                    cm.sku as sku_mapeado
                     FROM historico_compras hc
                     LEFT JOIN produtos p ON p.sku = hc.sku
+                    LEFT JOIN cprod_map cm ON cm.cprod = hc.cprod
                     WHERE hc.nf = {p}
-                    ORDER BY hc.det_num, hc.id""", (nf,), fetchall=True) or []
+                    ORDER BY hc.det_num, COALESCE(hc.cprod,''), hc.id DESC""", (nf,), fetchall=True) or []
             else:
                 rows = exe("""SELECT nf, fornecedor, data_emissao,
                     COUNT(*) as itens, SUM(vtot) as valor_total,
