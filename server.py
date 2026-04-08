@@ -1098,6 +1098,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/kits':              self._get_kits,
             '/api/db/cadastros':         self._get_cadastros,
             '/api/auth/tokens':           self._get_or_post_tokens,
+            '/api/estoque/parado':        self._get_estoque_parado,
+            '/api/estoque/sugerir-kit':   self._get_sugerir_kit,
             '/api/db/status':            self._get_status,
             '/api/db/pedidos-pc':         self._get_pedidos_pc,
             '/api/cmv-cache':            self._get_cmv_compat,
@@ -2234,6 +2236,83 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             except: pass
             self._ok(rows)
         except Exception as e: self._err(500, str(e))
+
+    def _get_estoque_parado(self):
+        """GET /api/estoque/parado?dias=90 — produtos com estoque > 0 sem venda nos últimos X dias"""
+        from urllib.parse import parse_qs
+        qs   = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        dias = int(qs.get('dias', ['90'])[0])
+        p    = '%s' if IS_PG else '?'
+        try:
+            # Usa historico_compras para última venda (tem sku direto)
+            # e pedidos para cruzar via itens JSON (fallback)
+            sql = f"""
+                SELECT
+                    pr.sku,
+                    pr.nome,
+                    pr.estoque                                      AS estoque,
+                    pr.familia,
+                    MAX(hc.data_emissao)                            AS ultima_venda,
+                    CASE
+                        WHEN MAX(hc.data_emissao) IS NULL THEN 9999
+                        ELSE NOW()::date - MAX(hc.data_emissao)::date
+                    END                                             AS dias_parado,
+                    EXISTS(SELECT 1 FROM ml_listings m WHERE m.sku = pr.sku)     AS tem_anuncio_ml,
+                    EXISTS(SELECT 1 FROM shopee_listings s WHERE s.sku = pr.sku) AS tem_anuncio_shopee,
+                    EXISTS(SELECT 1 FROM yampi_listings y WHERE y.sku = pr.sku)  AS tem_anuncio_yampi,
+                    COALESCE((SELECT m2.preco FROM ml_listings m2 WHERE m2.sku = pr.sku LIMIT 1), 0) AS preco_ml
+                FROM produtos pr
+                LEFT JOIN historico_compras hc ON hc.sku = pr.sku
+                WHERE pr.estoque > 0
+                  AND pr.sku ~ '^[0-9]'
+                GROUP BY pr.sku, pr.nome, pr.estoque, pr.familia
+                HAVING
+                    MAX(hc.data_emissao) IS NULL
+                    OR MAX(hc.data_emissao)::date < (NOW() - ({p} || ' days')::interval)::date
+                ORDER BY dias_parado DESC NULLS FIRST
+                LIMIT 500
+            """
+            rows = exe(sql, (str(dias),), fetchall=True) or []
+            self._ok(rows)
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _get_sugerir_kit(self):
+        """GET /api/estoque/sugerir-kit?sku=1562 — produtos da mesma família parados"""
+        from urllib.parse import parse_qs
+        qs  = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        sku = qs.get('sku', [''])[0].strip()
+        if not sku:
+            self._err(400, 'sku obrigatorio'); return
+        p = '%s' if IS_PG else '?'
+        try:
+            # Buscar família do SKU base
+            base = exe(f"SELECT familia, nome FROM produtos WHERE sku={p}", (sku,), fetchone=True)
+            if not base:
+                self._ok({'sku_base': sku, 'sugestoes': []}); return
+            familia = base.get('familia') or ''
+            if not familia:
+                self._ok({'sku_base': sku, 'sugestoes': []}); return
+            # Produtos da mesma família, com estoque, sem venda nos últimos 90 dias
+            sql = f"""
+                SELECT pr.sku, pr.nome, pr.estoque, pr.custo_br
+                FROM produtos pr
+                LEFT JOIN historico_compras hc ON hc.sku = pr.sku
+                WHERE pr.familia = {p}
+                  AND pr.sku != {p}
+                  AND pr.estoque > 0
+                  AND pr.sku ~ '^[0-9]'
+                GROUP BY pr.sku, pr.nome, pr.estoque, pr.custo_br
+                HAVING
+                    MAX(hc.data_emissao) IS NULL
+                    OR MAX(hc.data_emissao)::date < (NOW() - interval '90 days')::date
+                ORDER BY pr.nome
+                LIMIT 20
+            """
+            sugestoes = exe(sql, (familia, sku), fetchall=True) or []
+            self._ok({'sku_base': sku, 'nome_base': base.get('nome',''), 'familia': familia, 'sugestoes': sugestoes})
+        except Exception as e:
+            self._err(500, str(e))
 
     def _get_status(self):
         try:
