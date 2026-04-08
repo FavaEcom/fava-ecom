@@ -7,8 +7,8 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;font-size:12px}
-nav{background:#1e293b;padding:10px 20px;display:flex;gap:16px;align-items:center;border-bottom:1px solid #334155;position:sticky;top:0;z-index:50}
-nav a{color:#94a3b8;text-decoration:none;font-size:13px;font-weight:600;padding:6px 12px;border-radius:6px}
+nav{background:#1e293b;padding:6px 16px;display:flex;gap:12px;align-items:center;border-bottom:1px solid #334155;position:sticky;top:0;z-index:50;height:40px}
+nav a{color:#94a3b8;text-decoration:none;font-size:12px;font-weight:600;padding:4px 10px;border-radius:6px;white-space:nowrap}
 nav a:hover,nav a.ativo{background:#3b82f6;color:#fff}
 .main{max-width:100%;margin:0;padding:16px}
 
@@ -39,7 +39,7 @@ nav a:hover,nav a.ativo{background:#3b82f6;color:#fff}
 /* Tabela */
 .tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid #334155}
 table{width:100%;border-collapse:collapse;min-width:1600px;font-size:11px}
-thead th{background:#1a2335;padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:2px solid #334155;white-space:nowrap;position:sticky;top:48px;z-index:10}
+thead th{background:#1a2335;padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:2px solid #334155;white-space:nowrap;position:sticky;top:40px;z-index:10}
 thead th.num{text-align:right}
 tbody tr{border-bottom:1px solid #0f172a}
 tbody tr:hover{background:#14202f}
@@ -143,6 +143,17 @@ td{padding:6px 8px;vertical-align:middle}
 <!-- Stats -->
 <div id="stats" class="stats" style="display:none"></div>
 
+<!-- Capa NF -->
+<div id="capa-nf" style="display:none;background:#0d1f3c;border:1px solid #1d4ed8;border-radius:10px;padding:16px 20px;margin-bottom:14px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <span style="font-size:14px;font-weight:700;color:#93c5fd">📋 Capa da Nota</span>
+    <div id="capa-status"></div>
+  </div>
+  <div id="capa-body" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px"></div>
+  <div id="capa-flags" style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap"></div>
+  <div id="capa-creditos" style="margin-top:10px;background:#0f172a;border-radius:6px;padding:9px 12px;font-size:11px;color:#94a3b8"></div>
+</div>
+
 <!-- Conteúdo -->
 <div id="conteudo"><div class="loading">Digite um número de NF e clique em Buscar.</div></div>
 </div>
@@ -243,6 +254,7 @@ function buscarNF() {
         return it;
       });
       renderHeader(data);
+      carregarCapa(_nf);
       renderTabela();
       atualizarStats();
       document.getElementById('barra').style.display='flex';
@@ -469,6 +481,39 @@ function listarNFs() {
 }
 
 function abrirNF(n){document.getElementById('inp-nf').value=n;buscarNF();}
+
+function fmtR(v){return (v||0).toFixed(2);}
+
+function carregarCapa(nf) {
+  fetch('/api/db/capa-nf?nf='+encodeURIComponent(nf))
+    .then(r=>r.json()).then(function(d){
+      if(!d||d.erro){document.getElementById('capa-nf').style.display='none';return;}
+      document.getElementById('capa-nf').style.display='block';
+      var sCls=d.status_validacao===2?'background:#14532d;color:#86efac':d.status_validacao===1?'background:#78350f;color:#fcd34d':'background:#1e3a5f;color:#93c5fd';
+      document.getElementById('capa-status').innerHTML='<span style="padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700;'+sCls+'">'+d.status_label+'</span>';
+      var blocos=[['Fornecedor',d.fornecedor],['Data',d.data_emissao],
+        ['Itens',d.itens_total+' ('+d.skus_vinculados+' vinc.)'],
+        ['Vl Produtos','R$ '+fmtR(d.v_produtos)],['Vl IPI','R$ '+fmtR(d.v_ipi)],
+        ['Vl ST','R$ '+fmtR(d.v_st)],['Custo Total','R$ '+fmtR(d.custo_total)],
+        ['CMV BR Total','R$ '+fmtR(d.cmv_brasil_total)],['CMV PR Total','R$ '+fmtR(d.cmv_pr_total)],
+        ['CFOPs',(d.cfops||[]).join(', ')||'—']];
+      document.getElementById('capa-body').innerHTML=blocos.map(function(b){
+        return '<div style="background:#0f172a;border-radius:5px;padding:7px 10px;border:1px solid #1d4ed8">'+
+          '<div style="font-size:9px;color:#64748b;text-transform:uppercase;margin-bottom:2px">'+b[0]+'</div>'+
+          '<div style="font-size:12px;font-weight:700;color:#f1f5f9">'+escH(String(b[1]))+'</div></div>';
+      }).join('');
+      var fh='';
+      if(d.tem_st)fh+='<span style="background:#78350f;color:#fcd34d;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700">⚠ TEM ST</span> ';
+      if(d.tem_importado)fh+='<span style="background:#4c1d95;color:#ddd6fe;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700">🌍 IMPORTADO</span> ';
+      if((d.flags||[]).includes('BASE_REDUZIDA'))fh+='<span style="background:#7f1d1d;color:#fca5a5;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700">📉 BASE REDUZIDA</span> ';
+      (d.csts||[]).forEach(function(cst){fh+='<span style="background:#1e3a5f;color:#93c5fd;padding:2px 8px;border-radius:3px;font-size:10px">CST '+cst+'</span> ';});
+      document.getElementById('capa-flags').innerHTML=fh;
+      document.getElementById('capa-creditos').innerHTML=
+        '💡 <strong style="color:#f1f5f9">Créditos da nota:</strong> ICMS R$ '+fmtR(d.v_icms_credito)+
+        ' | PIS R$ '+fmtR(d.cred_pis)+' | COFINS R$ '+fmtR(d.cred_cofins)+
+        ' | <strong style="color:#22c55e">Total: R$ '+fmtR(d.cred_total)+'</strong>';
+    }).catch(function(){});
+}
 
 function enviarFilaAnuncios() {
   var novos = _itens.filter(function(it){
