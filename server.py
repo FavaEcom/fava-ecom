@@ -1125,6 +1125,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/capa-nf':             self._get_capa_nf,
             '/api/db/entrada-nf':         self._get_entrada_nf,
             '/api/db/bling-buscar-produto':self._get_bling_buscar_produto,
+            '/api/db/apagar-nf':           self._get_apagar_nf,
             '/api/db/fila-anuncios':       self._get_fila_anuncios,
             '/api/db/status':            self._get_status,
             '/api/db/pedidos-pc':         self._get_pedidos_pc,
@@ -2268,6 +2269,26 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._ok(rows)
         except Exception as e: self._err(500, str(e))
 
+    def _get_apagar_nf(self):
+        """GET /api/db/apagar-nf?nf=315065 — apaga todos os registros de uma NF do historico"""
+        from urllib.parse import parse_qs
+        qs = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        nf = qs.get('nf',[''])[0].strip()
+        p  = '%s' if IS_PG else '?'
+        if not nf: self._err(400,'nf obrigatorio'); return
+        try:
+            # Checar quantos registros tem
+            cnt = exe(f"SELECT COUNT(*) as n FROM historico_compras WHERE nf={p}", (nf,), fetchone=True)
+            n = cnt.get('n',0) if cnt else 0
+            if n == 0: self._ok({'ok':True,'apagados':0,'msg':'NF nao encontrada no historico'}); return
+            exe(f"DELETE FROM historico_compras WHERE nf={p}", (nf,))
+            # Apagar rascunho tambem
+            try: exe(f"DELETE FROM nf_rascunho WHERE nf_num={p}", (nf,))
+            except: pass
+            self._ok({'ok':True,'apagados':n,'nf':nf})
+        except Exception as e:
+            self._err(500, str(e))
+
     def _get_fila_anuncios(self):
         """GET /api/db/fila-anuncios?status=pendente — lista fila de criação de anúncios"""
         from urllib.parse import parse_qs
@@ -2411,28 +2432,55 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._err(500, str(e))
 
     def _get_entrada_nf(self):
-        """GET /api/db/entrada-nf?nf=315065 — retorna itens da NF do historico_compras"""
+        """GET /api/db/entrada-nf?nf=X — itens da NF, deduplica em Python"""
         from urllib.parse import parse_qs
-        qs  = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
-        nf  = qs.get('nf', [''])[0].strip()
-        p   = '%s' if IS_PG else '?'
+        qs = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        nf = qs.get('nf', [''])[0].strip()
+        p  = '%s' if IS_PG else '?'
         try:
             if nf:
-                # DISTINCT ON por (det_num, sku) — pegar mais recente de cada item
-                rows = exe(f"""SELECT DISTINCT ON (hc.det_num, COALESCE(hc.sku,'')) hc.*,
+                rows = exe(f"""SELECT hc.*,
                     COALESCE(hc.cst,'') as cst,
                     COALESCE(hc.cest,'') as cest,
                     COALESCE(hc.tem_st,0) as tem_st,
                     COALESCE(hc.orig,0) as orig,
-                    COALESCE(hc.cprod,'') as cprod,
                     p.familia, p.peso,
-                    CASE WHEN p.sku IS NOT NULL THEN true ELSE false END as ja_cadastrado,
-                    cm2.sku as sku_mapeado
+                    CASE WHEN p.sku IS NOT NULL THEN true ELSE false END as ja_cadastrado
                     FROM historico_compras hc
                     LEFT JOIN produtos p ON p.sku = hc.sku
-                    LEFT JOIN cprod_map cm2 ON cm2.cprod = COALESCE(hc.cprod,'')
                     WHERE hc.nf = {p}
-                    ORDER BY hc.det_num, COALESCE(hc.sku,''), hc.id DESC""", (nf,), fetchall=True) or []
+                    ORDER BY hc.det_num, hc.id DESC""", (nf,), fetchall=True) or []
+
+                # Deduplicar em Python — por (det_num, sku): manter o mais recente (id DESC)
+                seen = {}
+                dedup = []
+                for row in rows:
+                    chave = (row.get('det_num', 0), str(row.get('sku') or ''))
+                    if chave not in seen:
+                        seen[chave] = True
+                        # Corrigir icms_p em decimal (0.195 → 19.5)
+                        if row.get('icms_p') and 0 < float(row['icms_p'] or 0) < 1.0:
+                            row['icms_p'] = float(row['icms_p']) * 100
+                        # Detectar SKU que parece código de fornecedor (10+ dígitos)
+                        sku = str(row.get('sku') or '')
+                        row['sku_eh_cprod'] = bool(sku and sku.isdigit() and len(sku) >= 10)
+                        # Detectar duplicata no XML (mesmo det_num com sku diferente)
+                        row['duplicata'] = False
+                        # Buscar mapeamento cprod → sku no cprod_map
+                        row['sku_mapeado'] = ''
+                        row['cprod'] = str(row.get('cprod') or '')
+                        dedup.append(row)
+
+                # Detectar duplicatas reais (mesmo det_num, sku diferente)
+                det_count = {}
+                for row in dedup:
+                    k = row.get('det_num', 0)
+                    det_count[k] = det_count.get(k, 0) + 1
+                for row in dedup:
+                    if det_count.get(row.get('det_num', 0), 0) > 1:
+                        row['duplicata'] = True
+
+                self._ok(dedup)
             else:
                 rows = exe("""SELECT nf, fornecedor, data_emissao,
                     COUNT(*) as itens, SUM(vtot) as valor_total,
@@ -2440,10 +2488,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     SUM(COALESCE(tem_st,0)) as itens_st
                     FROM historico_compras
                     GROUP BY nf, fornecedor, data_emissao
-                    ORDER BY data_emissao DESC LIMIT 200""", fetchall=True) or []
-            self._ok(rows)
+                    ORDER BY data_emissao DESC LIMIT 300""", fetchall=True) or []
+                self._ok(rows)
         except Exception as e:
             self._err(500, str(e))
+
 
     def _post_entrada_nf_salvar(self):
         """POST /api/db/entrada-nf/salvar — salva ajustes da NF na base de produtos"""
@@ -3500,52 +3549,67 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception as e: self._err(500, str(e))
 
     def _post_historico(self):
+        """POST /api/db/historico — salva itens de NF com TODOS os campos fiscais."""
+        p = '%s' if IS_PG else '?'
         try:
             payload = self._body()
             if isinstance(payload, dict): payload = [payload]
-            n = 0
+            if not payload: self._ok({'ok': True, 'inseridos': 0}); return
+
+            # Apagar NFs do lote antes de inserir — evita qualquer duplicata
+            nfs = list(set(str(r.get('nf','')) for r in payload if r.get('nf')))
+            for nf_d in nfs:
+                try: exe(f"DELETE FROM historico_compras WHERE nf={p}", (nf_d,))
+                except: pass
+
+            inseridos = 0
             for row in payload:
                 try:
-                    nf    = str(row.get('nf',''))
-                    cprod = str(row.get('sku',''))
-                    if not nf or not cprod: continue
-                    v_st  = float(row.get('v_st',0) or 0)
-                    cred_icms = float(row.get('cred_icms',0) or 0)
-                    if not cred_icms:
-                        v_icms = float(row.get('icms_r',0) or 0)
-                        vtot_r = float(row.get('vtot',0) or row.get('vunit',0) or 0)
-                        if v_icms > 0 and vtot_r > 0:
-                            cred_icms = round(v_icms / vtot_r, 6)
-                    det_num = int(row.get('det_num', 0) or 0)
-                    cprod_real = str(row.get('cprod', cprod) or cprod)
-                    cst  = str(row.get('cst','') or '')
-                    cest = str(row.get('cest','') or '')
-                    tem_st = int(row.get('tem_st', 0) or 0)
-                    orig   = int(row.get('orig', 0) or 0)
-                    # ON CONFLICT: se mesma (nf, det_num, cprod) existir → atualiza
-                    exe("""INSERT INTO historico_compras
-                            (nf,fornecedor,data_emissao,sku,nome,qtd,vunit,vtot,
-                             ipi_p,ipi_un,icms_p,cred_pc,custo_r,cmv_br,cmv_pr,ncm,cfop,v_st,cred_icms,det_num,cprod,cst,cest,tem_st,orig)
-                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                           ON CONFLICT (nf, det_num, cprod) DO UPDATE SET
-                             sku=EXCLUDED.sku, custo_r=EXCLUDED.custo_r,
-                             cmv_br=EXCLUDED.cmv_br, cmv_pr=EXCLUDED.cmv_pr,
-                             cred_icms=EXCLUDED.cred_icms, v_st=EXCLUDED.v_st,
-                             cst=EXCLUDED.cst, cest=EXCLUDED.cest,
-                             tem_st=EXCLUDED.tem_st, orig=EXCLUDED.orig
-                           """,
-                        (nf, row.get('fornecedor',''), row.get('data_emissao',''),
-                         str(row.get('sku','') or ''), row.get('nome',''),
-                         float(row.get('qtd',0)), float(row.get('vunit',0)), float(row.get('vtot',0)),
-                         float(row.get('ipi_p',0)), float(row.get('ipi_un',0)),
-                         float(row.get('icms_p',0)), float(row.get('cred_pc',0)),
-                         float(row.get('custo_r',0)), float(row.get('cmv_br',0)),
-                         float(row.get('cmv_pr',0)), row.get('ncm',''), row.get('cfop',''),
-                         v_st, cred_icms, det_num, cprod_real, cst, cest, tem_st, orig))
-                    n += 1
-                except Exception as e: print(f'[HIST] {e}')
-            self._ok({'ok':True,'inseridos':n})
-        except Exception as e: self._err(500, str(e))
+                    nf  = str(row.get('nf','') or '')
+                    if not nf: continue
+                    sku           = str(row.get('sku','') or '')
+                    cprod_val     = str(row.get('cprod','') or '')
+                    nome          = str(row.get('nome','') or '')
+                    forn          = str(row.get('fornecedor','') or '')
+                    dt            = str(row.get('data_emissao','') or '')
+                    qtd           = float(row.get('qtd',0) or 0)
+                    vunit         = float(row.get('vunit',0) or 0)
+                    vtot          = float(row.get('vtot',0) or 0)
+                    ipi_p         = float(row.get('ipi_p',0) or 0)
+                    ipi_un        = float(row.get('ipi_un',0) or 0)
+                    icms_p        = float(row.get('icms_p',0) or 0)
+                    # Corrigir icms_p em decimal (0.195 → 19.5)
+                    if 0 < icms_p < 1.0: icms_p = icms_p * 100
+                    custo_r       = float(row.get('custo_r',0) or 0)
+                    cmv_br        = float(row.get('cmv_br',0) or 0)
+                    cmv_pr        = float(row.get('cmv_pr',0) or 0)
+                    ncm           = str(row.get('ncm','') or '')
+                    cfop          = str(row.get('cfop','') or '')
+                    v_st          = float(row.get('v_st',0) or 0)
+                    cred_icms     = float(row.get('cred_icms',0) or 0)
+                    det_num       = int(row.get('det_num',0) or 0)
+                    cst           = str(row.get('cst','') or '')
+                    cest          = str(row.get('cest','') or '')
+                    tem_st        = int(row.get('tem_st',0) or 0)
+                    orig          = int(row.get('orig',0) or 0)
+
+                    exe(f"""INSERT INTO historico_compras
+                        (nf,fornecedor,data_emissao,sku,nome,qtd,vunit,vtot,
+                         ipi_p,ipi_un,icms_p,cred_pc,custo_r,cmv_br,cmv_pr,
+                         ncm,cfop,v_st,cred_icms,det_num,cprod,cst,cest,tem_st,orig)
+                        VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})""",
+                        (nf,forn,dt,sku,nome,qtd,vunit,vtot,
+                         ipi_p,ipi_un,icms_p,0,custo_r,cmv_br,cmv_pr,
+                         ncm,cfop,v_st,cred_icms,det_num,cprod_val,cst,cest,tem_st,orig))
+                    inseridos += 1
+                except Exception as ei:
+                    pass  # continua próximo item
+
+            self._ok({'ok': True, 'inseridos': inseridos})
+        except Exception as e:
+            self._err(500, str(e))
+
+
     def _post_nf_rascunho(self):
         """POST /api/db/nf-rascunho — salva rascunho de NF para revisão no painel"""
         try:
