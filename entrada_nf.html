@@ -48,6 +48,8 @@ tbody tr.st:hover{background:#231e00}
 tbody tr.imp{background:#130d1a}
 tbody tr.imp:hover{background:#1c1326}
 tbody tr.ok-sku{background:#071411}
+tbody tr.dup{background:#2d0a0a !important;border-left:3px solid #ef4444}
+tbody tr.sku-cprod{background:#2d1b00 !important;border-left:3px solid #f59e0b}
 td{padding:6px 8px;vertical-align:middle}
 .num{text-align:right;font-family:monospace}
 .mono{font-family:monospace}
@@ -293,24 +295,33 @@ function renderTabela() {
   html+='</tr></thead><tbody>';
 
   _itens.forEach(function(it, i) {
-    var temSku  = it.sku && it.sku.trim();
-    var temST   = it.tem_st || parseInt(it.tem_st||0);
-    var isImp   = [1,2,6,7].includes(parseInt(it.orig||0));
-    var cst     = it.cst || '';
-    var cest    = it.cest || '';
-    var cls     = temST ? 'st' : isImp ? 'imp' : temSku ? 'ok-sku' : '';
-    var custo   = it.custo_r || 0;
-    var st_un   = (it.v_st||0)/Math.max(it.qtd||1,1);
+    var temSku     = it.sku && it.sku.trim();
+    var temST      = it.tem_st || parseInt(it.tem_st||0);
+    var isImp      = [1,2,6,7].includes(parseInt(it.orig||0));
+    var cst        = it.cst || '';
+    var cest       = it.cest || '';
+    var skuEhCprod = it.sku_eh_cprod || (temSku && /^\d{10,}$/.test(it.sku||''));
+    var isDup      = it.duplicata;
+    var skuMapeado = it.sku_mapeado || '';
+    var cls        = isDup ? 'dup' : skuEhCprod ? 'sku-cprod' : temST ? 'st' : isImp ? 'imp' : temSku ? 'ok-sku' : '';
+    var custo      = it.custo_r || 0;
+    var st_un      = (it.v_st||0)/Math.max(it.qtd||1,1);
 
     html += '<tr class="'+cls+'" id="row-'+i+'">';
-    html += '<td style="color:#475569">'+( it.det_num||i+1)+'</td>';
-    html += '<td><span class="mono" style="color:#64748b">'+(it.cprod||'—')+'</span></td>';
+    var alertas = '';
+    if(isDup)      alertas += '<span title="Duplicata no XML!" style="color:#ef4444;font-size:10px"> ⚠DUP</span>';
+    if(skuEhCprod) alertas += '<span title="SKU parece código fornecedor!" style="color:#f59e0b;font-size:10px"> ⚠COD</span>';
+    html += '<td style="color:#475569;font-size:10px">'+(it.det_num||i+1)+alertas+'</td>';
+    html += '<td><span class="mono" style="color:#64748b;font-size:11px">'+(it.cprod||'—')+'</span></td>';
     html += '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500" title="'+escHtml(it.nome||'')+'">'+escHtml((it.nome||'—').slice(0,40))+'</td>';
-    // SKU
-    if(temSku) {
-      html += '<td><span class="tag tag-ok">'+it.sku+'</span></td>';
+    // SKU — alertas e sugestão do mapa
+    if(temSku && !skuEhCprod) {
+      var extra = (skuMapeado && skuMapeado!==it.sku) ? '<br><span style="font-size:9px;color:#f59e0b">mapa:'+skuMapeado+'</span>' : '';
+      html += '<td><span class="tag tag-ok">'+it.sku+'</span>'+extra+'</td>';
     } else {
-      html += '<td><input class="ei ei-sku ei-sku-w" id="sku-'+i+'" placeholder="SKU" value="'+(it._novo_sku||'')+'" oninput="onSkuInput('+i+',this)"></td>';
+      var estilo = skuEhCprod ? 'border-color:#ef4444' : '';
+      var placeholder = skuEhCprod ? 'SKU interno (não código)' : 'SKU';
+      html += '<td><input class="ei ei-sku ei-sku-w" id="sku-'+i+'" placeholder="'+placeholder+'" value="'+(skuMapeado||it._novo_sku||'')+'" oninput="onSkuInput('+i+',this)" style="'+estilo+'"></td>';
     }
     // NCM
     html += '<td><input class="ei ei-ncm" value="'+(it.ncm||'')+'" oninput="_itens['+i+'].ncm=this.value"></td>';
