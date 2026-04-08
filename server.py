@@ -114,6 +114,19 @@ def criar_tabelas():
                 created_at TIMESTAMP DEFAULT NOW())""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS v_st REAL DEFAULT 0""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS cst TEXT""",
+            """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS cprod TEXT DEFAULT ''""",
+            """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS cfop TEXT DEFAULT ''""",
+            """DO $$ BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint 
+                    WHERE conname = 'uq_historico_nf_det_sku'
+                ) THEN
+                    ALTER TABLE historico_compras 
+                    ADD CONSTRAINT uq_historico_nf_det_sku 
+                    UNIQUE (nf, det_num, sku);
+                END IF;
+            EXCEPTION WHEN others THEN NULL;
+            END $$""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS cest TEXT""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS tem_st INTEGER DEFAULT 0""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS orig INTEGER DEFAULT 0""",
@@ -1150,6 +1163,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/fila-anuncios':       self._post_fila_anuncios,
             '/api/db/fila-anuncios/status': self._post_fila_status,
             '/api/db/entrada-nf/salvar':   self._post_entrada_nf_salvar,
+            '/api/db/produto':             self._patch_produto,
             '/api/db/produto-peso':        self._post_produto_peso,
             '/api/db/nf-rascunho':        self._post_nf_rascunho,
             '/api/db/listing':            self._post_listing,
@@ -2349,7 +2363,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if not nf: self._err(400,'nf obrigatorio'); return
         p  = '%s' if IS_PG else '?'
         try:
-            itens = exe(f"""SELECT DISTINCT ON (det_num, COALESCE(cprod,'')) * FROM historico_compras WHERE nf={p} ORDER BY det_num, COALESCE(cprod,''), id DESC""", (nf,), fetchall=True) or []
+            itens = exe(f"""SELECT DISTINCT ON (det_num, COALESCE(sku,'')) * FROM historico_compras WHERE nf={p} ORDER BY det_num, COALESCE(sku,''), id DESC""", (nf,), fetchall=True) or []
             if not itens: self._ok({'nf': nf, 'erro': 'NF nao encontrada'}); return
             f = itens[0]
             # Totais
@@ -2404,20 +2418,21 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         p   = '%s' if IS_PG else '?'
         try:
             if nf:
-                # DISTINCT ON deduplicar — pegar registro mais recente por (det_num, cprod)
-                rows = exe(f"""SELECT DISTINCT ON (hc.det_num, COALESCE(hc.cprod,'')) hc.*,
+                # DISTINCT ON por (det_num, sku) — pegar mais recente de cada item
+                rows = exe(f"""SELECT DISTINCT ON (hc.det_num, COALESCE(hc.sku,'')) hc.*,
                     COALESCE(hc.cst,'') as cst,
                     COALESCE(hc.cest,'') as cest,
                     COALESCE(hc.tem_st,0) as tem_st,
                     COALESCE(hc.orig,0) as orig,
+                    COALESCE(hc.cprod,'') as cprod,
                     p.familia, p.peso,
                     CASE WHEN p.sku IS NOT NULL THEN true ELSE false END as ja_cadastrado,
-                    cm.sku as sku_mapeado
+                    cm2.sku as sku_mapeado
                     FROM historico_compras hc
                     LEFT JOIN produtos p ON p.sku = hc.sku
-                    LEFT JOIN cprod_map cm ON cm.cprod = hc.cprod
+                    LEFT JOIN cprod_map cm2 ON cm2.cprod = COALESCE(hc.cprod,'')
                     WHERE hc.nf = {p}
-                    ORDER BY hc.det_num, COALESCE(hc.cprod,''), hc.id DESC""", (nf,), fetchall=True) or []
+                    ORDER BY hc.det_num, COALESCE(hc.sku,''), hc.id DESC""", (nf,), fetchall=True) or []
             else:
                 rows = exe("""SELECT nf, fornecedor, data_emissao,
                     COUNT(*) as itens, SUM(vtot) as valor_total,
@@ -2553,6 +2568,43 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     atualizados['yampi'] += 1
                 except: pass
             self._ok({'ok': True, 'produtos_com_peso': len(prods), 'atualizados': atualizados})
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _patch_produto(self):
+        """POST /api/db/produto — atualiza campos de um produto. Body: {sku, campo: valor, ...}"""
+        p = '%s' if IS_PG else '?'
+        try:
+            d    = self._body()
+            sku  = str(d.get('sku','')).strip()
+            if not sku: self._err(400,'sku obrigatorio'); return
+            # Campos editáveis
+            CAMPOS = {'nome','familia','marca','fornecedor','ncm','ean','cfop','origem',
+                      'peso','largura','altura','comprimento','st','st_imposto',
+                      'monofasico','custo_br','custo_pr','custo','ipi','preco_venda',
+                      'cest','cst_padrao','tem_st','subcategoria'}
+            sets, vals = [], []
+            for campo, valor in d.items():
+                if campo == 'sku' or campo not in CAMPOS: continue
+                sets.append(f"{campo}={p}")
+                vals.append(valor)
+            if not sets: self._ok({'ok': True, 'msg': 'nada a atualizar'}); return
+            sets.append(f"updated_at=NOW()")
+            vals.append(sku)
+            exe(f"UPDATE produtos SET {','.join(sets)} WHERE sku={p}", tuple(vals))
+            # Se atualizou peso/dimensões, propagar para listings
+            if any(c in d for c in ['peso','largura','altura','comprimento']):
+                peso = float(d.get('peso') or 0)
+                larg = float(d.get('largura') or 0)
+                alt  = float(d.get('altura') or 0)
+                comp = float(d.get('comprimento') or 0)
+                try: exe(f"UPDATE ml_listings SET peso={p},largura={p},altura={p},comprimento={p} WHERE sku={p}", (peso,larg,alt,comp,sku))
+                except: pass
+                try: exe(f"UPDATE shopee_listings SET peso={p} WHERE sku={p}", (peso,sku))
+                except: pass
+                try: exe(f"UPDATE yampi_listings SET peso={p} WHERE sku={p}", (peso,sku))
+                except: pass
+            self._ok({'ok': True, 'sku': sku, 'campos': len(sets)-1})
         except Exception as e:
             self._err(500, str(e))
 
@@ -3464,21 +3516,32 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         vtot_r = float(row.get('vtot',0) or row.get('vunit',0) or 0)
                         if v_icms > 0 and vtot_r > 0:
                             cred_icms = round(v_icms / vtot_r, 6)
-                    # DELETE antigo + INSERT novo — sem precisar de índice único
-                    exe("DELETE FROM historico_compras WHERE nf=%s AND sku=%s", (nf, cprod))
                     det_num = int(row.get('det_num', 0) or 0)
+                    cprod_real = str(row.get('cprod', cprod) or cprod)
+                    cst  = str(row.get('cst','') or '')
+                    cest = str(row.get('cest','') or '')
+                    tem_st = int(row.get('tem_st', 0) or 0)
+                    orig   = int(row.get('orig', 0) or 0)
+                    # ON CONFLICT: se mesma (nf, det_num, cprod) existir → atualiza
                     exe("""INSERT INTO historico_compras
                             (nf,fornecedor,data_emissao,sku,nome,qtd,vunit,vtot,
-                             ipi_p,ipi_un,icms_p,cred_pc,custo_r,cmv_br,cmv_pr,ncm,cfop,v_st,cred_icms,det_num)
-                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                             ipi_p,ipi_un,icms_p,cred_pc,custo_r,cmv_br,cmv_pr,ncm,cfop,v_st,cred_icms,det_num,cprod,cst,cest,tem_st,orig)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                           ON CONFLICT (nf, det_num, cprod) DO UPDATE SET
+                             sku=EXCLUDED.sku, custo_r=EXCLUDED.custo_r,
+                             cmv_br=EXCLUDED.cmv_br, cmv_pr=EXCLUDED.cmv_pr,
+                             cred_icms=EXCLUDED.cred_icms, v_st=EXCLUDED.v_st,
+                             cst=EXCLUDED.cst, cest=EXCLUDED.cest,
+                             tem_st=EXCLUDED.tem_st, orig=EXCLUDED.orig
+                           """,
                         (nf, row.get('fornecedor',''), row.get('data_emissao',''),
-                         cprod, row.get('nome',''),
+                         str(row.get('sku','') or ''), row.get('nome',''),
                          float(row.get('qtd',0)), float(row.get('vunit',0)), float(row.get('vtot',0)),
                          float(row.get('ipi_p',0)), float(row.get('ipi_un',0)),
                          float(row.get('icms_p',0)), float(row.get('cred_pc',0)),
                          float(row.get('custo_r',0)), float(row.get('cmv_br',0)),
                          float(row.get('cmv_pr',0)), row.get('ncm',''), row.get('cfop',''),
-                         v_st, cred_icms, det_num))
+                         v_st, cred_icms, det_num, cprod_real, cst, cest, tem_st, orig))
                     n += 1
                 except Exception as e: print(f'[HIST] {e}')
             self._ok({'ok':True,'inseridos':n})
