@@ -7,27 +7,65 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
-nav{background:#1e293b;padding:10px 20px;display:flex;gap:16px;align-items:center;border-bottom:1px solid #334155}
+nav{background:#1e293b;padding:10px 20px;display:flex;gap:16px;align-items:center;border-bottom:1px solid #334155;flex-wrap:wrap}
 nav a{color:#94a3b8;text-decoration:none;font-size:13px;font-weight:600;padding:6px 12px;border-radius:6px}
 nav a:hover,nav a.ativo{background:#3b82f6;color:#fff}
-.main{max-width:700px;margin:32px auto;padding:0 16px}
-h1{font-size:18px;margin-bottom:20px;color:#f1f5f9}
-.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center}
-.toolbar button{background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer}
-.toolbar button:hover{background:#2563eb}
-.toolbar select{padding:8px 12px;border-radius:8px;border:1px solid #475569;background:#1e293b;color:#e2e8f0;font-size:13px}
-.toolbar label{display:flex;align-items:center;gap:6px;font-size:13px;color:#94a3b8;cursor:pointer}
-.tarefa{background:#1e293b;border-radius:10px;padding:13px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;border-left:3px solid #3b82f6;border:1px solid #334155;border-left-width:3px}
-.tarefa.feita{border-left-color:#22c55e;opacity:.7}
-.tarefa input[type=checkbox]{width:18px;height:18px;cursor:pointer;flex-shrink:0;accent-color:#3b82f6}
-.cat{font-size:11px;background:#0f172a;padding:2px 8px;border-radius:4px;color:#94a3b8;white-space:nowrap}
+.main{max-width:900px;margin:28px auto;padding:0 16px}
+.topo{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+h1{font-size:18px;color:#f1f5f9}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer}
+.btn:hover{background:#2563eb}
+.btn-sec{background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer}
+.btn-sec:hover{border-color:#3b82f6;color:#3b82f6}
+.btn-ok{background:#166534;color:#86efac;border:none;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer}
+
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:2px solid #334155;margin-bottom:20px}
+.tab{padding:9px 18px;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px}
+.tab.ativo{color:#3b82f6;border-bottom-color:#3b82f6}
+
+/* Blocos de pendências */
+.bloco{background:#1e293b;border-radius:12px;border:1px solid #334155;margin-bottom:12px;overflow:hidden}
+.bloco-header{padding:12px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.bloco-header:hover{background:#1a2947}
+.bloco-icone{font-size:18px}
+.bloco-titulo{font-size:14px;font-weight:700;flex:1}
+.bloco-cnt{background:#0f172a;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700}
+.bloco-cnt.urgente{background:#7f1d1d;color:#fca5a5}
+.bloco-cnt.medio{background:#78350f;color:#fcd34d}
+.bloco-cnt.ok{background:#14532d;color:#86efac}
+.bloco-body{display:none;max-height:400px;overflow-y:auto}
+.bloco-body.aberto{display:block}
+.item-pend{padding:10px 16px;display:flex;align-items:center;gap:10px;border-top:1px solid #0f172a;font-size:13px}
+.item-pend:hover{background:#1a2947}
+.sku-tag{background:#0f172a;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:700;color:#60a5fa;white-space:nowrap;font-family:monospace}
+.nome-prod{flex:1;color:#94a3b8;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn-feito{background:none;border:1px solid #334155;color:#475569;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;white-space:nowrap}
+.btn-feito:hover{border-color:#22c55e;color:#22c55e}
+.feito{text-decoration:line-through;opacity:.4}
+
+/* Tarefas manuais */
+.tarefa{background:#1e293b;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:8px;border-left:3px solid #3b82f6;border:1px solid #334155;border-left-width:3px}
+.tarefa.feita-m{border-left-color:#22c55e;opacity:.6}
+.cat{font-size:11px;background:#0f172a;padding:2px 7px;border-radius:4px;color:#94a3b8;white-space:nowrap}
 .texto{flex:1;font-size:13px}
-.feita .texto{text-decoration:line-through;color:#64748b}
-.sku{font-size:11px;color:#3b82f6;font-weight:700;white-space:nowrap}
-.data{font-size:11px;color:#64748b;white-space:nowrap}
-.del{background:none;border:none;color:#475569;cursor:pointer;font-size:20px;padding:0 4px;line-height:1;flex-shrink:0}
+.feita-m .texto{text-decoration:line-through;color:#64748b}
+.sku-m{font-size:11px;color:#3b82f6;font-weight:700;white-space:nowrap}
+.data-m{font-size:11px;color:#64748b;white-space:nowrap}
+.del{background:none;border:none;color:#475569;cursor:pointer;font-size:18px;padding:0 4px}
 .del:hover{color:#ef4444}
 .vazio{color:#64748b;font-size:13px;padding:20px;text-align:center}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px}
+.stat{background:#1e293b;border-radius:10px;padding:14px;text-align:center;border:1px solid #334155}
+.stat-n{font-size:26px;font-weight:800;color:#3b82f6}
+.stat-n.urgente{color:#ef4444}
+.stat-n.ok{color:#22c55e}
+.stat-l{font-size:11px;color:#64748b;margin-top:2px}
+
+.loading{text-align:center;color:#475569;padding:20px;font-size:13px}
 </style>
 </head>
 <body>
@@ -38,76 +76,250 @@ h1{font-size:18px;margin-bottom:20px;color:#f1f5f9}
   <a href="/base_produtos.html">📦 Base</a>
 </nav>
 <div class="main">
-  <h1>📋 Tarefas de Operação</h1>
-  <div class="toolbar">
-    <button onclick="nova()">+ Nova Tarefa</button>
-    <select id="filtro" onchange="render()">
-      <option value="">Todas as categorias</option>
-      <option>Bater Fotos</option>
-      <option>Pesar Produto</option>
-      <option>Medir Produto</option>
-      <option>Aplicar Desconto</option>
-      <option>Anuncio ML</option>
-      <option>Anuncio Facebook</option>
-      <option>Anuncio Shopee</option>
-      <option>Estoque</option>
-      <option>Cadastro</option>
-      <option>Gerar EAN</option>
-      <option>Outros</option>
-    </select>
-    <label><input type="checkbox" id="verFeitas" onchange="render()"> Ver feitas</label>
+  <div class="topo">
+    <h1>📋 Tarefas & Pendências</h1>
+    <div class="row">
+      <button class="btn" onclick="addManual()">+ Nova tarefa manual</button>
+      <button class="btn-sec" onclick="carregarPendencias()">🔄 Atualizar</button>
+    </div>
   </div>
-  <div id="lista"></div>
+
+  <!-- Stats -->
+  <div class="stats" id="stats">
+    <div class="loading">Carregando...</div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab ativo" onclick="mudarTab('pendencias',this)">🔍 Pendências do Sistema</div>
+    <div class="tab" onclick="mudarTab('manuais',this)">✏️ Tarefas Manuais</div>
+  </div>
+
+  <!-- Aba Pendências -->
+  <div id="aba-pendencias">
+    <div id="blocos" class="loading">Carregando pendências...</div>
+  </div>
+
+  <!-- Aba Manuais -->
+  <div id="aba-manuais" style="display:none">
+    <div style="margin-bottom:12px">
+      <select id="filtro-cat" onchange="renderManuais()" style="padding:7px 12px;border-radius:8px;border:1px solid #475569;background:#1e293b;color:#e2e8f0;font-size:13px">
+        <option value="">Todas as categorias</option>
+        <option>Bater Fotos</option><option>Pesar Produto</option><option>Medir Produto</option>
+        <option>Aplicar Desconto</option><option>Anuncio ML</option><option>Anuncio Facebook</option>
+        <option>Anuncio Shopee</option><option>Estoque</option><option>Cadastro</option>
+        <option>Gerar EAN</option><option>Outros</option>
+      </select>
+      <label style="margin-left:12px;font-size:13px;color:#64748b;cursor:pointer">
+        <input type="checkbox" id="ver-feitas" onchange="renderManuais()" style="cursor:pointer"> Ver feitas
+      </label>
+    </div>
+    <div id="lista-manuais"></div>
+  </div>
 </div>
+
 <script>
+var PEND_KEY = 'fava_pend_feitas'; // SKUs já marcados como feitos por tipo
+var MAN_KEY  = 'fava_tarefas';
+var API = '';
+
+// Pendências feitas (salvo por SKU+tipo)
+var pendFeitas = JSON.parse(localStorage.getItem(PEND_KEY)||'{}');
+function salvarPendFeitas(){ localStorage.setItem(PEND_KEY, JSON.stringify(pendFeitas)); }
+
+// ── TABS ──────────────────────────────────────────────────────────
+function mudarTab(nome, el) {
+  document.querySelectorAll('.tab').forEach(function(t){ t.className='tab'; });
+  el.className='tab ativo';
+  document.getElementById('aba-pendencias').style.display = nome==='pendencias'?'block':'none';
+  document.getElementById('aba-manuais').style.display    = nome==='manuais'?'block':'none';
+}
+
+// ── PENDÊNCIAS DO SISTEMA ─────────────────────────────────────────
+var _prods = [];
+var _anuncios = [];
+
+function carregarPendencias() {
+  document.getElementById('blocos').innerHTML = '<div class="loading">⏳ Carregando dados do banco...</div>';
+  document.getElementById('stats').innerHTML  = '<div class="loading">Carregando...</div>';
+
+  Promise.all([
+    fetch(API+'/api/db/produtos?limit=5000').then(r=>r.json()).catch(()=>[]),
+    fetch(API+'/api/db/listings?limit=5000').then(r=>r.json()).catch(()=>[])
+  ]).then(function(res) {
+    _prods    = res[0] || [];
+    _anuncios = res[1] || [];
+    renderPendencias();
+    renderStats();
+  });
+}
+
+function renderStats() {
+  var prods = _prods.filter(function(p){ return /^\d+(-\d+)*$/.test(p.sku); });
+  var skusComAnuncio = new Set(_anuncios.map(function(a){return a.sku;}));
+
+  var sp = prods.filter(function(p){ return !p.peso||p.peso===0; }).length;
+  var se = prods.filter(function(p){ return !p.ean||p.ean===''; }).length;
+  var sf = prods.filter(function(p){ return !p.familia||p.familia===''; }).length;
+  var sn = prods.filter(function(p){ return !p.ncm||p.ncm===''; }).length;
+  var sc = prods.filter(function(p){ return !p.custo_br||p.custo_br===0; }).length;
+
+  var total = prods.length;
+  document.getElementById('stats').innerHTML = [
+    stat(total, 'Produtos', ''),
+    stat(sp, 'Sem Peso', sp>500?'urgente':sp>0?'medio':'ok'),
+    stat(se, 'Sem EAN', se>1000?'urgente':se>0?'medio':'ok'),
+    stat(sf, 'Sem Família', sf>500?'urgente':sf>0?'medio':'ok'),
+    stat(sn, 'Sem NCM', sn>500?'urgente':sn>0?'medio':'ok'),
+    stat(sc, 'Sem CMV', sc>0?'urgente':'ok'),
+  ].join('');
+}
+
+function stat(n, label, cls) {
+  return '<div class="stat"><div class="stat-n '+cls+'">'+n+'</div><div class="stat-l">'+label+'</div></div>';
+}
+
+function renderPendencias() {
+  var prods = _prods.filter(function(p){ return /^\d+(-\d+)*$/.test(p.sku); });
+
+  // Definir grupos de pendências
+  var grupos = [
+    { id:'peso',    icon:'⚖️',  titulo:'Pesar produto',      cor:'urgente',
+      filtro: function(p){ return !p.peso||p.peso===0; } },
+    { id:'ean',     icon:'🔢',  titulo:'Gerar EAN',           cor:'urgente',
+      filtro: function(p){ return !p.ean||p.ean===''; } },
+    { id:'ncm',     icon:'🏷️',  titulo:'Preencher NCM',       cor:'medio',
+      filtro: function(p){ return !p.ncm||p.ncm===''; } },
+    { id:'familia', icon:'📂',  titulo:'Definir família/categoria', cor:'medio',
+      filtro: function(p){ return !p.familia||p.familia===''; } },
+    { id:'cmv',     icon:'💰',  titulo:'Definir CMV/custo',   cor:'urgente',
+      filtro: function(p){ return !p.custo_br||p.custo_br===0; } },
+    { id:'foto',    icon:'📸',  titulo:'Bater foto (sem imagem no ML)',  cor:'medio',
+      filtro: function(p){
+        var anuncio = _anuncios.find(function(a){ return a.sku===p.sku; });
+        return anuncio && (!anuncio.imagem||anuncio.imagem==='');
+      }},
+    { id:'titulo',  icon:'✏️',  titulo:'Atualizar título ML', cor:'medio',
+      filtro: function(p){
+        var anuncio = _anuncios.find(function(a){ return a.sku===p.sku; });
+        return anuncio && (!anuncio.titulo||anuncio.titulo===''||anuncio.titulo===p.sku);
+      }},
+  ];
+
+  var html = '';
+  grupos.forEach(function(g) {
+    var pendentes = prods.filter(g.filtro).filter(function(p){
+      return !pendFeitas[g.id+':'+p.sku];
+    });
+    var feitos = prods.filter(g.filtro).filter(function(p){
+      return !!pendFeitas[g.id+':'+p.sku];
+    }).length;
+    var total = pendentes.length + feitos;
+    if(total === 0) return;
+
+    var cntClass = total>500?'urgente':total>100?'medio':'ok';
+    if(pendentes.length === 0) cntClass = 'ok';
+
+    html += '<div class="bloco">';
+    html += '<div class="bloco-header" onclick="toggleBloco(\''+g.id+'\')">';
+    html += '<span class="bloco-icone">'+g.icon+'</span>';
+    html += '<span class="bloco-titulo">'+g.titulo+'</span>';
+    html += '<span class="bloco-cnt '+cntClass+'">'+pendentes.length+' pendentes';
+    if(feitos>0) html += ' · '+feitos+' ✓';
+    html += '</span>';
+    html += '<span style="color:#64748b;font-size:12px">▼</span>';
+    html += '</div>';
+
+    html += '<div class="bloco-body" id="body-'+g.id+'">';
+    if(pendentes.length === 0) {
+      html += '<div style="padding:12px 16px;font-size:13px;color:#22c55e">✅ Tudo preenchido!</div>';
+    } else {
+      // Mostrar até 100 itens por bloco
+      pendentes.slice(0, 100).forEach(function(p) {
+        var key = g.id+':'+p.sku;
+        html += '<div class="item-pend" id="pend-'+key.replace(':','-')+'">';
+        html += '<span class="sku-tag">'+p.sku+'</span>';
+        html += '<span class="nome-prod">'+(p.nome||'—')+'</span>';
+        html += '<button class="btn-feito" onclick="marcarFeito(\''+g.id+'\',\''+p.sku+'\')">✓ Feito</button>';
+        html += '</div>';
+      });
+      if(pendentes.length > 100) {
+        html += '<div style="padding:10px 16px;font-size:12px;color:#475569">... e mais '+(pendentes.length-100)+' produtos</div>';
+      }
+    }
+    html += '</div></div>';
+  });
+
+  if(!html) html = '<div class="vazio">✅ Nenhuma pendência encontrada!</div>';
+  document.getElementById('blocos').innerHTML = html;
+}
+
+function toggleBloco(id) {
+  var body = document.getElementById('body-'+id);
+  if(body) body.className = body.className.includes('aberto') ? 'bloco-body' : 'bloco-body aberto';
+}
+
+function marcarFeito(tipo, sku) {
+  var key = tipo+':'+sku;
+  pendFeitas[key] = Date.now();
+  salvarPendFeitas();
+  var el = document.getElementById('pend-'+key.replace(':','-'));
+  if(el) {
+    el.style.opacity = '0.3';
+    el.style.textDecoration = 'line-through';
+    setTimeout(function(){ el.remove(); }, 500);
+  }
+}
+
+// ── TAREFAS MANUAIS ───────────────────────────────────────────────
 var CATS = ['Bater Fotos','Pesar Produto','Medir Produto','Aplicar Desconto','Anuncio ML','Anuncio Facebook','Anuncio Shopee','Estoque','Cadastro','Gerar EAN','Outros'];
-var tarefas = JSON.parse(localStorage.getItem('fava_tarefas') || '[]');
+var manuais = JSON.parse(localStorage.getItem(MAN_KEY)||'[]');
 
-function salvar() { localStorage.setItem('fava_tarefas', JSON.stringify(tarefas)); }
+function salvarManuais(){ localStorage.setItem(MAN_KEY, JSON.stringify(manuais)); }
 
-function render() {
-  var filtro = document.getElementById('filtro').value;
-  var verFeitas = document.getElementById('verFeitas').checked;
-  var lista = tarefas.filter(function(t) {
-    if (!verFeitas && t.done) return false;
-    if (filtro && t.cat !== filtro) return false;
+function renderManuais() {
+  var filtro = document.getElementById('filtro-cat').value;
+  var verFeitas = document.getElementById('ver-feitas').checked;
+  var lista = manuais.filter(function(t){
+    if(!verFeitas && t.done) return false;
+    if(filtro && t.cat!==filtro) return false;
     return true;
   });
-  var el = document.getElementById('lista');
-  if (!lista.length) { el.innerHTML = '<div class="vazio">Nenhuma tarefa. Clique em "+ Nova Tarefa".</div>'; return; }
-  el.innerHTML = '';
-  lista.forEach(function(t) {
-    var idx = tarefas.indexOf(t);
-    var d = document.createElement('div');
-    d.className = 'tarefa' + (t.done ? ' feita' : '');
-    d.style.borderLeftColor = t.done ? '#22c55e' : '#3b82f6';
-    d.innerHTML =
-      '<input type="checkbox" ' + (t.done ? 'checked' : '') + ' onchange="toggle(' + idx + ')">' +
-      '<span class="cat">' + t.cat + '</span>' +
-      '<span class="texto">' + t.texto + '</span>' +
-      (t.sku ? '<span class="sku">SKU ' + t.sku + '</span>' : '') +
-      '<span class="data">' + t.data + '</span>' +
-      '<button class="del" onclick="del(' + idx + ')">×</button>';
-    el.appendChild(d);
-  });
+  var el = document.getElementById('lista-manuais');
+  if(!lista.length) { el.innerHTML='<div class="vazio">Nenhuma tarefa. Clique em "+ Nova tarefa manual".</div>'; return; }
+  el.innerHTML = lista.map(function(t) {
+    var idx = manuais.indexOf(t);
+    return '<div class="tarefa'+(t.done?' feita-m':'')+'" style="border-left-color:'+(t.done?'#22c55e':'#3b82f6')+'">'
+      +'<input type="checkbox"'+(t.done?' checked':'')+' onchange="toggleManual('+idx+')" style="cursor:pointer;width:16px;height:16px;flex-shrink:0;accent-color:#3b82f6">'
+      +'<span class="cat">'+t.cat+'</span>'
+      +'<span class="texto">'+t.texto+'</span>'
+      +(t.sku?'<span class="sku-m">SKU '+t.sku+'</span>':'')
+      +'<span class="data-m">'+t.data+'</span>'
+      +'<button class="del" onclick="delManual('+idx+')">×</button>'
+    +'</div>';
+  }).join('');
 }
 
-function nova() {
+function addManual() {
   var catMenu = CATS.map(function(c,i){ return (i+1)+'. '+c; }).join('\n');
-  var n = parseInt(prompt('Categoria:\n' + catMenu + '\n\nDigite o número:')) || 1;
-  var cat = CATS[n-1] || CATS[0];
-  var sku = prompt('SKU do produto (Enter para pular):') || '';
-  var txt = prompt('Descrição da tarefa:');
-  if (!txt || !txt.trim()) return;
-  tarefas.unshift({ texto: txt.trim(), cat: cat, sku: sku.trim(), done: false, data: new Date().toLocaleDateString('pt-BR') });
-  salvar();
-  render();
+  var n = parseInt(prompt('Categoria:\n'+catMenu+'\n\nDigite o número:'))||1;
+  var cat = CATS[n-1]||CATS[0];
+  var sku = prompt('SKU (Enter para pular):') || '';
+  var txt = prompt('Descrição:');
+  if(!txt||!txt.trim()) return;
+  manuais.unshift({texto:txt.trim(),cat:cat,sku:sku.trim(),done:false,data:new Date().toLocaleDateString('pt-BR')});
+  salvarManuais();
+  renderManuais();
+  // Mudar para aba manuais
+  mudarTab('manuais', document.querySelectorAll('.tab')[1]);
 }
 
-function toggle(i) { tarefas[i].done = !tarefas[i].done; salvar(); render(); }
-function del(i) { if (!confirm('Apagar esta tarefa?')) return; tarefas.splice(i,1); salvar(); render(); }
+function toggleManual(i){ manuais[i].done=!manuais[i].done; salvarManuais(); renderManuais(); }
+function delManual(i){ if(!confirm('Apagar?'))return; manuais.splice(i,1); salvarManuais(); renderManuais(); }
 
-render();
+// ── INIT ──────────────────────────────────────────────────────────
+carregarPendencias();
+renderManuais();
 </script>
 </body>
 </html>
