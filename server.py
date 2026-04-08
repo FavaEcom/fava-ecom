@@ -1403,7 +1403,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     # GET routes
     # ────────────────────────────────────────────────────────────
     def _get_produtos(self):
-        try: self._ok(exe("SELECT * FROM produtos ORDER BY sku", fetchall=True))
+        try: self._ok(exe("SELECT * FROM produtos ORDER BY CASE WHEN sku ~ '^[0-9]' THEN 0 ELSE 1 END, CASE WHEN sku ~ '^[0-9]+$' THEN CAST(sku AS INTEGER) ELSE 9999999 END, sku", fetchall=True))
         except Exception as e: self._err(500, str(e))
 
     def _post_bling_buscar_produto(self):
