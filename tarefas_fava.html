@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tarefas — Fava Ecom</title>
+<style>
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --bg3: #1c2330;
+    --border: #30363d; --text: #c9d1d9; --muted: #8b949e;
+    --green: #2ea043; --green-light: #3fb950;
+    --yellow: #d29922; --yellow-light: #e3b341;
+    --red: #da3633; --red-light: #f85149;
+    --blue: #1f6feb; --blue-light: #58a6ff;
+    --purple: #8957e5; --purple-light: #bc8cff;
+    --orange: #bd561d; --orange-light: #ffa657;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; }
+
+  /* NAV */
+  nav { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 16px; display: flex; align-items: center; height: 44px; gap: 4px; position: sticky; top: 0; z-index: 100; }
+  nav a { color: var(--muted); text-decoration: none; padding: 6px 10px; border-radius: 6px; font-size: 12px; transition: all .15s; }
+  nav a:hover { color: var(--text); background: var(--bg3); }
+  nav a.active { color: #fff; background: var(--blue); }
+  nav .brand { color: var(--green-light); font-weight: 700; font-size: 14px; margin-right: 12px; }
+
+  /* HEADER */
+  .page-header { padding: 20px 20px 0; }
+  .page-header h1 { font-size: 20px; font-weight: 600; }
+  .page-header p { color: var(--muted); margin-top: 4px; font-size: 12px; }
+
+  /* DASHBOARD CARDS */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; padding: 16px 20px; }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .card .num { font-size: 24px; font-weight: 700; line-height: 1; }
+  .card .lbl { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .card.pendente .num { color: var(--yellow-light); }
+  .card.andamento .num { color: var(--blue-light); }
+  .card.concluido .num { color: var(--green-light); }
+  .card.exclusao .num { color: var(--red-light); }
+  .card.total .num { color: var(--text); }
+
+  /* BARRA DE FILTROS */
+  .filters { display: flex; gap: 8px; padding: 0 20px 12px; flex-wrap: wrap; align-items: center; }
+  .filters select, .filters input { background: var(--bg2); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 12px; outline: none; }
+  .filters select:focus, .filters input:focus { border-color: var(--blue); }
+  .btn { padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 500; transition: all .15s; }
+  .btn-green { background: var(--green); color: #fff; }
+  .btn-green:hover { background: var(--green-light); }
+  .btn-blue { background: var(--blue); color: #fff; }
+  .btn-blue:hover { opacity: .85; }
+  .btn-red { background: #3a1a1a; color: var(--red-light); border: 1px solid var(--red); }
+  .btn-red:hover { background: var(--red); color: #fff; }
+  .btn-sm { padding: 3px 8px; font-size: 11px; border-radius: 4px; }
+  .spacer { flex: 1; }
+  #btn-gerar { animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.7} }
+
+  /* TABELA */
+  .table-wrap { overflow-x: auto; padding: 0 20px 40px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { background: var(--bg3); color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); position: sticky; top: 44px; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:hover { background: var(--bg2); }
+  td { padding: 9px 10px; vertical-align: middle; }
+
+  /* BADGES */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+  .badge-pendente { background: #332700; color: var(--yellow-light); border: 1px solid #5a4300; }
+  .badge-andamento { background: #0d1f3c; color: var(--blue-light); border: 1px solid #1f3a6b; }
+  .badge-concluido { background: #0d2619; color: var(--green-light); border: 1px solid #1a4d30; }
+  .badge-exclusao { background: #2d0f0f; color: var(--red-light); border: 1px solid #5a1a1a; }
+  .badge-desconto { background: #1c1a2e; color: var(--purple-light); }
+  .badge-descricao { background: #1a2030; color: var(--blue-light); }
+  .badge-foto { background: #1a2e1a; color: #7ee787; }
+  .badge-familia { background: #2e1a1a; color: var(--orange-light); }
+  .badge-zerado { background: #2d1a0a; color: var(--orange-light); }
+  .badge-descontinuado { background: #2d0f0f; color: var(--red-light); }
+
+  /* CONTROLES DE STATUS */
+  .status-select { background: transparent; border: 1px solid var(--border); color: var(--text); border-radius: 4px; padding: 2px 6px; font-size: 11px; cursor: pointer; }
+
+  /* SKU */
+  .sku { font-family: monospace; font-size: 11px; color: var(--muted); }
+  .titulo { font-size: 12px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* PRAZO EXCLUSÃO */
+  .prazo { font-size: 11px; }
+  .prazo.urgente { color: var(--red-light); }
+  .prazo.ok { color: var(--muted); }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty h3 { font-size: 16px; margin-bottom: 8px; color: var(--text); }
+
+  /* LOADING */
+  .loading { text-align: center; padding: 40px; color: var(--muted); }
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--blue-light); border-radius: 50%; animation: spin .8s linear infinite; margin-right: 8px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 1000; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; width: 90%; max-width: 480px; }
+  .modal h3 { font-size: 15px; margin-bottom: 12px; }
+  .modal label { display: block; font-size: 11px; color: var(--muted); margin: 10px 0 4px; }
+  .modal input, .modal textarea, .modal select { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 10px; border-radius: 6px; font-size: 12px; outline: none; }
+  .modal textarea { resize: vertical; min-height: 70px; }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  .btn-cancel { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+  .btn-cancel:hover { background: var(--border); }
+  .alert { background: #2d1a0a; border: 1px solid #5a3500; color: var(--orange-light); padding: 10px 12px; border-radius: 6px; font-size: 12px; margin-bottom: 12px; }
+  .info-box { background: #0d1f3c; border: 1px solid #1f3a6b; color: var(--blue-light); padding: 10px 12px; border-radius: 6px; font-size: 12px; margin-bottom: 8px; }
+
+  /* TOAST */
+  #toast { position: fixed; bottom: 24px; right: 24px; background: #1a3a2a; border: 1px solid var(--green); color: var(--green-light); padding: 10px 16px; border-radius: 8px; font-size: 13px; z-index: 9999; display: none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">◀ Fava Ecom</span>
+  <a href="/painel_fava.html">Painel</a>
+  <a href="/balcao_fava.html">Balcão</a>
+  <a href="/gestor_anuncios.html">Gestor</a>
+  <a href="/tarefas_fava.html" class="active">✅ Tarefas</a>
+  <a href="/calculadora_fava.html">Calculadora</a>
+</nav>
+
+<div class="page-header">
+  <h1>✅ Painel de Tarefas</h1>
+  <p>Gestão de pendências por produto — site Yampi</p>
+</div>
+
+<!-- CARDS -->
+<div class="cards">
+  <div class="card total"><div class="num" id="cnt-total">—</div><div class="lbl">Total tarefas</div></div>
+  <div class="card pendente"><div class="num" id="cnt-pendente">—</div><div class="lbl">⏳ Pendente</div></div>
+  <div class="card andamento"><div class="num" id="cnt-andamento">—</div><div class="lbl">🔄 Em andamento</div></div>
+  <div class="card concluido"><div class="num" id="cnt-concluido">—</div><div class="lbl">✅ Concluído</div></div>
+  <div class="card exclusao"><div class="num" id="cnt-exclusao">—</div><div class="lbl">🗑️ Para excluir</div></div>
+</div>
+
+<!-- FILTROS -->
+<div class="filters">
+  <input type="text" id="busca" placeholder="🔍 Buscar SKU ou produto..." style="width:220px">
+  <select id="filtro-tipo">
+    <option value="">Tipo: Todos</option>
+    <option value="sem_desconto">Sem desconto</option>
+    <option value="sem_descricao">Sem descrição</option>
+    <option value="sem_familia">Sem família</option>
+    <option value="estoque_zero">Estoque zero</option>
+    <option value="descontinuado">Descontinuado</option>
+  </select>
+  <select id="filtro-status">
+    <option value="">Status: Todos</option>
+    <option value="pendente">Pendente</option>
+    <option value="em_andamento">Em andamento</option>
+    <option value="concluido">Concluído</option>
+    <option value="aguardando_exclusao">Aguard. exclusão</option>
+  </select>
+  <select id="filtro-resp">
+    <option value="">Responsável: Todos</option>
+    <option value="sem">Sem responsável</option>
+  </select>
+  <div class="spacer"></div>
+  <button class="btn btn-blue" id="btn-gerar" onclick="gerarTarefas()">⚡ Gerar / Atualizar Tarefas</button>
+  <button class="btn btn-green" onclick="abrirModalManual()">+ Nova tarefa</button>
+</div>
+
+<!-- TABELA -->
+<div class="table-wrap">
+  <div class="loading" id="loading"><span class="spinner"></span>Carregando tarefas...</div>
+  <div class="empty" id="empty" style="display:none">
+    <h3>Nenhuma tarefa encontrada</h3>
+    <p>Clique em <strong>⚡ Gerar / Atualizar Tarefas</strong> para analisar os produtos automaticamente.</p>
+  </div>
+  <table id="tabela" style="display:none">
+    <thead>
+      <tr>
+        <th>SKU</th>
+        <th>Produto</th>
+        <th>Tipo</th>
+        <th>Status</th>
+        <th>Responsável</th>
+        <th>Observação</th>
+        <th>Prazo / Data</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<!-- MODAL EDITAR -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modal-titulo">Editar Tarefa</h3>
+    <div id="modal-info" class="info-box" style="display:none"></div>
+    <label>Tipo de tarefa</label>
+    <select id="m-tipo">
+      <option value="sem_desconto">Sem desconto — aplicar promoção</option>
+      <option value="sem_descricao">Sem descrição — escrever no padrão Fava</option>
+      <option value="sem_familia">Sem família — categorizar produto</option>
+      <option value="estoque_zero">Estoque zero — verificar reposição</option>
+      <option value="descontinuado">Descontinuado — excluir do site em 1 ano</option>
+    </select>
+    <label>Status</label>
+    <select id="m-status">
+      <option value="pendente">⏳ Pendente</option>
+      <option value="em_andamento">🔄 Em andamento</option>
+      <option value="concluido">✅ Concluído</option>
+      <option value="aguardando_exclusao">🗑️ Aguardando exclusão</option>
+    </select>
+    <label>Responsável</label>
+    <input id="m-resp" type="text" placeholder="Nome do funcionário...">
+    <label>Observação</label>
+    <textarea id="m-obs" placeholder="Detalhes, link, instrução..."></textarea>
+    <div id="m-exclusao-aviso" class="alert" style="display:none">
+      ⚠️ Produto marcado como <strong>descontinuado</strong>. 
+      A data de exclusão será definida para <strong id="m-data-exc"></strong> (1 ano a partir de hoje). 
+      Lembre de desativar o produto no Yampi também.
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-green" onclick="salvarTarefa()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── STORAGE ────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'fava_tarefas_v2';
+let tarefas = [];
+let editando = null;
+
+function salvarLocal() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tarefas));
+}
+function carregarLocal() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
+}
+function genId() { return Date.now() + '_' + Math.random().toString(36).slice(2,7); }
+
+// ─── TIPOS ──────────────────────────────────────────────────────────────────
+const TIPO_BADGE = {
+  sem_desconto: '<span class="badge badge-desconto">💰 Sem desconto</span>',
+  sem_descricao: '<span class="badge badge-descricao">📝 Sem descrição</span>',
+  sem_familia: '<span class="badge badge-familia">📂 Sem família</span>',
+  estoque_zero: '<span class="badge badge-zerado">📦 Estoque zero</span>',
+  descontinuado: '<span class="badge badge-descontinuado">🗑️ Descontinuado</span>',
+};
+const STATUS_BADGE = {
+  pendente: '<span class="badge badge-pendente">⏳ Pendente</span>',
+  em_andamento: '<span class="badge badge-andamento">🔄 Em andamento</span>',
+  concluido: '<span class="badge badge-concluido">✅ Concluído</span>',
+  aguardando_exclusao: '<span class="badge badge-exclusao">🗑️ Aguard. exclusão</span>',
+};
+
+// ─── GERAR TAREFAS AUTOMÁTICAS ───────────────────────────────────────────────
+async function gerarTarefas() {
+  const btn = document.getElementById('btn-gerar');
+  btn.textContent = '⚡ Gerando...';
+  btn.disabled = true;
+
+  try {
+    const r = await fetch('/api/db/yampi-listings?limit=1500');
+    const data = await r.json();
+    const listings = Array.isArray(data) ? data : (data.listings || []);
+
+    const existentes = new Set(tarefas.map(t => t.sku + '|' + t.tipo));
+    let novas = 0;
+
+    for (const p of listings) {
+      // Sem desconto (status active)
+      if (p.status === 'active' && (!p.desconto || p.desconto == 0)) {
+        const key = p.sku + '|sem_desconto';
+        if (!existentes.has(key)) {
+          tarefas.push(criarTarefa(p, 'sem_desconto'));
+          existentes.add(key);
+          novas++;
+        }
+      }
+      // Sem família
+      if (!p.familia || p.familia.trim() === '') {
+        const key = p.sku + '|sem_familia';
+        if (!existentes.has(key)) {
+          tarefas.push(criarTarefa(p, 'sem_familia'));
+          existentes.add(key);
+          novas++;
+        }
+      }
+      // Estoque zero + ativo
+      if (p.status === 'active' && (p.estoque === 0 || p.estoque === null)) {
+        const key = p.sku + '|estoque_zero';
+        if (!existentes.has(key)) {
+          tarefas.push(criarTarefa(p, 'estoque_zero'));
+          existentes.add(key);
+          novas++;
+        }
+      }
+    }
+
+    salvarLocal();
+    renderizar();
+    toast(`✅ ${novas} novas tarefas geradas! Total: ${tarefas.length}`);
+  } catch(e) {
+    toast('❌ Erro ao carregar produtos: ' + e.message, true);
+  }
+
+  btn.textContent = '⚡ Gerar / Atualizar Tarefas';
+  btn.disabled = false;
+  btn.style.animation = 'none';
+}
+
+function criarTarefa(produto, tipo) {
+  const hoje = new Date();
+  const exclusao = tipo === 'descontinuado' ? dataExclusao() : null;
+  return {
+    id: genId(),
+    sku: produto.sku,
+    titulo: produto.titulo,
+    preco: produto.preco,
+    familia: produto.familia || '',
+    estoque: produto.estoque || 0,
+    tipo,
+    status: 'pendente',
+    responsavel: '',
+    observacao: '',
+    data_exclusao: exclusao,
+    created_at: hoje.toISOString(),
+    updated_at: hoje.toISOString(),
+  };
+}
+
+function dataExclusao() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().split('T')[0];
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function renderizar() {
+  const busca = document.getElementById('busca').value.toLowerCase();
+  const filtroTipo = document.getElementById('filtro-tipo').value;
+  const filtroStatus = document.getElementById('filtro-status').value;
+  const filtroResp = document.getElementById('filtro-resp').value;
+
+  let lista = tarefas.filter(t => {
+    if (busca && !t.sku.toLowerCase().includes(busca) && !t.titulo.toLowerCase().includes(busca)) return false;
+    if (filtroTipo && t.tipo !== filtroTipo) return false;
+    if (filtroStatus && t.status !== filtroStatus) return false;
+    if (filtroResp === 'sem' && t.responsavel) return false;
+    if (filtroResp && filtroResp !== 'sem' && t.responsavel !== filtroResp) return false;
+    return true;
+  });
+
+  // Contadores (sem filtro)
+  document.getElementById('cnt-total').textContent = tarefas.length;
+  document.getElementById('cnt-pendente').textContent = tarefas.filter(t => t.status === 'pendente').length;
+  document.getElementById('cnt-andamento').textContent = tarefas.filter(t => t.status === 'em_andamento').length;
+  document.getElementById('cnt-concluido').textContent = tarefas.filter(t => t.status === 'concluido').length;
+  document.getElementById('cnt-exclusao').textContent = tarefas.filter(t => t.status === 'aguardando_exclusao').length;
+
+  // Atualizar lista de responsáveis
+  const resps = [...new Set(tarefas.map(t => t.responsavel).filter(Boolean))];
+  const sel = document.getElementById('filtro-resp');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Responsável: Todos</option><option value="sem">Sem responsável</option>';
+  resps.forEach(r => sel.innerHTML += `<option value="${r}">${r}</option>`);
+  sel.value = current;
+
+  document.getElementById('loading').style.display = 'none';
+
+  if (tarefas.length === 0) {
+    document.getElementById('empty').style.display = 'block';
+    document.getElementById('tabela').style.display = 'none';
+    return;
+  }
+  document.getElementById('empty').style.display = 'none';
+  document.getElementById('tabela').style.display = 'table';
+
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+
+  if (lista.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--muted)">Nenhuma tarefa com esses filtros</td></tr>';
+    return;
+  }
+
+  lista.forEach(t => {
+    const prazo = t.data_exclusao ? formatPrazo(t.data_exclusao) : '—';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="sku">${escHtml(t.sku)}</span></td>
+      <td><span class="titulo" title="${escHtml(t.titulo)}">${escHtml(t.titulo)}</span>
+          ${t.preco ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">R$ ${Number(t.preco).toFixed(2)}</div>` : ''}
+      </td>
+      <td>${TIPO_BADGE[t.tipo] || t.tipo}</td>
+      <td>
+        <select class="status-select" onchange="mudarStatus('${t.id}', this.value)">
+          <option value="pendente" ${t.status==='pendente'?'selected':''}>⏳ Pendente</option>
+          <option value="em_andamento" ${t.status==='em_andamento'?'selected':''}>🔄 Em andamento</option>
+          <option value="concluido" ${t.status==='concluido'?'selected':''}>✅ Concluído</option>
+          <option value="aguardando_exclusao" ${t.status==='aguardando_exclusao'?'selected':''}>🗑️ Aguard. exclusão</option>
+        </select>
+      </td>
+      <td>${t.responsavel
+        ? `<span style="color:var(--blue-light)">${escHtml(t.responsavel)}</span>`
+        : `<span style="color:var(--muted);font-style:italic">sem atribuição</span>`
+      }</td>
+      <td style="max-width:180px;font-size:11px;color:var(--muted)">${t.observacao ? escHtml(t.observacao.slice(0,60)) + (t.observacao.length>60?'…':'') : '—'}</td>
+      <td class="prazo ${t.data_exclusao && diasAte(t.data_exclusao) < 90 ? 'urgente' : 'ok'}">${prazo}</td>
+      <td>
+        <button class="btn btn-blue btn-sm" onclick="abrirModal('${t.id}')" style="margin-right:4px">✏️</button>
+        ${t.tipo === 'estoque_zero' ? `<button class="btn btn-red btn-sm" onclick="marcarDescontinuado('${t.id}')">🗑️</button>` : ''}
+        <button class="btn btn-sm" onclick="excluirTarefa('${t.id}')" style="background:var(--bg3);color:var(--muted);border:1px solid var(--border)" title="Remover tarefa">✕</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ─── AÇÕES ───────────────────────────────────────────────────────────────────
+function mudarStatus(id, novoStatus) {
+  const t = tarefas.find(x => x.id === id);
+  if (!t) return;
+  t.status = novoStatus;
+  if (novoStatus === 'aguardando_exclusao' && !t.data_exclusao) {
+    t.data_exclusao = dataExclusao();
+    toast(`📅 Data de exclusão definida para ${t.data_exclusao}`);
+  }
+  t.updated_at = new Date().toISOString();
+  salvarLocal();
+  renderizar();
+}
+
+function marcarDescontinuado(id) {
+  if (!confirm('Marcar produto como DESCONTINUADO?\n\nEle será colocado na fila de exclusão com prazo de 1 ano.\nLembre de desativá-lo no Yampi também.')) return;
+  const t = tarefas.find(x => x.id === id);
+  if (!t) return;
+  t.status = 'aguardando_exclusao';
+  t.tipo = 'descontinuado';
+  t.data_exclusao = dataExclusao();
+  t.updated_at = new Date().toISOString();
+  salvarLocal();
+  renderizar();
+  toast(`🗑️ Produto marcado para exclusão em ${t.data_exclusao}`);
+}
+
+function excluirTarefa(id) {
+  if (!confirm('Remover esta tarefa da lista?')) return;
+  tarefas = tarefas.filter(t => t.id !== id);
+  salvarLocal();
+  renderizar();
+  toast('Tarefa removida');
+}
+
+// ─── MODAL ───────────────────────────────────────────────────────────────────
+function abrirModal(id) {
+  const t = tarefas.find(x => x.id === id);
+  if (!t) return;
+  editando = id;
+  document.getElementById('modal-titulo').textContent = 'Editar Tarefa — ' + t.sku;
+  const info = document.getElementById('modal-info');
+  info.style.display = 'block';
+  info.innerHTML = `<strong>${escHtml(t.titulo)}</strong><br>Família: ${t.familia||'—'} | Estoque: ${t.estoque} | Preço: R$ ${Number(t.preco||0).toFixed(2)}`;
+  document.getElementById('m-tipo').value = t.tipo;
+  document.getElementById('m-status').value = t.status;
+  document.getElementById('m-resp').value = t.responsavel || '';
+  document.getElementById('m-obs').value = t.observacao || '';
+  atualizarAvisoExclusao();
+  document.getElementById('modal').classList.add('open');
+}
+
+function abrirModalManual() {
+  editando = null;
+  document.getElementById('modal-titulo').textContent = 'Nova Tarefa Manual';
+  document.getElementById('modal-info').style.display = 'none';
+  document.getElementById('m-tipo').value = 'sem_descricao';
+  document.getElementById('m-status').value = 'pendente';
+  document.getElementById('m-resp').value = '';
+  document.getElementById('m-obs').value = '';
+  atualizarAvisoExclusao();
+  document.getElementById('modal').classList.add('open');
+}
+
+function fecharModal() {
+  document.getElementById('modal').classList.remove('open');
+  editando = null;
+}
+
+function atualizarAvisoExclusao() {
+  const tipo = document.getElementById('m-tipo').value;
+  const aviso = document.getElementById('m-exclusao-aviso');
+  if (tipo === 'descontinuado') {
+    document.getElementById('m-data-exc').textContent = dataExclusao();
+    aviso.style.display = 'block';
+  } else {
+    aviso.style.display = 'none';
+  }
+}
+document.getElementById('m-tipo').addEventListener('change', atualizarAvisoExclusao);
+
+function salvarTarefa() {
+  const tipo = document.getElementById('m-tipo').value;
+  const status = document.getElementById('m-status').value;
+  const resp = document.getElementById('m-resp').value.trim();
+  const obs = document.getElementById('m-obs').value.trim();
+
+  if (editando) {
+    const t = tarefas.find(x => x.id === editando);
+    if (t) {
+      t.tipo = tipo;
+      t.status = status;
+      t.responsavel = resp;
+      t.observacao = obs;
+      if (tipo === 'descontinuado' || status === 'aguardando_exclusao') {
+        if (!t.data_exclusao) t.data_exclusao = dataExclusao();
+      }
+      t.updated_at = new Date().toISOString();
+    }
+  } else {
+    // Nova tarefa manual
+    if (!obs) { alert('Descreva a tarefa na observação.'); return; }
+    tarefas.push({
+      id: genId(),
+      sku: 'MANUAL',
+      titulo: obs.slice(0,80),
+      preco: 0,
+      familia: '',
+      estoque: 0,
+      tipo, status,
+      responsavel: resp,
+      observacao: obs,
+      data_exclusao: tipo === 'descontinuado' ? dataExclusao() : null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  salvarLocal();
+  fecharModal();
+  renderizar();
+  toast('✅ Tarefa salva!');
+}
+
+// ─── HELPERS ────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function diasAte(dataStr) {
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const alvo = new Date(dataStr);
+  return Math.round((alvo - hoje) / 86400000);
+}
+function formatPrazo(dataStr) {
+  const dias = diasAte(dataStr);
+  const d = new Date(dataStr).toLocaleDateString('pt-BR');
+  if (dias < 0) return `⚠️ VENCIDO (${d})`;
+  if (dias < 90) return `${d} (${dias}d)`;
+  const meses = Math.round(dias / 30);
+  return `${d} (~${meses} meses)`;
+}
+function toast(msg, erro = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = erro ? '#3a1a1a' : '#1a3a2a';
+  el.style.borderColor = erro ? 'var(--red)' : 'var(--green)';
+  el.style.color = erro ? 'var(--red-light)' : 'var(--green-light)';
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3500);
+}
+
+// ─── FILTROS LIVE ────────────────────────────────────────────────────────────
+['busca','filtro-tipo','filtro-status','filtro-resp'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderizar);
+  document.getElementById(id).addEventListener('change', renderizar);
+});
+
+// Fechar modal clicando fora
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) fecharModal();
+});
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+tarefas = carregarLocal();
+renderizar();
+
+if (tarefas.length === 0) {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('empty').style.display = 'block';
+}
+</script>
+</body>
+</html>
