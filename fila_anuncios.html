@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fila de Anúncios — Fava Ecom</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;font-size:13px}
+nav{background:#1e293b;padding:6px 16px;display:flex;gap:8px;align-items:center;border-bottom:1px solid #334155;position:sticky;top:0;z-index:50;height:40px;flex-wrap:wrap}
+nav a{color:#94a3b8;text-decoration:none;font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;white-space:nowrap}
+nav a:hover,nav a.ativo{background:#3b82f6;color:#fff}
+.main{max-width:1200px;margin:0 auto;padding:20px 16px}
+h1{font-size:18px;margin-bottom:6px;color:#f1f5f9}
+.sub{font-size:12px;color:#64748b;margin-bottom:20px}
+
+/* Stats */
+.stats{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.stat{background:#1e293b;border-radius:8px;padding:10px 16px;border:1px solid #334155;text-align:center;min-width:110px}
+.sn{font-size:22px;font-weight:800;color:#3b82f6}.sn.ok{color:#22c55e}.sn.warn{color:#f59e0b}.sn.done{color:#8b5cf6}
+.sl{font-size:10px;color:#64748b;margin-top:2px}
+
+/* Cards da fila */
+.fila{display:flex;flex-direction:column;gap:10px}
+.card{background:#1e293b;border-radius:10px;border:1px solid #334155;overflow:hidden}
+.card.processando{border-color:#3b82f6;box-shadow:0 0 12px rgba(59,130,246,.3)}
+.card.concluido{border-color:#22c55e;opacity:.7}
+.card.erro{border-color:#ef4444}
+.card-header{padding:12px 16px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.card-header:hover{background:#1a2335}
+.card-sku{font-family:monospace;font-weight:700;color:#60a5fa;font-size:13px}
+.card-nome{flex:1;font-weight:600;font-size:13px}
+.card-info{font-size:11px;color:#64748b}
+.badge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700}
+.b-pend{background:#1e3a5f;color:#93c5fd}
+.b-proc{background:#1d4ed8;color:#fff}
+.b-done{background:#14532d;color:#86efac}
+.b-erro{background:#7f1d1d;color:#fca5a5}
+
+/* Corpo do card */
+.card-body{display:none;padding:16px;border-top:1px solid #334155;background:#0f172a}
+.card-body.aberto{display:block}
+
+/* Abas geração */
+.gen-tabs{display:flex;gap:0;border-bottom:1px solid #334155;margin-bottom:12px}
+.gen-tab{padding:7px 14px;font-size:12px;font-weight:600;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.gen-tab.ativo{color:#3b82f6;border-bottom-color:#3b82f6}
+
+/* Campos */
+.campo{margin-bottom:10px}
+.campo label{font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px}
+.campo input,.campo textarea,.campo select{width:100%;background:#1e293b;border:1px solid #334155;border-radius:6px;color:#f1f5f9;padding:7px 10px;font-size:12px}
+.campo textarea{min-height:90px;resize:vertical}
+.campo input:focus,.campo textarea:focus{outline:none;border-color:#3b82f6}
+
+/* Info fiscal */
+.fiscal{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px}
+.fi{background:#1e293b;border-radius:6px;padding:8px 10px;border:1px solid #334155}
+.fi label{font-size:9px;color:#64748b;display:block;text-transform:uppercase}
+.fi span{font-size:12px;font-weight:700;color:#f1f5f9}
+
+/* Ações */
+.acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btn{padding:7px 16px;border-radius:6px;border:none;font-size:12px;font-weight:700;cursor:pointer}
+.btn-blue{background:#3b82f6;color:#fff}.btn-blue:hover{background:#2563eb}
+.btn-purple{background:#7c3aed;color:#fff}.btn-purple:hover{background:#6d28d9}
+.btn-green{background:#16a34a;color:#fff}.btn-green:hover{background:#15803d}
+.btn-gray{background:#334155;color:#94a3b8}.btn-gray:hover{color:#fff}
+.btn-red{background:#dc2626;color:#fff}.btn-red:hover{background:#b91c1c}
+
+/* IA Loading */
+.ia-loading{display:flex;align-items:center;gap:8px;color:#60a5fa;font-size:12px;padding:8px 0}
+.ia-loading .dot{width:6px;height:6px;border-radius:50%;background:#3b82f6;animation:pulse 1s infinite}
+.ia-loading .dot:nth-child(2){animation-delay:.2s}
+.ia-loading .dot:nth-child(3){animation-delay:.4s}
+@keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+
+/* Filtros */
+.filtros{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filtros select{background:#1e293b;border:1px solid #334155;border-radius:6px;color:#e2e8f0;padding:6px 10px;font-size:12px}
+.filtros .info{font-size:11px;color:#64748b;margin-left:auto}
+
+.toast{position:fixed;top:60px;right:16px;background:#166534;color:#86efac;padding:10px 16px;border-radius:7px;font-size:12px;font-weight:700;z-index:200;display:none}
+.empty{text-align:center;padding:40px;color:#475569;font-size:13px}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/painel_fava.html">🏠 Painel</a>
+  <a href="/entrada_nf.html">📄 Entrada NF</a>
+  <a href="/historico_compras.html">🔍 Histórico</a>
+  <a href="/base_produtos.html">📦 Base</a>
+  <a href="/gestor_anuncios.html">📢 Anúncios</a>
+  <a href="/fila_anuncios.html">🤖 Fila IA</a>
+  <a href="/calculadora_fava.html">💰 Calculadora</a>
+  <a href="/balcao_fava.html">🏪 Balcão</a>
+  <a href="/ean.html">🏷️ EAN</a>
+  <a href="/tarefas.html">📋 Tarefas</a>
+  <a href="/estoque_parado.html">📦 Estoque</a>
+</nav>
+<div class="main">
+  <h1>🤖 Fila de Criação de Anúncios</h1>
+  <p class="sub">Produtos aguardando criação de anúncio. O agente IA gera título e descrição automaticamente.</p>
+
+  <!-- Stats -->
+  <div class="stats" id="stats"></div>
+
+  <!-- Filtros -->
+  <div class="filtros">
+    <select id="filtro-status" onchange="carregar()">
+      <option value="pendente">⏳ Pendentes</option>
+      <option value="">Todos</option>
+      <option value="concluido">✅ Concluídos</option>
+      <option value="erro">❌ Com erro</option>
+    </select>
+    <select id="filtro-canal" onchange="carregar()">
+      <option value="">Todos os canais</option>
+      <option value="ml">Mercado Livre</option>
+      <option value="shopee">Shopee</option>
+      <option value="yampi">Yampi</option>
+    </select>
+    <button class="btn btn-purple" onclick="processarProximo()">⚡ Processar próximo (IA)</button>
+    <button class="btn btn-blue" onclick="processarTodos()">🚀 Processar todos (IA)</button>
+    <button class="btn btn-gray" onclick="carregar()">🔄 Atualizar</button>
+    <span class="info" id="info-count"></span>
+  </div>
+
+  <!-- Lista -->
+  <div class="fila" id="fila"><div class="empty">Carregando...</div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var _fila = [];
+var _processando = false;
+
+function toast(msg, ok) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = ok===false ? '#7f1d1d' : '#166534';
+  el.style.display = 'block';
+  setTimeout(()=>el.style.display='none', 3000);
+}
+
+function carregar() {
+  var st = document.getElementById('filtro-status').value;
+  var ca = document.getElementById('filtro-canal').value;
+  var url = '/api/db/fila-anuncios' + (st ? '?status='+st : '');
+  fetch(url).then(r=>r.json()).then(data=>{
+    _fila = ca ? data.filter(d=>d.canal===ca) : data;
+    renderStats(data);
+    renderFila();
+    document.getElementById('info-count').textContent = _fila.length + ' itens';
+  }).catch(e=>document.getElementById('fila').innerHTML='<div class="empty">Erro: '+e.message+'</div>');
+}
+
+function renderStats(data) {
+  var pend  = data.filter(d=>d.status==='pendente').length;
+  var proc  = data.filter(d=>d.status==='processando').length;
+  var done  = data.filter(d=>d.status==='concluido').length;
+  var erro  = data.filter(d=>d.status==='erro').length;
+  document.getElementById('stats').innerHTML = [
+    st(data.length,'Total',''),
+    st(pend,'Pendentes','warn'),
+    st(done,'Concluídos','ok'),
+    st(proc,'Processando',''),
+    st(erro,'Erros',''),
+  ].join('');
+}
+function st(n,l,c){return '<div class="stat"><div class="sn '+c+'">'+n+'</div><div class="sl">'+l+'</div></div>';}
+
+function renderFila() {
+  var el = document.getElementById('fila');
+  if(!_fila.length){el.innerHTML='<div class="empty">Nenhum item na fila.</div>';return;}
+  el.innerHTML = _fila.map(function(it,i){
+    var bc = it.status==='processando'?'processando':it.status==='concluido'?'concluido':it.status==='erro'?'erro':'';
+    var badge = it.status==='pendente'?'b-pend':it.status==='processando'?'b-proc':it.status==='concluido'?'b-done':'b-erro';
+    var statusLabel = {'pendente':'⏳ Pendente','processando':'⚡ Processando','concluido':'✅ Concluído','erro':'❌ Erro'}[it.status]||it.status;
+    return '<div class="card '+bc+'" id="card-'+it.id+'">' +
+      '<div class="card-header" onclick="toggleCard('+it.id+')">' +
+        '<span class="card-sku">'+( it.sku||'?')+'</span>' +
+        '<span class="card-nome">'+(it.nome||'—').slice(0,60)+'</span>' +
+        '<span class="card-info">'+(it.familia||'')+'</span>' +
+        '<span class="badge '+badge+'">'+statusLabel+'</span>' +
+        '<span class="card-info" style="margin-left:8px">'+( it.canal||'ml').toUpperCase()+'</span>' +
+      '</div>' +
+      '<div class="card-body" id="body-'+it.id+'">' +
+        renderCardBody(it) +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderCardBody(it) {
+  var cmv_br = it.custo_br||0;
+  var cmv_pr = it.custo_pr||0;
+  return '<div class="fiscal">' +
+    fi('SKU',it.sku||'—') + fi('NCM',it.ncm||'—') + fi('CFOP',it.cfop||'—') +
+    fi('CMV BR','R$ '+(cmv_br.toFixed(4))) + fi('CMV PR','R$ '+(cmv_pr.toFixed(4))) +
+    fi('ST',it.tem_st?'✅ Sim':'Não') + fi('NF Origem',it.nf_origem||'—') +
+  '</div>' +
+  '<div class="gen-tabs">' +
+    '<div class="gen-tab ativo" onclick="mudarTab('+it.id+',\'titulo\',this)">Título</div>' +
+    '<div class="gen-tab" onclick="mudarTab('+it.id+',\'descricao\',this)">Descrição</div>' +
+    '<div class="gen-tab" onclick="mudarTab('+it.id+',\'preco\',this)">Preço</div>' +
+  '</div>' +
+  '<div id="tab-titulo-'+it.id+'">' +
+    '<div class="campo"><label>Título do anúncio</label>' +
+    '<input id="titulo-'+it.id+'" value="'+(it.titulo_ml||'')+'" placeholder="Gere com IA ou edite manualmente..."></div>' +
+  '</div>' +
+  '<div id="tab-descricao-'+it.id+'" style="display:none">' +
+    '<div class="campo"><label>Descrição completa</label>' +
+    '<textarea id="desc-'+it.id+'" placeholder="Gere com IA ou escreva manualmente...">'+(it.descricao||'')+'</textarea></div>' +
+  '</div>' +
+  '<div id="tab-preco-'+it.id+'" style="display:none">' +
+    '<div class="campo"><label>Preço sugerido (R$)</label>' +
+    '<input type="number" id="preco-'+it.id+'" value="'+(it.preco_sugerido||'')+'"></div>' +
+  '</div>' +
+  '<div id="ia-status-'+it.id+'"></div>' +
+  '<div class="acoes">' +
+    '<button class="btn btn-purple" onclick="gerarComIA('+it.id+')">🤖 Gerar com IA</button>' +
+    '<button class="btn btn-green" onclick="marcarConcluido('+it.id+')">✅ Salvar e concluir</button>' +
+    '<button class="btn btn-blue" onclick="enviarAnuncio('+it.id+')">📢 Criar anúncio no ML</button>' +
+    '<button class="btn btn-red" onclick="removerDaFila('+it.id+')">🗑 Remover</button>' +
+  '</div>';
+}
+
+function fi(l,v){return '<div class="fi"><label>'+l+'</label><span>'+escH(String(v))+'</span></div>';}
+function escH(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function toggleCard(id) {
+  var el = document.getElementById('body-'+id);
+  if(!el) return;
+  el.className = el.className.includes('aberto') ? 'card-body' : 'card-body aberto';
+}
+
+function mudarTab(id, tab, el) {
+  ['titulo','descricao','preco'].forEach(function(t) {
+    var d = document.getElementById('tab-'+t+'-'+id);
+    if(d) d.style.display = t===tab ? '' : 'none';
+  });
+  el.closest('.gen-tabs').querySelectorAll('.gen-tab').forEach(function(t){t.className='gen-tab';});
+  el.className = 'gen-tab ativo';
+}
+
+async function gerarComIA(id) {
+  var it = _fila.find(f=>f.id===id);
+  if(!it) return;
+  var statusEl = document.getElementById('ia-status-'+id);
+  statusEl.innerHTML = '<div class="ia-loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span>Gerando com IA...</span></div>';
+
+  var prompt = `Você é especialista em criação de anúncios para e-commerce no Mercado Livre Brasil.
+
+Produto: ${it.nome}
+SKU: ${it.sku}
+Família/Categoria: ${it.familia || 'ferramentas e utilidades'}
+NCM: ${it.ncm || ''}
+CMV: R$ ${(it.custo_br||0).toFixed(2)}
+
+Crie:
+1. TITULO: título otimizado para ML (máx 60 chars), com palavra-chave no início
+2. DESCRICAO: descrição completa no padrão Fava Ecom com: apresentação direta, benefícios, especificações técnicas, aplicações, modo de uso
+
+Responda APENAS em JSON:
+{"titulo": "...", "descricao": "..."}`;
+
+  try {
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{role:'user', content: prompt}]
+      })
+    });
+    var data = await resp.json();
+    var text = data.content?.[0]?.text || '';
+    var clean = text.replace(/```json|```/g,'').trim();
+    var parsed = JSON.parse(clean);
+
+    var tEl = document.getElementById('titulo-'+id);
+    var dEl = document.getElementById('desc-'+id);
+    if(tEl) tEl.value = parsed.titulo || '';
+    if(dEl) dEl.value = parsed.descricao || '';
+
+    statusEl.innerHTML = '<span style="color:#22c55e;font-size:11px">✓ IA gerou título e descrição</span>';
+    // Atualizar na fila local
+    var item = _fila.find(f=>f.id===id);
+    if(item){ item.titulo_ml = parsed.titulo; item.descricao = parsed.descricao; }
+  } catch(e) {
+    statusEl.innerHTML = '<span style="color:#ef4444;font-size:11px">Erro IA: '+e.message+'</span>';
+  }
+}
+
+function marcarConcluido(id) {
+  var titulo = document.getElementById('titulo-'+id)?.value || '';
+  var descricao = document.getElementById('desc-'+id)?.value || '';
+  fetch('/api/db/fila-anuncios/status', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({id, status:'concluido', titulo_ml: titulo, descricao})
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){ toast('✓ Salvo!'); carregar(); }
+  }).catch(()=>toast('Erro',false));
+}
+
+function removerDaFila(id) {
+  if(!confirm('Remover da fila?')) return;
+  fetch('/api/db/fila-anuncios/status', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({id, status:'removido'})
+  }).then(()=>{toast('Removido');carregar();});
+}
+
+function enviarAnuncio(id) {
+  var it = _fila.find(f=>f.id===id);
+  toast('Em desenvolvimento — integração ML em breve');
+}
+
+async function processarProximo() {
+  var pendentes = _fila.filter(f=>f.status==='pendente');
+  if(!pendentes.length){ toast('Nenhum pendente',false); return; }
+  await gerarComIA(pendentes[0].id);
+  toggleCard(pendentes[0].id);
+}
+
+async function processarTodos() {
+  if(_processando){ toast('Já processando...',false); return; }
+  _processando = true;
+  var pendentes = _fila.filter(f=>f.status==='pendente');
+  toast('Processando '+pendentes.length+' itens...');
+  for(var i=0; i<pendentes.length; i++) {
+    await gerarComIA(pendentes[i].id);
+    await new Promise(r=>setTimeout(r,1500)); // delay entre chamadas
+  }
+  _processando = false;
+  toast('✓ Todos processados!');
+}
+
+// Carregar ao iniciar
+carregar();
+setInterval(carregar, 30000); // atualizar a cada 30s
+</script>
+</body>
+</html>

@@ -7,8 +7,8 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;font-size:12px}
-nav{background:#1e293b;padding:6px 16px;display:flex;gap:12px;align-items:center;border-bottom:1px solid #334155;position:sticky;top:0;z-index:50;height:40px}
-nav a{color:#94a3b8;text-decoration:none;font-size:12px;font-weight:600;padding:4px 10px;border-radius:6px;white-space:nowrap}
+nav{background:#1e293b;padding:6px 16px;display:flex;gap:8px;align-items:center;border-bottom:1px solid #334155;position:sticky;top:0;z-index:50;height:40px;flex-wrap:wrap}
+nav a{color:#94a3b8;text-decoration:none;font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;white-space:nowrap}
 nav a:hover,nav a.ativo{background:#3b82f6;color:#fff}
 .toolbar{padding:10px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#1e293b;border-bottom:1px solid #334155;position:sticky;top:40px;z-index:40}
 .toolbar input{background:#0f172a;border:1px solid #475569;border-radius:6px;color:#f1f5f9;padding:6px 10px;font-size:12px;width:220px}
@@ -47,9 +47,16 @@ input.cell-edit.salvo{border-color:#22c55e;background:#071411}
 <body>
 <nav>
   <a href="/painel_fava.html">🏠 Painel</a>
-  <a href="/base_produtos.html" class="ativo">📦 Base</a>
   <a href="/entrada_nf.html">📄 Entrada NF</a>
+  <a href="/historico_compras.html">🔍 Histórico</a>
+  <a href="/base_produtos.html">📦 Base</a>
+  <a href="/gestor_anuncios.html">📢 Anúncios</a>
+  <a href="/fila_anuncios.html">🤖 Fila IA</a>
+  <a href="/calculadora_fava.html">💰 Calculadora</a>
+  <a href="/balcao_fava.html">🏪 Balcão</a>
+  <a href="/ean.html">🏷️ EAN</a>
   <a href="/tarefas.html">📋 Tarefas</a>
+  <a href="/estoque_parado.html">📦 Estoque</a>
 </nav>
 <div class="toolbar">
   <input id="busca" type="text" placeholder="Buscar SKU ou nome..." oninput="filtrar()">
