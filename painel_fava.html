@@ -337,6 +337,31 @@ header h1{font-size:15px;font-weight:700;flex:1}
 
 @media(max-width:700px){.grid2,.grid3{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}}
 </style>
+
+<script>
+// Auto-sync tokens do servidor Railway
+(function(){
+  function syncTokens() {
+    var tk4 = localStorage.getItem('fava_tk4');
+    var tkv2 = localStorage.getItem('fava_tokens_v2');
+    var vazio = !tk4 || tk4 === '{"bling":"","ml":""}';
+    var vazio2 = !tkv2 || tkv2.indexOf('"access":""') >= 0;
+    if(vazio || vazio2) {
+      fetch('/api/auth/tokens').then(function(r){return r.json();}).then(function(d){
+        if(d.ml_access || d.bling_access) {
+          localStorage.setItem('fava_tk4', JSON.stringify({bling:d.bling_access||'',ml:d.ml_access||''}));
+          var v2 = {ml:{access:d.ml_access||'',refresh:d.ml_refresh||''},bling:{access:d.bling_access||'',refresh:d.bling_refresh||''}};
+          localStorage.setItem('fava_tokens_v2', JSON.stringify(v2));
+          console.log('Tokens restaurados do servidor');
+          // Recarregar a página para aplicar
+          setTimeout(function(){ location.reload(); }, 500);
+        }
+      }).catch(function(){});
+    }
+  }
+  syncTokens();
+})();
+</script>
 </head>
 <script>
 
@@ -7832,6 +7857,28 @@ async function confirmarPreco(){
     } else alert(`❌ ${d.message||JSON.stringify(d)}`);
   }catch(e){alert(`❌ ${e.message}`);}
 }
+
+// Auto-sync tokens do servidor Railway (recupera tokens mesmo após limpar cache)
+(function(){
+  try {
+    var tk4 = localStorage.getItem('fava_tk4');
+    var tkv2 = localStorage.getItem('fava_tokens_v2');
+    var mlVazio = !tk4 || JSON.parse(tk4||'{}').ml === '';
+    var blingVazio = !tk4 || JSON.parse(tk4||'{}').bling === '';
+    if(mlVazio || blingVazio) {
+      fetch('/api/auth/tokens').then(function(r){return r.json();}).then(function(d){
+        if(d && (d.ml_access || d.bling_access)) {
+          var tk = {ml: d.ml_access||'', bling: d.bling_access||''};
+          localStorage.setItem('fava_tk4', JSON.stringify(tk));
+          var v2 = {ml:{access:d.ml_access||'',refresh:d.ml_refresh||'',expires:Date.now()+21600000},
+                    bling:{access:d.bling_access||'',refresh:d.bling_refresh||'',expires:Date.now()+21600000}};
+          localStorage.setItem('fava_tokens_v2', JSON.stringify(v2));
+          setTimeout(function(){location.reload();}, 500);
+        }
+      }).catch(function(){});
+    }
+  } catch(e){}
+})();
 </script>
 
 <!-- SYNC PRECO CERTO -->
