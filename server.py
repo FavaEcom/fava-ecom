@@ -1098,6 +1098,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/kits':              self._get_kits,
             '/api/db/cadastros':         self._get_cadastros,
             '/api/auth/tokens':           self._get_or_post_tokens,
+            '/api/sync/peso':              self._get_sync_peso,
             '/api/estoque/parado':        self._get_estoque_parado,
             '/api/estoque/sugerir-kit':   self._get_sugerir_kit,
             '/api/db/status':            self._get_status,
@@ -1134,6 +1135,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/historico':          self._post_historico,
             '/api/db/limpar-nf':          self._post_limpar_nf,
             '/api/db/nf':                 self._post_nf,
+            '/api/db/produto-peso':        self._post_produto_peso,
             '/api/db/nf-rascunho':        self._post_nf_rascunho,
             '/api/db/listing':            self._post_listing,
             '/api/sync/lucro':            self._sync_lucro,
@@ -2236,6 +2238,69 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             except: pass
             self._ok(rows)
         except Exception as e: self._err(500, str(e))
+
+    def _get_sync_peso(self):
+        """GET /api/sync/peso — propaga peso/dimensões de produtos para ml/shopee/yampi listings"""
+        p = '%s' if IS_PG else '?'
+        try:
+            # Buscar todos produtos com peso preenchido
+            prods = exe("""SELECT sku, peso, largura, altura, comprimento
+                           FROM produtos
+                           WHERE peso > 0 AND sku ~ '^[0-9]'""", fetchall=True) or []
+            atualizados = {'ml': 0, 'shopee': 0, 'yampi': 0}
+            for pr in prods:
+                sku = pr['sku']
+                peso = pr['peso'] or 0
+                larg = pr.get('largura') or 0
+                alt  = pr.get('altura') or 0
+                comp = pr.get('comprimento') or 0
+                # ML
+                try:
+                    exe(f"""UPDATE ml_listings SET peso={p},largura={p},altura={p},comprimento={p}
+                             WHERE sku={p}""", (peso, larg, alt, comp, sku))
+                    atualizados['ml'] += 1
+                except: pass
+                # Shopee
+                try:
+                    exe(f"UPDATE shopee_listings SET peso={p} WHERE sku={p}", (peso, sku))
+                    atualizados['shopee'] += 1
+                except: pass
+                # Yampi
+                try:
+                    exe(f"UPDATE yampi_listings SET peso={p} WHERE sku={p}", (peso, sku))
+                    atualizados['yampi'] += 1
+                except: pass
+            self._ok({'ok': True, 'produtos_com_peso': len(prods), 'atualizados': atualizados})
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _post_produto_peso(self):
+        """POST /api/db/produto-peso — salva peso/dimensões em produtos e propaga para listings"""
+        p = '%s' if IS_PG else '?'
+        try:
+            d = self._body()
+            sku  = str(d.get('sku', '')).strip()
+            if not sku: self._err(400, 'sku obrigatorio'); return
+            peso = float(d.get('peso', 0) or 0)
+            larg = float(d.get('largura', 0) or 0)
+            alt  = float(d.get('altura', 0) or 0)
+            comp = float(d.get('comprimento', 0) or 0)
+            # 1) Atualiza fonte de verdade: produtos
+            exe(f"""UPDATE produtos SET peso={p},largura={p},altura={p},comprimento={p}
+                     WHERE sku={p}""", (peso, larg, alt, comp, sku))
+            # 2) Propaga para ml_listings
+            try: exe(f"""UPDATE ml_listings SET peso={p},largura={p},altura={p},comprimento={p}
+                          WHERE sku={p}""", (peso, larg, alt, comp, sku))
+            except: pass
+            # 3) Propaga para shopee_listings
+            try: exe(f"UPDATE shopee_listings SET peso={p} WHERE sku={p}", (peso, sku))
+            except: pass
+            # 4) Propaga para yampi_listings
+            try: exe(f"UPDATE yampi_listings SET peso={p} WHERE sku={p}", (peso, sku))
+            except: pass
+            self._ok({'ok': True, 'sku': sku, 'peso': peso})
+        except Exception as e:
+            self._err(500, str(e))
 
     def _get_estoque_parado(self):
         """GET /api/estoque/parado?dias=90 — produtos com estoque > 0 sem venda nos últimos X dias"""
