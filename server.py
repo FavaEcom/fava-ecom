@@ -1403,7 +1403,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     # GET routes
     # ────────────────────────────────────────────────────────────
     def _get_produtos(self):
-        try: self._ok(exe("SELECT * FROM produtos ORDER BY CASE WHEN sku ~ '^[0-9]' THEN 0 ELSE 1 END, CASE WHEN sku ~ '^[0-9]+$' THEN CAST(sku AS INTEGER) ELSE 9999999 END, sku", fetchall=True))
+        try: self._ok(exe("SELECT * FROM produtos ORDER BY CASE WHEN sku ~ '^[[:digit:]]' THEN 0 ELSE 1 END, CASE WHEN sku ~ '^[[:digit:]]+$' THEN sku::integer ELSE 9999999 END, sku", fetchall=True))
         except Exception as e: self._err(500, str(e))
 
     def _post_bling_buscar_produto(self):
@@ -2399,13 +2399,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # 2) Remover produtos com SKU não-numérico e sem dados úteis
             removidos_r = exe("""
                 DELETE FROM produtos 
-                WHERE sku ~ '[^0-9\-]' 
+                WHERE sku ~ '[^0-9-]' 
                 AND (custo_br = 0 OR custo_br IS NULL)
                 AND (nome = '' OR nome IS NULL)
             """)
             
             # 3) Contar restantes inválidos
-            invalidos = exe("SELECT count(*) as n FROM produtos WHERE sku ~ '[^0-9\-]'", fetchone=True)
+            invalidos = exe("SELECT count(*) as n FROM produtos WHERE sku ~ '[^0-9-]'", fetchone=True)
             total = exe("SELECT count(*) as n FROM produtos", fetchone=True)
 
             self._ok({
