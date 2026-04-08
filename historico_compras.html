@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Histórico de Compras — Fava Ecom</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;font-size:13px}
+nav{background:#1e293b;padding:6px 16px;display:flex;gap:12px;align-items:center;border-bottom:1px solid #334155;height:40px}
+nav a{color:#94a3b8;text-decoration:none;font-size:12px;font-weight:600;padding:4px 10px;border-radius:6px}
+nav a:hover,nav a.ativo{background:#3b82f6;color:#fff}
+.main{max-width:900px;margin:0 auto;padding:24px 16px}
+h1{font-size:16px;color:#f1f5f9;margin-bottom:4px}
+.sub{font-size:12px;color:#64748b;margin-bottom:20px}
+.busca{display:flex;gap:8px;margin-bottom:20px;align-items:flex-end;flex-wrap:wrap}
+.busca label{font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px}
+.busca input{background:#1e293b;border:1px solid #475569;border-radius:6px;color:#f1f5f9;padding:8px 12px;font-size:13px;width:220px}
+.busca input:focus{outline:none;border-color:#3b82f6}
+.btn{padding:8px 16px;border-radius:6px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:#3b82f6;color:#fff}
+.btn:hover{background:#2563eb}
+/* Cards */
+.cards{display:flex;flex-direction:column;gap:10px}
+.card{background:#1e293b;border-radius:8px;border:1px solid #334155;padding:14px 16px}
+.card-top{display:flex;gap:12px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.card-nf{font-family:monospace;font-weight:700;color:#60a5fa;font-size:14px}
+.card-forn{color:#94a3b8;font-size:12px}
+.card-data{color:#64748b;font-size:11px;margin-left:auto}
+.card-nome{font-weight:600;font-size:13px;margin-bottom:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.fi{background:#0f172a;border-radius:5px;padding:7px 10px}
+.fi label{font-size:9px;color:#64748b;display:block;text-transform:uppercase;margin-bottom:2px}
+.fi span{font-size:12px;font-weight:700}
+.tag{padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700}
+.st{background:#78350f;color:#fcd34d}
+.nst{background:#14532d;color:#86efac}
+.imp{background:#4c1d95;color:#ddd6fe}
+.nac{background:#1e3a5f;color:#93c5fd}
+.cst-tag{background:#1e3a5f;color:#93c5fd;padding:1px 6px;border-radius:3px;font-size:10px}
+.vazio{text-align:center;padding:40px;color:#475569}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/painel_fava.html">🏠 Painel</a>
+  <a href="/entrada_nf.html">📄 Entrada NF</a>
+  <a href="/historico_compras.html" class="ativo">🔍 Histórico</a>
+  <a href="/base_produtos.html">📦 Base</a>
+</nav>
+<div class="main">
+  <h1>🔍 Histórico de Compras</h1>
+  <p class="sub">Consulte por código do fornecedor (cProd) ou SKU interno. Mostra todas as compras, último preço pago, CST, ST e CMV.</p>
+
+  <div class="busca">
+    <div>
+      <label>Código do Fornecedor (cProd)</label>
+      <input id="inp-cprod" placeholder="Ex: 6247212015" onkeydown="if(event.key==='Enter')buscar()">
+    </div>
+    <div>
+      <label>SKU Interno</label>
+      <input id="inp-sku" placeholder="Ex: 2861" onkeydown="if(event.key==='Enter')buscar()">
+    </div>
+    <button class="btn" onclick="buscar()">🔍 Buscar</button>
+  </div>
+
+  <div id="resultado"><div class="vazio">Digite um código do fornecedor ou SKU para consultar o histórico de compras.</div></div>
+</div>
+
+<script>
+function buscar() {
+  var cprod = document.getElementById('inp-cprod').value.trim();
+  var sku   = document.getElementById('inp-sku').value.trim();
+  if(!cprod && !sku){ alert('Digite o código do fornecedor ou o SKU'); return; }
+  var url = cprod ? '/api/db/historico-cprod?cprod='+encodeURIComponent(cprod)
+                  : '/api/db/historico-cprod?sku='+encodeURIComponent(sku);
+  document.getElementById('resultado').innerHTML = '<div class="vazio">⏳ Buscando...</div>';
+  fetch(url).then(r=>r.json()).then(data=>{
+    if(!data||!data.length){
+      document.getElementById('resultado').innerHTML = '<div class="vazio">Nenhuma compra encontrada.</div>';
+      return;
+    }
+    var html = '<div class="cards">';
+    data.forEach(function(it){
+      var isImp = [1,2,6,7].includes(parseInt(it.orig||0));
+      var temST = it.tem_st || parseInt(it.tem_st||0);
+      html += '<div class="card">';
+      html += '<div class="card-top">';
+      html += '<span class="card-nf">NF #'+(it.nf||'?')+'</span>';
+      html += '<span class="card-forn">'+(it.fornecedor||'').slice(0,40)+'</span>';
+      html += '<span class="card-data">'+(it.data_emissao||'')+'</span>';
+      html += '</div>';
+      html += '<div class="card-nome">'+(it.nome||'—')+'</div>';
+      html += '<div class="grid">';
+      html += fi('Cód. Forn.','<span style="font-family:monospace;color:#f59e0b">'+(it.cprod||'—')+'</span>');
+      html += fi('SKU','<span style="font-family:monospace;color:#60a5fa">'+(it.sku||'—')+'</span>');
+      html += fi('Qtd comprada',it.qtd||0);
+      html += fi('Vl Unit','R$ '+Number(it.vunit||0).toFixed(4));
+      html += fi('Custo (c/IPI+ST)','<span style="color:#f1f5f9;font-weight:700">R$ '+Number(it.custo_r||0).toFixed(4)+'</span>');
+      html += fi('CMV Brasil','<span style="color:#22c55e;font-weight:700">R$ '+Number(it.cmv_br||0).toFixed(4)+'</span>');
+      html += fi('CMV PR','<span style="color:#60a5fa;font-weight:700">R$ '+Number(it.cmv_pr||0).toFixed(4)+'</span>');
+      html += fi('IPI',Number(it.ipi_p||0).toFixed(1)+'%');
+      html += fi('ICMS',Number(it.icms_p||0).toFixed(2)+'%');
+      html += fi('CST','<span class="cst-tag">'+(it.cst||'—')+'</span>');
+      html += fi('CEST',(it.cest||'—'));
+      html += fi('ST', temST ? '<span class="tag st">SIM</span>' : '<span class="tag nst">Não</span>');
+      html += fi('Origem', isImp ? '<span class="tag imp">IMPORTADO</span>' : '<span class="tag nac">NACIONAL</span>');
+      html += '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    document.getElementById('resultado').innerHTML = html;
+  }).catch(e=>document.getElementById('resultado').innerHTML='<div class="vazio">Erro: '+e.message+'</div>');
+}
+function fi(l,v){return '<div class="fi"><label>'+l+'</label><span>'+v+'</span></div>';}
+
+// Auto-busca pela URL
+(function(){
+  var p = new URLSearchParams(location.search);
+  var cp = p.get('cprod'), sk = p.get('sku');
+  if(cp){ document.getElementById('inp-cprod').value=cp; buscar(); }
+  else if(sk){ document.getElementById('inp-sku').value=sk; buscar(); }
+})();
+</script>
+</body>
+</html>
