@@ -1132,6 +1132,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/historico':          self._post_historico,
             '/api/db/limpar-nf':          self._post_limpar_nf,
             '/api/db/nf':                 self._post_nf,
+            '/api/db/nf-rascunho':        self._post_nf_rascunho,
             '/api/db/listing':            self._post_listing,
             '/api/sync/lucro':            self._sync_lucro,
             '/api/sync/ml-titulos':      self._sync_ml_titulos,
@@ -3056,6 +3057,42 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 except Exception as e: print(f'[HIST] {e}')
             self._ok({'ok':True,'inseridos':n})
         except Exception as e: self._err(500, str(e))
+    def _post_nf_rascunho(self):
+        """POST /api/db/nf-rascunho — salva rascunho de NF para revisão no painel"""
+        try:
+            d = self._body()
+            nf_num = str(d.get('nf_num',''))
+            p = '%s' if IS_PG else '?'
+            # Criar tabela se não existir
+            exe(f"""CREATE TABLE IF NOT EXISTS nf_rascunho (
+                id SERIAL PRIMARY KEY,
+                nf_num TEXT,
+                fornecedor TEXT,
+                cnpj TEXT,
+                data_nf TEXT,
+                status TEXT DEFAULT 'pendente',
+                itens TEXT,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )""")
+            # Upsert por nf_num
+            existing = exe(f"SELECT id FROM nf_rascunho WHERE nf_num={p}", (nf_num,), fetchone=True)
+            import json as _json
+            itens_json = _json.dumps(d.get('itens', []), ensure_ascii=False)
+            if existing:
+                exe(f"""UPDATE nf_rascunho SET fornecedor={p},cnpj={p},data_nf={p},
+                    status={p},itens={p},updated_at=NOW() WHERE nf_num={p}""",
+                    (d.get('fornecedor',''), d.get('cnpj',''), d.get('data_nf',''),
+                     d.get('status','pendente'), itens_json, nf_num))
+            else:
+                exe(f"""INSERT INTO nf_rascunho (nf_num,fornecedor,cnpj,data_nf,status,itens)
+                    VALUES ({p},{p},{p},{p},{p},{p})""",
+                    (nf_num, d.get('fornecedor',''), d.get('cnpj',''),
+                     d.get('data_nf',''), d.get('status','pendente'), itens_json))
+            self._ok({'ok': True, 'nf': nf_num})
+        except Exception as e:
+            self._err(500, str(e))
+
     def _post_nf(self):
         try:
             d = self._body()
