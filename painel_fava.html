@@ -518,6 +518,7 @@ function salvarCfg(){
   </div>
   <span class="last-update" id="last-update"></span>
   <button class="btn-reload" onclick="recarregar()">↻ Atualizar</button>
+  <button class="btn-reload" onclick="importarPlanilha()" style="background:rgba(34,197,94,.3);border-color:rgba(34,197,94,.5)" title="Importar planilha BASE_DADOS ou FV Comercio direto para o banco">📥 Base</button>
   <button class="btn-reload" id="btn-taxas-ml" onclick="importarTaxasML(this)" style="background:rgba(59,130,246,.3);border-color:rgba(59,130,246,.5)" title="Busca taxa real do ML uma única vez e salva permanentemente">📊 Taxas ML</button>
   <button class="btn-reload" id="btn-renovar-ml" onclick="forcarRenovacaoML()" style="background:rgba(239,68,68,.3);border-color:rgba(239,68,68,.5)" title="Renovar token ML expirado">🔑 Renovar ML</button>
   <button class="btn-reload" id="btn-renovar-bling" onclick="forcarRenovacaoBling()" style="background:rgba(251,146,60,.3);border-color:rgba(251,146,60,.5)" title="Renovar token Bling expirado (401)">🔑 Renovar Bling</button>
@@ -3176,6 +3177,92 @@ function showLoading(msg){const _l=document.getElementById('loading');if(_l)_l.s
 function hideLoading(){(document.getElementById('loading')||{style:{}}).style.display ='none';}
 function setDot(a,s,l){const d=document.getElementById(`dot-${a}`);const lb=document.getElementById(`lbl-${a}`);if(d)d.className=`dot ${s}`;if(lb)lb.textContent=l;}
 function recarregar(){dados.cmvCache={};carregarTudo();}
+async function importarPlanilha(){
+  const input = document.createElement('input');
+  input.type='file'; input.accept='.xlsx,.xlsm';
+  input.onchange = async e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const status = document.createElement('div');
+    status.style='position:fixed;bottom:20px;right:20px;background:#1e293b;color:#fff;padding:12px 18px;border-radius:8px;z-index:9999;font-size:13px';
+    status.textContent='⏳ Lendo '+file.name+'...';
+    document.body.appendChild(status);
+    try {
+      // Ler o arquivo como ArrayBuffer e processar via SheetJS
+      const buf = await file.arrayBuffer();
+      const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs');
+      const wb = XLSX.read(buf, {type:'array'});
+      
+      // Detectar aba
+      const abaBase = wb.SheetNames.find(n=>n.includes('BASE_DADOS'));
+      const abaFV   = wb.SheetNames.find(n=>n.includes('FV COMERCIO'));
+      const aba = abaBase || abaFV || wb.SheetNames[0];
+      status.textContent='⏳ Processando aba: '+aba+'...';
+      
+      const ws = wb.Sheets[aba];
+      const rows = XLSX.utils.sheet_to_json(ws, {raw:true, defval:''});
+      
+      let produtos = [];
+      for(const r of rows){
+        const sku = String(r['SKU']||r['sku']||'').trim();
+        if(!sku || !/^\d/.test(sku)) continue;
+        const custo    = parseFloat(r['Novo custo']||r['CUSTO REAL']||r['Custo unitário']||0)||0;
+        const cmv_br   = parseFloat(r['CMV BRASIL']||0)||0;
+        const cmv_pr   = parseFloat(r['CMV PARANÁ']||0)||0;
+        const ipi_raw  = parseFloat(r['IPI']||r['Novo IPI']||0)||0;
+        const icms_raw = parseFloat(r['ALÍQ. ICMS EFETIVA']||r['Crédito ICMS']||r['Novo ICMS']||0)||0;
+        const PIS=0.0165, COF=0.076;
+        // Se não tem CMV calculado (FV Comercio), calcular
+        const custo_br = cmv_br>0 ? cmv_br : Math.max(0, custo*(1+ipi_raw/100) - custo*(icms_raw/100) - custo*PIS - custo*COF);
+        const custo_pr = cmv_pr>0 ? cmv_pr : custo_br;
+        produtos.push({
+          sku, 
+          nome:    String(r['PRODUTO']||r['Produto']||'').trim(),
+          marca:   String(r['MARCA']||'').trim(),
+          familia: String(r['FAMÍLIA']||'').trim(),
+          subcategoria: String(r['SUBCATEGORIA']||'').trim(),
+          fornecedor:   String(r['FORNECEDOR']||r['Fornecedor']||'').trim(),
+          origem:  String(r['ORIGEM']||'').trim(),
+          custo, custo_br, custo_pr,
+          ipi:    ipi_raw > 1 ? ipi_raw/100 : ipi_raw,
+          cred_icms: icms_raw > 1 ? icms_raw/100 : icms_raw,
+          st:     (String(r['ST']||'').toLowerCase()==='sim'||r['ST']==='1') ? 1 : 0,
+          st_imposto: parseFloat(r['ST IMPOSTO']||0)||0,
+          monofasico: String(r['MONOFÁSICO']||'').toLowerCase()==='sim' ? 1 : 0,
+          ncm:    String(r['NCM']||'').trim(),
+          ean:    String(r['EAN']||'').trim(),
+          cfop:   String(r['CFOP']||'').trim(),
+          peso:   parseFloat(r['PESO (kg)']||r['PESO']||0)||0,
+          largura: parseFloat(r['LARGURA (cm)']||0)||0,
+          altura:  parseFloat(r['ALTURA (cm)']||0)||0,
+          comprimento: parseFloat(r['PROFUNDIDADE (cm)']||r['COMPRIMENTO']||0)||0,
+        });
+      }
+      
+      if(!produtos.length){ status.textContent='❌ Nenhum produto encontrado'; return; }
+      status.textContent=`⏳ Enviando ${produtos.length} produtos...`;
+      
+      // Enviar em lotes de 150
+      let ok=0;
+      for(let i=0;i<produtos.length;i+=150){
+        const lote=produtos.slice(i,i+150);
+        const r2=await fetch('/api/import/planilha',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(lote)});
+        const d=await r2.json();
+        ok+=d.inseridos||0;
+        status.textContent=`⏳ ${ok}/${produtos.length} importados...`;
+      }
+      status.style.background='#166534';
+      status.textContent=`✅ ${ok} produtos importados! Atualizando...`;
+      setTimeout(()=>{ status.remove(); carregarTudo(); }, 3000);
+    } catch(e){
+      status.style.background='#7f1d1d';
+      status.textContent='❌ Erro: '+e.message;
+      setTimeout(()=>status.remove(),5000);
+    }
+  };
+  input.click();
+}
+
 async function importarTaxasML(el){
   const orig=el.textContent;
   el.textContent='⏳ Buscando...'; el.disabled=true;
@@ -7780,6 +7867,60 @@ async function syncPC(full){
     bar.style.width='100%';bar.style.background='#2196f3';st.textContent='OK - '+saved+' pedidos salvos';
   }catch(e){bar.style.background='#f44336';st.textContent='Erro: '+e.message;}
 }
+
+// ═══════════ TAREFAS ═══════════
+let tarefas = JSON.parse(localStorage.getItem('fava_tarefas')||'[]');
+function renderTarefas(){
+  const el = document.getElementById('tarefas-lista');
+  if(!el) return;
+  if(!tarefas.length){ el.innerHTML='<div style="color:var(--muted);font-size:13px">Nenhuma tarefa.</div>'; return; }
+  el.innerHTML = tarefas.map((t,i)=>`
+    <div style="background:var(--card);border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;border-left:3px solid ${t.done?'var(--verde)':'var(--azul)'}">
+      <input type="checkbox" ${t.done?'checked':''} onchange="toggleTarefa(${i})" style="cursor:pointer">
+      <span style="flex:1;font-size:13px;${t.done?'text-decoration:line-through;color:var(--muted)':''}">${t.texto}</span>
+      <span style="font-size:11px;color:var(--muted)">${t.data||''}</span>
+      <button onclick="delTarefa(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px">×</button>
+    </div>`).join('');
+}
+function addTarefa(){
+  const txt = prompt('Nova tarefa:');
+  if(!txt||!txt.trim()) return;
+  tarefas.unshift({texto:txt.trim(), done:false, data:new Date().toLocaleDateString('pt-BR')});
+  localStorage.setItem('fava_tarefas', JSON.stringify(tarefas));
+  renderTarefas();
+}
+function toggleTarefa(i){ tarefas[i].done=!tarefas[i].done; localStorage.setItem('fava_tarefas',JSON.stringify(tarefas)); renderTarefas(); }
+function delTarefa(i){ tarefas.splice(i,1); localStorage.setItem('fava_tarefas',JSON.stringify(tarefas)); renderTarefas(); }
+
+// ═══════════ GERADOR EAN ═══════════
+function calcDigitoEAN(doze){
+  let s=0;
+  for(let i=0;i<12;i++) s+=parseInt(doze[i])*(i%2===0?1:3);
+  return (10-(s%10))%10;
+}
+function gerarEAN(){
+  const pref = (document.getElementById('ean-prefixo')?.value||'').replace(/[^0-9]/g,'').padStart(7,'0').slice(0,7);
+  const sku  = (document.getElementById('ean-sku')?.value||'').replace(/[^0-9]/g,'').padStart(5,'0').slice(0,5);
+  if(pref.length<7){ alert('Prefixo deve ter 7 dígitos'); return; }
+  const doze = pref + sku;
+  const dig  = calcDigitoEAN(doze);
+  const ean  = doze + dig;
+  const res  = document.getElementById('ean-resultado');
+  if(res) res.textContent = ean;
+  navigator.clipboard?.writeText(ean).catch(()=>{});
+  const lista = document.getElementById('ean-lista');
+  if(lista){
+    const item = document.createElement('div');
+    item.style='background:var(--card);border-radius:6px;padding:8px 12px;display:flex;justify-content:space-between;font-size:13px';
+    item.innerHTML='<span style="font-weight:600;letter-spacing:2px">'+ean+'</span><span style="color:var(--muted)">SKU '+sku+'</span>';
+    lista.prepend(item);
+  }
+}
+
+// Hook setView para renderizar tarefas
+const _sv0 = setView;
+setView = function(v){ _sv0(v); if(v==='tarefas') renderTarefas(); };
+
 // Fix automático: container das views
 (function(){
   const vd = document.getElementById('view-dashboard');
