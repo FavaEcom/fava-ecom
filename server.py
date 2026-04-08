@@ -1097,6 +1097,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/pedrinho':          self._get_pedrinho,
             '/api/db/kits':              self._get_kits,
             '/api/db/cadastros':         self._get_cadastros,
+            '/api/auth/tokens':           self._get_or_post_tokens,
             '/api/db/status':            self._get_status,
             '/api/db/pedidos-pc':         self._get_pedidos_pc,
             '/api/cmv-cache':            self._get_cmv_compat,
@@ -2743,6 +2744,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def _get_or_post_tokens(self):
         """GET /api/auth/tokens — retorna tokens do servidor | POST — salva tokens"""
+        global _bling_token, _ml_token
         if self.command == 'GET':
             # Retornar tokens atuais para sync no browser
             self._ok({
@@ -2753,7 +2755,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 'ok': bool(_ml_token.get('access') or _bling_token.get('access'))
             })
             return
-        global _bling_token, _ml_token
         try:
             d = self._body()
             if d.get('bling_access'):
