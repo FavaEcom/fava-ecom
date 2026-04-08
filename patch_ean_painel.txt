@@ -1,0 +1,70 @@
+========================================================
+PATCH — GERADOR DE EAN no painel_fava.html
+========================================================
+
+PASSO 1: No HTML, procure exatamente esta linha:
+
+  <button class="btn-reload" onclick="document.getElementById('modal-cfg').style.display='flex'">⚙️</button>
+
+SUBSTITUA por (adicione o bloco do EAN ANTES do botão ⚙️):
+
+  <!-- GERADOR DE EAN BRASIL -->
+  <div id="ean-widget" style="display:inline-flex;align-items:center;gap:5px;background:#0d2619;border:1px solid #1a4d30;border-radius:6px;padding:3px 8px;margin-right:6px;">
+    <span style="font-size:10px;color:#7ee787;font-weight:600;white-space:nowrap">🏷️ EAN</span>
+    <input id="ean-output" type="text" readonly
+      style="width:118px;background:#0a1f12;border:1px solid #1a4d30;color:#3fb950;font-family:monospace;font-size:12px;font-weight:700;padding:2px 5px;border-radius:4px;cursor:pointer;"
+      title="Clique para copiar"
+      onclick="this.select();document.execCommand('copy');document.getElementById('ean-copied').style.opacity=1;setTimeout(()=>document.getElementById('ean-copied').style.opacity=0,1200)">
+    <button onclick="document.getElementById('ean-output').value=gerarEAN()"
+      class="btn-reload" title="Gerar novo EAN">↻</button>
+    <span id="ean-copied" style="font-size:10px;color:#3fb950;opacity:0;transition:opacity .3s;white-space:nowrap">✓ copiado</span>
+  </div>
+  <!-- FIM GERADOR DE EAN -->
+
+  <button class="btn-reload" onclick="document.getElementById('modal-cfg').style.display='flex'">⚙️</button>
+
+
+========================================================
+PASSO 2: No <script> do painel_fava.html, adicione estas
+funções junto com as outras funções utilitárias
+(pode ser no início do bloco <script>, antes do DOMContentLoaded):
+========================================================
+
+// ─── GERADOR DE EAN-13 BRASIL (prefixo 789) ─────────────────────────────────
+function calcEAN13(doze) {
+  let soma = 0;
+  for (let i = 0; i < 12; i++) soma += parseInt(doze[i]) * (i % 2 === 0 ? 1 : 3);
+  const resto = soma % 10;
+  return resto === 0 ? 0 : 10 - resto;
+}
+
+function gerarEAN(prefixo) {
+  prefixo = prefixo || '789';
+  let meio = '';
+  const digitsNeed = 12 - prefixo.length;
+  for (let i = 0; i < digitsNeed; i++) meio += Math.floor(Math.random() * 10);
+  const doze = prefixo + meio;
+  return doze + calcEAN13(doze);
+}
+
+// Inicializar EAN ao carregar
+document.addEventListener('DOMContentLoaded', function() {
+  const eanOut = document.getElementById('ean-output');
+  if (eanOut) eanOut.value = gerarEAN();
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
+
+========================================================
+COMO FUNCIONA:
+========================================================
+- Prefixo 789 fixo (GS1 Brasil — padrão brasileiro)
+- Gera 9 dígitos aleatórios após o prefixo
+- Calcula o 13º dígito verificador automaticamente (módulo 10)
+- Clica no número → copia para área de transferência
+- Botão ↻ → gera novo EAN
+- Aparece "✓ copiado" por 1.2 segundos após copiar
+
+EXEMPLOS DE EAN VÁLIDO GERADO:
+789XXXXXXXXX? (onde ? é o dígito verificador calculado)
+========================================================
