@@ -1146,7 +1146,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/kit':                self._post_kit,
             '/api/db/cadastro':           self._post_cadastro,
             '/api/db/pedidos-pc':         self._post_pedidos_pc,
-            '/api/auth/tokens':           self._post_tokens,
+            '/api/auth/tokens':           self._get_or_post_tokens,
             '/api/bling/set-token':         self._bling_set_token,
             '/api/cmv-cache':             self._post_cmv,
             '/webhook/bling':             self._post_webhook_bling,
@@ -2741,7 +2741,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             print(f'[PC] {ok} pedidos salvos | {errs} erros')
         except Exception as e: self._err(500, str(e))
 
-    def _post_tokens(self):
+    def _get_or_post_tokens(self):
+        """GET /api/auth/tokens — retorna tokens do servidor | POST — salva tokens"""
+        if self.command == 'GET':
+            # Retornar tokens atuais para sync no browser
+            self._ok({
+                'ml_access':     _ml_token.get('access',''),
+                'ml_refresh':    _ml_token.get('refresh',''),
+                'bling_access':  _bling_token.get('access',''),
+                'bling_refresh': _bling_token.get('refresh',''),
+                'ok': bool(_ml_token.get('access') or _bling_token.get('access'))
+            })
+            return
         global _bling_token, _ml_token
         try:
             d = self._body()

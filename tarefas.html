@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tarefas — Fava Ecom</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+nav{background:#1e293b;padding:10px 20px;display:flex;gap:16px;align-items:center;border-bottom:1px solid #334155}
+nav a{color:#94a3b8;text-decoration:none;font-size:13px;font-weight:600;padding:6px 12px;border-radius:6px}
+nav a:hover,nav a.ativo{background:#3b82f6;color:#fff}
+.main{max-width:700px;margin:32px auto;padding:0 16px}
+h1{font-size:18px;margin-bottom:20px;color:#f1f5f9}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center}
+.toolbar button{background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer}
+.toolbar button:hover{background:#2563eb}
+.toolbar select{padding:8px 12px;border-radius:8px;border:1px solid #475569;background:#1e293b;color:#e2e8f0;font-size:13px}
+.toolbar label{display:flex;align-items:center;gap:6px;font-size:13px;color:#94a3b8;cursor:pointer}
+.tarefa{background:#1e293b;border-radius:10px;padding:13px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;border-left:3px solid #3b82f6;border:1px solid #334155;border-left-width:3px}
+.tarefa.feita{border-left-color:#22c55e;opacity:.7}
+.tarefa input[type=checkbox]{width:18px;height:18px;cursor:pointer;flex-shrink:0;accent-color:#3b82f6}
+.cat{font-size:11px;background:#0f172a;padding:2px 8px;border-radius:4px;color:#94a3b8;white-space:nowrap}
+.texto{flex:1;font-size:13px}
+.feita .texto{text-decoration:line-through;color:#64748b}
+.sku{font-size:11px;color:#3b82f6;font-weight:700;white-space:nowrap}
+.data{font-size:11px;color:#64748b;white-space:nowrap}
+.del{background:none;border:none;color:#475569;cursor:pointer;font-size:20px;padding:0 4px;line-height:1;flex-shrink:0}
+.del:hover{color:#ef4444}
+.vazio{color:#64748b;font-size:13px;padding:20px;text-align:center}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/painel_fava.html">🏠 Painel</a>
+  <a href="/ean.html">🔢 EAN</a>
+  <a href="/tarefas.html" class="ativo">📋 Tarefas</a>
+  <a href="/base_produtos.html">📦 Base</a>
+</nav>
+<div class="main">
+  <h1>📋 Tarefas de Operação</h1>
+  <div class="toolbar">
+    <button onclick="nova()">+ Nova Tarefa</button>
+    <select id="filtro" onchange="render()">
+      <option value="">Todas as categorias</option>
+      <option>Bater Fotos</option>
+      <option>Pesar Produto</option>
+      <option>Medir Produto</option>
+      <option>Aplicar Desconto</option>
+      <option>Anuncio ML</option>
+      <option>Anuncio Facebook</option>
+      <option>Anuncio Shopee</option>
+      <option>Estoque</option>
+      <option>Cadastro</option>
+      <option>Gerar EAN</option>
+      <option>Outros</option>
+    </select>
+    <label><input type="checkbox" id="verFeitas" onchange="render()"> Ver feitas</label>
+  </div>
+  <div id="lista"></div>
+</div>
+<script>
+var CATS = ['Bater Fotos','Pesar Produto','Medir Produto','Aplicar Desconto','Anuncio ML','Anuncio Facebook','Anuncio Shopee','Estoque','Cadastro','Gerar EAN','Outros'];
+var tarefas = JSON.parse(localStorage.getItem('fava_tarefas') || '[]');
+
+function salvar() { localStorage.setItem('fava_tarefas', JSON.stringify(tarefas)); }
+
+function render() {
+  var filtro = document.getElementById('filtro').value;
+  var verFeitas = document.getElementById('verFeitas').checked;
+  var lista = tarefas.filter(function(t) {
+    if (!verFeitas && t.done) return false;
+    if (filtro && t.cat !== filtro) return false;
+    return true;
+  });
+  var el = document.getElementById('lista');
+  if (!lista.length) { el.innerHTML = '<div class="vazio">Nenhuma tarefa. Clique em "+ Nova Tarefa".</div>'; return; }
+  el.innerHTML = '';
+  lista.forEach(function(t) {
+    var idx = tarefas.indexOf(t);
+    var d = document.createElement('div');
+    d.className = 'tarefa' + (t.done ? ' feita' : '');
+    d.style.borderLeftColor = t.done ? '#22c55e' : '#3b82f6';
+    d.innerHTML =
+      '<input type="checkbox" ' + (t.done ? 'checked' : '') + ' onchange="toggle(' + idx + ')">' +
+      '<span class="cat">' + t.cat + '</span>' +
+      '<span class="texto">' + t.texto + '</span>' +
+      (t.sku ? '<span class="sku">SKU ' + t.sku + '</span>' : '') +
+      '<span class="data">' + t.data + '</span>' +
+      '<button class="del" onclick="del(' + idx + ')">×</button>';
+    el.appendChild(d);
+  });
+}
+
+function nova() {
+  var catMenu = CATS.map(function(c,i){ return (i+1)+'. '+c; }).join('\n');
+  var n = parseInt(prompt('Categoria:\n' + catMenu + '\n\nDigite o número:')) || 1;
+  var cat = CATS[n-1] || CATS[0];
+  var sku = prompt('SKU do produto (Enter para pular):') || '';
+  var txt = prompt('Descrição da tarefa:');
+  if (!txt || !txt.trim()) return;
+  tarefas.unshift({ texto: txt.trim(), cat: cat, sku: sku.trim(), done: false, data: new Date().toLocaleDateString('pt-BR') });
+  salvar();
+  render();
+}
+
+function toggle(i) { tarefas[i].done = !tarefas[i].done; salvar(); render(); }
+function del(i) { if (!confirm('Apagar esta tarefa?')) return; tarefas.splice(i,1); salvar(); render(); }
+
+render();
+</script>
+</body>
+</html>
