@@ -2690,21 +2690,22 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                          ncm,peso,largura,altura,comprimento,estoque)
                         VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,0)
                         ON CONFLICT(sku) DO UPDATE SET
-                          nome=COALESCE(NULLIF(EXCLUDED.nome,''),produtos.nome),
-                          marca=COALESCE(NULLIF(EXCLUDED.marca,''),produtos.marca),
-                          familia=COALESCE(NULLIF(EXCLUDED.familia,''),produtos.familia),
-                          fornecedor=COALESCE(NULLIF(EXCLUDED.fornecedor,''),produtos.fornecedor),
+                          nome=CASE WHEN EXCLUDED.nome!='' THEN EXCLUDED.nome ELSE produtos.nome END,
+                          marca=CASE WHEN EXCLUDED.marca!='' THEN EXCLUDED.marca ELSE produtos.marca END,
+                          familia=CASE WHEN EXCLUDED.familia!='' THEN EXCLUDED.familia ELSE produtos.familia END,
+                          fornecedor=CASE WHEN EXCLUDED.fornecedor!='' THEN EXCLUDED.fornecedor ELSE produtos.fornecedor END,
                           custo_br=CASE WHEN EXCLUDED.custo_br>0 THEN EXCLUDED.custo_br ELSE produtos.custo_br END,
                           custo_pr=CASE WHEN EXCLUDED.custo_pr>0 THEN EXCLUDED.custo_pr ELSE produtos.custo_pr END,
                           custo=CASE WHEN EXCLUDED.custo>0 THEN EXCLUDED.custo ELSE produtos.custo END,
                           ipi=EXCLUDED.ipi, cred_icms=EXCLUDED.cred_icms,
                           st=EXCLUDED.st, st_imposto=EXCLUDED.st_imposto,
                           monofasico=EXCLUDED.monofasico,
-                          ncm=COALESCE(NULLIF(EXCLUDED.ncm,''),produtos.ncm),
+                          ncm=CASE WHEN EXCLUDED.ncm!='' THEN EXCLUDED.ncm ELSE produtos.ncm END,
                           peso=CASE WHEN EXCLUDED.peso>0 THEN EXCLUDED.peso ELSE produtos.peso END,
                           largura=CASE WHEN EXCLUDED.largura>0 THEN EXCLUDED.largura ELSE produtos.largura END,
                           altura=CASE WHEN EXCLUDED.altura>0 THEN EXCLUDED.altura ELSE produtos.altura END,
-                          comprimento=CASE WHEN EXCLUDED.comprimento>0 THEN EXCLUDED.comprimento ELSE produtos.comprimento END
+                          comprimento=CASE WHEN EXCLUDED.comprimento>0 THEN EXCLUDED.comprimento ELSE produtos.comprimento END,
+                          updated_at=NOW()
                     """, (sku, p.get('nome',''), p.get('marca',''), p.get('familia',''),
                              p.get('fornecedor',''), p.get('custo',0), p.get('custo_br',0),
                              p.get('custo_pr',0), p.get('ipi',0), p.get('cred_icms',0),
