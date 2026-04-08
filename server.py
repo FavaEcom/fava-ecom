@@ -113,6 +113,10 @@ def criar_tabelas():
                 det_num INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT NOW())""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS v_st REAL DEFAULT 0""",
+            """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS cst TEXT""",
+            """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS cest TEXT""",
+            """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS tem_st INTEGER DEFAULT 0""",
+            """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS orig INTEGER DEFAULT 0""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS cred_icms REAL DEFAULT 0""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS det_num INTEGER DEFAULT 0""",
             """CREATE TABLE IF NOT EXISTS webhook_log (
@@ -329,7 +333,11 @@ def criar_tabelas():
                            ('altura','REAL DEFAULT 0'),('comprimento','REAL DEFAULT 0'),
                            ('st','INTEGER DEFAULT 0'),('st_imposto','REAL DEFAULT 0'),
                            ('monofasico','INTEGER DEFAULT 0'),('subcategoria','TEXT'),
-                           ('origem','TEXT')]:
+                           ('origem','TEXT'),
+                           ('cest','TEXT'),
+                           ('cst_padrao','TEXT'),
+                           ('tem_st','INTEGER DEFAULT 0')]:
+
         try: exe(f"ALTER TABLE produtos ADD COLUMN IF NOT EXISTS {col_p} {tipo_p}")
         except: pass
     try:
@@ -1101,6 +1109,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/sync/peso':              self._get_sync_peso,
             '/api/estoque/parado':        self._get_estoque_parado,
             '/api/estoque/sugerir-kit':   self._get_sugerir_kit,
+            '/api/db/capa-nf':             self._get_capa_nf,
+            '/api/db/entrada-nf':         self._get_entrada_nf,
+            '/api/db/bling-buscar-produto':self._get_bling_buscar_produto,
+            '/api/db/fila-anuncios':       self._get_fila_anuncios,
             '/api/db/status':            self._get_status,
             '/api/db/pedidos-pc':         self._get_pedidos_pc,
             '/api/cmv-cache':            self._get_cmv_compat,
@@ -1135,6 +1147,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/historico':          self._post_historico,
             '/api/db/limpar-nf':          self._post_limpar_nf,
             '/api/db/nf':                 self._post_nf,
+            '/api/db/fila-anuncios':       self._post_fila_anuncios,
+            '/api/db/fila-anuncios/status': self._post_fila_status,
+            '/api/db/entrada-nf/salvar':   self._post_entrada_nf_salvar,
             '/api/db/produto-peso':        self._post_produto_peso,
             '/api/db/nf-rascunho':        self._post_nf_rascunho,
             '/api/db/listing':            self._post_listing,
@@ -2238,6 +2253,270 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             except: pass
             self._ok(rows)
         except Exception as e: self._err(500, str(e))
+
+    def _get_fila_anuncios(self):
+        """GET /api/db/fila-anuncios?status=pendente — lista fila de criação de anúncios"""
+        from urllib.parse import parse_qs
+        qs     = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        status = qs.get('status', [''])[0]
+        p = '%s' if IS_PG else '?'
+        try:
+            exe(f"""CREATE TABLE IF NOT EXISTS fila_anuncios (
+                id SERIAL PRIMARY KEY,
+                sku TEXT, nome TEXT, familia TEXT,
+                ncm TEXT, cfop TEXT, origem INTEGER DEFAULT 0,
+                custo_br REAL DEFAULT 0, custo_pr REAL DEFAULT 0,
+                preco_sugerido REAL DEFAULT 0,
+                tem_st INTEGER DEFAULT 0,
+                status TEXT DEFAULT 'pendente',
+                prioridade INTEGER DEFAULT 1,
+                nf_origem TEXT,
+                titulo_ml TEXT, descricao TEXT,
+                canal TEXT DEFAULT 'ml',
+                criado_em TIMESTAMP DEFAULT NOW(),
+                processado_em TIMESTAMP
+            )""")
+            if status:
+                rows = exe(f"SELECT * FROM fila_anuncios WHERE status={p} ORDER BY prioridade DESC, criado_em ASC", (status,), fetchall=True) or []
+            else:
+                rows = exe("SELECT * FROM fila_anuncios ORDER BY prioridade DESC, criado_em ASC LIMIT 500", fetchall=True) or []
+            self._ok(rows)
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _post_fila_anuncios(self):
+        """POST /api/db/fila-anuncios — adiciona produto(s) na fila de criação de anúncios"""
+        p = '%s' if IS_PG else '?'
+        try:
+            exe(f"""CREATE TABLE IF NOT EXISTS fila_anuncios (
+                id SERIAL PRIMARY KEY,
+                sku TEXT, nome TEXT, familia TEXT,
+                ncm TEXT, cfop TEXT, origem INTEGER DEFAULT 0,
+                custo_br REAL DEFAULT 0, custo_pr REAL DEFAULT 0,
+                preco_sugerido REAL DEFAULT 0,
+                tem_st INTEGER DEFAULT 0,
+                status TEXT DEFAULT 'pendente',
+                prioridade INTEGER DEFAULT 1,
+                nf_origem TEXT,
+                titulo_ml TEXT, descricao TEXT,
+                canal TEXT DEFAULT 'ml',
+                criado_em TIMESTAMP DEFAULT NOW(),
+                processado_em TIMESTAMP
+            )""")
+            d = self._body()
+            itens = d if isinstance(d, list) else [d]
+            adicionados = 0
+            for it in itens:
+                sku = str(it.get('sku','')).strip()
+                if not sku: continue
+                # Não duplicar pendentes
+                ja_existe = exe(f"SELECT 1 FROM fila_anuncios WHERE sku={p} AND status='pendente'", (sku,), fetchone=True)
+                if ja_existe: continue
+                exe(f"""INSERT INTO fila_anuncios 
+                    (sku,nome,familia,ncm,cfop,origem,custo_br,custo_pr,preco_sugerido,tem_st,nf_origem,canal)
+                    VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})""",
+                    (sku, it.get('nome',''), it.get('familia',''),
+                     it.get('ncm',''), it.get('cfop',''), int(it.get('origem',0)),
+                     float(it.get('custo_br',0)), float(it.get('custo_pr',0)),
+                     float(it.get('preco_sugerido',0)), int(it.get('tem_st',0)),
+                     it.get('nf_origem',''), it.get('canal','ml')))
+                adicionados += 1
+            self._ok({'ok': True, 'adicionados': adicionados, 'total': len(itens)})
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _post_fila_status(self):
+        """POST /api/db/fila-anuncios/status — atualiza status de item da fila"""
+        p = '%s' if IS_PG else '?'
+        try:
+            d = self._body()
+            fila_id = int(d.get('id',0))
+            status  = str(d.get('status','pendente'))
+            titulo  = str(d.get('titulo_ml','') or '')
+            descricao = str(d.get('descricao','') or '')
+            exe(f"""UPDATE fila_anuncios SET status={p}, titulo_ml={p}, descricao={p},
+                processado_em=NOW() WHERE id={p}""",
+                (status, titulo, descricao, fila_id))
+            self._ok({'ok': True, 'id': fila_id, 'status': status})
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _get_capa_nf(self):
+        """GET /api/db/capa-nf?nf=315065 — retorna capa resumo da NF"""
+        from urllib.parse import parse_qs
+        qs = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        nf = qs.get('nf',[''])[0].strip()
+        if not nf: self._err(400,'nf obrigatorio'); return
+        p  = '%s' if IS_PG else '?'
+        try:
+            itens = exe(f"""SELECT * FROM historico_compras WHERE nf={p}""", (nf,), fetchall=True) or []
+            if not itens: self._ok({'nf': nf, 'erro': 'NF nao encontrada'}); return
+            f = itens[0]
+            # Totais
+            v_prod   = sum(it.get('vtot',0) or 0 for it in itens)
+            v_ipi    = sum((it.get('ipi_un',0) or 0)*(it.get('qtd',1) or 1) for it in itens)
+            v_st     = sum(it.get('v_st',0) or 0 for it in itens)
+            v_icms   = sum(it.get('cred_icms',0) or 0 for it in itens)
+            custo_tot= sum((it.get('custo_r',0) or 0)*(it.get('qtd',1) or 1) for it in itens)
+            cmv_br_t = sum((it.get('cmv_br',0) or 0)*(it.get('qtd',1) or 1) for it in itens)
+            cmv_pr_t = sum((it.get('cmv_pr',0) or 0)*(it.get('qtd',1) or 1) for it in itens)
+            cred_pis = custo_tot * 0.0165
+            cred_cof = custo_tot * 0.076
+            # Flags
+            tem_st      = any(it.get('tem_st') or it.get('v_st',0)>0 for it in itens)
+            tem_imp     = any(int(it.get('orig',0) or 0) in [1,2,6,7] for it in itens)
+            skus_vinc   = sum(1 for it in itens if it.get('sku'))
+            skus_total  = len(itens)
+            cfops       = list(set(it.get('cfop','') for it in itens if it.get('cfop')))
+            ncms        = list(set(it.get('ncm','') for it in itens if it.get('ncm')))[:5]
+            csts        = list(set(it.get('cst','') for it in itens if it.get('cst')))
+            # Status validação
+            status = 2 if skus_vinc == skus_total else (1 if skus_vinc > 0 else 0)
+            flags = []
+            if tem_st:   flags.append('TEM_ST')
+            if tem_imp:  flags.append('IMPORTADO')
+            if any(it.get('cst','')=='20' for it in itens): flags.append('BASE_REDUZIDA')
+            self._ok({
+                'nf': nf, 'fornecedor': f.get('fornecedor',''),
+                'data_emissao': f.get('data_emissao',''),
+                'itens_total': skus_total, 'skus_vinculados': skus_vinc,
+                'v_produtos': round(v_prod,2), 'v_ipi': round(v_ipi,2),
+                'v_st': round(v_st,2), 'v_icms_credito': round(v_icms,2),
+                'custo_total': round(custo_tot,2),
+                'cred_pis': round(cred_pis,2), 'cred_cofins': round(cred_cof,2),
+                'cred_total': round(v_icms+cred_pis+cred_cof,2),
+                'cmv_brasil_total': round(cmv_br_t,2),
+                'cmv_pr_total': round(cmv_pr_t,2),
+                'cfops': cfops, 'ncms': ncms, 'csts': csts,
+                'tem_st': tem_st, 'tem_importado': tem_imp,
+                'flags': flags,
+                'status_validacao': status,
+                'status_label': ['Não validada','Parcialmente validada','Validada'][status]
+            })
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _get_entrada_nf(self):
+        """GET /api/db/entrada-nf?nf=315065 — retorna itens da NF do historico_compras"""
+        from urllib.parse import parse_qs
+        qs  = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        nf  = qs.get('nf', [''])[0].strip()
+        p   = '%s' if IS_PG else '?'
+        try:
+            if nf:
+                rows = exe(f"""SELECT hc.*,
+                    COALESCE(hc.cst,'') as cst,
+                    COALESCE(hc.cest,'') as cest,
+                    COALESCE(hc.tem_st,0) as tem_st,
+                    COALESCE(hc.orig,0) as orig,
+                    p.familia, p.peso,
+                    CASE WHEN p.sku IS NOT NULL THEN true ELSE false END as ja_cadastrado
+                    FROM historico_compras hc
+                    LEFT JOIN produtos p ON p.sku = hc.sku
+                    WHERE hc.nf = {p}
+                    ORDER BY hc.det_num, hc.id""", (nf,), fetchall=True) or []
+            else:
+                rows = exe("""SELECT nf, fornecedor, data_emissao,
+                    COUNT(*) as itens, SUM(vtot) as valor_total,
+                    SUM(CASE WHEN sku IS NOT NULL AND sku != '' THEN 1 ELSE 0 END) as com_sku,
+                    SUM(COALESCE(tem_st,0)) as itens_st
+                    FROM historico_compras
+                    GROUP BY nf, fornecedor, data_emissao
+                    ORDER BY data_emissao DESC LIMIT 200""", fetchall=True) or []
+            self._ok(rows)
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _post_entrada_nf_salvar(self):
+        """POST /api/db/entrada-nf/salvar — salva ajustes da NF na base de produtos"""
+        p = '%s' if IS_PG else '?'
+        try:
+            d    = self._body()
+            itens = d.get('itens', [])
+            salvos = 0
+            novos  = 0
+            for it in itens:
+                sku    = str(it.get('sku', '')).strip()
+                cprod  = str(it.get('cprod', '')).strip()
+                nome   = str(it.get('nome', '')).strip()
+                ncm    = str(it.get('ncm', '')).strip()
+                cfop   = str(it.get('cfop', '')).strip()
+                origem = int(it.get('origem', 0) or 0)
+                ipi_p  = float(it.get('ipi_p', 0) or 0)
+                icms_base = float(it.get('icms_base', 12) or 12)  # alíquota real de crédito
+                v_st   = float(it.get('v_st', 0) or 0)
+                qtd    = float(it.get('qtd', 1) or 1)
+                custo  = float(it.get('custo_r', 0) or 0)
+                ipi_un = float(it.get('ipi_un', 0) or 0)
+                st_un  = v_st / max(qtd, 1)
+                # CMV Brasil com alíquota correta
+                cred_icms = custo * (icms_base / 100)
+                cred_pis  = custo * 0.0165
+                cred_cof  = custo * 0.076
+                cmv_br = custo + ipi_un + st_un - cred_icms - cred_pis - cred_cof
+                cmv_pr = cmv_br  # ajustar depois se ST
+                if sku:
+                    # Produto já existe — atualiza dados fiscais e CMV
+                    exe(f"""UPDATE produtos SET 
+                        ncm=CASE WHEN {p}!='' THEN {p} ELSE ncm END,
+                        cfop=CASE WHEN {p}!='' THEN {p} ELSE cfop END,
+                        origem={p}, ipi={p},
+                        custo={p}, custo_br={p}, custo_pr={p},
+                        updated_at=NOW()
+                        WHERE sku={p}""",
+                        (ncm, ncm, cfop, cfop, origem, ipi_p, custo, cmv_br, cmv_pr, sku))
+                    # Atualizar cprod_map
+                    if cprod:
+                        exe(f"""INSERT INTO cprod_map (cprod,sku,nome,cmv_br,cmv_pr)
+                            VALUES ({p},{p},{p},{p},{p})
+                            ON CONFLICT(cprod) DO UPDATE SET 
+                            sku=EXCLUDED.sku, cmv_br=EXCLUDED.cmv_br, cmv_pr=EXCLUDED.cmv_pr""",
+                            (cprod, sku, nome, cmv_br, cmv_pr))
+                    # Propagar peso se houver
+                    salvos += 1
+                else:
+                    # Produto novo — inserir na base
+                    if nome and cprod:
+                        new_sku = it.get('novo_sku', '').strip()
+                        if new_sku:
+                            try:
+                                exe(f"""INSERT INTO produtos 
+                                    (sku,nome,ncm,cfop,origem,ipi,custo,custo_br,custo_pr,estoque)
+                                    VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},0)
+                                    ON CONFLICT(sku) DO UPDATE SET
+                                    nome=EXCLUDED.nome, ncm=EXCLUDED.ncm,
+                                    custo=EXCLUDED.custo, custo_br=EXCLUDED.custo_br""",
+                                    (new_sku,nome,ncm,cfop,origem,ipi_p,custo,cmv_br,cmv_pr))
+                                if cprod:
+                                    exe(f"""INSERT INTO cprod_map (cprod,sku,nome,cmv_br,cmv_pr)
+                                        VALUES ({p},{p},{p},{p},{p})
+                                        ON CONFLICT(cprod) DO UPDATE SET sku=EXCLUDED.sku""",
+                                        (cprod, new_sku, nome, cmv_br, cmv_pr))
+                                novos += 1
+                            except: pass
+            self._ok({'ok': True, 'salvos': salvos, 'novos': novos})
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _get_bling_buscar_produto(self):
+        """GET /api/db/bling-buscar-produto?codigo=XXX — busca produto no Bling por código"""
+        from urllib.parse import parse_qs
+        qs   = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        cod  = qs.get('codigo', [''])[0].strip()
+        if not cod: self._err(400, 'codigo obrigatorio'); return
+        try:
+            import urllib.request as ur
+            token = _bling_token.get('access','')
+            if not token: self._err(401, 'token bling nao configurado'); return
+            url = f'https://www.bling.com.br/Api/v3/produtos?codigo={cod}&limite=5'
+            req = ur.Request(url, headers={'Authorization': f'Bearer {token}'})
+            resp = ur.urlopen(req, timeout=10)
+            import json as _j
+            data = _j.loads(resp.read())
+            prods = data.get('data', [])
+            self._ok({'produtos': prods, 'total': len(prods)})
+        except Exception as e:
+            self._err(500, str(e))
 
     def _get_sync_peso(self):
         """GET /api/sync/peso — propaga peso/dimensões de produtos para ml/shopee/yampi listings"""
