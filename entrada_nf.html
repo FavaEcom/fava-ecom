@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Entrada de NF — Fava Ecom</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;font-size:12px}
+nav{background:#1e293b;padding:10px 20px;display:flex;gap:16px;align-items:center;border-bottom:1px solid #334155;position:sticky;top:0;z-index:50}
+nav a{color:#94a3b8;text-decoration:none;font-size:13px;font-weight:600;padding:6px 12px;border-radius:6px}
+nav a:hover,nav a.ativo{background:#3b82f6;color:#fff}
+.main{max-width:100%;margin:0;padding:16px}
+
+.busca{background:#1e293b;border-radius:10px;padding:14px 18px;margin-bottom:14px;border:1px solid #334155;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.busca label{font-size:10px;color:#94a3b8;font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase}
+.busca input,.busca select{background:#0f172a;border:1px solid #475569;border-radius:6px;color:#f1f5f9;padding:7px 10px;font-size:13px}
+.busca input:focus,.busca select:focus{outline:none;border-color:#3b82f6}
+
+/* Config fiscal */
+.cfg{background:#0d1f3c;border-radius:10px;padding:12px 18px;margin-bottom:14px;border:1px solid #1d4ed8;display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.cfg-item{display:flex;flex-direction:column;gap:3px}
+.cfg-item label{font-size:10px;color:#93c5fd;font-weight:700;text-transform:uppercase}
+.cfg-item input,.cfg-item select{background:#0f172a;border:1px solid #2563eb;border-radius:5px;color:#f1f5f9;padding:5px 8px;font-size:12px;width:110px}
+.cfg-regra{font-size:11px;color:#60a5fa;line-height:1.6;padding:4px 12px;border-left:2px solid #2563eb}
+
+/* NF info */
+.nf-header{background:#1e293b;border-radius:8px;padding:12px 16px;margin-bottom:12px;border:1px solid #334155;display:flex;gap:20px;flex-wrap:wrap}
+.nf-fi label{font-size:10px;color:#64748b;display:block;text-transform:uppercase}
+.nf-fi span{font-size:13px;font-weight:700}
+
+/* Stats */
+.stats{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.stat{background:#1e293b;border-radius:7px;padding:9px 14px;border:1px solid #334155;text-align:center;min-width:100px}
+.stat-n{font-size:18px;font-weight:800;color:#3b82f6}
+.stat-n.ok{color:#22c55e}.stat-n.warn{color:#f59e0b}.stat-n.red{color:#ef4444}
+.stat-l{font-size:10px;color:#64748b;margin-top:1px}
+
+/* Tabela */
+.tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid #334155}
+table{width:100%;border-collapse:collapse;min-width:1600px;font-size:11px}
+thead th{background:#1a2335;padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:2px solid #334155;white-space:nowrap;position:sticky;top:48px;z-index:10}
+thead th.num{text-align:right}
+tbody tr{border-bottom:1px solid #0f172a}
+tbody tr:hover{background:#14202f}
+tbody tr.st{background:#1a1500}
+tbody tr.st:hover{background:#231e00}
+tbody tr.imp{background:#130d1a}
+tbody tr.imp:hover{background:#1c1326}
+tbody tr.ok-sku{background:#071411}
+td{padding:6px 8px;vertical-align:middle}
+.num{text-align:right;font-family:monospace}
+.mono{font-family:monospace}
+
+/* Badges */
+.tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;white-space:nowrap}
+.tag-st{background:#78350f;color:#fcd34d}
+.tag-imp{background:#4c1d95;color:#ddd6fe}
+.tag-nac{background:#14532d;color:#86efac}
+.tag-cst{background:#1e3a5f;color:#93c5fd}
+.tag-ok{background:#14532d;color:#86efac}
+.tag-warn{background:#78350f;color:#fcd34d}
+
+/* Inputs */
+.ei{background:#0f172a;border:1px solid #334155;border-radius:4px;color:#f1f5f9;padding:3px 6px;font-size:11px}
+.ei:focus{outline:none;border-color:#3b82f6}
+.ei-sku{border-color:#ea580c;color:#fbbf24}
+.ei-sku.ok{border-color:#22c55e;color:#86efac}
+.ei-num{width:58px;text-align:right}
+.ei-sku-w{width:90px}
+.ei-ncm{width:80px}
+
+/* CMV display */
+.cmv-br{color:#22c55e;font-weight:700;font-family:monospace}
+.cmv-pr{color:#60a5fa;font-weight:700;font-family:monospace}
+.cmv-neg{color:#ef4444}
+
+/* Botões */
+.btn{padding:7px 14px;border-radius:6px;border:none;font-size:12px;font-weight:700;cursor:pointer}
+.btn-blue{background:#3b82f6;color:#fff}.btn-blue:hover{background:#2563eb}
+.btn-green{background:#16a34a;color:#fff}.btn-green:hover{background:#15803d}
+.btn-gray{background:#334155;color:#94a3b8;font-size:11px}.btn-gray:hover{color:#fff}
+.btn-xs{padding:2px 7px;border-radius:4px;border:none;font-size:10px;font-weight:700;cursor:pointer}
+.bxs-green{background:#14532d;color:#86efac}.bxs-blue{background:#1d4ed8;color:#93c5fd}
+
+/* Barra inferior */
+.barra{position:fixed;bottom:0;left:0;right:0;background:#1e293b;border-top:2px solid #3b82f6;padding:10px 20px;display:flex;gap:10px;align-items:center;z-index:100}
+.barra-info{flex:1;font-size:12px;color:#94a3b8}
+
+/* Toast */
+.toast{position:fixed;top:60px;right:16px;background:#166534;color:#86efac;padding:10px 18px;border-radius:7px;font-size:12px;font-weight:700;z-index:200;display:none;max-width:400px}
+
+.loading{text-align:center;padding:40px;color:#475569}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/painel_fava.html">🏠 Painel</a>
+  <a href="/entrada_nf.html" class="ativo">📄 Entrada NF</a>
+  <a href="/base_produtos.html">📦 Base</a>
+  <a href="/tarefas.html">📋 Tarefas</a>
+</nav>
+<div class="main">
+
+<!-- Busca NF -->
+<div class="busca">
+  <div><label>Número da NF</label>
+    <input id="inp-nf" style="width:160px" placeholder="315065" onkeydown="if(event.key==='Enter')buscarNF()">
+  </div>
+  <button class="btn btn-blue" onclick="buscarNF()">🔍 Buscar</button>
+  <button class="btn btn-gray" onclick="listarNFs()">📋 Todas as NFs</button>
+  <div id="nf-status" style="font-size:11px;color:#64748b;align-self:center"></div>
+</div>
+
+<!-- Config Fiscal -->
+<div class="cfg">
+  <div class="cfg-item">
+    <label>ICMS Nacional (%)</label>
+    <input id="cfg-nac" type="number" value="12" step="0.5" oninput="recalc()">
+  </div>
+  <div class="cfg-item">
+    <label>ICMS Importado (%)</label>
+    <input id="cfg-imp" type="number" value="4" step="0.5" oninput="recalc()">
+  </div>
+  <div class="cfg-item">
+    <label>PIS (%)</label>
+    <input id="cfg-pis" type="number" value="1.65" step="0.01" oninput="recalc()">
+  </div>
+  <div class="cfg-item">
+    <label>COFINS (%)</label>
+    <input id="cfg-cof" type="number" value="7.6" step="0.01" oninput="recalc()">
+  </div>
+  <div class="cfg-regra">
+    📌 <strong>ICMS crédito depende do produto:</strong><br>
+    Nacional (orig 0,3,4,5,8) → 12% &nbsp;|&nbsp; Importado (orig 1,2,6,7) → 4%<br>
+    ST: CMV PR sem crédito ICMS &nbsp;|&nbsp; Base reduzida (CST 20) → usa ICMS real da nota
+  </div>
+</div>
+
+<!-- NF Header -->
+<div id="nf-header" style="display:none" class="nf-header"></div>
+
+<!-- Stats -->
+<div id="stats" class="stats" style="display:none"></div>
+
+<!-- Conteúdo -->
+<div id="conteudo"><div class="loading">Digite um número de NF e clique em Buscar.</div></div>
+</div>
+
+<!-- Barra -->
+<div class="barra" id="barra" style="display:none">
+  <div class="barra-info" id="barra-info"></div>
+  <button class="btn btn-gray" onclick="expandirTodos()">⊕ Expandir detalhes</button>
+  <button class="btn btn-green" onclick="salvarTudo()">💾 Salvar tudo na base</button>
+  <button class="btn btn-purple" style="background:#7c3aed;color:#fff" onclick="enviarFilaAnuncios()">📢 Enviar novos para fila de anúncios</button>
+  <a href="/fila_anuncios.html" class="btn" style="background:#1e293b;color:#94a3b8;text-decoration:none">🤖 Ver fila</a>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var _itens = [], _nf = '';
+
+function toast(msg, ok) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = ok === false ? '#7f1d1d' : '#166534';
+  el.style.display = 'block';
+  setTimeout(()=>el.style.display='none', 3500);
+}
+
+function cfg() {
+  return {
+    nac: parseFloat(document.getElementById('cfg-nac').value)||12,
+    imp: parseFloat(document.getElementById('cfg-imp').value)||4,
+    pis: parseFloat(document.getElementById('cfg-pis').value)||1.65,
+    cof: parseFloat(document.getElementById('cfg-cof').value)||7.6
+  };
+}
+
+function aliqIcms(orig, cst, icms_p_nota) {
+  // Base reduzida: usar ICMS real
+  if (cst === '20') return icms_p_nota;
+  var c = cfg();
+  // Importado
+  return [1,2,6,7].includes(parseInt(orig||0)) ? c.imp : c.nac;
+}
+
+function calcCMV(it, aliq_icms_override) {
+  var c = cfg();
+  var aliq = aliq_icms_override !== undefined ? aliq_icms_override : aliqIcms(it.orig, it.cst, it.icms_p||0);
+  var custo = it.custo_r || 0;
+  // CMV Brasil — sempre com ICMS crédito
+  var cmv_br = custo - custo*(aliq/100) - custo*(c.pis/100) - custo*(c.cof/100);
+  // CMV PR — sem ICMS se tem ST
+  var cmv_pr;
+  if (it.tem_st || parseInt(it.tem_st||0)) {
+    cmv_pr = custo - custo*(c.pis/100) - custo*(c.cof/100);
+  } else {
+    cmv_pr = cmv_br;
+  }
+  return {cmv_br, cmv_pr, aliq};
+}
+
+function recalc() {
+  _itens.forEach(function(it, i) {
+    var r = calcCMV(it);
+    it._cmv_br = r.cmv_br;
+    it._cmv_pr = r.cmv_pr;
+    it._aliq   = r.aliq;
+    var eBr = document.getElementById('cmvbr-'+i);
+    var ePr = document.getElementById('cmvpr-'+i);
+    var eA  = document.getElementById('aliq-'+i);
+    if(eBr) eBr.textContent = fmt(r.cmv_br);
+    if(ePr) ePr.textContent = fmt(r.cmv_pr);
+    if(eA)  eA.value = r.aliq.toFixed(2);
+  });
+  atualizarStats();
+}
+
+function fmt(v) { return 'R$ ' + (v||0).toFixed(4); }
+function fmtR(v) { return 'R$ ' + (v||0).toFixed(2); }
+
+function buscarNF() {
+  var nf = document.getElementById('inp-nf').value.trim();
+  if(!nf){toast('Digite o número da NF', false);return;}
+  _nf = nf;
+  document.getElementById('nf-status').textContent = 'Buscando...';
+  document.getElementById('conteudo').innerHTML = '<div class="loading">⏳ Carregando NF '+nf+'...</div>';
+  fetch('/api/db/entrada-nf?nf='+encodeURIComponent(nf))
+    .then(r=>r.json()).then(data=>{
+      if(!data||!data.length){
+        document.getElementById('conteudo').innerHTML='<div class="loading">NF '+nf+' não encontrada.</div>';
+        document.getElementById('nf-status').textContent='Não encontrada';
+        return;
+      }
+      _itens = data.map(function(it){
+        var r = calcCMV(it);
+        it._cmv_br = r.cmv_br;
+        it._cmv_pr = r.cmv_pr;
+        it._aliq   = r.aliq;
+        it._novo_sku = '';
+        return it;
+      });
+      renderHeader(data);
+      renderTabela();
+      atualizarStats();
+      document.getElementById('barra').style.display='flex';
+      document.getElementById('nf-status').textContent = data.length+' itens';
+    }).catch(e=>{
+      document.getElementById('conteudo').innerHTML='<div class="loading">Erro: '+e.message+'</div>';
+    });
+}
+
+function renderHeader(data) {
+  var f = data[0];
+  var el = document.getElementById('nf-header');
+  el.style.display='flex';
+  el.innerHTML = [
+    fi('NF', '#'+f.nf),
+    fi('Fornecedor', f.fornecedor||'—'),
+    fi('Data', f.data_emissao||'—'),
+    fi('CNPJ', (f.cnpj||'—')),
+    fi('Itens', data.length),
+    fi('CFOP padrão', f.cfop||'—'),
+    fi('Com SKU', '<span class="tag tag-ok">'+data.filter(d=>d.sku&&d.sku.trim()).length+'</span>'),
+    fi('Com ST', '<span class="tag tag-st">'+data.filter(d=>d.tem_st||parseInt(d.tem_st||0)).length+'</span>'),
+    fi('Importados', '<span class="tag tag-imp">'+data.filter(d=>[1,2,6,7].includes(parseInt(d.orig||0))).length+'</span>'),
+  ].join('');
+}
+function fi(l,v){return '<div class="nf-fi"><label>'+l+'</label><span>'+v+'</span></div>';}
+
+function renderTabela() {
+  var html = '<div class="tbl-wrap"><table><thead><tr>';
+  var ths = ['#','Cód Forn','Nome Produto','SKU Vinculado','NCM','CFOP','CST','CEST','Orig',
+    'Qtd','Vl Unit','IPI%','IPI Un','ICMS NF%','Aliq Cred%','ST Un','Custo Total',
+    'CMV Brasil','CMV PR','Ações'];
+  ths.forEach(h=>html+='<th'+(
+    ['Qtd','Vl Unit','IPI%','IPI Un','ICMS NF%','Aliq Cred%','ST Un','Custo Total','CMV Brasil','CMV PR'].includes(h)
+    ?' class="num"':'')+'>'+h+'</th>');
+  html+='</tr></thead><tbody>';
+
+  _itens.forEach(function(it, i) {
+    var temSku  = it.sku && it.sku.trim();
+    var temST   = it.tem_st || parseInt(it.tem_st||0);
+    var isImp   = [1,2,6,7].includes(parseInt(it.orig||0));
+    var cst     = it.cst || '';
+    var cest    = it.cest || '';
+    var cls     = temST ? 'st' : isImp ? 'imp' : temSku ? 'ok-sku' : '';
+    var custo   = it.custo_r || 0;
+    var st_un   = (it.v_st||0)/Math.max(it.qtd||1,1);
+
+    html += '<tr class="'+cls+'" id="row-'+i+'">';
+    html += '<td style="color:#475569">'+( it.det_num||i+1)+'</td>';
+    html += '<td><span class="mono" style="color:#64748b">'+(it.cprod||'—')+'</span></td>';
+    html += '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500" title="'+escHtml(it.nome||'')+'">'+escHtml((it.nome||'—').slice(0,40))+'</td>';
+    // SKU
+    if(temSku) {
+      html += '<td><span class="tag tag-ok">'+it.sku+'</span></td>';
+    } else {
+      html += '<td><input class="ei ei-sku ei-sku-w" id="sku-'+i+'" placeholder="SKU" value="'+(it._novo_sku||'')+'" oninput="onSkuInput('+i+',this)"></td>';
+    }
+    // NCM
+    html += '<td><input class="ei ei-ncm" value="'+(it.ncm||'')+'" oninput="_itens['+i+'].ncm=this.value"></td>';
+    // CFOP
+    html += '<td><span class="mono">'+(it.cfop||'—')+'</span></td>';
+    // CST
+    html += '<td>'+(cst ? '<span class="tag tag-cst">'+cst+'</span>' : '—')+'</td>';
+    // CEST
+    html += '<td><span style="font-size:10px;color:'+(cest?'#fcd34d':'#475569')+'">'+(cest||'—')+'</span></td>';
+    // Origem
+    html += '<td>'+(isImp ? '<span class="tag tag-imp">IMP</span>' : '<span class="tag tag-nac">NAC</span>')+'</td>';
+    // Números
+    html += '<td class="num">'+(it.qtd||0)+'</td>';
+    html += '<td class="num">'+fmtR(it.vunit||0)+'</td>';
+    html += '<td class="num">'+(it.ipi_p||0).toFixed(1)+'%</td>';
+    html += '<td class="num">'+fmt(it.ipi_un||0)+'</td>';
+    html += '<td class="num" style="color:#f59e0b">'+(it.icms_p||0).toFixed(2)+'%</td>';
+    // Alíquota crédito (editável)
+    html += '<td class="num"><input class="ei ei-num" id="aliq-'+i+'" type="number" value="'+it._aliq.toFixed(2)+'" step="0.5" oninput="onAliqChange('+i+',this.value)"></td>';
+    html += '<td class="num">'+(st_un>0 ? fmt(st_un) : '—')+'</td>';
+    html += '<td class="num" style="font-weight:700">'+fmt(custo)+'</td>';
+    // CMV Brasil
+    html += '<td class="num cmv-br'+(it._cmv_br<0?' cmv-neg':'')+'" id="cmvbr-'+i+'">'+fmt(it._cmv_br)+'</td>';
+    // CMV PR
+    html += '<td class="num cmv-pr'+(it._cmv_pr<0?' cmv-neg':'')+'" id="cmvpr-'+i+'">'+fmt(it._cmv_pr)+'</td>';
+    // Ações
+    html += '<td style="white-space:nowrap">';
+    html += '<button class="btn-xs bxs-green" onclick="salvarItem('+i+')" title="Salvar">💾</button> ';
+    if(!temSku) html += '<button class="btn-xs bxs-blue" onclick="buscarBling('+i+')" title="Buscar no Bling">🔍</button>';
+    html += '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('conteudo').innerHTML = html;
+}
+
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function onSkuInput(i, el) {
+  _itens[i]._novo_sku = el.value;
+  el.className = 'ei ei-sku ei-sku-w' + (el.value ? ' ok' : '');
+}
+
+function onAliqChange(i, val) {
+  var aliq = parseFloat(val)||0;
+  var it   = _itens[i];
+  var c    = cfg();
+  var custo = it.custo_r || 0;
+  var cmv_br = custo - custo*(aliq/100) - custo*(c.pis/100) - custo*(c.cof/100);
+  var cmv_pr = (it.tem_st||parseInt(it.tem_st||0))
+    ? custo - custo*(c.pis/100) - custo*(c.cof/100)
+    : cmv_br;
+  it._aliq   = aliq;
+  it._cmv_br = cmv_br;
+  it._cmv_pr = cmv_pr;
+  var eBr = document.getElementById('cmvbr-'+i);
+  var ePr = document.getElementById('cmvpr-'+i);
+  if(eBr) eBr.textContent = fmt(cmv_br);
+  if(ePr) ePr.textContent = fmt(cmv_pr);
+  atualizarStats();
+}
+
+function atualizarStats() {
+  var temSku  = _itens.filter(d=>d.sku&&d.sku.trim()).length;
+  var semSku  = _itens.length - temSku;
+  var temST   = _itens.filter(d=>d.tem_st||parseInt(d.tem_st||0)).length;
+  var isImp   = _itens.filter(d=>[1,2,6,7].includes(parseInt(d.orig||0))).length;
+  var avgBR   = _itens.reduce((s,it)=>s+(it._cmv_br||0),0) / Math.max(_itens.length,1);
+
+  document.getElementById('stats').style.display='flex';
+  document.getElementById('stats').innerHTML = [
+    st(_itens.length,'Total itens',''),
+    st(temSku,'Com SKU','ok'),
+    st(semSku,'Sem SKU',semSku>0?'warn':'ok'),
+    st(temST,'Com ST','warn'),
+    st(isImp,'Importados',''),
+    st(fmtR(avgBR),'CMV BR médio',''),
+  ].join('');
+
+  var b = document.getElementById('barra-info');
+  if(b) b.innerHTML = '<strong>'+_itens.length+' itens</strong> | '+temSku+' com SKU | '+semSku+' sem SKU | '+temST+' com ST';
+}
+function st(n,l,c){return '<div class="stat"><div class="stat-n '+c+'">'+n+'</div><div class="stat-l">'+l+'</div></div>';}
+
+function buscarBling(i) {
+  var it = _itens[i];
+  if(!it.cprod){toast('Sem código do fornecedor',false);return;}
+  fetch('/api/db/bling-buscar-produto?codigo='+encodeURIComponent(it.cprod))
+    .then(r=>r.json()).then(d=>{
+      var p = (d.produtos||[])[0];
+      if(!p){toast('Não encontrado no Bling: '+it.cprod,false);return;}
+      var sku = p.codigo||'';
+      _itens[i]._novo_sku = sku;
+      var el = document.getElementById('sku-'+i);
+      if(el){el.value=sku;el.className='ei ei-sku ei-sku-w ok';}
+      toast('Bling: '+sku+' — '+(p.nome||'').slice(0,35));
+    }).catch(()=>toast('Erro Bling',false));
+}
+
+function salvarItem(i) {
+  var it   = _itens[i];
+  var sku  = it.sku || it._novo_sku || (document.getElementById('sku-'+i)?.value||'');
+  var ncm  = it.ncm || (document.getElementById('ncm-'+i)?.value||'');
+  fetch('/api/db/entrada-nf/salvar',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({itens:[{
+      sku, novo_sku: sku, cprod: it.cprod||'', nome: it.nome||'',
+      ncm, cfop: it.cfop||'', origem: parseInt(it.orig||0),
+      ipi_p: it.ipi_p||0, icms_base: it._aliq||12,
+      v_st: it.v_st||0, qtd: it.qtd||1,
+      custo_r: it.custo_r||0, ipi_un: it.ipi_un||0,
+      tem_st: it.tem_st||0, cst: it.cst||'', cest: it.cest||'',
+      cmv_br: it._cmv_br, cmv_pr: it._cmv_pr,
+    }]})
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){
+      document.getElementById('row-'+i)?.style.setProperty('opacity','0.5');
+      toast('✓ Item '+(i+1)+' salvo');
+    }
+  }).catch(()=>toast('Erro ao salvar',false));
+}
+
+function salvarTudo() {
+  var itens = _itens.map(function(it,i){
+    return {
+      sku: it.sku||it._novo_sku||(document.getElementById('sku-'+i)?.value||''),
+      novo_sku: it.sku||it._novo_sku||(document.getElementById('sku-'+i)?.value||''),
+      cprod: it.cprod||'', nome: it.nome||'',
+      ncm: it.ncm||'', cfop: it.cfop||'',
+      origem: parseInt(it.orig||0), ipi_p: it.ipi_p||0,
+      icms_base: it._aliq||12, v_st: it.v_st||0,
+      qtd: it.qtd||1, custo_r: it.custo_r||0, ipi_un: it.ipi_un||0,
+      tem_st: it.tem_st||0, cst: it.cst||'', cest: it.cest||'',
+      cmv_br: it._cmv_br, cmv_pr: it._cmv_pr,
+    };
+  });
+  fetch('/api/db/entrada-nf/salvar',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({itens})
+  }).then(r=>r.json()).then(d=>{
+    toast('✓ '+( d.salvos||0)+' atualizados | '+(d.novos||0)+' novos');
+  }).catch(()=>toast('Erro ao salvar',false));
+}
+
+function expandirTodos(){/* futuro: mostrar painel de detalhe */}
+
+function listarNFs() {
+  document.getElementById('conteudo').innerHTML='<div class="loading">⏳ Carregando NFs...</div>';
+  document.getElementById('nf-header').style.display='none';
+  document.getElementById('stats').style.display='none';
+  fetch('/api/db/entrada-nf').then(r=>r.json()).then(data=>{
+    var html='<div class="tbl-wrap"><table><thead><tr><th>NF</th><th>Fornecedor</th><th>Data</th><th class="num">Itens</th><th class="num">Com SKU</th><th class="num">Com ST</th><th class="num">Valor Total</th><th>Ação</th></tr></thead><tbody>';
+    data.forEach(nf=>{
+      var pct = nf.itens > 0 ? Math.round((nf.com_sku/nf.itens)*100) : 0;
+      html+='<tr><td class="mono" style="font-weight:700">#'+nf.nf+'</td>';
+      html+='<td>'+(nf.fornecedor||'—').slice(0,40)+'</td>';
+      html+='<td class="mono">'+(nf.data_emissao||'—')+'</td>';
+      html+='<td class="num">'+nf.itens+'</td>';
+      html+='<td class="num"><span class="tag '+(pct===100?'tag-ok':'tag-warn')+'">'+nf.com_sku+'/'+nf.itens+'</span></td>';
+      html+='<td class="num">'+(nf.itens_st>0?'<span class="tag tag-st">'+nf.itens_st+'</span>':'—')+'</td>';
+      html+='<td class="num">'+fmtR(nf.valor_total||0)+'</td>';
+      html+='<td><button class="btn-xs bxs-blue" onclick="abrirNF(\''+nf.nf+'\')">Abrir →</button></td>';
+      html+='</tr>';
+    });
+    html+='</tbody></table></div>';
+    document.getElementById('conteudo').innerHTML=html;
+  });
+}
+
+function abrirNF(n){document.getElementById('inp-nf').value=n;buscarNF();}
+
+function enviarFilaAnuncios() {
+  var novos = _itens.filter(function(it){
+    return it.sku && it.sku.trim() && !it.ja_cadastrado;
+  }).concat(_itens.filter(function(it){
+    var sku = it.sku||it._novo_sku||(document.getElementById('sku-'+_itens.indexOf(it))?.value||'');
+    return sku && !it.sku;
+  }));
+  if(!novos.length){ toast('Nenhum produto novo para enviar', false); return; }
+  var payload = novos.map(function(it){
+    return {
+      sku: it.sku||it._novo_sku||'',
+      nome: it.nome||'', ncm: it.ncm||'',
+      cfop: it.cfop||'', origem: parseInt(it.orig||0),
+      custo_br: it._cmv_br||0, custo_pr: it._cmv_pr||0,
+      tem_st: it.tem_st||0, nf_origem: _nf, canal: 'ml'
+    };
+  });
+  fetch('/api/db/fila-anuncios',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  }).then(r=>r.json()).then(d=>{
+    toast('✓ '+( d.adicionados||0)+' adicionados à fila de anúncios');
+  }).catch(()=>toast('Erro ao enviar fila',false));
+}
+
+// Abrir direto via URL ?nf=XXX
+(function(){
+  var p = new URLSearchParams(location.search);
+  var n = p.get('nf');
+  if(n){document.getElementById('inp-nf').value=n;buscarNF();}
+})();
+</script>
+<div style="height:60px"></div>
+</body>
+</html>
