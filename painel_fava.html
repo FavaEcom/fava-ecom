@@ -552,6 +552,8 @@ function salvarCfg(){
   <div class="vtab" id="vtab-hist" onclick="setView('historico')">Histórico</div>
   <div class="vtab" id="vtab-nf" onclick="setView('nf')" style="background:rgba(16,185,129,.15);color:#065f46;font-weight:700">📄 NF Entrada</div>
   <div class="vtab" id="vtab-perg" onclick="setView('perguntas')">Perguntas</div>
+  <div class="vtab" id="vtab-tarefas" onclick="setView('tarefas')">📋 Tarefas</div>
+  <div class="vtab" id="vtab-ean" onclick="setView('ean')">🔢 EAN</div>
 </div>
 
 <!-- ── PERÍODO (só no dashboard) ── -->
@@ -7931,6 +7933,40 @@ setView = function(v){ _sv0(v); if(v==='tarefas') renderTarefas(); };
   const vt = document.querySelector('.view-tabs');
   if(vt) vt.style.alignItems = 'flex-start';
 })();
+
+<!-- ═══════════ VIEW: TAREFAS ═══════════ -->
+<div id="view-tarefas" style="display:none;flex-direction:column">
+  <div class="main">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <h2 style="margin:0;font-size:16px;color:var(--texto)">📋 Tarefas</h2>
+      <button onclick="addTarefa()" style="background:var(--azul);color:#fff;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:13px">+ Nova</button>
+    </div>
+    <div id="tarefas-lista" style="display:flex;flex-direction:column;gap:8px;min-height:200px"></div>
+  </div>
+</div>
+
+<!-- ═══════════ VIEW: EAN ═══════════ -->
+<div id="view-ean" style="display:none;flex-direction:column">
+  <div class="main">
+    <h2 style="margin:0 0 16px;font-size:16px;color:var(--texto)">🔢 Gerador EAN-13</h2>
+    <div style="background:var(--card);border-radius:10px;padding:20px;max-width:460px">
+      <div style="margin-bottom:10px">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">Prefixo (7 dígitos) — ex: 7891234</label>
+        <input id="ean-prefixo" type="text" maxlength="7" placeholder="7891234"
+          style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--borda);background:var(--bg);color:var(--texto);font-size:15px;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">SKU do produto</label>
+        <input id="ean-sku" type="text" placeholder="1562"
+          style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--borda);background:var(--bg);color:var(--texto);font-size:15px;box-sizing:border-box">
+      </div>
+      <button onclick="gerarEAN()" style="background:var(--azul);color:#fff;border:none;border-radius:6px;padding:10px;cursor:pointer;font-size:14px;width:100%;font-weight:600">Gerar EAN-13</button>
+      <div id="ean-resultado" style="margin-top:16px;font-size:28px;font-weight:700;color:var(--azul);text-align:center;letter-spacing:4px;min-height:40px"></div>
+      <div style="margin-top:4px;text-align:center;font-size:11px;color:var(--muted)" id="ean-copiado"></div>
+      <div id="ean-lista" style="margin-top:12px;display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto"></div>
+    </div>
+  </div>
+</div>
 </script>
 </body>
 </html>
