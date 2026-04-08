@@ -39,7 +39,7 @@ nav a:hover,nav a.ativo{background:#3b82f6;color:#fff}
 /* Tabela */
 .tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid #334155}
 table{width:100%;border-collapse:collapse;min-width:1600px;font-size:11px}
-thead th{background:#1a2335;padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:2px solid #334155;white-space:nowrap;position:sticky;top:40px;z-index:10}
+thead th{background:#1a2335;padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:2px solid #334155;white-space:nowrap;position:sticky;top:0;z-index:10}
 thead th.num{text-align:right}
 tbody tr{border-bottom:1px solid #0f172a}
 tbody tr:hover{background:#14202f}
@@ -122,6 +122,7 @@ td{padding:6px 8px;vertical-align:middle}
 </div>
 
 <!-- Config Fiscal -->
+<details style="margin-bottom:14px"><summary style="background:#0d1f3c;border:1px solid #1d4ed8;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:11px;color:#93c5fd;font-weight:700">⚙ Configuração Fiscal (clique para expandir)</summary>
 <div class="cfg">
   <div class="cfg-item">
     <label>ICMS Nacional (%)</label>
@@ -146,6 +147,7 @@ td{padding:6px 8px;vertical-align:middle}
   </div>
 </div>
 
+</details>
 <!-- NF Header -->
 <div id="nf-header" style="display:none" class="nf-header"></div>
 
@@ -293,7 +295,7 @@ function renderHeader(data) {
 function fi(l,v){return '<div class="nf-fi"><label>'+l+'</label><span>'+v+'</span></div>';}
 
 function renderTabela() {
-  var html = '<div class="tbl-wrap"><table><thead><tr>';
+  var html = '<div class="tbl-wrap" style="max-height:calc(100vh - 120px);overflow-y:auto;overflow-x:auto"><table><thead><tr>';
   var ths = ['#','Cód Forn','Nome Produto','SKU Vinculado','NCM','CFOP','CST','CEST','Orig',
     'Qtd','Vl Unit','IPI%','IPI Un','ICMS NF%','Aliq Cred%','ST Un','Custo Total',
     'CMV Brasil','CMV PR','Ações'];
@@ -481,7 +483,7 @@ function listarNFs() {
   document.getElementById('nf-header').style.display='none';
   document.getElementById('stats').style.display='none';
   fetch('/api/db/entrada-nf').then(r=>r.json()).then(data=>{
-    var html='<div class="tbl-wrap"><table><thead><tr><th>NF</th><th>Fornecedor</th><th>Data</th><th class="num">Itens</th><th class="num">Com SKU</th><th class="num">Com ST</th><th class="num">Valor Total</th><th>Ação</th></tr></thead><tbody>';
+    var html='<div class="tbl-wrap" style="max-height:calc(100vh - 120px);overflow-y:auto;overflow-x:auto"><table><thead><tr><th>NF</th><th>Fornecedor</th><th>Data</th><th class="num">Itens</th><th class="num">Com SKU</th><th class="num">Com ST</th><th class="num">Valor Total</th><th>Ação</th></tr></thead><tbody>';
     data.forEach(nf=>{
       var pct = nf.itens > 0 ? Math.round((nf.com_sku/nf.itens)*100) : 0;
       html+='<tr><td class="mono" style="font-weight:700">#'+nf.nf+'</td>';
