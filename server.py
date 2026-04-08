@@ -1125,6 +1125,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/capa-nf':             self._get_capa_nf,
             '/api/db/entrada-nf':         self._get_entrada_nf,
             '/api/db/bling-buscar-produto':self._get_bling_buscar_produto,
+            '/api/db/historico-cprod':      self._get_historico_cprod,
             '/api/db/apagar-nf':           self._get_apagar_nf,
             '/api/db/fila-anuncios':       self._get_fila_anuncios,
             '/api/db/status':            self._get_status,
@@ -2268,6 +2269,34 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             except: pass
             self._ok(rows)
         except Exception as e: self._err(500, str(e))
+
+    def _get_historico_cprod(self):
+        """GET /api/db/historico-cprod?cprod=6247212015 — histórico de compras por código do fornecedor"""
+        from urllib.parse import parse_qs
+        qs    = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        cprod = qs.get('cprod',[''])[0].strip()
+        sku   = qs.get('sku',[''])[0].strip()
+        p     = '%s' if IS_PG else '?'
+        try:
+            if cprod:
+                rows = exe(f"""SELECT nf, fornecedor, data_emissao, nome, cprod, sku,
+                    qtd, vunit, custo_r, cst, cest, tem_st, orig,
+                    cmv_br, cmv_pr, icms_p, v_st, ipi_p
+                    FROM historico_compras
+                    WHERE cprod={p}
+                    ORDER BY data_emissao DESC, nf DESC LIMIT 50""", (cprod,), fetchall=True) or []
+            elif sku:
+                rows = exe(f"""SELECT nf, fornecedor, data_emissao, nome, cprod, sku,
+                    qtd, vunit, custo_r, cst, cest, tem_st, orig,
+                    cmv_br, cmv_pr, icms_p, v_st, ipi_p
+                    FROM historico_compras
+                    WHERE sku={p}
+                    ORDER BY data_emissao DESC, nf DESC LIMIT 50""", (sku,), fetchall=True) or []
+            else:
+                self._err(400,'cprod ou sku obrigatorio'); return
+            self._ok(rows)
+        except Exception as e:
+            self._err(500, str(e))
 
     def _get_apagar_nf(self):
         """GET /api/db/apagar-nf?nf=315065 — apaga todos os registros de uma NF do historico"""
