@@ -1136,6 +1136,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/sync/ml-titulos':      self._sync_ml_titulos,
             '/api/sync/fix-status':      self._sync_fix_status,
             '/api/sync/taxas-ml':         self._sync_taxas_ml,
+            '/api/import/planilha':       self._import_planilha,
+            '/api/db/limpar-skus':        self._limpar_skus,
             '/api/db/campanha':           self._post_campanha,
             '/api/db/cprod-map':          self._post_cprod_map,
             '/api/db/listings-batch':     self._post_listings_batch,
@@ -2372,6 +2374,103 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             print(f'[ML-TITULOS] {atualizados} títulos atualizados')
         threading.Thread(target=_run, daemon=True).start()
         self._ok({'ok': True, 'msg': 'Atualização de títulos iniciada em background'})
+
+    def _limpar_skus(self):
+        """POST /api/db/limpar-skus — corrige SKUs com underscore e remove SKUs inválidos sem dados"""
+        try:
+            # 1) Renomear SKUs com underscore: '10-1582_' -> '10-1582'
+            rows_und = exe("""SELECT sku FROM produtos WHERE sku LIKE '%_' """, fetchall=True) or []
+            corrigidos = 0
+            for r in rows_und:
+                sku_old = r['sku']
+                sku_new = sku_old.rstrip('_')
+                if sku_new == sku_old: continue
+                try:
+                    # Verificar se o SKU novo já existe
+                    existe = exe("SELECT 1 FROM produtos WHERE sku=%s", (sku_new,), fetchone=True)
+                    if existe:
+                        exe("DELETE FROM produtos WHERE sku=%s", (sku_old,))
+                    else:
+                        exe("UPDATE produtos SET sku=%s WHERE sku=%s", (sku_new, sku_old))
+                    corrigidos += 1
+                except Exception as e:
+                    print(f'[LIMPAR] {sku_old}: {e}')
+
+            # 2) Remover produtos com SKU não-numérico e sem dados úteis
+            removidos_r = exe("""
+                DELETE FROM produtos 
+                WHERE sku ~ '[^0-9\-]' 
+                AND (custo_br = 0 OR custo_br IS NULL)
+                AND (nome = '' OR nome IS NULL)
+            """)
+            
+            # 3) Contar restantes inválidos
+            invalidos = exe("SELECT count(*) as n FROM produtos WHERE sku ~ '[^0-9\-]'", fetchone=True)
+            total = exe("SELECT count(*) as n FROM produtos", fetchone=True)
+
+            self._ok({
+                'ok': True,
+                'corrigidos_underscore': corrigidos,
+                'removidos': removidos_r,
+                'invalidos_restantes': invalidos['n'] if invalidos else 0,
+                'total_produtos': total['n'] if total else 0
+            })
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _import_planilha(self):
+        """POST /api/import/planilha — recebe JSON com lista de produtos e importa/atualiza tudo"""
+        try:
+            lista = self._body()
+            if not isinstance(lista, list): return self._err(400,'Esperado lista')
+            inseridos = 0; erros = []
+            for p in lista:
+                sku = str(p.get('sku','')).strip()
+                if not sku: continue
+                try:
+                    exe("""INSERT INTO produtos
+                        (sku,nome,marca,familia,subcategoria,fornecedor,origem,
+                         custo,custo_br,custo_pr,ipi,cred_icms,st,st_imposto,
+                         monofasico,ncm,ean,cfop,peso,largura,altura,comprimento,estoque)
+                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,0)
+                        ON CONFLICT(sku) DO UPDATE SET
+                          nome=CASE WHEN EXCLUDED.nome!='' THEN EXCLUDED.nome ELSE produtos.nome END,
+                          marca=CASE WHEN EXCLUDED.marca!='' THEN EXCLUDED.marca ELSE produtos.marca END,
+                          familia=CASE WHEN EXCLUDED.familia!='' THEN EXCLUDED.familia ELSE produtos.familia END,
+                          subcategoria=CASE WHEN EXCLUDED.subcategoria!='' THEN EXCLUDED.subcategoria ELSE produtos.subcategoria END,
+                          fornecedor=CASE WHEN EXCLUDED.fornecedor!='' THEN EXCLUDED.fornecedor ELSE produtos.fornecedor END,
+                          origem=CASE WHEN EXCLUDED.origem!='' THEN EXCLUDED.origem ELSE produtos.origem END,
+                          custo=CASE WHEN EXCLUDED.custo>0 THEN EXCLUDED.custo ELSE produtos.custo END,
+                          custo_br=CASE WHEN EXCLUDED.custo_br>0 THEN EXCLUDED.custo_br ELSE produtos.custo_br END,
+                          custo_pr=CASE WHEN EXCLUDED.custo_pr>0 THEN EXCLUDED.custo_pr ELSE produtos.custo_pr END,
+                          ipi=EXCLUDED.ipi, cred_icms=EXCLUDED.cred_icms,
+                          st=EXCLUDED.st, st_imposto=EXCLUDED.st_imposto,
+                          monofasico=EXCLUDED.monofasico,
+                          ncm=CASE WHEN EXCLUDED.ncm!='' THEN EXCLUDED.ncm ELSE produtos.ncm END,
+                          ean=CASE WHEN EXCLUDED.ean!='' THEN EXCLUDED.ean ELSE produtos.ean END,
+                          cfop=CASE WHEN EXCLUDED.cfop!='' THEN EXCLUDED.cfop ELSE produtos.cfop END,
+                          peso=CASE WHEN EXCLUDED.peso>0 THEN EXCLUDED.peso ELSE produtos.peso END,
+                          largura=CASE WHEN EXCLUDED.largura>0 THEN EXCLUDED.largura ELSE produtos.largura END,
+                          altura=CASE WHEN EXCLUDED.altura>0 THEN EXCLUDED.altura ELSE produtos.altura END,
+                          comprimento=CASE WHEN EXCLUDED.comprimento>0 THEN EXCLUDED.comprimento ELSE produtos.comprimento END,
+                          updated_at=NOW()
+                    """, (sku, p.get('nome',''), p.get('marca',''), p.get('familia',''),
+                             p.get('subcategoria',''), p.get('fornecedor',''), p.get('origem',''),
+                             float(p.get('custo',0)), float(p.get('custo_br',0)), float(p.get('custo_pr',0)),
+                             float(p.get('ipi',0)), float(p.get('cred_icms',0)),
+                             int(p.get('st',0)), float(p.get('st_imposto',0)), int(p.get('monofasico',0)),
+                             p.get('ncm',''), p.get('ean',''), p.get('cfop',''),
+                             float(p.get('peso',0)), float(p.get('largura',0)),
+                             float(p.get('altura',0)), float(p.get('comprimento',0))))
+                    inseridos += 1
+                except Exception as e:
+                    erros.append(f'{sku}:{e}')
+            # Também atualizar ml_listings.cmv via join
+            exe("""UPDATE ml_listings l SET cmv = p.custo_br
+                    FROM produtos p WHERE l.sku = p.sku AND p.custo_br > 0""")
+            self._ok({'ok':True,'inseridos':inseridos,'total':len(lista),'erros':len(erros)})
+        except Exception as e:
+            self._err(500, str(e))
 
     def _sync_taxas_ml(self):
         """POST /api/sync/taxas-ml — busca sale_fee real do ML para todos os anúncios e salva no banco"""
