@@ -172,6 +172,7 @@ td{padding:6px 8px;vertical-align:middle}
   <div class="barra-info" id="barra-info"></div>
   <button class="btn btn-gray" onclick="expandirTodos()">⊕ Expandir detalhes</button>
   <button class="btn btn-green" onclick="salvarTudo()">💾 Salvar tudo na base</button>
+  <button class="btn" style="background:#7c3aed;color:#fff" onclick="adicionarItemManual()">➕ Item manual</button>
   <button class="btn btn-purple" style="background:#7c3aed;color:#fff" onclick="enviarFilaAnuncios()">📢 Enviar novos para fila de anúncios</button>
   <a href="/fila_anuncios.html" class="btn" style="background:#1e293b;color:#94a3b8;text-decoration:none">🤖 Ver fila</a>
 </div>
@@ -323,8 +324,8 @@ function renderTabela() {
     html += '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500" title="'+escHtml(it.nome||'')+'">'+escHtml((it.nome||'—').slice(0,40))+'</td>';
     // SKU — alertas e sugestão do mapa
     if(temSku && !skuEhCprod) {
-      var extra = (skuMapeado && skuMapeado!==it.sku) ? '<br><span style="font-size:9px;color:#f59e0b">mapa:'+skuMapeado+'</span>' : '';
-      html += '<td><span class="tag tag-ok">'+it.sku+'</span>'+extra+'</td>';
+      // SKU vinculado — mostra badge mas permite editar clicando
+      html += '<td><input class="ei ei-sku ei-sku-w ei-sku.ok" id="sku-'+i+'" value="'+it.sku+'" oninput="onSkuInput('+i+',this)" style="border-color:#22c55e;color:#86efac"></td>';
     } else {
       var estilo = skuEhCprod ? 'border-color:#ef4444' : '';
       var placeholder = skuEhCprod ? 'SKU interno (não código)' : 'SKU';
@@ -531,6 +532,27 @@ function carregarCapa(nf) {
         ' | PIS R$ '+fmtR(d.cred_pis)+' | COFINS R$ '+fmtR(d.cred_cofins)+
         ' | <strong style="color:#22c55e">Total: R$ '+fmtR(d.cred_total)+'</strong>';
     }).catch(function(){});
+}
+
+function adicionarItemManual() {
+  var cprod = prompt('Código do fornecedor (cProd):','');
+  if(!cprod) return;
+  var sku   = prompt('SKU interno (ex: 2531):','');
+  var nome  = prompt('Nome do produto:','');
+  var custo = parseFloat(prompt('Custo unitário (R$):','0') || '0');
+  if(!cprod) return;
+  var item = {
+    nf: _nf, cprod: cprod, sku: sku||'', nome: nome||cprod,
+    qtd:1, vunit:custo, vtot:custo,
+    ipi_p:0, ipi_un:0, icms_p:0, custo_r:custo,
+    cmv_br: custo*(1-0.09225-0.0165-0.076),
+    cmv_pr: custo*(1-0.09225-0.0165-0.076),
+    ncm:'', cfop:'', cst:'', cest:'', tem_st:0, orig:0, v_st:0, cred_icms:0, det_num:999,
+  };
+  _itens.push(Object.assign(item, {_cmv_br:item.cmv_br, _cmv_pr:item.cmv_pr, _aliq:0}));
+  renderTabela();
+  atualizarStats();
+  toast('Item adicionado — preencha os campos e salve');
 }
 
 function enviarFilaAnuncios() {
