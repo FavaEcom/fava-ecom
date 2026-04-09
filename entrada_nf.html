@@ -133,6 +133,16 @@ td{padding:6px 8px;vertical-align:middle}
   .print-box{border-radius:0!important;padding:12px!important}
   .pm-close,.pm-btn-bar,.no-print{display:none!important}
   .pm-conf-fi input,.pm-conf-fi select{border:none!important;padding:0!important}
+  /* Página 1: retrato (capa) */
+  .pm-pagina1{page-break-after:always}
+  /* Página 2: paisagem (tabela matemática) */
+  .pm-pagina2{page-break-before:always}
+  @page{margin:12mm}
+  @page pm-landscape{size:A4 landscape;margin:8mm}
+  .pm-pagina2{-webkit-print-color-adjust:exact}
+  .pm-calc-tbl{font-size:8px!important}
+  .pm-calc-tbl th{font-size:7px!important;padding:3px 4px!important}
+  .pm-calc-tbl td{padding:2px 4px!important}
 }
 </style>
 </head>
@@ -680,8 +690,9 @@ function imprimirCapa() {
           novos.map(function(i){return '<span style="margin:4px;display:inline-block;background:#fff;border:1px solid #f59e0b;padding:2px 8px;border-radius:3px;font-size:11px"><b>'+i.sku+'</b> — '+i.nome?.substring(0,30)+'</span>';}).join('')+
         '</div>' : '')+
 
-      // Tabela matemática de todos os itens
-      '<div class="pm-sec"><h3>🔢 Matemática dos Produtos ('+d.itens_total+' itens)</h3>'+
+      // Tabela matemática — página 2 (paisagem)
+      '<div class="pm-pagina1"></div>'+
+      '<div class="pm-pagina2 pm-sec" style="width:100%;overflow-x:auto"><h3>🔢 Matemática dos Produtos ('+d.itens_total+' itens) — orientação paisagem na impressão</h3>'+
       '<table class="pm-calc-tbl"><thead><tr>'+
         '<th>#</th><th>SKU</th><th>Produto</th>'+
         '<th class="r">Qtd</th><th class="r">V.Unit</th>'+
@@ -714,6 +725,13 @@ function imprimirCapa() {
     document.getElementById('print-content').innerHTML = html;
     document.getElementById('print-modal').classList.add('open');
   }).catch(function(e){alert('Erro: '+e.message);});
+}
+
+function imprimirSoPagina1() {
+  var p2 = document.querySelector('.pm-pagina2');
+  if(p2) { p2.dataset.origDisplay = p2.style.display; p2.style.display='none'; }
+  window.print();
+  setTimeout(function(){ if(p2) p2.style.display = p2.dataset.origDisplay||''; }, 1000);
 }
 
 function renderBoletos(bls) {
@@ -830,7 +848,8 @@ function enviarFilaAnuncios() {
     <button class="pm-close no-print" onclick="document.getElementById('print-modal').classList.remove('open')">✕ Fechar</button>
     <div id="print-content"></div>
     <div class="pm-btn-bar no-print">
-      <button class="pm-btn" style="background:#000;color:#fff" onclick="window.print()">🖨️ Imprimir</button>
+      <button class="pm-btn" style="background:#000;color:#fff" onclick="imprimirSoPagina1()">🖨️ Capa (1 pág)</button>
+      <button class="pm-btn" style="background:#475569;color:#fff" onclick="window.print()">🖨️ Completo (2 págs)</button>
       <button class="pm-btn" style="background:#16a34a;color:#fff" onclick="salvarConferencia()">💾 Salvar conferência</button>
       <button class="pm-btn" style="background:#2563eb;color:#fff" onclick="salvarBoletos()">💾 Salvar boletos</button>
     </div>
