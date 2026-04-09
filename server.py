@@ -240,6 +240,8 @@ def criar_tabelas():
                 qtd REAL DEFAULT 1,
                 fonte TEXT DEFAULT 'auto',
                 PRIMARY KEY (sku_componente, sku_kit))""",
+            """ALTER TABLE kits_mapa ADD COLUMN IF NOT EXISTS qtd_comp NUMERIC DEFAULT 1""",
+            """ALTER TABLE kits_mapa ADD COLUMN IF NOT EXISTS nome_comp TEXT DEFAULT ''""",
             """CREATE TABLE IF NOT EXISTS pedidos_pc (
                 id TEXT PRIMARY KEY,
                 numero TEXT, data TEXT, canal TEXT, uf TEXT,
@@ -1158,6 +1160,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/capa-nf':             self._get_capa_nf,
             '/api/db/entrada-nf':         self._get_entrada_nf,
             '/api/db/bling-buscar-produto':self._get_bling_buscar_produto,
+            '/api/db/kits':                 self._get_kits,
+            '/api/db/kit-calcular':         self._get_kit_calcular,
+            '/api/sync/bling-peso':         self._get_sync_bling_peso,
             '/api/db/boletos':              self._get_boletos,
             '/api/db/conferencia':          self._get_conferencia,
             '/api/whatsapp/webhook':        self._post_whatsapp_webhook,
@@ -1167,6 +1172,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/apagar-nf':           self._get_apagar_nf,
             '/api/db/fila-anuncios':       self._get_fila_anuncios,
             '/api/db/status':            self._get_status,
+            '/api/minha-ip':             self._get_minha_ip,
             '/api/db/pedidos-pc':         self._get_pedidos_pc,
             '/api/cmv-cache':            self._get_cmv_compat,
             '/api/sync/now':             self._sync_now,
@@ -1194,6 +1200,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         clean = self.path.split('?')[0]
         routes = {
+            '/api/db/kits':                 self._post_kit_salvar,
             '/api/db/boletos-salvar':       self._post_boletos_salvar,
             '/api/db/conferencia-salvar':   self._post_conferencia_salvar,
             '/api/db/produto':            self._post_produto,
@@ -1911,6 +1918,149 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     except: r['itens'] = []
             self._ok(rows)
         except Exception as e: self._err(500, str(e))
+
+    def _get_kits(self):
+        """GET /api/db/kits — lista todos os kits"""
+        p = '%s' if IS_PG else '?'
+        try:
+            rows = exe(f"""SELECT k.sku_kit, k.sku_comp, k.qtd_comp, k.nome_comp,
+                p.custo_br as cmv_br_comp, p.custo_pr as cmv_pr_comp,
+                p.peso as peso_comp, p.ipi as ipi_comp, p.cst_padrao as cst_comp
+                FROM kits_mapa k LEFT JOIN produtos p ON p.sku=k.sku_comp
+                ORDER BY k.sku_kit, k.id""", fetchall=True) or []
+            # Agrupar por kit
+            kits = {}
+            for r in rows:
+                sk = r['sku_kit']
+                if sk not in kits:
+                    kits[sk] = {'sku_kit': sk, 'componentes': []}
+                kits[sk]['componentes'].append({
+                    'sku': r['sku_comp'], 'qtd': r['qtd_comp'],
+                    'nome': r['nome_comp'],
+                    'cmv_br': r['cmv_br_comp'] or 0,
+                    'cmv_pr': r['cmv_pr_comp'] or 0,
+                    'peso': r['peso_comp'] or 0,
+                    'ipi': r['ipi_comp'] or 0,
+                })
+            self._ok(list(kits.values()))
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _get_kit_calcular(self):
+        """GET /api/db/kit-calcular?itens=SKU:QTD,SKU:QTD — calcula CMV/peso do kit"""
+        from urllib.parse import parse_qs
+        qs = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        itens_str = qs.get('itens', [''])[0].strip()
+        p = '%s' if IS_PG else '?'
+        try:
+            pares = [x.split(':') for x in itens_str.split(',') if ':' in x]
+            skus = [par[0].strip() for par in pares]
+            qtds = {par[0].strip(): float(par[1]) for par in pares}
+            if not skus: self._ok({}); return
+            placeholders = ','.join([p]*len(skus))
+            prods = exe(f"SELECT sku,nome,custo_br,custo_pr,peso,ipi,cst_padrao,tem_st,origem FROM produtos WHERE sku IN ({placeholders})", skus, fetchall=True) or []
+            prods_map = {pr['sku']: pr for pr in prods}
+            total_cmv_br = total_cmv_pr = total_peso = 0
+            ipi_vals = []; cst_vals = []; orig_vals = []; nao_encontrados = []
+            componentes = []
+            for sku in skus:
+                qtd = qtds.get(sku, 1)
+                pr = prods_map.get(sku)
+                if not pr: nao_encontrados.append(sku); continue
+                total_cmv_br += (pr['custo_br'] or 0) * qtd
+                total_cmv_pr += (pr['custo_pr'] or 0) * qtd
+                total_peso   += (pr['peso'] or 0) * qtd
+                ipi_vals.append(pr['ipi'] or 0)
+                if pr['cst_padrao']: cst_vals.append(pr['cst_padrao'])
+                orig_vals.append(int(pr['origem'] or 0))
+                componentes.append({'sku': sku, 'qtd': qtd, 'nome': pr['nome'], 'cmv_br': pr['custo_br'] or 0, 'cmv_pr': pr['custo_pr'] or 0, 'peso': pr['peso'] or 0})
+            media_ipi  = round(sum(ipi_vals)/max(len(ipi_vals),1), 4)
+            cst_kit    = max(set(cst_vals), key=cst_vals.count) if cst_vals else '00'
+            orig_kit   = 0 if all(o==0 for o in orig_vals) else (1 if any(o in [1,2,6,7] for o in orig_vals) else 0)
+            self._ok({'cmv_br': round(total_cmv_br,4), 'cmv_pr': round(total_cmv_pr,4),
+                'peso': round(total_peso,4), 'media_ipi': media_ipi,
+                'cst_kit': cst_kit, 'origem_kit': orig_kit,
+                'componentes': componentes, 'nao_encontrados': nao_encontrados})
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _post_kit_salvar(self):
+        """POST /api/db/kits — salva kit na base (produtos + kits_mapa)"""
+        p = '%s' if IS_PG else '?'
+        try:
+            d = self._body()
+            sku_kit  = str(d.get('sku_kit','') or '').strip()
+            nome_kit = str(d.get('nome_kit','') or '').strip()
+            familia  = str(d.get('familia','KIT') or 'KIT').strip()
+            componentes = d.get('componentes', [])
+            if not sku_kit or not componentes:
+                self._err(400, 'sku_kit e componentes obrigatorios'); return
+            cmv_br   = float(d.get('cmv_br', 0) or 0)
+            cmv_pr   = float(d.get('cmv_pr', 0) or 0)
+            peso     = float(d.get('peso', 0) or 0)
+            media_ipi = float(d.get('media_ipi', 0) or 0)
+            cst_kit  = str(d.get('cst_kit','00') or '00')
+            origem   = int(d.get('origem_kit', 0) or 0)
+            # Salvar produto kit
+            exe(f"""INSERT INTO produtos (sku,nome,familia,custo,custo_br,custo_pr,peso,ipi,cst_padrao,origem,estoque)
+                VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},0)
+                ON CONFLICT(sku) DO UPDATE SET
+                nome=EXCLUDED.nome, familia=EXCLUDED.familia,
+                custo_br=EXCLUDED.custo_br, custo_pr=EXCLUDED.custo_pr,
+                peso=EXCLUDED.peso, ipi=EXCLUDED.ipi, updated_at=NOW()""",
+                (sku_kit, nome_kit, familia, cmv_br, cmv_br, cmv_pr, peso, media_ipi, cst_kit, origem))
+            # Apagar composição antiga e reinserir
+            exe(f"DELETE FROM kits_mapa WHERE sku_kit={p}", (sku_kit,))
+            for comp in componentes:
+                sku_c = str(comp.get('sku','')).strip()
+                qtd_c = float(comp.get('qtd',1))
+                nome_c = str(comp.get('nome','')).strip()
+                if sku_c:
+                    exe(f"""INSERT INTO kits_mapa (sku_kit,sku_comp,qtd_comp,nome_comp)
+                        VALUES ({p},{p},{p},{p})""", (sku_kit, sku_c, qtd_c, nome_c))
+            self._ok({'ok': True, 'sku_kit': sku_kit})
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _get_sync_bling_peso(self):
+        """GET /api/sync/bling-peso — importa peso/dimensoes dos produtos do Bling"""
+        global _bling_token
+        p = '%s' if IS_PG else '?'
+        try:
+            if not _bling_token:
+                self._err(400, 'Token Bling nao configurado'); return
+            import urllib.request, json as _json
+            atualizados = 0
+            pagina = 1
+            while True:
+                url = f'https://www.bling.com.br/Api/v3/produtos?pagina={pagina}&limite=100&tipo=P'
+                req = urllib.request.Request(url, headers={'Authorization': f'Bearer {_bling_token}'})
+                try:
+                    r = urllib.request.urlopen(req, timeout=20)
+                    dados = _json.loads(r.read())
+                except: break
+                prods = dados.get('data', [])
+                if not prods: break
+                for pr in prods:
+                    sku  = str(pr.get('codigo','') or '').strip()
+                    peso = float(pr.get('pesoLiquido', 0) or pr.get('pesoBruto', 0) or 0)
+                    larg = float(pr.get('largura', 0) or 0)
+                    alt  = float(pr.get('altura', 0) or 0)
+                    comp = float(pr.get('profundidade', 0) or 0)
+                    if sku and (peso > 0 or larg > 0 or alt > 0 or comp > 0):
+                        exe(f"""UPDATE produtos SET
+                            peso=CASE WHEN {p}>0 THEN {p} ELSE peso END,
+                            largura=CASE WHEN {p}>0 THEN {p} ELSE largura END,
+                            altura=CASE WHEN {p}>0 THEN {p} ELSE altura END,
+                            comprimento=CASE WHEN {p}>0 THEN {p} ELSE comprimento END
+                            WHERE sku={p}""",
+                            (peso,peso, larg,larg, alt,alt, comp,comp, sku))
+                        atualizados += 1
+                if len(prods) < 100: break
+                pagina += 1
+            self._ok({'ok': True, 'atualizados': atualizados, 'paginas': pagina})
+        except Exception as e:
+            self._err(500, str(e))
 
     def _get_boletos(self):
         try: self._ok(exe("SELECT * FROM boletos ORDER BY vencimento ASC LIMIT 300", fetchall=True))
@@ -3028,6 +3178,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             """
             sugestoes = exe(sql, (familia, sku), fetchall=True) or []
             self._ok({'sku_base': sku, 'nome_base': base.get('nome',''), 'familia': familia, 'sugestoes': sugestoes})
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _get_minha_ip(self):
+        """GET /api/minha-ip — IP publico do servidor Railway"""
+        try:
+            import urllib.request as _ur
+            ip = _ur.urlopen('https://api.ipify.org', timeout=5).read().decode().strip()
+            self._ok({'ip': ip})
         except Exception as e:
             self._err(500, str(e))
 
