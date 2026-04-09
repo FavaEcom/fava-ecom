@@ -154,9 +154,7 @@ def criar_tabelas():
                     SELECT 1 FROM pg_constraint 
                     WHERE conname = 'uq_historico_nf_det_sku'
                 ) THEN
-                    ALTER TABLE historico_compras 
-                    ADD CONSTRAINT uq_historico_nf_det_sku 
-                    UNIQUE (nf, det_num, sku);
+                    ALTER TABLE historico_compras DROP CONSTRAINT IF EXISTS uq_historico_nf_det_sku;
                 END IF;
             EXCEPTION WHEN others THEN NULL;
             END $$""",
@@ -165,6 +163,8 @@ def criar_tabelas():
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS orig INTEGER DEFAULT 0""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS cred_icms REAL DEFAULT 0""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS det_num INTEGER DEFAULT 0""",
+            """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS tipo TEXT DEFAULT 'compra'""",
+            """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS cnpj_emit TEXT DEFAULT ''""",
             """CREATE TABLE IF NOT EXISTS webhook_log (
                 id SERIAL PRIMARY KEY,
                 event_id TEXT,
@@ -1160,6 +1160,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/capa-nf':             self._get_capa_nf,
             '/api/db/entrada-nf':         self._get_entrada_nf,
             '/api/db/bling-buscar-produto':self._get_bling_buscar_produto,
+            '/api/db/nfs-existentes':       self._get_nfs_existentes,
             '/api/db/kits':                 self._get_kits,
             '/api/db/kit-calcular':         self._get_kit_calcular,
             '/api/sync/bling-peso':         self._get_sync_bling_peso,
@@ -1918,6 +1919,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     except: r['itens'] = []
             self._ok(rows)
         except Exception as e: self._err(500, str(e))
+
+    def _get_nfs_existentes(self):
+        """GET /api/db/nfs-existentes — lista todas as NFs que já existem no historico"""
+        try:
+            rows = exe("SELECT DISTINCT nf FROM historico_compras ORDER BY nf", fetchall=True) or []
+            self._ok([r['nf'] for r in rows])
+        except Exception as e:
+            self._err(500, str(e))
 
     def _get_kits(self):
         """GET /api/db/kits — lista todos os kits"""
@@ -4024,14 +4033,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     exe(f"""INSERT INTO historico_compras
                         (nf,fornecedor,data_emissao,sku,nome,qtd,vunit,vtot,
                          ipi_p,ipi_un,icms_p,cred_pc,custo_r,cmv_br,cmv_pr,
-                         ncm,cfop,v_st,cred_icms,det_num,cprod,cst,cest,tem_st,orig)
-                        VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})""",
+                         ncm,cfop,v_st,cred_icms,det_num,cprod,cst,cest,tem_st,orig,tipo,cnpj_emit)
+                        VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})""",
                         (nf,forn,dt,sku,nome,qtd,vunit,vtot,
                          ipi_p,ipi_un,icms_p,0,custo_r,cmv_br,cmv_pr,
-                         ncm,cfop,v_st,cred_icms,det_num,cprod_val,cst,cest,tem_st,orig))
+                         ncm,cfop,v_st,cred_icms,det_num,cprod_val,cst,cest,tem_st,orig,
+                         str(row.get('tipo','compra') or 'compra'),
+                         str(row.get('cnpj_emit','') or '')))
                     inseridos += 1
                 except Exception as ei:
-                    pass  # continua próximo item
+                    continue  # item com erro, pula
 
             self._ok({'ok': True, 'inseridos': inseridos})
         except Exception as e:
