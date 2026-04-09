@@ -923,6 +923,14 @@ def sync_ml_listings():
     if not all_ids:
         print('[ML] Nenhum anúncio encontrado'); return 0
     print(f'[ML] {len(all_ids)} anúncios — buscando detalhes...')
+
+    # Cache de SKUs válidos da nossa base — só aceita seller_sku que existir aqui
+    try:
+        skus_validos = set(r['sku'] for r in query('SELECT sku FROM produtos'))
+        print(f'[ML] {len(skus_validos)} SKUs válidos carregados para validação')
+    except:
+        skus_validos = set()
+
     salvos = 0
     for i in range(0, len(all_ids), 20):
         lote = ','.join(all_ids[i:i+20])
@@ -933,7 +941,11 @@ def sync_ml_listings():
             it = x.get('body', {})
             iid = it.get('id','')
             if not iid: continue
-            sku       = str(it.get('seller_sku','') or '').strip()
+            # Validar seller_sku — só usa se existir na nossa base de produtos
+            raw_sku = str(it.get('seller_sku','') or '').strip()
+            sku = raw_sku if (raw_sku and raw_sku in skus_validos) else ''
+            if raw_sku and not sku:
+                print(f'[ML] {iid}: seller_sku "{raw_sku}" não é SKU interno — ignorado')
             titulo    = (it.get('title','') or '').strip()
             preco     = float(it.get('price') or 0)
             sale_fee  = float(it.get('sale_fee') or 0)
@@ -949,13 +961,17 @@ def sync_ml_listings():
             alt_cm   = float((dims.get('height') or {}).get('value') or 0)
             comp_cm  = float((dims.get('length') or {}).get('value') or 0)
             try:
-                c = ('ON CONFLICT(id) DO UPDATE SET sku=EXCLUDED.sku,titulo=EXCLUDED.titulo,'
-                     'preco=EXCLUDED.preco,sale_fee=EXCLUDED.sale_fee,listing_type=EXCLUDED.listing_type,'
-                     'free_shipping=EXCLUDED.free_shipping,status=EXCLUDED.status,'
+                c = ('ON CONFLICT(id) DO UPDATE SET '
+                     'sku=CASE WHEN EXCLUDED.sku!=\'\' THEN EXCLUDED.sku ELSE ml_listings.sku END,'
+                     'titulo=EXCLUDED.titulo,preco=EXCLUDED.preco,sale_fee=EXCLUDED.sale_fee,'
+                     'listing_type=EXCLUDED.listing_type,free_shipping=EXCLUDED.free_shipping,'
+                     'status=EXCLUDED.status,'
                      'peso=EXCLUDED.peso,largura=EXCLUDED.largura,altura=EXCLUDED.altura,comprimento=EXCLUDED.comprimento') if IS_PG else \
-                    ('ON CONFLICT(id) DO UPDATE SET sku=excluded.sku,titulo=excluded.titulo,'
-                     'preco=excluded.preco,sale_fee=excluded.sale_fee,listing_type=excluded.listing_type,'
-                     'free_shipping=excluded.free_shipping,status=excluded.status,'
+                    ('ON CONFLICT(id) DO UPDATE SET '
+                     "sku=CASE WHEN excluded.sku!='' THEN excluded.sku ELSE ml_listings.sku END,"
+                     'titulo=excluded.titulo,preco=excluded.preco,sale_fee=excluded.sale_fee,'
+                     'listing_type=excluded.listing_type,free_shipping=excluded.free_shipping,'
+                     'status=excluded.status,'
                      'peso=excluded.peso,largura=excluded.largura,altura=excluded.altura,comprimento=excluded.comprimento')
                 dt_val = start_time if start_time else None
                 if IS_PG:
@@ -1223,6 +1239,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/cmv-cache':            self._get_cmv_compat,
             '/api/sync/now':             self._sync_now,
             '/api/sync/ml-listings':     self._sync_ml_listings_now,
+            '/api/db/historico-fix-sku': self._historico_fix_sku,
             '/api/sync/bling-anuncios':  self._sync_bling_anuncios,
             '/api/sync/yampi':           self._sync_yampi,
             '/api/db/limpar-ml':         self._post_limpar_ml,
@@ -3635,6 +3652,23 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         threading.Thread(target=sync_all, daemon=True).start()
         self._ok({'ok':True,'msg':'Sync iniciado'})
 
+
+    def _historico_fix_sku(self):
+        """GET /api/db/historico-fix-sku — retroage cprod_map em todos os historico com sku vazio."""
+        try:
+            p = '%s' if IS_PG else '?'
+            # Para cada cprod_map com sku preenchido, atualiza historico_compras
+            mapa = query('SELECT cprod, sku FROM cprod_map WHERE sku IS NOT NULL AND sku != ''')
+            total = 0
+            for row in mapa:
+                cprod = row['cprod']; sku = row['sku']
+                ret = exe(f"UPDATE historico_compras SET sku={p} WHERE cprod={p} AND (sku IS NULL OR sku='')",
+                          (sku, cprod))
+                n = ret.rowcount if hasattr(ret,'rowcount') else 0
+                total += n
+            self._ok({'ok': True, 'atualizados': total,
+                      'msg': f'{total} registros de historico_compras atualizados com SKU'})
+        except Exception as e: self._err(500, str(e))
     def _sync_ml_listings_now(self):
         """GET /api/sync/ml-listings — força sync dos anúncios ML em background."""
         if not _ml_token.get('access'):
@@ -4301,11 +4335,21 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 if not sku: continue
                 exe(f"INSERT INTO cprod_map (cprod,sku,nome,cmv_br,cmv_pr) VALUES ({qmark(5)}) {c}",
                     (cprod,sku,nome,cmv_br,cmv_pr))
+                # ★ Retroagir: atualizar historico_compras com sku vazio que têm esse cprod
+                try:
+                    p = '%s' if IS_PG else '?'
+                    ret = exe(f"UPDATE historico_compras SET sku={p} WHERE cprod={p} AND (sku IS NULL OR sku='')",
+                              (sku, cprod))
+                    atualizados = ret.rowcount if hasattr(ret,'rowcount') else 0
+                    if atualizados:
+                        print(f'[cprod_map] {cprod}→{sku}: {atualizados} registros historico atualizados')
+                except Exception as er:
+                    print(f'[cprod_map] retroage erro: {er}')
                 # Atualizar fornecedor + nome no produtos
                 try:
-                    exe("UPDATE produtos SET fornecedor=%s WHERE sku=%s AND (fornecedor IS NULL OR fornecedor='')", (cprod, sku))
+                    exe(f"UPDATE produtos SET fornecedor={p} WHERE sku={p} AND (fornecedor IS NULL OR fornecedor='')", (cprod, sku))
                     if nome:
-                        exe("UPDATE produtos SET nome=%s WHERE sku=%s AND (nome IS NULL OR nome='')", (nome, sku))
+                        exe(f"UPDATE produtos SET nome={p} WHERE sku={p} AND (nome IS NULL OR nome='')", (nome, sku))
                 except: pass
                 n += 1
             self._ok({'ok': True, 'n': n})
