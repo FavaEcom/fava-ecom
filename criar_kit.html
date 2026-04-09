@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Criar Kit — Fava Ecom</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;font-size:13px}
+nav{background:#1e293b;padding:6px 16px;display:flex;gap:8px;align-items:center;border-bottom:1px solid #334155;position:sticky;top:0;z-index:50;height:40px}
+nav a{color:#94a3b8;text-decoration:none;font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px}
+nav a:hover,nav a.ativo{background:#3b82f6;color:#fff}
+.main{max-width:1100px;margin:0 auto;padding:20px}
+h1{font-size:18px;font-weight:700;margin-bottom:18px;color:#f1f5f9}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.card{background:#1e293b;border-radius:10px;border:1px solid #334155;padding:18px}
+.card h2{font-size:13px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
+label{font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px}
+input,select{background:#0f172a;border:1px solid #475569;border-radius:6px;color:#f1f5f9;padding:7px 10px;font-size:13px;width:100%}
+input:focus,select:focus{outline:none;border-color:#3b82f6}
+.campo{margin-bottom:12px}
+.btn{padding:8px 16px;border-radius:6px;border:none;font-size:12px;font-weight:700;cursor:pointer}
+.btn-blue{background:#3b82f6;color:#fff}.btn-blue:hover{background:#2563eb}
+.btn-green{background:#16a34a;color:#fff}.btn-green:hover{background:#15803d}
+.btn-red{background:#dc2626;color:#fff}.btn-red:hover{background:#b91c1c}
+.btn-gray{background:#334155;color:#94a3b8}.btn-gray:hover{color:#fff}
+.btn-sm{padding:4px 10px;font-size:11px}
+
+/* Busca produto */
+.busca-row{display:flex;gap:8px;margin-bottom:12px}
+.busca-row input{flex:1}
+.resultado-busca{background:#0f172a;border:1px solid #334155;border-radius:6px;max-height:200px;overflow-y:auto;display:none}
+.rb-item{padding:8px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1e293b}
+.rb-item:hover{background:#1e293b}
+.rb-sku{color:#94a3b8;font-size:11px;font-family:monospace}
+.rb-nome{font-size:12px;color:#e2e8f0}
+.rb-cmv{color:#22c55e;font-size:11px;font-family:monospace}
+
+/* Tabela componentes */
+.tbl-comp{width:100%;border-collapse:collapse;margin-top:8px}
+.tbl-comp th{background:#0f172a;padding:7px 8px;text-align:left;font-size:10px;color:#64748b;text-transform:uppercase;border-bottom:1px solid #334155}
+.tbl-comp td{padding:7px 8px;border-bottom:1px solid #1e293b;vertical-align:middle}
+.tbl-comp .r{text-align:right;font-family:monospace}
+.qtd-input{width:60px;text-align:center;padding:4px 6px;font-size:12px}
+
+/* Resumo */
+.resumo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.kpi{background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px 14px;text-align:center}
+.kpi-n{font-size:20px;font-weight:800;color:#3b82f6}
+.kpi-n.verde{color:#22c55e}.kpi-n.azul{color:#60a5fa}.kpi-n.amarelo{color:#f59e0b}
+.kpi-l{font-size:10px;color:#64748b;margin-top:2px}
+
+.toast{position:fixed;top:60px;right:16px;background:#166534;color:#86efac;padding:10px 18px;border-radius:7px;font-size:12px;font-weight:700;z-index:200;display:none}
+.empty{text-align:center;padding:24px;color:#475569;font-size:12px}
+
+/* Kits existentes */
+.kit-item{background:#0f172a;border:1px solid #334155;border-radius:6px;padding:12px;margin-bottom:8px}
+.kit-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.kit-sku{font-family:monospace;font-weight:700;color:#3b82f6;font-size:14px}
+.kit-nome{color:#e2e8f0;font-size:12px}
+.comp-list{display:flex;flex-wrap:wrap;gap:6px}
+.comp-tag{background:#1e293b;border:1px solid #334155;border-radius:4px;padding:3px 8px;font-size:11px}
+.comp-qtd{color:#f59e0b;font-weight:700}
+.comp-sku{color:#60a5fa;font-family:monospace}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/painel_fava.html">🏠 Painel</a>
+  <a href="/base_produtos.html">📦 Base</a>
+  <a href="/gestor_anuncios.html">📢 Anúncios</a>
+  <a href="/criar_kit.html" class="ativo">🧩 Kits</a>
+  <a href="/entrada_nf.html">📋 Entrada NF</a>
+  <a href="/calculadora_fava.html">🧮 Calculadora</a>
+</nav>
+<div class="main">
+<h1>🧩 Criador de Kits</h1>
+
+<div class="grid2">
+  <!-- Coluna esquerda: criar kit -->
+  <div>
+    <div class="card">
+      <h2>Novo Kit</h2>
+
+      <div class="campo">
+        <label>SKU do Kit</label>
+        <input id="kit-sku" placeholder="Ex: K-1562-1711" oninput="verificarSkuKit()">
+        <div id="sku-aviso" style="font-size:10px;margin-top:3px;color:#f59e0b;display:none">⚠️ SKU já existe na base</div>
+      </div>
+      <div class="campo">
+        <label>Nome do Kit</label>
+        <input id="kit-nome" placeholder="Ex: Kit Pulverizador Completo">
+      </div>
+      <div class="campo">
+        <label>Família</label>
+        <input id="kit-familia" value="KIT">
+      </div>
+
+      <div class="campo" style="margin-top:16px">
+        <label>Adicionar Produto</label>
+        <div class="busca-row">
+          <input id="busca-inp" placeholder="SKU ou nome do produto..." oninput="buscarProduto(this.value)" onkeydown="if(event.key==='Enter')adicionarPrimeiro()">
+          <input id="busca-qtd" type="number" value="1" min="0.001" step="0.001" style="width:70px" placeholder="Qtd">
+          <button class="btn btn-blue" onclick="adicionarPrimeiro()">+ Add</button>
+        </div>
+        <div class="resultado-busca" id="resultado-busca"></div>
+      </div>
+
+      <!-- Tabela de componentes -->
+      <table class="tbl-comp" id="tbl-comp">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Produto</th>
+            <th class="r">Qtd</th>
+            <th class="r">CMV BR un</th>
+            <th class="r">Peso un</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody-comp">
+          <tr><td colspan="6" class="empty">Nenhum componente adicionado</td></tr>
+        </tbody>
+      </table>
+
+      <!-- Resumo calculado -->
+      <div class="resumo" id="resumo" style="display:none">
+        <div class="kpi"><div class="kpi-n verde" id="r-cmvbr">R$ 0</div><div class="kpi-l">CMV Brasil Total</div></div>
+        <div class="kpi"><div class="kpi-n azul" id="r-cmvpr">R$ 0</div><div class="kpi-l">CMV PR Total</div></div>
+        <div class="kpi"><div class="kpi-n amarelo" id="r-peso">0 kg</div><div class="kpi-l">Peso Embalagem</div></div>
+        <div class="kpi"><div class="kpi-n" id="r-ipi">0%</div><div class="kpi-l">IPI Médio</div></div>
+      </div>
+
+      <div style="margin-top:16px;display:flex;gap:8px">
+        <button class="btn btn-green" onclick="salvarKit()" id="btn-salvar">✅ Criar Kit</button>
+        <button class="btn btn-gray" onclick="limparForm()">🗑️ Limpar</button>
+        <button class="btn btn-gray btn-sm" onclick="sincBlingPeso()" style="margin-left:auto" title="Importar peso e dimensões do Bling">⚖️ Sync Peso Bling</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Coluna direita: kits existentes -->
+  <div>
+    <div class="card">
+      <h2>Kits Cadastrados <span id="kits-count" style="color:#3b82f6;font-size:12px"></span></h2>
+      <input id="filtro-kits" placeholder="🔍 Filtrar kits..." oninput="filtrarKits(this.value)" style="margin-bottom:12px">
+      <div id="lista-kits"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var _componentes = []; // {sku, nome, qtd, cmv_br, cmv_pr, peso, ipi}
+var _todos_produtos = [];
+var _todos_kits = [];
+
+function toast(msg, ok) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = ok===false ? '#7f1d1d' : '#166534';
+  el.style.display = 'block';
+  setTimeout(()=>el.style.display='none', 3000);
+}
+function f2(v){ return 'R$ '+Number(v||0).toFixed(2).replace('.',','); }
+function f4(v){ return Number(v||0).toFixed(4); }
+
+// Carregar todos os produtos para busca
+function carregarProdutos() {
+  fetch('/api/db/produtos').then(r=>r.json()).then(d=>{
+    _todos_produtos = d.filter(p => p.sku && !p.sku.includes('-'));
+  }).catch(()=>{});
+}
+
+// Busca produto
+function buscarProduto(q) {
+  if(!q || q.length < 2) { fecharBusca(); return; }
+  var res = _todos_produtos.filter(p =>
+    p.sku.toLowerCase().includes(q.toLowerCase()) ||
+    (p.nome||'').toLowerCase().includes(q.toLowerCase())
+  ).slice(0,12);
+  var el = document.getElementById('resultado-busca');
+  if(!res.length) { el.style.display='none'; return; }
+  el.style.display='block';
+  el.innerHTML = res.map(p =>
+    `<div class="rb-item" onclick="selecionarProduto('${p.sku}','${escHtml(p.nome||'')}',${p.custo_br||0},${p.custo_pr||0},${p.peso||0},${p.ipi||0})">
+      <div>
+        <span class="rb-sku">${p.sku}</span>
+        <span class="rb-nome" style="margin-left:8px">${(p.nome||'').substring(0,35)}</span>
+      </div>
+      <span class="rb-cmv">${f2(p.custo_br)}</span>
+    </div>`
+  ).join('');
+}
+
+function fecharBusca() {
+  document.getElementById('resultado-busca').style.display='none';
+}
+
+function adicionarPrimeiro() {
+  var rb = document.querySelector('.rb-item');
+  if(rb) rb.click();
+  else {
+    var sku = document.getElementById('busca-inp').value.trim();
+    if(sku) {
+      var p = _todos_produtos.find(x => x.sku === sku);
+      if(p) selecionarProduto(p.sku, p.nome||'', p.custo_br||0, p.custo_pr||0, p.peso||0, p.ipi||0);
+      else toast('SKU não encontrado: '+sku, false);
+    }
+  }
+}
+
+function selecionarProduto(sku, nome, cmv_br, cmv_pr, peso, ipi) {
+  var qtd = parseFloat(document.getElementById('busca-qtd').value) || 1;
+  // Se já existe, somar a qtd
+  var ex = _componentes.find(c=>c.sku===sku);
+  if(ex) { ex.qtd += qtd; }
+  else { _componentes.push({sku, nome, qtd, cmv_br, cmv_pr, peso, ipi}); }
+  document.getElementById('busca-inp').value='';
+  document.getElementById('busca-qtd').value='1';
+  fecharBusca();
+  renderComponetes();
+}
+
+function renderComponetes() {
+  var tbody = document.getElementById('tbody-comp');
+  if(!_componentes.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum componente adicionado</td></tr>';
+    document.getElementById('resumo').style.display = 'none';
+    return;
+  }
+  tbody.innerHTML = _componentes.map(function(c,i){
+    return `<tr>
+      <td><b style="color:#60a5fa;font-family:monospace">${c.sku}</b></td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(c.nome.substring(0,30))}</td>
+      <td class="r"><input class="qtd-input" type="number" value="${c.qtd}" min="0.001" step="0.001" onchange="_componentes[${i}].qtd=parseFloat(this.value)||1;calcularResumo()"></td>
+      <td class="r" style="color:#22c55e">${f2(c.cmv_br)}</td>
+      <td class="r" style="color:#f59e0b">${c.peso>0?c.peso.toFixed(3)+' kg':'—'}</td>
+      <td><button class="btn btn-red btn-sm" onclick="remover(${i})">✕</button></td>
+    </tr>`;
+  }).join('');
+  calcularResumo();
+  document.getElementById('resumo').style.display = 'grid';
+}
+
+function remover(i) {
+  _componentes.splice(i, 1);
+  renderComponetes();
+}
+
+function calcularResumo() {
+  var cmv_br = 0, cmv_pr = 0, peso = 0, ipi_vals = [];
+  _componentes.forEach(c=>{
+    cmv_br += (c.cmv_br||0)*c.qtd;
+    cmv_pr += (c.cmv_pr||0)*c.qtd;
+    peso   += (c.peso||0)*c.qtd;
+    ipi_vals.push(c.ipi||0);
+  });
+  var media_ipi = ipi_vals.length ? ipi_vals.reduce((a,b)=>a+b,0)/ipi_vals.length : 0;
+  document.getElementById('r-cmvbr').textContent = f2(cmv_br);
+  document.getElementById('r-cmvpr').textContent = f2(cmv_pr);
+  document.getElementById('r-peso').textContent  = peso.toFixed(3)+' kg';
+  document.getElementById('r-ipi').textContent   = media_ipi.toFixed(2)+'%';
+}
+
+function verificarSkuKit() {
+  var sku = document.getElementById('kit-sku').value.trim();
+  var existe = _todos_produtos.find(p=>p.sku===sku);
+  document.getElementById('sku-aviso').style.display = existe ? 'block' : 'none';
+}
+
+function salvarKit() {
+  var sku_kit  = document.getElementById('kit-sku').value.trim();
+  var nome_kit = document.getElementById('kit-nome').value.trim();
+  var familia  = document.getElementById('kit-familia').value.trim() || 'KIT';
+  if(!sku_kit){ toast('Informe o SKU do kit', false); return; }
+  if(!nome_kit){ toast('Informe o nome do kit', false); return; }
+  if(!_componentes.length){ toast('Adicione pelo menos 1 componente', false); return; }
+
+  // Calcular totais
+  var cmv_br = 0, cmv_pr = 0, peso = 0, ipi_vals = [], cst_vals = [];
+  _componentes.forEach(c=>{
+    cmv_br += (c.cmv_br||0)*c.qtd;
+    cmv_pr += (c.cmv_pr||0)*c.qtd;
+    peso   += (c.peso||0)*c.qtd;
+    ipi_vals.push(c.ipi||0);
+  });
+  var media_ipi = ipi_vals.reduce((a,b)=>a+b,0)/Math.max(ipi_vals.length,1);
+
+  var payload = {
+    sku_kit, nome_kit, familia,
+    cmv_br: Math.round(cmv_br*10000)/10000,
+    cmv_pr: Math.round(cmv_pr*10000)/10000,
+    peso: Math.round(peso*1000)/1000,
+    media_ipi: Math.round(media_ipi*100)/100,
+    cst_kit: '00', origem_kit: 0,
+    componentes: _componentes.map(c=>({sku:c.sku, qtd:c.qtd, nome:c.nome}))
+  };
+
+  document.getElementById('btn-salvar').disabled = true;
+  fetch('/api/db/kits', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
+    .then(r=>r.json()).then(d=>{
+      if(d.ok){
+        toast('✅ Kit '+sku_kit+' criado com sucesso!');
+        limparForm();
+        carregarKits();
+        carregarProdutos();
+      } else toast('Erro: '+(d.error||'desconhecido'), false);
+    }).catch(()=>toast('Erro ao salvar', false))
+    .finally(()=>document.getElementById('btn-salvar').disabled=false);
+}
+
+function limparForm() {
+  document.getElementById('kit-sku').value='';
+  document.getElementById('kit-nome').value='';
+  document.getElementById('kit-familia').value='KIT';
+  _componentes = [];
+  renderComponetes();
+}
+
+function sincBlingPeso() {
+  toast('⏳ Sincronizando peso do Bling...');
+  fetch('/api/sync/bling-peso').then(r=>r.json()).then(d=>{
+    if(d.ok) toast('✅ '+d.atualizados+' produtos com peso atualizado do Bling!');
+    else toast('Erro: '+(d.error||d), false);
+  }).catch(()=>toast('Erro sync Bling', false));
+}
+
+// Kits existentes
+function carregarKits() {
+  fetch('/api/db/kits').then(r=>r.json()).then(d=>{
+    _todos_kits = d;
+    document.getElementById('kits-count').textContent = '('+d.length+')';
+    renderKits(d);
+  }).catch(()=>document.getElementById('lista-kits').innerHTML='<div class="empty">Erro ao carregar</div>');
+}
+
+function filtrarKits(q) {
+  if(!q) { renderKits(_todos_kits); return; }
+  var f = _todos_kits.filter(k =>
+    k.sku_kit.toLowerCase().includes(q.toLowerCase()) ||
+    k.componentes.some(c=>(c.nome||'').toLowerCase().includes(q.toLowerCase()) || c.sku.includes(q))
+  );
+  renderKits(f);
+}
+
+function renderKits(kits) {
+  var el = document.getElementById('lista-kits');
+  if(!kits.length){ el.innerHTML='<div class="empty">Nenhum kit cadastrado</div>'; return; }
+  el.innerHTML = kits.map(k=>{
+    var cmv_total = k.componentes.reduce((s,c)=>s+(c.cmv_br||0)*(c.qtd||1),0);
+    var peso_total = k.componentes.reduce((s,c)=>s+(c.peso||0)*(c.qtd||1),0);
+    return `<div class="kit-item">
+      <div class="kit-header">
+        <div>
+          <span class="kit-sku">${k.sku_kit}</span>
+          <span style="color:#22c55e;font-size:11px;font-family:monospace;margin-left:10px">${f2(cmv_total)}</span>
+          ${peso_total>0?`<span style="color:#f59e0b;font-size:11px;margin-left:8px">${peso_total.toFixed(3)} kg</span>`:''}
+        </div>
+        <button class="btn btn-red btn-sm" onclick="excluirKit('${k.sku_kit}')">✕</button>
+      </div>
+      <div class="comp-list">
+        ${k.componentes.map(c=>`<span class="comp-tag"><span class="comp-qtd">${c.qtd}x</span> <span class="comp-sku">${c.sku}</span> ${(c.nome||'').substring(0,20)}</span>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function excluirKit(sku) {
+  if(!confirm('Excluir kit '+sku+'?')) return;
+  // Por enquanto apenas remove da lista visual — endpoint DELETE a implementar
+  _todos_kits = _todos_kits.filter(k=>k.sku_kit!==sku);
+  renderKits(_todos_kits);
+  toast('Kit removido da visualização (reimporte para efetivar)');
+}
+
+function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// Fechar busca ao clicar fora
+document.addEventListener('click', function(e){
+  if(!e.target.closest('#busca-inp') && !e.target.closest('#resultado-busca')) fecharBusca();
+});
+
+// Init
+carregarProdutos();
+carregarKits();
+</script>
+</body>
+</html>
