@@ -1159,9 +1159,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/entrada-nf':         self._get_entrada_nf,
             '/api/db/bling-buscar-produto':self._get_bling_buscar_produto,
             '/api/db/boletos':              self._get_boletos,
-            '/api/db/boletos-salvar':       self._post_boletos_salvar,
             '/api/db/conferencia':          self._get_conferencia,
-            '/api/db/conferencia-salvar':   self._post_conferencia_salvar,
             '/api/whatsapp/webhook':        self._post_whatsapp_webhook,
             '/api/whatsapp/send':            self._post_whatsapp_send,
             '/api/whatsapp/conversas':      self._get_whatsapp_conversas,
@@ -1196,6 +1194,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         clean = self.path.split('?')[0]
         routes = {
+            '/api/db/boletos-salvar':       self._post_boletos_salvar,
+            '/api/db/conferencia-salvar':   self._post_conferencia_salvar,
             '/api/db/produto':            self._post_produto,
             '/api/db/produtos/batch':    self._post_produtos_batch,
             '/api/db/produtos/update-fiscal': self._post_produtos_update_fiscal,
