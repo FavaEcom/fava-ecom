@@ -202,17 +202,21 @@ function cfg() {
   };
 }
 
-function aliqIcms(orig, cst, icms_p_nota) {
-  // Base reduzida: usar ICMS real
-  if (cst === '20') return icms_p_nota;
+function aliqIcms(orig, cst, icms_p_nota, cred_icms, vunit) {
+  // Se temos vICMS e vProd reais da nota → alíquota real = vICMS / vProd × 100
+  if (cred_icms && vunit && vunit > 0) {
+    return Math.round((cred_icms / vunit) * 10000) / 100;  // 4 casas → arredonda 2
+  }
+  // Base reduzida: usar percentual real da nota
+  if (cst === '20' && icms_p_nota) return icms_p_nota;
   var c = cfg();
-  // Importado
+  // Fallback: nacional 12% / importado 4%
   return [1,2,6,7].includes(parseInt(orig||0)) ? c.imp : c.nac;
 }
 
 function calcCMV(it, aliq_icms_override) {
   var c = cfg();
-  var aliq = aliq_icms_override !== undefined ? aliq_icms_override : aliqIcms(it.orig, it.cst, it.icms_p||0);
+  var aliq = aliq_icms_override !== undefined ? aliq_icms_override : aliqIcms(it.orig, it.cst, it.icms_p||0, it.cred_icms||0, it.vunit||0);
   var custo = it.custo_r || 0;
   // CMV Brasil — sempre com ICMS crédito
   var cmv_br = custo - custo*(aliq/100) - custo*(c.pis/100) - custo*(c.cof/100);
@@ -351,8 +355,10 @@ function renderTabela() {
     html += '<td class="num">'+(it.ipi_p||0).toFixed(1)+'%</td>';
     html += '<td class="num">'+fmt(it.ipi_un||0)+'</td>';
     html += '<td class="num" style="color:#f59e0b">'+(it.icms_p||0).toFixed(2)+'%</td>';
-    // Alíquota crédito (editável)
-    html += '<td class="num"><input class="ei ei-num" id="aliq-'+i+'" type="number" value="'+it._aliq.toFixed(2)+'" step="0.5" oninput="onAliqChange('+i+',this.value)"></td>';
+    // Alíquota crédito (editável) — verde se veio do XML real, amarelo se estimada
+    var aliqCor = (it.cred_icms && it.vunit) ? '#86efac' : '#fbbf24';
+    var aliqTitle = (it.cred_icms && it.vunit) ? 'Calculada do XML (vICMS÷vProd)' : 'Estimada (nacional/importado)';
+    html += '<td class="num"><input class="ei ei-num" id="aliq-'+i+'" type="number" value="'+it._aliq.toFixed(2)+'" step="0.5" style="border-color:'+aliqCor+'" title="'+aliqTitle+'" oninput="onAliqChange('+i+',this.value)"></td>';
     html += '<td class="num">'+(st_un>0 ? fmt(st_un) : '—')+'</td>';
     html += '<td class="num" style="font-weight:700">'+fmt(custo)+'</td>';
     // CMV Brasil
@@ -468,11 +474,12 @@ function salvarTudo() {
       qtd: it.qtd||1, custo_r: it.custo_r||0, ipi_un: it.ipi_un||0,
       tem_st: it.tem_st||0, cst: it.cst||'', cest: it.cest||'',
       cmv_br: it._cmv_br, cmv_pr: it._cmv_pr,
+      det_num: it.det_num||0,
     };
   });
   fetch('/api/db/entrada-nf/salvar',{
     method:'POST',headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({itens})
+    body: JSON.stringify({itens, nf: _nf})
   }).then(r=>r.json()).then(d=>{
     toast('✓ '+( d.salvos||0)+' atualizados | '+(d.novos||0)+' novos');
   }).catch(()=>toast('Erro ao salvar',false));
@@ -539,30 +546,75 @@ function carregarCapa(nf) {
 }
 
 function imprimirCapa() {
-  var capa = document.getElementById('capa-nf');
-  if(!capa || capa.style.display==='none') {
-    alert('Carregue uma NF primeiro'); return;
-  }
-  var conteudo = capa.outerHTML;
-  var win = window.open('','_blank');
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-    <title>Capa NF</title>
-    <style>
-      body{font-family:system-ui,sans-serif;padding:20px;background:#fff;color:#000}
-      .nf-fi{margin-bottom:8px} .nf-fi label{font-size:10px;text-transform:uppercase;color:#666;display:block}
-      .nf-fi span{font-size:13px;font-weight:700}
-      .tag{padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700}
-      *{box-sizing:border-box}
-      #capa-nf{display:block!important;border:1px solid #ccc;border-radius:8px;padding:16px;margin-bottom:12px}
-      @media print{button{display:none}}
-    </style>
-  </head><body>
-    <h2 style="margin-bottom:12px">📋 Entrada de NF — Fava Ecom</h2>
-    ${conteudo}
-    <br>
-    <button onclick="window.print()" style="padding:8px 20px;background:#3b82f6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
-  </body></html>`);
-  win.document.close();
+  // Pegar dados da capa do servidor — renderizar em branco para impressão
+  if(!_nf){alert('Carregue uma NF primeiro');return;}
+  fetch('/api/db/capa-nf?nf='+encodeURIComponent(_nf))
+    .then(r=>r.json()).then(function(d){
+      if(d.erro){alert('Capa não encontrada');return;}
+      var win = window.open('','_blank');
+      var cfops = (d.cfops||[]).join(', ');
+      var csts  = (d.csts||[]).join(', ');
+      var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Capa NF '+_nf+'</title>'+
+      '<style>'+
+      'body{font-family:Arial,sans-serif;padding:24px;color:#000;background:#fff;font-size:12px}'+
+      'h2{font-size:16px;margin-bottom:4px;border-bottom:2px solid #000;padding-bottom:6px}'+
+      '.sub{font-size:11px;color:#555;margin-bottom:16px}'+
+      '.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}'+
+      '.fi{border:1px solid #ddd;border-radius:4px;padding:8px 10px}'+
+      '.fi label{font-size:9px;text-transform:uppercase;color:#888;display:block;margin-bottom:2px}'+
+      '.fi span{font-size:13px;font-weight:700}'+
+      '.totais{border:1px solid #000;border-radius:4px;padding:10px;margin-bottom:14px}'+
+      '.totais h3{font-size:12px;margin-bottom:8px;font-weight:700}'+
+      '.row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee;font-size:11px}'+
+      '.row.destaque{font-weight:700;font-size:13px;border-bottom:2px solid #000}'+
+      '.flags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}'+
+      '.flag{padding:2px 8px;border:1px solid #333;border-radius:3px;font-size:10px;font-weight:700}'+
+      '.creditos{border:1px solid #ddd;border-radius:4px;padding:8px;margin-bottom:14px;font-size:11px}'+
+      '.creditos h3{font-size:11px;margin-bottom:6px}'+
+      '.cred-row{display:flex;justify-content:space-between;padding:2px 0}'+
+      '@media print{.no-print{display:none}body{padding:12px}}'+
+      '</style></head><body>'+
+      '<h2>📋 Entrada de NF #'+_nf+' — Fava Ecom</h2>'+
+      '<div class="sub">Emitido em: '+new Date().toLocaleDateString('pt-BR')+'</div>'+
+      '<div class="grid">'+
+      fi('Fornecedor', d.fornecedor||'—')+
+      fi('Data Emissão', d.data_emissao||'—')+
+      fi('NF Nº', '#'+_nf)+
+      fi('Itens na nota', d.itens_total+' itens ('+d.skus_vinculados+' vinculados)')+
+      fi('CFOPs', cfops||'—')+
+      fi('CSTs', csts||'—')+
+      '</div>'+
+      '<div class="totais"><h3>Valores da Nota</h3>'+
+      row('Valor dos Produtos', 'R$ '+fmt2(d.v_produtos))+
+      row('IPI', 'R$ '+fmt2(d.v_ipi))+
+      row('ST (Substituição Tributária)', 'R$ '+fmt2(d.v_st))+
+      row('ICMS Crédito (na nota)', 'R$ '+fmt2(d.v_icms_credito))+
+      '<div class="row destaque"><span>Custo Total (c/ IPI + ST)</span><span>R$ '+fmt2(d.custo_total)+'</span></div>'+
+      '</div>'+
+      '<div class="creditos"><h3>💡 Créditos Fiscais</h3>'+
+      cred('ICMS', d.v_icms_credito)+
+      cred('PIS (1,65%)', d.cred_pis)+
+      cred('COFINS (7,6%)', d.cred_cofins)+
+      '<div class="cred-row" style="font-weight:700;margin-top:4px;border-top:1px solid #ccc;padding-top:4px"><span>Total Créditos</span><span>R$ '+fmt2(d.cred_total)+'</span></div>'+
+      '</div>'+
+      '<div class="totais"><h3>CMV Resultante</h3>'+
+      row('CMV Brasil (marketplaces)', 'R$ '+fmt2(d.cmv_brasil_total))+
+      row('CMV PR (balcão/local)', 'R$ '+fmt2(d.cmv_pr_total))+
+      '</div>'+
+      (d.tem_st||d.tem_importado?'<div class="flags">'+
+      (d.tem_st?'<span class="flag">⚡ COM ST</span>':'')+
+      (d.tem_importado?'<span class="flag">🌍 IMPORTADO</span>':'')+
+      '</div>':'')+
+      '<br><button class="no-print" onclick="window.print()" style="padding:8px 20px;background:#000;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px">🖨️ Imprimir</button>'+
+      '</body></html>';
+      win.document.write(html);
+      win.document.close();
+    }).catch(function(){alert('Erro ao carregar capa');});
+
+  function fi(l,v){return '<div class="fi"><label>'+l+'</label><span>'+v+'</span></div>';}
+  function row(l,v){return '<div class="row"><span>'+l+'</span><span>'+v+'</span></div>';}
+  function cred(l,v){return '<div class="cred-row"><span>'+l+'</span><span>R$ '+fmt2(v)+'</span></div>';}
+  function fmt2(v){return Number(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
 }
 
 function adicionarItemManual() {

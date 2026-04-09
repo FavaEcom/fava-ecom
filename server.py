@@ -114,6 +114,16 @@ def criar_tabelas():
                 created_at TIMESTAMP DEFAULT NOW())""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS v_st REAL DEFAULT 0""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS cst TEXT""",
+            """CREATE TABLE IF NOT EXISTS whatsapp_mensagens (
+                id SERIAL PRIMARY KEY,
+                telefone TEXT NOT NULL,
+                nome TEXT DEFAULT \'\',
+                direcao TEXT DEFAULT \'recebida\',
+                mensagem TEXT,
+                respondida INTEGER DEFAULT 0,
+                auto_resposta INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW()
+            )""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS cprod TEXT DEFAULT ''""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS cfop TEXT DEFAULT ''""",
             """DO $$ BEGIN
@@ -1125,7 +1135,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/capa-nf':             self._get_capa_nf,
             '/api/db/entrada-nf':         self._get_entrada_nf,
             '/api/db/bling-buscar-produto':self._get_bling_buscar_produto,
-            '/api/db/historico-cprod':      self._get_historico_cprod,
+            '/api/whatsapp/webhook':        self._post_whatsapp_webhook,
+            '/api/whatsapp/send':            self._post_whatsapp_send,
+            '/api/whatsapp/conversas':      self._get_whatsapp_conversas,
+            '/api/db/historico-cprod':       self._get_historico_cprod,
             '/api/db/apagar-nf':           self._get_apagar_nf,
             '/api/db/fila-anuncios':       self._get_fila_anuncios,
             '/api/db/status':            self._get_status,
@@ -2270,6 +2283,82 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._ok(rows)
         except Exception as e: self._err(500, str(e))
 
+    def _post_whatsapp_webhook(self):
+        """POST /api/whatsapp/webhook — recebe mensagens do Wassender/Z-API/Evolution"""
+        import threading
+        try:
+            d = self._body()
+            tel = msg = nome = ''
+            if 'phone' in d:
+                tel  = str(d.get('phone','') or d.get('from',''))
+                msg  = str(d.get('message','') or d.get('body','') or d.get('text',''))
+                nome = str(d.get('senderName','') or d.get('pushName',''))
+            elif 'data' in d and isinstance(d.get('data'),dict):
+                dd  = d['data']
+                tel = str(dd.get('key',{}).get('remoteJid','').replace('@s.whatsapp.net',''))
+                msg = str(dd.get('message',{}).get('conversation','') or
+                          dd.get('message',{}).get('extendedTextMessage',{}).get('text',''))
+                nome = str(dd.get('pushName',''))
+            elif 'entry' in d:
+                try:
+                    ch  = d['entry'][0]['changes'][0]['value']
+                    tel = ch['messages'][0]['from']
+                    msg = ch['messages'][0]['text']['body']
+                    nome = ch.get('contacts',[{}])[0].get('profile',{}).get('name','')
+                except: pass
+            if not tel or not msg:
+                self._ok({'ok':True,'ignorado':True}); return
+            p = '%s' if IS_PG else '?'
+            exe(f"INSERT INTO whatsapp_mensagens (telefone,nome,direcao,mensagem) VALUES ({p},{p},\'recebida\',{p})",
+                (tel, nome, msg))
+            self._ok({'ok':True})
+            def auto_reply():
+                try:
+                    resp = _gerar_resposta_ia(msg, tel)
+                    if not resp: return
+                    exe(f"INSERT INTO whatsapp_mensagens (telefone,nome,direcao,mensagem,auto_resposta) VALUES ({p},{p},\'enviada\',{p},1)",
+                        (tel, nome, resp))
+                    _enviar_whatsapp(tel, resp)
+                except: pass
+            threading.Thread(target=auto_reply, daemon=True).start()
+        except:
+            self._ok({'ok':True})
+
+    def _post_whatsapp_send(self):
+        """POST /api/whatsapp/send — envia mensagem manual"""
+        p = '%s' if IS_PG else '?'
+        try:
+            d   = self._body()
+            tel = str(d.get('telefone','') or d.get('phone',''))
+            msg = str(d.get('mensagem','') or d.get('message',''))
+            if not tel or not msg: self._err(400,'telefone e mensagem obrigatorios'); return
+            ok = _enviar_whatsapp(tel, msg)
+            if ok:
+                exe(f"INSERT INTO whatsapp_mensagens (telefone,direcao,mensagem) VALUES ({p},\'enviada\',{p})", (tel,msg))
+            self._ok({'ok':ok})
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _get_whatsapp_conversas(self):
+        """GET /api/whatsapp/conversas — lista conversas"""
+        from urllib.parse import parse_qs
+        qs  = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        tel = qs.get('tel',[''])[0].strip()
+        p   = '%s' if IS_PG else '?'
+        try:
+            if tel:
+                rows = exe(f"SELECT * FROM whatsapp_mensagens WHERE telefone={p} ORDER BY created_at ASC LIMIT 200",
+                    (tel,), fetchall=True) or []
+            else:
+                rows = exe("""SELECT DISTINCT ON (telefone) telefone, nome,
+                    created_at as ultima,
+                    COUNT(*) OVER (PARTITION BY telefone) as total
+                    FROM whatsapp_mensagens
+                    ORDER BY telefone, created_at DESC LIMIT 100""", fetchall=True) or []
+            self._ok(rows)
+        except Exception as e:
+            self._err(500, str(e))
+
     def _get_historico_cprod(self):
         """GET /api/db/historico-cprod?cprod=6247212015 — histórico de compras por código do fornecedor"""
         from urllib.parse import parse_qs
@@ -2529,6 +2618,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         try:
             d    = self._body()
             itens = d.get('itens', [])
+            nf    = str(d.get('nf', '')).strip()
             salvos = 0
             novos  = 0
             for it in itens:
@@ -2539,21 +2629,28 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 cfop   = str(it.get('cfop', '')).strip()
                 origem = int(it.get('origem', 0) or 0)
                 ipi_p  = float(it.get('ipi_p', 0) or 0)
-                icms_base = float(it.get('icms_base', 12) or 12)  # alíquota real de crédito
+                icms_base = float(it.get('icms_base', 12) or 12)
                 v_st   = float(it.get('v_st', 0) or 0)
                 qtd    = float(it.get('qtd', 1) or 1)
                 custo  = float(it.get('custo_r', 0) or 0)
                 ipi_un = float(it.get('ipi_un', 0) or 0)
-                st_un  = v_st / max(qtd, 1)
-                # CMV Brasil com alíquota correta
-                cred_icms = custo * (icms_base / 100)
-                cred_pis  = custo * 0.0165
-                cred_cof  = custo * 0.076
-                cmv_br = custo + ipi_un + st_un - cred_icms - cred_pis - cred_cof
-                cmv_pr = cmv_br  # ajustar depois se ST
+                cst    = str(it.get('cst', '')).strip()
+                cest   = str(it.get('cest', '')).strip()
+                tem_st = int(it.get('tem_st', 0) or 0)
+                det_num = int(it.get('det_num', 0) or 0)
+                cmv_br = float(it.get('cmv_br', 0) or 0)
+                cmv_pr = float(it.get('cmv_pr', 0) or 0)
+                # Se CMV não vier calculado, recalcular
+                if not cmv_br:
+                    st_un = v_st / max(qtd, 1)
+                    cred_icms = custo * (icms_base / 100)
+                    cred_pis  = custo * 0.0165
+                    cred_cof  = custo * 0.076
+                    cmv_br = custo + ipi_un + st_un - cred_icms - cred_pis - cred_cof
+                    cmv_pr = (custo + ipi_un + st_un - custo*0.0165 - custo*0.076) if tem_st else cmv_br
                 if sku:
-                    # Produto já existe — atualiza dados fiscais e CMV
-                    exe(f"""UPDATE produtos SET 
+                    # Atualiza produto
+                    exe(f"""UPDATE produtos SET
                         ncm=CASE WHEN {p}!='' THEN {p} ELSE ncm END,
                         cfop=CASE WHEN {p}!='' THEN {p} ELSE cfop END,
                         origem={p}, ipi={p},
@@ -2565,10 +2662,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     if cprod:
                         exe(f"""INSERT INTO cprod_map (cprod,sku,nome,cmv_br,cmv_pr)
                             VALUES ({p},{p},{p},{p},{p})
-                            ON CONFLICT(cprod) DO UPDATE SET 
+                            ON CONFLICT(cprod) DO UPDATE SET
                             sku=EXCLUDED.sku, cmv_br=EXCLUDED.cmv_br, cmv_pr=EXCLUDED.cmv_pr""",
                             (cprod, sku, nome, cmv_br, cmv_pr))
-                    # Propagar peso se houver
+                    # Salvar aliq corrigida de volta no historico_compras (preserva CST/CEST/ST)
+                    if nf and cprod:
+                        exe(f"""UPDATE historico_compras SET
+                            sku={p}, cmv_br={p}, cmv_pr={p}, cred_pc={p}
+                            WHERE nf={p} AND cprod={p}""",
+                            (sku, cmv_br, cmv_pr, icms_base, nf, cprod))
                     salvos += 1
                 else:
                     # Produto novo — inserir na base
