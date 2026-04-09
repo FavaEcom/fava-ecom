@@ -174,6 +174,7 @@ td{padding:6px 8px;vertical-align:middle}
   <div class="barra-info" id="barra-info"></div>
   <button class="btn btn-gray" onclick="expandirTodos()">⊕ Expandir detalhes</button>
   <button class="btn btn-green" onclick="salvarTudo()">💾 Salvar tudo na base</button>
+  <button class="btn" style="background:#0ea5e9;color:#fff" onclick="imprimirCapa()">🖨️ Imprimir Capa</button>
   <button class="btn" style="background:#7c3aed;color:#fff" onclick="adicionarItemManual()">➕ Item manual</button>
   <button class="btn btn-purple" style="background:#7c3aed;color:#fff" onclick="enviarFilaAnuncios()">📢 Enviar novos para fila de anúncios</button>
   <a href="/fila_anuncios.html" class="btn" style="background:#1e293b;color:#94a3b8;text-decoration:none">🤖 Ver fila</a>
@@ -269,6 +270,7 @@ function buscarNF() {
       carregarCapa(_nf);
       renderTabela();
       atualizarStats();
+      carregarCapa(nf);
       document.getElementById('barra').style.display='flex';
       document.getElementById('nf-status').textContent = data.length+' itens';
     }).catch(e=>{
@@ -534,6 +536,33 @@ function carregarCapa(nf) {
         ' | PIS R$ '+fmtR(d.cred_pis)+' | COFINS R$ '+fmtR(d.cred_cofins)+
         ' | <strong style="color:#22c55e">Total: R$ '+fmtR(d.cred_total)+'</strong>';
     }).catch(function(){});
+}
+
+function imprimirCapa() {
+  var capa = document.getElementById('capa-nf');
+  if(!capa || capa.style.display==='none') {
+    alert('Carregue uma NF primeiro'); return;
+  }
+  var conteudo = capa.outerHTML;
+  var win = window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Capa NF</title>
+    <style>
+      body{font-family:system-ui,sans-serif;padding:20px;background:#fff;color:#000}
+      .nf-fi{margin-bottom:8px} .nf-fi label{font-size:10px;text-transform:uppercase;color:#666;display:block}
+      .nf-fi span{font-size:13px;font-weight:700}
+      .tag{padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700}
+      *{box-sizing:border-box}
+      #capa-nf{display:block!important;border:1px solid #ccc;border-radius:8px;padding:16px;margin-bottom:12px}
+      @media print{button{display:none}}
+    </style>
+  </head><body>
+    <h2 style="margin-bottom:12px">📋 Entrada de NF — Fava Ecom</h2>
+    ${conteudo}
+    <br>
+    <button onclick="window.print()" style="padding:8px 20px;background:#3b82f6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
+  </body></html>`);
+  win.document.close();
 }
 
 function adicionarItemManual() {
