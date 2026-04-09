@@ -905,28 +905,42 @@ function adicionarItemManual() {
 }
 
 function enviarFilaAnuncios() {
-  var novos = _itens.filter(function(it){
-    return it.sku && it.sku.trim() && !it.ja_cadastrado;
-  }).concat(_itens.filter(function(it){
-    var sku = it.sku||it._novo_sku||(document.getElementById('sku-'+_itens.indexOf(it))?.value||'');
-    return sku && !it.sku;
-  }));
-  if(!novos.length){ toast('Nenhum produto novo para enviar', false); return; }
-  var payload = novos.map(function(it){
-    return {
-      sku: it.sku||it._novo_sku||'',
-      nome: it.nome||'', ncm: it.ncm||'',
-      cfop: it.cfop||'', origem: parseInt(it.orig||0),
-      custo_br: it._cmv_br||0, custo_pr: it._cmv_pr||0,
-      tem_st: it.tem_st||0, nf_origem: _nf, canal: 'ml'
-    };
-  });
-  fetch('/api/db/fila-anuncios',{
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(payload)
-  }).then(r=>r.json()).then(d=>{
-    toast('✓ '+( d.adicionados||0)+' adicionados à fila de anúncios');
-  }).catch(()=>toast('Erro ao enviar fila',false));
+  if(!_itens || !_itens.length){ toast('Carregue uma NF primeiro', false); return; }
+  // Buscar quais SKUs já têm anúncio ML
+  var skus_nf = [...new Set(_itens.filter(i=>i.sku&&i.sku.trim()).map(i=>i.sku))];
+  fetch('/api/db/listings').then(r=>r.json()).then(function(listings){
+    var skus_ml = new Set(listings.map(l=>String(l.sku)));
+    var sem_anuncio = skus_nf.filter(s => !skus_ml.has(String(s)));
+    if(!sem_anuncio.length){
+      toast('Todos os produtos desta nota já têm anúncio no ML', false);
+      return;
+    }
+    // Montar payload apenas com produtos SEM anúncio
+    var novos = _itens.filter(function(it){
+      return it.sku && it.sku.trim() && sem_anuncio.includes(it.sku);
+    });
+    // Deduplicar por SKU
+    var vistos = new Set();
+    novos = novos.filter(function(it){
+      if(vistos.has(it.sku)) return false;
+      vistos.add(it.sku); return true;
+    });
+    var payload = novos.map(function(it){
+      return {
+        sku: it.sku||'',
+        nome: it.nome||'', ncm: it.ncm||'',
+        cfop: it.cfop||'', origem: parseInt(it.orig||0),
+        custo_br: it._cmv_br||0, custo_pr: it._cmv_pr||0,
+        tem_st: it.tem_st||0, nf_origem: _nf, canal: 'ml'
+      };
+    });
+    fetch('/api/db/fila-anuncios',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    }).then(r=>r.json()).then(function(d){
+      toast('✅ '+novos.length+' produtos sem anúncio enviados para a fila!');
+    }).catch(function(){ toast('Erro ao enviar fila', false); });
+  }).catch(function(){ toast('Erro ao verificar anúncios', false); });
 }
 
 // Abrir direto via URL ?nf=XXX
