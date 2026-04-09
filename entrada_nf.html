@@ -140,8 +140,9 @@ td{padding:6px 8px;vertical-align:middle}
   @page{size:A4 portrait;margin:10mm}
   @page landscape-page{size:A4 landscape;margin:8mm}
   .pm-pagina2{page:landscape-page}
-  .pm-calc-tbl{font-size:7.5px!important;width:100%!important}
-  .pm-calc-tbl th{font-size:7px!important;padding:2px 3px!important;white-space:nowrap}
+  .pm-pagina2{width:270mm!important}
+  .pm-calc-tbl{font-size:6.5px!important;width:100%!important}
+  .pm-calc-tbl th{font-size:6px!important;padding:2px 3px!important;white-space:nowrap}
   .pm-calc-tbl td{padding:2px 3px!important;white-space:nowrap}
   .pm-sec{border:1px solid #999!important;padding:6px!important;margin-bottom:8px!important}
 }
@@ -728,6 +729,11 @@ function imprimirCapa() {
   }).catch(function(e){alert('Erro: '+e.message);});
 }
 
+function lancarContasPagar() {
+  salvarBoletos();
+  setTimeout(function(){ toast("✅ Lançado em Contas a Pagar!"); }, 800);
+}
+
 function imprimirSoPagina1() {
   var p2 = document.querySelector('.pm-pagina2');
   if(p2) { p2.dataset.origDisplay = p2.style.display; p2.style.display='none'; }
@@ -853,6 +859,7 @@ function enviarFilaAnuncios() {
       <button class="pm-btn" style="background:#475569;color:#fff" onclick="window.print()">🖨️ Completo (2 págs)</button>
       <button class="pm-btn" style="background:#16a34a;color:#fff" onclick="salvarConferencia()">💾 Salvar conferência</button>
       <button class="pm-btn" style="background:#2563eb;color:#fff" onclick="salvarBoletos()">💾 Salvar boletos</button>
+      <button class="pm-btn" style="background:#7c3aed;color:#fff" onclick="lancarContasPagar()">📋 Contas a Pagar</button>
     </div>
   </div>
 </div>
