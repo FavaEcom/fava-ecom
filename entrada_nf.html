@@ -130,19 +130,20 @@ td{padding:6px 8px;vertical-align:middle}
 @media print{
   body > *{display:none!important}
   .print-modal{display:block!important;position:static!important;background:#fff!important;padding:0!important}
-  .print-box{border-radius:0!important;padding:12px!important}
+  .print-box{border-radius:0!important;padding:0!important;max-width:none!important;width:100%!important}
   .pm-close,.pm-btn-bar,.no-print{display:none!important}
   .pm-conf-fi input,.pm-conf-fi select{border:none!important;padding:0!important}
-  /* Página 1: retrato (capa) */
   .pm-pagina1{page-break-after:always}
-  /* Página 2: paisagem (tabela matemática) */
   .pm-pagina2{page-break-before:always}
-  @page{margin:12mm}
-  @page pm-landscape{size:A4 landscape;margin:8mm}
-  .pm-pagina2{-webkit-print-color-adjust:exact}
-  .pm-calc-tbl{font-size:8px!important}
-  .pm-calc-tbl th{font-size:7px!important;padding:3px 4px!important}
-  .pm-calc-tbl td{padding:2px 4px!important}
+}
+@media print{
+  @page{size:A4 portrait;margin:10mm}
+  @page landscape-page{size:A4 landscape;margin:8mm}
+  .pm-pagina2{page:landscape-page}
+  .pm-calc-tbl{font-size:7.5px!important;width:100%!important}
+  .pm-calc-tbl th{font-size:7px!important;padding:2px 3px!important;white-space:nowrap}
+  .pm-calc-tbl td{padding:2px 3px!important;white-space:nowrap}
+  .pm-sec{border:1px solid #999!important;padding:6px!important;margin-bottom:8px!important}
 }
 </style>
 </head>
