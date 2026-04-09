@@ -550,6 +550,24 @@ def bling_get(path, pagina=1):
     except Exception as e:
         print(f'[BLING] {path}: {e}'); return None
 
+
+def bling_get_one(path):
+    """GET simples sem paginação para Bling API."""
+    token = _bling_token.get('access','')
+    if not token: return None
+    url = f'https://www.bling.com.br/Api/v3/{path}'
+    req = urllib.request.Request(url, headers={'Authorization':f'Bearer {token}','Accept':'application/json'})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 401 and renovar_bling():
+            return bling_get_one(path)
+        return None
+    except Exception as e:
+        print(f'[BLING] GET ONE erro: {e}')
+        return None
+
 def sync_produtos():
     print('[SYNC] Produtos...')
     n=0; pagina=1
@@ -955,53 +973,78 @@ def sync_ml_listings():
     return salvos
 
 def sync_bling_anuncios():
+    """Sincroniza anúncios ML via Bling API v3 com tipoIntegracao+idLoja corretos."""
     if not _bling_token.get('access'): return 0
-    print('[SYNC] Anúncios Bling...')
-    endpoint = None
-    for ep in ['anuncios', 'produtos?tipo=V&situacao=Ativo', 'integracoes/marketplace/anuncios']:
-        d = bling_get(ep, 1)
-        if d and d.get('data') is not None:
-            endpoint = ep
-            print(f'[BLING] Endpoint anúncios: {ep}')
-            break
-    if not endpoint:
-        print('[BLING] Nenhum endpoint de anúncios funcionou')
-        return 0
-    n = 0; pagina = 1
+    LOJA_ID   = 204310753   # ID da loja ML no Bling (URL /ads/stores/204310753)
+    TIPO      = 'MercadoLivre'
+    base_path = f'anuncios?tipoIntegracao={TIPO}&idLoja={LOJA_ID}&situacao=1'
+    print(f'[SYNC] Bling anúncios ML (loja {LOJA_ID})...')
+
+    # ---- Cache produto Bling ID → SKU (evita 1 chamada por anuncio) ----
+    prod_cache = {}  # {bling_prod_id: sku}
+
+    def get_sku_from_bling_prod(prod_id):
+        if prod_id in prod_cache: return prod_cache[prod_id]
+        d = bling_get_one(f'produtos/{prod_id}')
+        sku = str((d or {}).get('data', {}).get('codigo') or '').strip()
+        prod_cache[prod_id] = sku
+        return sku
+
+    all_ids = []
+    pagina  = 1
     while True:
-        d = bling_get(endpoint, pagina)
+        d = bling_get(base_path, pagina)
         if not d: break
-        items = d.get('data', [])
-        if not items: break
-        for it in items:
-            try:
-                mlb    = str(it.get('idSite') or it.get('idAnuncio') or '').strip()
-                sku    = str(it.get('codigo') or it.get('sku') or '').strip()
-                titulo = str(it.get('nome') or it.get('titulo') or '').strip()
-                preco  = float(it.get('preco') or 0)
-                taxa   = float(it.get('percentualComissao') or it.get('taxa') or 0)
-                frete  = float(it.get('frete') or 0)
-                ltype  = str(it.get('tipoAnuncio') or '').lower()
-                free_s = 1 if 'premium' in ltype or 'gold_pro' in ltype else 0
-                status = str(it.get('situacao') or 'active').lower()
-                cmv    = float(it.get('precoCusto') or 0)
-                if not mlb or not mlb.startswith('MLB'): continue
-                c = ('ON CONFLICT(id) DO UPDATE SET sku=EXCLUDED.sku,titulo=EXCLUDED.titulo,'
-                     'preco=EXCLUDED.preco,sale_fee=EXCLUDED.sale_fee,listing_type=EXCLUDED.listing_type,'
-                     'free_shipping=EXCLUDED.free_shipping,status=EXCLUDED.status,frete_medio=EXCLUDED.frete_medio') if IS_PG else \
-                    ('ON CONFLICT(id) DO UPDATE SET sku=excluded.sku,titulo=excluded.titulo,'
-                     'preco=excluded.preco,sale_fee=excluded.sale_fee,listing_type=excluded.listing_type,'
-                     'free_shipping=excluded.free_shipping,status=excluded.status,frete_medio=excluded.frete_medio')
-                exe(f"INSERT INTO ml_listings (id,sku,titulo,preco,sale_fee,listing_type,free_shipping,status,frete_medio) VALUES ({qmark(9)}) {c}",
-                    (mlb,sku,titulo,preco,taxa,ltype,free_s,status,frete))
-                if cmv > 0 and sku:
-                    upsert_produto(sku, titulo, custo=cmv, custo_br=cmv)
-                n += 1
-            except Exception as e:
-                print(f'[BLING] anuncio erro: {e}')
-        if len(items) < 100: break
-        pagina += 1; time.sleep(0.3)
-    print(f'[BLING] {n} anúncios salvos')
+        raw = d.get('data', [])
+        # API pode retornar dict único ou lista
+        if isinstance(raw, dict): raw = [raw]
+        if not raw: break
+        for it in raw:
+            all_ids.append(it.get('id'))
+        if len(raw) < 100: break
+        pagina += 1
+        time.sleep(0.2)
+
+    print(f'[BLING] {len(all_ids)} anúncios encontrados — buscando detalhes...')
+    n = 0
+    for ad_id in all_ids:
+        if not ad_id: continue
+        try:
+            det = bling_get_one(f'anuncios/{ad_id}?tipoIntegracao={TIPO}&idLoja={LOJA_ID}')
+            if not det: continue
+            data = det.get('data') or {}
+
+            # MLB ID está em anuncioLoja.id
+            mlb    = str((data.get('anuncioLoja') or {}).get('id') or '').strip()
+            if not mlb or not mlb.startswith('MLB'): continue
+
+            titulo = str(data.get('titulo') or data.get('nome') or '').strip()
+            preco  = float((data.get('preco') or {}).get('valor') or data.get('preco') or 0)
+            sit    = data.get('situacao', 1)
+            status = 'active' if sit == 1 else ('paused' if sit == 4 else 'closed')
+            ltype  = str((data.get('mercadoLivre') or {}).get('modalidade') or '').lower()
+            free_s = 1 if 'gold_pro' in ltype or 'premium' in ltype else 0
+
+            # SKU via produto.id
+            prod_id = (data.get('produto') or {}).get('id')
+            sku = get_sku_from_bling_prod(prod_id) if prod_id else ''
+
+            p = '%s' if IS_PG else '?'
+            cc = ('ON CONFLICT(id) DO UPDATE SET sku=EXCLUDED.sku,titulo=EXCLUDED.titulo,'
+                  'preco=EXCLUDED.preco,listing_type=EXCLUDED.listing_type,'
+                  'free_shipping=EXCLUDED.free_shipping,status=EXCLUDED.status') if IS_PG else                  ('ON CONFLICT(id) DO UPDATE SET sku=excluded.sku,titulo=excluded.titulo,'
+                  'preco=excluded.preco,listing_type=excluded.listing_type,'
+                  'free_shipping=excluded.free_shipping,status=excluded.status')
+            exe(f'INSERT INTO ml_listings (id,sku,titulo,preco,listing_type,free_shipping,status) VALUES ({qmark(7)}) {cc}',
+                (mlb, sku, titulo, preco, ltype, free_s, status))
+            n += 1
+            if n % 50 == 0:
+                print(f'[BLING] {n} anúncios salvos...')
+            time.sleep(0.1)  # rate limit
+        except Exception as e:
+            print(f'[BLING] Anuncio {ad_id} erro: {e}')
+
+    print(f'[BLING] Sync concluído: {n} anúncios salvos')
     return n
 
 def sync_all():
@@ -1161,6 +1204,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/entrada-nf':         self._get_entrada_nf,
             '/api/db/bling-buscar-produto':self._get_bling_buscar_produto,
             '/api/db/nfs-existentes':       self._get_nfs_existentes,
+            '/api/db/historico-apagar':      self._post_historico_apagar,
+            '/api/db/historico-inserir':     self._post_historico_inserir,
             '/api/db/kits':                 self._get_kits,
             '/api/db/kit-calcular':         self._get_kit_calcular,
             '/api/sync/bling-peso':         self._get_sync_bling_peso,
@@ -1177,6 +1222,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/pedidos-pc':         self._get_pedidos_pc,
             '/api/cmv-cache':            self._get_cmv_compat,
             '/api/sync/now':             self._sync_now,
+            '/api/sync/ml-listings':     self._sync_ml_listings_now,
             '/api/sync/bling-anuncios':  self._sync_bling_anuncios,
             '/api/sync/yampi':           self._sync_yampi,
             '/api/db/limpar-ml':         self._post_limpar_ml,
@@ -3589,6 +3635,23 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         threading.Thread(target=sync_all, daemon=True).start()
         self._ok({'ok':True,'msg':'Sync iniciado'})
 
+    def _sync_ml_listings_now(self):
+        """GET /api/sync/ml-listings — força sync dos anúncios ML em background."""
+        if not _ml_token.get('access'):
+            self._err(400, 'Token ML não disponível — acesse /api/ml/autorizar'); return
+        def _run():
+            n = sync_ml_listings()
+            print(f'[SYNC ML] Concluído: {n} anúncios atualizados')
+        threading.Thread(target=_run, daemon=True).start()
+        # Retorna contagem atual enquanto o sync roda em background
+        try:
+            rows = query('SELECT COUNT(*) as c FROM ml_listings')
+            atual = rows[0]['c'] if rows else 0
+        except:
+            atual = 0
+        self._ok({'ok': True, 'msg': 'Sync ML iniciado em background', 'anuncios_atual': atual,
+                  'dica': 'Aguarde ~2 minutos e recarregue o gestor de anúncios'})
+
 
     def _yampi_proxy(self, method):
         """Proxy para Yampi API com auth automática."""
@@ -3984,6 +4047,75 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             result = exe("DELETE FROM historico_compras WHERE nf=%s", (nf,))
             self._ok({'ok':True,'nf':nf})
         except Exception as e: self._err(500, str(e))
+
+    def _post_historico_apagar(self):
+        """POST /api/db/historico-apagar — apaga NFs especificadas antes de reinserir"""
+        p = '%s' if IS_PG else '?'
+        try:
+            d = self._body()
+            nfs = d.get('nfs', [])
+            apagados = 0
+            for nf in nfs:
+                try:
+                    exe(f"DELETE FROM historico_compras WHERE nf={p}", (str(nf),))
+                    apagados += 1
+                except: pass
+            self._ok({'ok': True, 'apagados': apagados})
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _post_historico_inserir(self):
+        """POST /api/db/historico-inserir — insere itens SEM apagar antes (apagar feito separado)"""
+        p = '%s' if IS_PG else '?'
+        try:
+            payload = self._body()
+            if isinstance(payload, dict): payload = [payload]
+            if not payload: self._ok({'ok': True, 'inseridos': 0}); return
+            inseridos = 0
+            for row in payload:
+                try:
+                    nf  = str(row.get('nf','') or '')
+                    if not nf: continue
+                    sku       = str(row.get('sku','') or '')
+                    cprod_val = str(row.get('cprod','') or '')
+                    nome      = str(row.get('nome','') or '')
+                    forn      = str(row.get('fornecedor','') or '')
+                    dt        = str(row.get('data_emissao','') or '')
+                    qtd       = float(row.get('qtd',0) or 0)
+                    vunit     = float(row.get('vunit',0) or 0)
+                    vtot      = float(row.get('vtot',0) or 0)
+                    ipi_p     = float(row.get('ipi_p',0) or 0)
+                    ipi_un    = float(row.get('ipi_un',0) or 0)
+                    icms_p    = float(row.get('icms_p',0) or 0)
+                    if 0 < icms_p < 1.0: icms_p = icms_p * 100
+                    custo_r   = float(row.get('custo_r',0) or 0)
+                    cmv_br    = float(row.get('cmv_br',0) or 0)
+                    cmv_pr    = float(row.get('cmv_pr',0) or 0)
+                    ncm       = str(row.get('ncm','') or '')
+                    cfop      = str(row.get('cfop','') or '')
+                    v_st      = float(row.get('v_st',0) or 0)
+                    cred_icms = float(row.get('cred_icms',0) or 0)
+                    det_num   = int(row.get('det_num',0) or 0)
+                    cst       = str(row.get('cst','') or '')
+                    cest      = str(row.get('cest','') or '')
+                    tem_st    = int(row.get('tem_st',0) or 0)
+                    orig      = int(row.get('orig',0) or 0)
+                    tipo      = str(row.get('tipo','compra') or 'compra')
+                    cnpj_emit = str(row.get('cnpj_emit','') or '')
+                    exe(f"""INSERT INTO historico_compras
+                        (nf,fornecedor,data_emissao,sku,nome,qtd,vunit,vtot,
+                         ipi_p,ipi_un,icms_p,cred_pc,custo_r,cmv_br,cmv_pr,
+                         ncm,cfop,v_st,cred_icms,det_num,cprod,cst,cest,tem_st,orig,tipo,cnpj_emit)
+                        VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})""",
+                        (nf,forn,dt,sku,nome,qtd,vunit,vtot,
+                         ipi_p,ipi_un,icms_p,0,custo_r,cmv_br,cmv_pr,
+                         ncm,cfop,v_st,cred_icms,det_num,cprod_val,cst,cest,tem_st,orig,tipo,cnpj_emit))
+                    inseridos += 1
+                except Exception as ei:
+                    continue
+            self._ok({'ok': True, 'inseridos': inseridos})
+        except Exception as e:
+            self._err(500, str(e))
 
     def _post_historico(self):
         """POST /api/db/historico — salva itens de NF com TODOS os campos fiscais."""
