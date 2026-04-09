@@ -114,6 +114,29 @@ def criar_tabelas():
                 created_at TIMESTAMP DEFAULT NOW())""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS v_st REAL DEFAULT 0""",
             """ALTER TABLE historico_compras ADD COLUMN IF NOT EXISTS cst TEXT""",
+            """CREATE TABLE IF NOT EXISTS boletos_nf (
+                id SERIAL PRIMARY KEY,
+                nf TEXT NOT NULL,
+                fornecedor TEXT DEFAULT '',
+                parcela INTEGER DEFAULT 1,
+                total_parcelas INTEGER DEFAULT 1,
+                vencimento DATE,
+                valor NUMERIC(12,2) DEFAULT 0,
+                num_boleto TEXT DEFAULT '',
+                pago INTEGER DEFAULT 0,
+                data_pagamento DATE,
+                obs TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS nf_conferencia (
+                id SERIAL PRIMARY KEY,
+                nf TEXT NOT NULL UNIQUE,
+                responsavel TEXT DEFAULT '',
+                data_recebimento DATE,
+                conferido INTEGER DEFAULT 0,
+                obs TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT NOW()
+            )""",
             """CREATE TABLE IF NOT EXISTS whatsapp_mensagens (
                 id SERIAL PRIMARY KEY,
                 telefone TEXT NOT NULL,
@@ -1135,6 +1158,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/capa-nf':             self._get_capa_nf,
             '/api/db/entrada-nf':         self._get_entrada_nf,
             '/api/db/bling-buscar-produto':self._get_bling_buscar_produto,
+            '/api/db/boletos':              self._get_boletos,
+            '/api/db/boletos-salvar':       self._post_boletos_salvar,
+            '/api/db/conferencia':          self._get_conferencia,
+            '/api/db/conferencia-salvar':   self._post_conferencia_salvar,
             '/api/whatsapp/webhook':        self._post_whatsapp_webhook,
             '/api/whatsapp/send':            self._post_whatsapp_send,
             '/api/whatsapp/conversas':      self._get_whatsapp_conversas,
@@ -2282,6 +2309,74 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             except: pass
             self._ok(rows)
         except Exception as e: self._err(500, str(e))
+
+    def _get_boletos(self):
+        """GET /api/db/boletos?nf=X — lista boletos da NF"""
+        from urllib.parse import parse_qs
+        qs = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        nf = qs.get('nf',[''])[0].strip()
+        p  = '%s' if IS_PG else '?'
+        try:
+            rows = exe(f"SELECT * FROM boletos_nf WHERE nf={p} ORDER BY parcela", (nf,), fetchall=True) or []
+            self._ok(rows)
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _post_boletos_salvar(self):
+        """POST /api/db/boletos-salvar — salva/atualiza boletos da NF"""
+        p = '%s' if IS_PG else '?'
+        try:
+            d = self._body()
+            nf = str(d.get('nf','')).strip()
+            boletos = d.get('boletos', [])
+            if not nf: self._err(400,'nf obrigatorio'); return
+            # Apagar anteriores e reinserir
+            exe(f"DELETE FROM boletos_nf WHERE nf={p}", (nf,))
+            for b in boletos:
+                exe(f"""INSERT INTO boletos_nf (nf,fornecedor,parcela,total_parcelas,vencimento,valor,num_boleto,pago,data_pagamento,obs)
+                    VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p})""",
+                    (nf, str(b.get('fornecedor','')), int(b.get('parcela',1)),
+                     int(b.get('total_parcelas',1)), b.get('vencimento') or None,
+                     float(b.get('valor',0)), str(b.get('num_boleto','')),
+                     int(b.get('pago',0)), b.get('data_pagamento') or None,
+                     str(b.get('obs',''))))
+            self._ok({'ok':True,'salvos':len(boletos)})
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _get_conferencia(self):
+        """GET /api/db/conferencia?nf=X"""
+        from urllib.parse import parse_qs
+        qs = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        nf = qs.get('nf',[''])[0].strip()
+        p  = '%s' if IS_PG else '?'
+        try:
+            row = exe(f"SELECT * FROM nf_conferencia WHERE nf={p}", (nf,), fetchall=True)
+            self._ok((row or [{}])[0])
+        except Exception as e:
+            self._err(500, str(e))
+
+    def _post_conferencia_salvar(self):
+        """POST /api/db/conferencia-salvar"""
+        p = '%s' if IS_PG else '?'
+        try:
+            d = self._body()
+            nf = str(d.get('nf','')).strip()
+            if not nf: self._err(400,'nf obrigatorio'); return
+            exe(f"""INSERT INTO nf_conferencia (nf,responsavel,data_recebimento,conferido,obs)
+                VALUES ({p},{p},{p},{p},{p})
+                ON CONFLICT(nf) DO UPDATE SET
+                responsavel=EXCLUDED.responsavel,
+                data_recebimento=EXCLUDED.data_recebimento,
+                conferido=EXCLUDED.conferido,
+                obs=EXCLUDED.obs""",
+                (nf, str(d.get('responsavel','')),
+                 d.get('data_recebimento') or None,
+                 int(d.get('conferido',0)),
+                 str(d.get('obs',''))))
+            self._ok({'ok':True})
+        except Exception as e:
+            self._err(500, str(e))
 
     def _post_whatsapp_webhook(self):
         """POST /api/whatsapp/webhook — recebe mensagens do Wassender/Z-API/Evolution"""

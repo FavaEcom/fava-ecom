@@ -96,18 +96,43 @@ td{padding:6px 8px;vertical-align:middle}
 
 /* Área de impressão */
 #print-area{display:none}
+.print-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;overflow:auto;padding:20px}
+.print-modal.open{display:flex;align-items:flex-start;justify-content:center}
+.print-box{background:#fff;max-width:900px;width:100%;border-radius:8px;padding:24px;font-family:Arial,sans-serif;font-size:12px;color:#000}
+.pm-close{float:right;background:#000;color:#fff;border:none;padding:5px 14px;cursor:pointer;border-radius:4px;font-size:12px}
+.pm-h1{font-size:18px;font-weight:700;border-bottom:3px solid #000;padding-bottom:8px;margin-bottom:16px}
+.pm-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.pm-fi{border:1px solid #ccc;padding:8px 10px;border-radius:4px}
+.pm-fi label{font-size:9px;text-transform:uppercase;color:#888;display:block;margin-bottom:2px}
+.pm-fi span{font-size:13px;font-weight:700}
+.pm-sec{border:1px solid #333;border-radius:4px;padding:12px;margin-bottom:14px}
+.pm-sec h3{font-size:12px;font-weight:700;border-bottom:1px solid #ccc;padding-bottom:5px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+.pm-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f0f0f0;font-size:11px}
+.pm-row.tot{font-weight:700;font-size:13px;border-top:2px solid #000;border-bottom:none;padding-top:5px}
+.pm-boleto-grid{display:grid;grid-template-columns:50px 120px 1fr 90px 80px 60px;gap:4px;font-size:11px}
+.pm-boleto-hdr{background:#000;color:#fff;padding:4px 6px;font-weight:700;font-size:9px;text-transform:uppercase}
+.pm-boleto-cel{padding:5px 6px;border-bottom:1px solid #eee}
+.pm-boleto-ok{color:#16a34a;font-weight:700}
+.pm-novos{background:#fffbeb;border:1px solid #f59e0b;border-radius:4px;padding:10px;margin-bottom:14px}
+.pm-conf{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+.pm-conf-fi{border:1px solid #ccc;padding:8px;border-radius:4px}
+.pm-conf-fi label{font-size:9px;color:#888;display:block;margin-bottom:3px;text-transform:uppercase}
+.pm-conf-fi input,.pm-conf-fi select{width:100%;border:1px solid #ccc;padding:5px;font-size:12px;border-radius:3px}
+.pm-calc-tbl{width:100%;border-collapse:collapse;font-size:10px;margin-top:8px}
+.pm-calc-tbl th{background:#1F3864;color:#fff;padding:5px 6px;text-align:left;font-size:9px;text-transform:uppercase}
+.pm-calc-tbl th.r{text-align:right}
+.pm-calc-tbl td{padding:4px 6px;border-bottom:1px solid #eee;vertical-align:middle}
+.pm-calc-tbl td.r{text-align:right;font-family:monospace}
+.pm-calc-tbl tr:nth-child(even){background:#f9f9f9}
+.pm-calc-tbl .new-sku{background:#fffbeb!important;font-weight:700}
+.pm-btn-bar{display:flex;gap:8px;margin-bottom:16px}
+.pm-btn{padding:8px 18px;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:700}
 @media print{
   body > *{display:none!important}
-  #print-area{display:block!important;padding:20px;font-family:Arial,sans-serif;color:#000;background:#fff}
-  #print-area h2{font-size:16px;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:14px}
-  #print-area .fi{border:1px solid #ccc;border-radius:4px;padding:8px 10px;margin-bottom:8px}
-  #print-area .fi label{font-size:9px;text-transform:uppercase;color:#666;display:block;margin-bottom:2px}
-  #print-area .fi span{font-size:13px;font-weight:700}
-  #print-area .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
-  #print-area .row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee;font-size:11px}
-  #print-area .row.tot{font-weight:700;font-size:13px;border-bottom:2px solid #000}
-  #print-area .bloco{border:1px solid #000;border-radius:4px;padding:10px;margin-bottom:12px}
-  #print-area .bloco h3{font-size:12px;margin-bottom:8px;font-weight:700}
+  .print-modal{display:block!important;position:static!important;background:#fff!important;padding:0!important}
+  .print-box{border-radius:0!important;padding:12px!important}
+  .pm-close,.pm-btn-bar,.no-print{display:none!important}
+  .pm-conf-fi input,.pm-conf-fi select{border:none!important;padding:0!important}
 }
 </style>
 </head>
@@ -569,44 +594,179 @@ function carregarCapa(nf) {
 
 function imprimirCapa() {
   if(!_nf){alert('Carregue uma NF primeiro');return;}
-  fetch('/api/db/capa-nf?nf='+encodeURIComponent(_nf))
-    .then(r=>r.json()).then(function(d){
-      if(d.erro){alert('Capa não encontrada');return;}
-      var cfops = (d.cfops||[]).join(', ');
-      var csts  = (d.csts||[]).join(', ');
-      function fi(l,v){return '<div class="fi"><label>'+l+'</label><span>'+(v||'—')+'</span></div>';}
-      function row(l,v,tot){return '<div class="row'+(tot?' tot':'')+'"><span>'+l+'</span><span>'+v+'</span></div>';}
-      function f2(v){return 'R$ '+Number(v||0).toFixed(2).replace('.',',');}
-      var html =
-        '<h2>📋 Entrada NF #'+_nf+' — Fava Ecom</h2>'+
-        '<div class="grid">'+
-          fi('Fornecedor', (d.fornecedor||'').substring(0,40))+
-          fi('Data Emissão', d.data_emissao||'')+
-          fi('NF Nº / Itens', '#'+_nf+' · '+d.itens_total+' itens')+
-          fi('CFOPs', cfops||'—')+
-          fi('CSTs', csts||'—')+
-          fi('Com ST / Importado', (d.tem_st?'Sim':'Não')+' / '+(d.tem_importado?'Sim':'Não'))+
-        '</div>'+
-        '<div class="bloco"><h3>Valores</h3>'+
+  Promise.all([
+    fetch('/api/db/capa-nf?nf='+encodeURIComponent(_nf)).then(r=>r.json()),
+    fetch('/api/db/boletos?nf='+encodeURIComponent(_nf)).then(r=>r.json()),
+    fetch('/api/db/conferencia?nf='+encodeURIComponent(_nf)).then(r=>r.json())
+  ]).then(function([d, boletos, conf]){
+    if(d.erro){alert('Capa não encontrada');return;}
+    function fi(l,v){return '<div class="pm-fi"><label>'+l+'</label><span>'+(v||'—')+'</span></div>';}
+    function row(l,v,tot){return '<div class="pm-row'+(tot?' tot':'')+'"><span>'+l+'</span><span>'+v+'</span></div>';}
+    function f2(v){return 'R$ '+Number(v||0).toFixed(2).replace('.',',');}
+    function fd(s){if(!s)return '—';var p=s.split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:s;}
+
+    // SKUs novos
+    var novos = _itens.filter(function(i){return !i.ja_cadastrado && i.sku && i.sku.trim();});
+
+    // Boletos — se não tiver nenhum, criar 1 em branco
+    var bls = boletos.length ? boletos : [{parcela:1,total_parcelas:1,vencimento:'',valor:'',num_boleto:'',pago:0,obs:''}];
+    window._boletos_edit = JSON.parse(JSON.stringify(bls));
+    window._conf_edit    = conf || {};
+
+    var html =
+      '<h1 class="pm-h1">📋 Entrada NF #'+_nf+' — Fava Ecom</h1>'+
+
+      // Conferência
+      '<div class="pm-sec"><h3>✅ Conferência de Recebimento</h3>'+
+      '<div class="pm-conf">'+
+        '<div class="pm-conf-fi"><label>Recebido por</label><input id="conf-resp" value="'+(conf?.responsavel||'')+'" placeholder="Nome"></div>'+
+        '<div class="pm-conf-fi"><label>Data Recebimento</label><input id="conf-data" type="date" value="'+(conf?.data_recebimento||new Date().toISOString().split("T")[0])+'"></div>'+
+        '<div class="pm-conf-fi"><label>Conferido</label><select id="conf-ok"><option value="0"'+(conf?.conferido?'':' selected')+'>❌ Pendente</option><option value="1"'+(conf?.conferido?' selected':'')+'>✅ Conferido</option></select></div>'+
+      '</div>'+
+      '</div>'+
+
+      // Dados da nota
+      '<div class="pm-grid3">'+
+        fi('Fornecedor', d.fornecedor?.substring(0,35))+
+        fi('Data Emissão', fd(d.data_emissao))+
+        fi('NF Nº', '#'+_nf)+
+        fi('Itens / Vinculados', d.itens_total+' itens / '+d.skus_vinculados+' vinculados')+
+        fi('CFOPs', (d.cfops||[]).join(', '))+
+        fi('CSTs', (d.csts||[]).join(', '))+
+      '</div>'+
+
+      // Boletos
+      '<div class="pm-sec"><h3>💰 Boletos / Parcelas</h3>'+
+      '<div class="pm-boleto-grid">'+
+        '<div class="pm-boleto-hdr">#</div>'+
+        '<div class="pm-boleto-hdr">Vencimento</div>'+
+        '<div class="pm-boleto-hdr">Nº Boleto</div>'+
+        '<div class="pm-boleto-hdr">Valor</div>'+
+        '<div class="pm-boleto-hdr">Pago?</div>'+
+        '<div class="pm-boleto-hdr no-print">Ação</div>'+
+      '</div>'+
+      '<div id="boletos-list">'+renderBoletos(bls)+'</div>'+
+      '<div class="no-print" style="margin-top:8px">'+
+        '<button class="pm-btn no-print" style="background:#334155;color:#fff;font-size:10px" onclick="addBoleto()">+ Parcela</button>'+
+      '</div>'+
+      '</div>'+
+
+      // Resumo fiscal
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">'+
+        '<div class="pm-sec"><h3>📊 Valores da Nota</h3>'+
           row('Produtos', f2(d.v_produtos))+
           row('IPI', f2(d.v_ipi))+
           row('ST', f2(d.v_st))+
-          row('Custo Total (c/ IPI + ST)', f2(d.custo_total), true)+
+          row('Custo Total (c/ IPI+ST)', f2(d.custo_total), true)+
         '</div>'+
-        '<div class="bloco"><h3>Créditos Fiscais</h3>'+
+        '<div class="pm-sec"><h3>💡 Créditos Fiscais</h3>'+
           row('ICMS', f2(d.v_icms_credito))+
           row('PIS (1,65%)', f2(d.cred_pis))+
           row('COFINS (7,6%)', f2(d.cred_cofins))+
           row('Total Créditos', f2(d.cred_total), true)+
         '</div>'+
-        '<div class="bloco"><h3>CMV Resultante</h3>'+
-          row('CMV Brasil (marketplaces)', f2(d.cmv_brasil_total))+
-          row('CMV PR (balcão/local)', f2(d.cmv_pr_total), true)+
-        '</div>';
-      document.getElementById('print-area').innerHTML = html;
-      setTimeout(function(){ window.print(); }, 200);
-    }).catch(function(e){alert('Erro ao carregar capa: '+e.message);});
+      '</div>'+
+      '<div class="pm-sec"><h3>🏷️ CMV Resultante</h3>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+          '<div>'+row('CMV Brasil (marketplaces)', f2(d.cmv_brasil_total), true)+'</div>'+
+          '<div>'+row('CMV PR (balcão/local)', f2(d.cmv_pr_total), true)+'</div>'+
+        '</div>'+
+      '</div>'+
+
+      // SKUs novos
+      (novos.length ?
+        '<div class="pm-novos">'+
+          '<strong style="color:#b45309">⚡ '+novos.length+' SKU(s) NOVO(S) nesta nota:</strong><br>'+
+          novos.map(function(i){return '<span style="margin:4px;display:inline-block;background:#fff;border:1px solid #f59e0b;padding:2px 8px;border-radius:3px;font-size:11px"><b>'+i.sku+'</b> — '+i.nome?.substring(0,30)+'</span>';}).join('')+
+        '</div>' : '')+
+
+      // Tabela matemática de todos os itens
+      '<div class="pm-sec"><h3>🔢 Matemática dos Produtos ('+d.itens_total+' itens)</h3>'+
+      '<table class="pm-calc-tbl"><thead><tr>'+
+        '<th>#</th><th>SKU</th><th>Produto</th>'+
+        '<th class="r">Qtd</th><th class="r">V.Unit</th>'+
+        '<th class="r">IPI%</th><th class="r">IPI Un</th>'+
+        '<th class="r">ICMS%</th><th class="r">Cred%</th>'+
+        '<th class="r">ST Un</th><th class="r">Custo</th>'+
+        '<th class="r">CMV BR</th><th class="r">CMV PR</th>'+
+      '</tr></thead><tbody>'+
+      _itens.map(function(it,i){
+        var novo = !it.ja_cadastrado && it.sku && it.sku.trim();
+        var st_un = (it.v_st||0)/Math.max(it.qtd||1,1);
+        return '<tr class="'+(novo?'new-sku':'')+'">'+
+          '<td>'+(it.det_num||i+1)+'</td>'+
+          '<td><b>'+escHtml(it.sku||'—')+'</b>'+(novo?'<span style="color:#b45309;font-size:9px"> NOVO</span>':'')+'</td>'+
+          '<td>'+escHtml((it.nome||'').substring(0,30))+'</td>'+
+          '<td class="r">'+(it.qtd||0)+'</td>'+
+          '<td class="r">'+Number(it.vunit||0).toFixed(4)+'</td>'+
+          '<td class="r">'+(it.ipi_p||0).toFixed(1)+'%</td>'+
+          '<td class="r">'+Number(it.ipi_un||0).toFixed(4)+'</td>'+
+          '<td class="r" style="color:#f59e0b">'+(it.icms_p||0).toFixed(2)+'%</td>'+
+          '<td class="r" style="color:#16a34a">'+(it._aliq||0).toFixed(2)+'%</td>'+
+          '<td class="r">'+(st_un>0?Number(st_un).toFixed(4):'—')+'</td>'+
+          '<td class="r"><b>'+Number(it.custo_r||0).toFixed(4)+'</b></td>'+
+          '<td class="r" style="color:#16a34a"><b>'+Number(it._cmv_br||0).toFixed(4)+'</b></td>'+
+          '<td class="r" style="color:#2563eb"><b>'+Number(it._cmv_pr||0).toFixed(4)+'</b></td>'+
+        '</tr>';
+      }).join('')+
+      '</tbody></table></div>';
+
+    document.getElementById('print-content').innerHTML = html;
+    document.getElementById('print-modal').classList.add('open');
+  }).catch(function(e){alert('Erro: '+e.message);});
 }
+
+function renderBoletos(bls) {
+  return bls.map(function(b,i){
+    return '<div class="pm-boleto-grid">'+
+      '<div class="pm-boleto-cel">'+(b.parcela||i+1)+'/'+(b.total_parcelas||bls.length)+'</div>'+
+      '<div class="pm-boleto-cel"><input type="date" value="'+(b.vencimento||'')+'" onchange="window._boletos_edit['+i+'].vencimento=this.value" style="border:none;font-size:11px;width:100%"></div>'+
+      '<div class="pm-boleto-cel"><input value="'+(b.num_boleto||'')+'" placeholder="Nº boleto" onchange="window._boletos_edit['+i+'].num_boleto=this.value" style="border:none;font-size:11px;width:100%"></div>'+
+      '<div class="pm-boleto-cel"><input type="number" value="'+(b.valor||'')+'" placeholder="0,00" onchange="window._boletos_edit['+i+'].valor=this.value" style="border:none;font-size:11px;width:100%;text-align:right"></div>'+
+      '<div class="pm-boleto-cel"><input type="checkbox" '+(b.pago?'checked':'')+' onchange="window._boletos_edit['+i+'].pago=this.checked?1:0" title="Marcar como pago"> '+(b.pago?'<span class="pm-boleto-ok">✅ PAGO</span>':'Pendente')+'</div>'+
+      '<div class="pm-boleto-cel no-print"><button onclick="removerBoleto('+i+')" style="background:#dc2626;color:#fff;border:none;padding:2px 6px;border-radius:3px;cursor:pointer;font-size:10px">✕</button></div>'+
+    '</div>';
+  }).join('');
+}
+
+function addBoleto() {
+  window._boletos_edit = window._boletos_edit || [];
+  var n = window._boletos_edit.length + 1;
+  window._boletos_edit.push({parcela:n,total_parcelas:n,vencimento:'',valor:'',num_boleto:'',pago:0});
+  window._boletos_edit.forEach(function(b,i){b.total_parcelas=n;});
+  document.getElementById('boletos-list').innerHTML = renderBoletos(window._boletos_edit);
+}
+
+function removerBoleto(i) {
+  window._boletos_edit.splice(i,1);
+  window._boletos_edit.forEach(function(b,j){b.parcela=j+1;b.total_parcelas=window._boletos_edit.length;});
+  document.getElementById('boletos-list').innerHTML = renderBoletos(window._boletos_edit);
+}
+
+function salvarBoletos() {
+  if(!_nf) return;
+  var bls = (window._boletos_edit||[]).map(function(b,i){
+    return Object.assign({},b,{nf:_nf,parcela:i+1,total_parcelas:window._boletos_edit.length});
+  });
+  // Buscar dados atuais dos inputs
+  document.querySelectorAll('#boletos-list input[type=date]').forEach(function(el,i){if(bls[i])bls[i].vencimento=el.value;});
+  document.querySelectorAll('#boletos-list input[type=number]').forEach(function(el,i){if(bls[i])bls[i].valor=parseFloat(el.value)||0;});
+  document.querySelectorAll('#boletos-list input:not([type])').forEach(function(el,i){if(bls[i])bls[i].num_boleto=el.value;});
+  document.querySelectorAll('#boletos-list input[type=checkbox]').forEach(function(el,i){if(bls[i])bls[i].pago=el.checked?1:0;});
+  fetch('/api/db/boletos-salvar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nf:_nf,boletos:bls})})
+    .then(r=>r.json()).then(d=>{if(d.ok)toast('✅ Boletos salvos!');});
+}
+
+function salvarConferencia() {
+  if(!_nf) return;
+  fetch('/api/db/conferencia-salvar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    nf:_nf,
+    responsavel: document.getElementById('conf-resp')?.value||'',
+    data_recebimento: document.getElementById('conf-data')?.value||'',
+    conferido: parseInt(document.getElementById('conf-ok')?.value||0),
+  })}).then(r=>r.json()).then(d=>{if(d.ok)toast('✅ Conferência salva!');});
+}
+
 
 function adicionarItemManual() {
   var cprod = prompt('Código do fornecedor (cProd):','');
@@ -663,5 +823,18 @@ function enviarFilaAnuncios() {
 </script>
 <div style="height:60px"></div>
 <div id="print-area"></div>
+
+<!-- Modal capa impressão -->
+<div class="print-modal" id="print-modal">
+  <div class="print-box" id="print-box">
+    <button class="pm-close no-print" onclick="document.getElementById('print-modal').classList.remove('open')">✕ Fechar</button>
+    <div id="print-content"></div>
+    <div class="pm-btn-bar no-print">
+      <button class="pm-btn" style="background:#000;color:#fff" onclick="window.print()">🖨️ Imprimir</button>
+      <button class="pm-btn" style="background:#16a34a;color:#fff" onclick="salvarConferencia()">💾 Salvar conferência</button>
+      <button class="pm-btn" style="background:#2563eb;color:#fff" onclick="salvarBoletos()">💾 Salvar boletos</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
