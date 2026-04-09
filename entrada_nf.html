@@ -93,6 +93,22 @@ td{padding:6px 8px;vertical-align:middle}
 .toast{position:fixed;top:60px;right:16px;background:#166534;color:#86efac;padding:10px 18px;border-radius:7px;font-size:12px;font-weight:700;z-index:200;display:none;max-width:400px}
 
 .loading{text-align:center;padding:40px;color:#475569}
+
+/* Área de impressão */
+#print-area{display:none}
+@media print{
+  body > *{display:none!important}
+  #print-area{display:block!important;padding:20px;font-family:Arial,sans-serif;color:#000;background:#fff}
+  #print-area h2{font-size:16px;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:14px}
+  #print-area .fi{border:1px solid #ccc;border-radius:4px;padding:8px 10px;margin-bottom:8px}
+  #print-area .fi label{font-size:9px;text-transform:uppercase;color:#666;display:block;margin-bottom:2px}
+  #print-area .fi span{font-size:13px;font-weight:700}
+  #print-area .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+  #print-area .row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee;font-size:11px}
+  #print-area .row.tot{font-weight:700;font-size:13px;border-bottom:2px solid #000}
+  #print-area .bloco{border:1px solid #000;border-radius:4px;padding:10px;margin-bottom:12px}
+  #print-area .bloco h3{font-size:12px;margin-bottom:8px;font-weight:700}
+}
 </style>
 </head>
 <body>
@@ -252,6 +268,12 @@ function fmtR(v) { return 'R$ ' + (v||0).toFixed(2); }
 function buscarNF() {
   var nf = document.getElementById('inp-nf').value.trim();
   if(!nf){toast('Digite o número da NF', false);return;}
+  // Se for chave de acesso (44 dígitos), extrair o nNF (posições 25 a 34, 9 dígitos)
+  if(/^\d{44}$/.test(nf)) {
+    nf = String(parseInt(nf.substring(25, 34), 10)); // remove zeros à esquerda
+    document.getElementById('inp-nf').value = nf;
+    toast('Chave de acesso detectada → NF #'+nf);
+  }
   _nf = nf;
   document.getElementById('nf-status').textContent = 'Buscando...';
   document.getElementById('conteudo').innerHTML = '<div class="loading">⏳ Carregando NF '+nf+'...</div>';
@@ -546,75 +568,44 @@ function carregarCapa(nf) {
 }
 
 function imprimirCapa() {
-  // Pegar dados da capa do servidor — renderizar em branco para impressão
   if(!_nf){alert('Carregue uma NF primeiro');return;}
   fetch('/api/db/capa-nf?nf='+encodeURIComponent(_nf))
     .then(r=>r.json()).then(function(d){
       if(d.erro){alert('Capa não encontrada');return;}
-      var win = window.open('','_blank');
       var cfops = (d.cfops||[]).join(', ');
       var csts  = (d.csts||[]).join(', ');
-      var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Capa NF '+_nf+'</title>'+
-      '<style>'+
-      'body{font-family:Arial,sans-serif;padding:24px;color:#000;background:#fff;font-size:12px}'+
-      'h2{font-size:16px;margin-bottom:4px;border-bottom:2px solid #000;padding-bottom:6px}'+
-      '.sub{font-size:11px;color:#555;margin-bottom:16px}'+
-      '.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}'+
-      '.fi{border:1px solid #ddd;border-radius:4px;padding:8px 10px}'+
-      '.fi label{font-size:9px;text-transform:uppercase;color:#888;display:block;margin-bottom:2px}'+
-      '.fi span{font-size:13px;font-weight:700}'+
-      '.totais{border:1px solid #000;border-radius:4px;padding:10px;margin-bottom:14px}'+
-      '.totais h3{font-size:12px;margin-bottom:8px;font-weight:700}'+
-      '.row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee;font-size:11px}'+
-      '.row.destaque{font-weight:700;font-size:13px;border-bottom:2px solid #000}'+
-      '.flags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}'+
-      '.flag{padding:2px 8px;border:1px solid #333;border-radius:3px;font-size:10px;font-weight:700}'+
-      '.creditos{border:1px solid #ddd;border-radius:4px;padding:8px;margin-bottom:14px;font-size:11px}'+
-      '.creditos h3{font-size:11px;margin-bottom:6px}'+
-      '.cred-row{display:flex;justify-content:space-between;padding:2px 0}'+
-      '@media print{.no-print{display:none}body{padding:12px}}'+
-      '</style></head><body>'+
-      '<h2>📋 Entrada de NF #'+_nf+' — Fava Ecom</h2>'+
-      '<div class="sub">Emitido em: '+new Date().toLocaleDateString('pt-BR')+'</div>'+
-      '<div class="grid">'+
-      fi('Fornecedor', d.fornecedor||'—')+
-      fi('Data Emissão', d.data_emissao||'—')+
-      fi('NF Nº', '#'+_nf)+
-      fi('Itens na nota', d.itens_total+' itens ('+d.skus_vinculados+' vinculados)')+
-      fi('CFOPs', cfops||'—')+
-      fi('CSTs', csts||'—')+
-      '</div>'+
-      '<div class="totais"><h3>Valores da Nota</h3>'+
-      row('Valor dos Produtos', 'R$ '+fmt2(d.v_produtos))+
-      row('IPI', 'R$ '+fmt2(d.v_ipi))+
-      row('ST (Substituição Tributária)', 'R$ '+fmt2(d.v_st))+
-      row('ICMS Crédito (na nota)', 'R$ '+fmt2(d.v_icms_credito))+
-      '<div class="row destaque"><span>Custo Total (c/ IPI + ST)</span><span>R$ '+fmt2(d.custo_total)+'</span></div>'+
-      '</div>'+
-      '<div class="creditos"><h3>💡 Créditos Fiscais</h3>'+
-      cred('ICMS', d.v_icms_credito)+
-      cred('PIS (1,65%)', d.cred_pis)+
-      cred('COFINS (7,6%)', d.cred_cofins)+
-      '<div class="cred-row" style="font-weight:700;margin-top:4px;border-top:1px solid #ccc;padding-top:4px"><span>Total Créditos</span><span>R$ '+fmt2(d.cred_total)+'</span></div>'+
-      '</div>'+
-      '<div class="totais"><h3>CMV Resultante</h3>'+
-      row('CMV Brasil (marketplaces)', 'R$ '+fmt2(d.cmv_brasil_total))+
-      row('CMV PR (balcão/local)', 'R$ '+fmt2(d.cmv_pr_total))+
-      '</div>'+
-      (d.tem_st||d.tem_importado?'<div class="flags">'+
-      (d.tem_st?'<span class="flag">⚡ COM ST</span>':'')+
-      (d.tem_importado?'<span class="flag">🌍 IMPORTADO</span>':'')+
-      '</div>':'')+
-      '<br><button class="no-print" onclick="window.print()" style="padding:8px 20px;background:#000;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px">🖨️ Imprimir</button>'+
-      '</body></html>';
-      win.document.write(html);
-      win.document.close();
-    }).catch(function(){alert('Erro ao carregar capa');});
-
-  function fi(l,v){return '<div class="fi"><label>'+l+'</label><span>'+v+'</span></div>';}
-  function row(l,v){return '<div class="row"><span>'+l+'</span><span>'+v+'</span></div>';}
-  function cred(l,v){return '<div class="cred-row"><span>'+l+'</span><span>R$ '+fmt2(v)+'</span></div>';}
-  function fmt2(v){return Number(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
+      function fi(l,v){return '<div class="fi"><label>'+l+'</label><span>'+(v||'—')+'</span></div>';}
+      function row(l,v,tot){return '<div class="row'+(tot?' tot':'')+'"><span>'+l+'</span><span>'+v+'</span></div>';}
+      function f2(v){return 'R$ '+Number(v||0).toFixed(2).replace('.',',');}
+      var html =
+        '<h2>📋 Entrada NF #'+_nf+' — Fava Ecom</h2>'+
+        '<div class="grid">'+
+          fi('Fornecedor', (d.fornecedor||'').substring(0,40))+
+          fi('Data Emissão', d.data_emissao||'')+
+          fi('NF Nº / Itens', '#'+_nf+' · '+d.itens_total+' itens')+
+          fi('CFOPs', cfops||'—')+
+          fi('CSTs', csts||'—')+
+          fi('Com ST / Importado', (d.tem_st?'Sim':'Não')+' / '+(d.tem_importado?'Sim':'Não'))+
+        '</div>'+
+        '<div class="bloco"><h3>Valores</h3>'+
+          row('Produtos', f2(d.v_produtos))+
+          row('IPI', f2(d.v_ipi))+
+          row('ST', f2(d.v_st))+
+          row('Custo Total (c/ IPI + ST)', f2(d.custo_total), true)+
+        '</div>'+
+        '<div class="bloco"><h3>Créditos Fiscais</h3>'+
+          row('ICMS', f2(d.v_icms_credito))+
+          row('PIS (1,65%)', f2(d.cred_pis))+
+          row('COFINS (7,6%)', f2(d.cred_cofins))+
+          row('Total Créditos', f2(d.cred_total), true)+
+        '</div>'+
+        '<div class="bloco"><h3>CMV Resultante</h3>'+
+          row('CMV Brasil (marketplaces)', f2(d.cmv_brasil_total))+
+          row('CMV PR (balcão/local)', f2(d.cmv_pr_total), true)+
+        '</div>';
+      document.getElementById('print-area').innerHTML = html;
+      setTimeout(function(){ window.print(); }, 200);
+    }).catch(function(e){alert('Erro ao carregar capa: '+e.message);});
 }
 
 function adicionarItemManual() {
@@ -671,5 +662,6 @@ function enviarFilaAnuncios() {
 })();
 </script>
 <div style="height:60px"></div>
+<div id="print-area"></div>
 </body>
 </html>
