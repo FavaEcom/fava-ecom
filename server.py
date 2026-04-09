@@ -2311,16 +2311,59 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception as e: self._err(500, str(e))
 
     def _get_boletos(self):
-        """GET /api/db/boletos?nf=X — lista boletos da NF"""
+        """GET /api/db/boletos?nf=X — lista boletos da NF, tenta extrair do XML se vazio"""
         from urllib.parse import parse_qs
         qs = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
         nf = qs.get('nf',[''])[0].strip()
         p  = '%s' if IS_PG else '?'
         try:
             rows = exe(f"SELECT * FROM boletos_nf WHERE nf={p} ORDER BY parcela", (nf,), fetchall=True) or []
+            # Se não tem boletos salvos, tentar extrair do XML
+            if not rows:
+                rows = self._extrair_boletos_xml(nf)
             self._ok(rows)
         except Exception as e:
             self._err(500, str(e))
+
+    def _extrair_boletos_xml(self, nf):
+        """Extrai parcelas/boletos da seção <cobr> do XML da NF"""
+        import glob, os
+        import xml.etree.ElementTree as ET
+        NS = 'http://www.portalfiscal.inf.br/nfe'
+        def tag(n): return f'{{{NS}}}{n}'
+        PASTA = os.environ.get('NF_PASTA', r'\\192.168.0.103\Trabalho\NOTAS XLS')
+        padrao = f'*{nf}*.xml'
+        xmls = glob.glob(os.path.join(PASTA, '**', padrao), recursive=True) +                glob.glob(os.path.join(PASTA, padrao))
+        for f in xmls:
+            try:
+                tree = ET.parse(f)
+                root = tree.getroot()
+                nfe  = root.find(tag('NFe')) or root
+                inf  = nfe.find(tag('infNFe')) or nfe
+                cobr = inf.find(tag('cobr'))
+                if cobr is None: continue
+                forn_el = inf.find(tag('emit'))
+                forn = ''
+                if forn_el is not None:
+                    forn = (forn_el.findtext(tag('xNome')) or '').strip()
+                dups = cobr.findall(tag('dup'))
+                if not dups: continue
+                boletos = []
+                for i, dup in enumerate(dups, 1):
+                    ndup  = (dup.findtext(tag('nDup')) or str(i)).strip()
+                    dvenc = (dup.findtext(tag('dVenc')) or '').strip()
+                    valor = float(dup.findtext(tag('vDup')) or 0)
+                    boletos.append({
+                        'id': None, 'nf': nf, 'fornecedor': forn,
+                        'parcela': i, 'total_parcelas': len(dups),
+                        'vencimento': dvenc, 'valor': valor,
+                        'num_boleto': ndup, 'pago': 0,
+                        'data_pagamento': None, 'obs': '',
+                        'created_at': None, '_do_xml': True
+                    })
+                return boletos
+            except: continue
+        return []
 
     def _post_boletos_salvar(self):
         """POST /api/db/boletos-salvar — salva/atualiza boletos da NF"""
