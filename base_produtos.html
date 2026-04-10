@@ -33,6 +33,7 @@ tbody tr{border-bottom:1px solid #0f172a;transition:background .1s}
 tbody tr:hover{background:#14202f}
 tbody tr.sem-peso{background:#1a1200}
 tbody tr.sem-cmv{background:#1a0a0a}
+tbody tr.variacao-pai{background:#1a1a0a;opacity:.7}
 td{padding:5px 8px;vertical-align:middle;max-width:200px}
 .sku-tag{font-family:monospace;font-weight:700;color:#60a5fa;font-size:11px}
 .nome-cell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
@@ -78,10 +79,17 @@ input.cel-inp.salvo{border-color:#22c55e}
     <option value="sem-ncm">Sem NCM</option>
     <option value="sem-ean">Sem EAN</option>
     <option value="sem-familia">Sem familia</option>
+    <option value="sem-cmv-pr">Sem CMV PR</option>
     <option value="com-st">Com ST</option>
   </select>
   <button class="btn btn-blue" onclick="syncBlingPeso()" id="btn-speso">Sync Peso Bling</button>
   <button class="btn btn-green" onclick="syncEstoque()" id="btn-sestq">Sync Estoque</button>
+  <button class="btn" style="background:#7c3aed;color:#fff" onclick="syncNCMBling()" id="btn-ncm">&#128230; Sync NCM Bling</button>
+  <label style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px">
+    <input type="checkbox" id="chk-vars" onchange="filtrar()"> Ocultar variações (_)
+  </label>
+  <button class="btn" style="background:#7c3aed;color:#fff" onclick="calcularCmvPr()" id="btn-cmvpr">&#x26A1; Calcular CMV PR</button>
+  <button class="btn" style="background:#7c3aed;color:#fff" onclick="calcularCmvPr()" id="btn-cmvpr">🧮 Calcular CMV PR</button>
   <span id="lbl-count" style="font-size:11px;color:#64748b"></span>
 </div>
 <div class="stats">
@@ -91,6 +99,7 @@ input.cel-inp.salvo{border-color:#22c55e}
   <div class="stat" onclick="document.getElementById('f-pend').value='sem-ncm';filtrar()"><div class="stat-n warn" id="sn-sn">-</div><div class="stat-l">Sem NCM</div></div>
   <div class="stat" onclick="document.getElementById('f-pend').value='sem-ean';filtrar()"><div class="stat-n" style="color:#8b5cf6" id="sn-se">-</div><div class="stat-l">Sem EAN</div></div>
   <div class="stat" onclick="document.getElementById('f-pend').value='com-st';filtrar()"><div class="stat-n" style="color:#fcd34d" id="sn-st">-</div><div class="stat-l">Com ST</div></div>
+  <div class="stat" onclick="document.getElementById('f-pend').value='sem-cmv-pr';filtrar()"><div class="stat-n warn" id="sn-sp2">-</div><div class="stat-l">Sem CMV PR</div></div>
   <div class="stat"><div class="stat-n ok" id="sn-eq">-</div><div class="stat-l">Em estoque</div></div>
 </div>
 <div class="tbl-wrap"><div id="conteudo" class="loading">Carregando...</div></div>
@@ -125,6 +134,8 @@ function filtrar(){
   var fam=document.getElementById('f-fam').value;
   var pend=document.getElementById('f-pend').value;
   _fil=_todos.filter(function(p){
+    var ocultarVars=document.getElementById('chk-vars')?.checked;
+    if(ocultarVars && /[_]$/.test(p.sku||'')) return false;
     if(q&&!(p.sku||'').toLowerCase().includes(q)&&!(p.nome||'').toLowerCase().includes(q))return false;
     if(fam&&p.familia!==fam)return false;
     if(pend==='sem-peso'&&(p.peso||0)>0)return false;
@@ -132,6 +143,7 @@ function filtrar(){
     if(pend==='sem-ncm'&&p.ncm)return false;
     if(pend==='sem-ean'&&p.ean)return false;
     if(pend==='sem-familia'&&p.familia)return false;
+    if(pend==='sem-cmv-pr'&&(p.custo_pr||0)>0)return false;
     if(pend==='com-st'&&!parseInt(p.tem_st||0))return false;
     return true;
   });
@@ -147,6 +159,8 @@ function atualizarStats(){
   document.getElementById('sn-se').textContent=d.filter(function(p){return!p.ean;}).length;
   document.getElementById('sn-st').textContent=d.filter(function(p){return parseInt(p.tem_st||0);}).length;
   document.getElementById('sn-eq').textContent=d.filter(function(p){return(p.estoque||0)>0;}).length;
+  var elSp2=document.getElementById('sn-sp2');
+  if(elSp2) elSp2.textContent=d.filter(function(p){return(p.custo_br||0)>0&&!(p.custo_pr>0);}).length;
   document.getElementById('lbl-count').textContent=_fil.length+' produtos';
 }
 
@@ -169,8 +183,10 @@ function setSort(col){
 
 var COLS=[
   {k:'sku',l:'SKU',ed:false},
+  {k:'cod_forn',l:'Cód Forn',ed:false},
   {k:'nome',l:'Nome',ed:true},
   {k:'familia',l:'Familia',ed:true},
+  {k:'fornecedor',l:'Cod Fornec',ed:true},
   {k:'custo_br',l:'CMV BR',ed:true,num:true},
   {k:'custo_pr',l:'CMV PR',ed:true,num:true},
   {k:'peso',l:'Peso kg',ed:true,num:true},
@@ -200,15 +216,27 @@ function renderTabela(){
   html+='</tr></thead><tbody>';
   _fil.forEach(function(p){
     var sp=!(p.peso>0),sc=!(p.custo_br>0);
-    var rc=sc?'sem-cmv':sp?'sem-peso':'';
+    var isVar=/[_]$/.test(p.sku||'');
+    var rc=sc?'sem-cmv':sp?'sem-peso':isVar?'variacao-pai':'';
     var f50=calcFrete(p.peso,50),f100=calcFrete(p.peso,100),f200=calcFrete(p.peso,200);
     html+='<tr class="'+rc+'">';
     COLS.forEach(function(c){
       var v=p[c.k],disp='';
-      if(c.k==='sku') disp='<span class="sku-tag">'+esc(p.sku)+'</span>';
-      else if(c.k==='nome') disp='<div class="nome-cell" title="'+esc(v||'')+'">'+esc((v||'&mdash;').slice(0,40))+'</div>';
+      if(c.k==='sku'){
+        var isPai=p.sku&&(p.sku.endsWith('_'));
+        var skuDisp='<span class="sku-tag"'+(isPai?' style="color:#94a3b8"':'')+'>'+esc(p.sku)+'</span>';
+        if(isPai) skuDisp+=' <span style="font-size:9px;color:#64748b">estq.virtual</span>';
+        disp=skuDisp;
+      } else if(c.k==='cod_forn'){
+        disp=v?'<span style="font-family:monospace;color:#f59e0b;font-size:10px">'+esc(String(v))+'</span>':'<span class="tag-zero">&mdash;</span>';
+      } else if(c.k==='nome') disp='<div class="nome-cell" title="'+esc(v||'')+'">'+esc((v||'&mdash;').slice(0,40))+'</div>';
       else if(c.k==='familia') disp=v?'<span class="fam-badge">'+esc(v)+'</span>':'<span class="tag-zero">&mdash;</span>';
-      else if(c.k==='custo_br'||c.k==='custo_pr') disp=v&&v>0?'<span style="color:#22c55e;font-family:monospace">R$ '+Number(v).toFixed(4)+'</span>':'<span class="tag tag-warn">-- sem CMV</span>';
+      else if(c.k==='custo_br') disp=v&&v>0?'<span style="color:#22c55e;font-family:monospace">R$ '+Number(v).toFixed(4)+'</span>':'<span class="tag tag-warn">-- sem CMV</span>';
+      else if(c.k==='custo_pr'){
+        if(v&&v>0) disp='<span style="color:#60a5fa;font-family:monospace">R$ '+Number(v).toFixed(4)+'</span>';
+        else if((p.custo_br||0)>0) disp='<span style="color:#f59e0b;font-size:10px">⚠ calcular</span>';
+        else disp='<span class="tag-zero">&mdash;</span>';
+      }
       else if(c.k==='peso') disp=v&&v>0?'<span style="font-family:monospace">'+Number(v).toFixed(3)+'</span>':'<span class="tag tag-warn">-- sem peso</span>';
       else if(c.k==='largura'||c.k==='altura'||c.k==='comprimento') disp=v&&v>0?'<span style="font-family:monospace">'+Number(v).toFixed(1)+'</span>':'<span class="tag-zero">&mdash;</span>';
       else if(c.k==='_f50') disp=f50!==null?'<span class="fr-calc">'+f50.toFixed(2)+'</span>':'<span class="fr-sem">&mdash;</span>';
@@ -255,6 +283,22 @@ document.addEventListener('keydown',function(e){
   if(e.key==='Tab'&&_cel){e.preventDefault();var tds=Array.from(_cel.parentElement.querySelectorAll('td.edit'));var idx=tds.indexOf(_cel);if(idx>=0&&idx<tds.length-1)setTimeout(function(){tds[idx+1].dispatchEvent(new MouseEvent('dblclick'));},10);}
 });
 
+
+function calcularCmvPr(){
+  var b=document.getElementById('btn-cmvpr');
+  b.textContent='Calculando...';b.disabled=true;
+  fetch('/api/db/calcular-cmv-pr')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      toast('CMV PR: '+d.atualizados+' produtos calculados');
+      return fetch('/api/db/produtos?limit=5000');
+    })
+    .then(function(r){return r.json();})
+    .then(function(data){_todos=data;filtrar();})
+    .catch(function(e){toast('Erro: '+e.message,false);})
+    .finally(function(){b.textContent='\u26A1 Calcular CMV PR';b.disabled=false;});
+}
+
 function syncBlingPeso(){
   var b=document.getElementById('btn-speso');b.textContent='Aguarde...';b.disabled=true;
   fetch('/api/sync/bling-peso').then(function(r){return r.json();}).then(function(d){
@@ -268,6 +312,17 @@ function syncBlingPeso(){
   .finally(function(){b.textContent='Sync Peso Bling';b.disabled=false;});
 }
 
+function calcularCmvPr(){
+  var b=document.getElementById('btn-cmvpr');b.textContent='Calculando...';b.disabled=true;
+  fetch('/api/db/produtos/calcular-cmv-pr',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})
+    .then(function(r){return r.json();}).then(function(d){
+      toast('CMV PR calculado: '+d.com_cmv_pr+' produtos. Ainda sem: '+d.ainda_sem_cmv_pr);
+      return fetch('/api/db/produtos?limit=5000');
+    }).then(function(r){return r.json();}).then(function(data){_todos=data;filtrar();})
+    .catch(function(e){toast('Erro: '+e.message,false);})
+    .finally(function(){b.textContent='Calcular CMV PR';b.disabled=false;});
+}
+
 function syncEstoque(){
   var b=document.getElementById('btn-sestq');b.textContent='Aguarde...';b.disabled=true;
   fetch('/api/sync/now').then(function(r){return r.json();}).then(function(d){
@@ -276,6 +331,16 @@ function syncEstoque(){
   }).then(function(r){return r.json();}).then(function(data){_todos=data;filtrar();})
   .catch(function(e){toast('Erro: '+e.message,false);})
   .finally(function(){b.textContent='Sync Estoque';b.disabled=false;});
+}
+
+function syncNCMBling(){
+  var b=document.getElementById('btn-ncm');b.textContent='Aguarde...';b.disabled=true;
+  fetch('/api/sync/bling-ncm').then(function(r){return r.json();}).then(function(d){
+    toast('NCM Bling: '+d.atualizados+' produtos atualizados');
+    return fetch('/api/db/produtos?limit=5000');
+  }).then(function(r){return r.json();}).then(function(data){_todos=data;filtrar();})
+  .catch(function(e){toast('Erro: '+e.message,false);})
+  .finally(function(){b.textContent='Sync NCM Bling';b.disabled=false;});
 }
 
 function toast(msg,ok){var el=document.getElementById('toast');el.textContent=msg;el.style.background=ok===false?'#7f1d1d':'#166534';el.style.display='block';setTimeout(function(){el.style.display='none';},3500);}

@@ -146,6 +146,24 @@ td{padding:6px 8px;vertical-align:middle}
   .pm-calc-tbl td{padding:2px 3px!important;white-space:nowrap}
   .pm-sec{border:1px solid #999!important;padding:6px!important;margin-bottom:8px!important}
 }
+
+/* Modal Gerar SKU */
+.modal-sku{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:600;align-items:center;justify-content:center}
+.modal-sku.open{display:flex}
+.msku-box{background:#1e293b;border:2px solid #10b981;border-radius:12px;padding:24px;width:520px;max-width:95vw}
+.msku-title{font-size:14px;font-weight:700;color:#10b981;margin-bottom:4px}
+.msku-sub{font-size:11px;color:#64748b;margin-bottom:18px}
+.msku-row{display:grid;grid-template-columns:130px 1fr;gap:8px;align-items:center;margin-bottom:12px}
+.msku-row label{font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase}
+.msku-inp{background:#0f172a;border:1px solid #334155;border-radius:6px;color:#f1f5f9;padding:8px 12px;font-size:13px;width:100%;outline:none}
+.msku-inp:focus{border-color:#10b981}
+.msku-inp.sku-num{color:#10b981;font-weight:800;font-family:monospace;font-size:18px;border-color:#10b981}
+.msku-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.msku-preview{background:#0f172a;border:1px solid #1e3a5f;border-radius:6px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:#64748b}
+.msku-preview b{color:#93c5fd}
+.tag-sem-sku{background:#064e3b22;border:1px dashed #10b981;color:#10b981;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer}
+.tag-sem-sku:hover{background:#064e3b55}
+
 </style>
 </head>
 <body>
@@ -335,6 +353,8 @@ function buscarNF() {
       atualizarStats();
       carregarCapa(nf);
       document.getElementById('barra').style.display='flex';
+      carregarProximoSku();
+      carregarFamilias();
       document.getElementById('nf-status').textContent = data.length+' itens';
     }).catch(e=>{
       document.getElementById('conteudo').innerHTML='<div class="loading">Erro: '+e.message+'</div>';
@@ -396,7 +416,15 @@ function renderTabela() {
     } else {
       var estilo = skuEhCprod ? 'border-color:#ef4444' : '';
       var placeholder = skuEhCprod ? 'SKU interno (não código)' : 'SKU';
-      html += '<td><input class="ei ei-sku ei-sku-w" id="sku-'+i+'" placeholder="'+placeholder+'" value="'+(skuMapeado||it._novo_sku||'')+'" oninput="onSkuInput('+i+',this)" style="'+estilo+'"></td>';
+      if(!skuEhCprod && !skuMapeado && !it._novo_sku) {
+        // Sem SKU: mostra botão de geração
+        html += '<td><div style="display:flex;gap:4px;align-items:center">'
+              + '<input class="ei ei-sku ei-sku-w" id="sku-'+i+'" placeholder="SKU" value="" oninput="onSkuInput('+i+',this)" style="'+estilo+'">'
+              + '<button class="btn-xs bxs-green" style="white-space:nowrap" onclick="abrirModalSku('+i+')" title="Gerar novo SKU para este produto">⚡ Gerar</button>'
+              + '</div></td>';
+      } else {
+        html += '<td><input class="ei ei-sku ei-sku-w" id="sku-'+i+'" placeholder="'+placeholder+'" value="'+(skuMapeado||it._novo_sku||'')+'" oninput="onSkuInput('+i+',this)" style="'+estilo+'"></td>';
+      }
     }
     // NCM
     html += '<td><input class="ei ei-ncm" value="'+(it.ncm||'')+'" oninput="_itens['+i+'].ncm=this.value"></td>';
@@ -512,7 +540,6 @@ function salvarItem(i) {
       custo_r: it.custo_r||0, ipi_un: it.ipi_un||0,
       tem_st: it.tem_st||0, cst: it.cst||'', cest: it.cest||'',
       cmv_br: it._cmv_br, cmv_pr: it._cmv_pr,
-      fornecedor: it.fornecedor||_itens[0]?.fornecedor||'',
     }]})
   }).then(r=>r.json()).then(d=>{
     if(d.ok){
@@ -956,6 +983,33 @@ function enviarFilaAnuncios() {
 <div id="print-area"></div>
 
 <!-- Modal capa impressão -->
+
+<!-- Modal Gerar SKU -->
+<div class="modal-sku" id="modal-sku">
+  <div class="msku-box">
+    <div class="msku-title">⚡ Gerar novo SKU</div>
+    <div class="msku-sub" id="msku-sub">Código fornecedor: —</div>
+    <div class="msku-preview" id="msku-preview"></div>
+    <div class="msku-row">
+      <label>Próximo SKU</label>
+      <input class="msku-inp sku-num" id="msku-sku" type="number" min="1000" max="99999">
+    </div>
+    <div class="msku-row">
+      <label>Nome no sistema</label>
+      <input class="msku-inp" id="msku-nome" placeholder="Nome do produto (maiúsculo)">
+    </div>
+    <div class="msku-row">
+      <label>Família</label>
+      <input class="msku-inp" id="msku-familia" placeholder="Ex: FERRAMENTAS" list="lista-familias">
+      <datalist id="lista-familias"></datalist>
+    </div>
+    <div class="msku-actions">
+      <button class="btn btn-gray" onclick="fecharModalSku()">Cancelar</button>
+      <button class="btn" style="background:#10b981;color:#fff" onclick="confirmarSku()">✓ Confirmar e Vincular</button>
+    </div>
+  </div>
+</div>
+
 <div class="print-modal" id="print-modal">
   <div class="print-box" id="print-box">
     <button class="pm-close no-print" onclick="document.getElementById('print-modal').classList.remove('open')">✕ Fechar</button>

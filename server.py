@@ -1209,6 +1209,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/bling-peso':         self._get_bling_peso,
             '/api/db/proximo-sku':       self._get_proximo_sku,
             '/api/db/sem-sku':           self._get_sem_sku,
+            '/api/export/frete':         self._export_frete,
+            '/api/sync/base-completa':   self._sync_base_completa,
             '/api/db/familias':          self._get_familias,
             '/api/db/pedrinho':          self._get_pedrinho,
             '/api/db/kits':              self._get_kits,
@@ -1290,6 +1292,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/campanha':           self._post_campanha,
             '/api/db/cprod-map':          self._post_cprod_map,
             '/api/db/vincular-sku':       self._post_vincular_sku,
+            '/api/import/frete':          self._import_frete,
             '/api/db/listings-batch':     self._post_listings_batch,
             '/api/db/kits-mapa':          self._post_kits_mapa,
             '/api/db/pedrinho/importar':  self._post_pedrinho_importar,
@@ -1628,89 +1631,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def _get_proximo_sku(self):
         try:
             with get_db() as db:
-                row=db.fetchone("SELECT MAX(sku::integer) as m FROM produtos WHERE sku ~ '^[0-9]+$'")
+                row=db.fetchone("SELECT MAX(sku::bigint) as m FROM produtos WHERE sku ~ '^[0-9]+$' AND LENGTH(sku)<=6")
                 mx=int(row["m"] or 2933) if row and row["m"] else 2933
             self._ok({"proximo_sku": max(mx+1, 2934), "max_db": mx})
         except Exception as e: self._ok({"proximo_sku":2934,"error":str(e)})
-
-    def _get_sem_sku(self):
-        """GET /api/db/sem-sku — itens do historico_compras sem SKU vinculado"""
-        p = '%s' if IS_PG else '?'
-        try:
-            rows = exe("""
-                SELECT DISTINCT ON (h.cprod)
-                    h.nf, h.cprod, h.nome, h.fornecedor, h.data_emissao,
-                    h.custo_r as custo, h.qtd, h.v_st, h.tem_st,
-                    h.ncm, h.cst, h.cest, h.cfop, h.orig as origem, h.ipi_p,
-                    h.cmv_br, h.cmv_pr
-                FROM historico_compras h
-                WHERE (h.sku IS NULL OR h.sku = '')
-                  AND h.cprod IS NOT NULL AND h.cprod != ''
-                  AND h.nome IS NOT NULL AND h.nome != ''
-                ORDER BY h.cprod, h.data_emissao DESC
-            """, fetchall=True) or []
-            # Próximo SKU disponível
-            row_sku = exe("SELECT MAX(sku::integer) as m FROM produtos WHERE sku ~ '^[0-9]+$'", fetchone=True)
-            mx = int(row_sku['m'] or 2933) if row_sku and row_sku.get('m') else 2933
-            self._ok({'itens': rows, 'proximo_sku': max(mx+1, 2934)})
-        except Exception as e: self._err(500, str(e))
-
-    def _post_vincular_sku(self):
-        """POST /api/db/vincular-sku — vincula cprod a SKU existente ou cria novo produto"""
-        p = '%s' if IS_PG else '?'
-        try:
-            d = self._body()
-            itens = d if isinstance(d, list) else [d]
-            salvos = 0
-            criados = 0
-            for it in itens:
-                cprod   = str(it.get('cprod','')).strip()
-                sku     = str(it.get('sku','')).strip()
-                nome    = str(it.get('nome','')).strip()
-                custo   = float(it.get('custo',0) or 0)
-                cmv_br  = float(it.get('cmv_br',0) or 0)
-                cmv_pr  = float(it.get('cmv_pr',0) or 0)
-                ncm     = str(it.get('ncm','') or '').strip()
-                cst     = str(it.get('cst','') or '').strip()
-                cest    = str(it.get('cest','') or '').strip()
-                cfop    = str(it.get('cfop','') or '').strip()
-                origem  = int(it.get('origem',0) or 0)
-                ipi_p   = float(it.get('ipi_p',0) or 0)
-                tem_st  = int(it.get('tem_st',0) or 0)
-                fornecedor = str(it.get('fornecedor','') or '').strip()[:120]
-                criar   = bool(it.get('criar', False))
-                if not cprod or not sku: continue
-                # Salvar no cprod_map
-                exe(f"""INSERT INTO cprod_map (cprod,sku,nome,cmv_br,cmv_pr)
-                    VALUES ({p},{p},{p},{p},{p})
-                    ON CONFLICT(cprod) DO UPDATE SET
-                    sku=EXCLUDED.sku, nome=EXCLUDED.nome,
-                    cmv_br=EXCLUDED.cmv_br, cmv_pr=EXCLUDED.cmv_pr""",
-                    (cprod, sku, nome, cmv_br, cmv_pr))
-                # Atualizar historico_compras
-                exe(f"UPDATE historico_compras SET sku={p} WHERE cprod={p} AND (sku IS NULL OR sku='')",
-                    (sku, cprod))
-                salvos += 1
-                # Se criar=True, inserir novo produto
-                if criar and nome:
-                    try:
-                        exe(f"""INSERT INTO produtos
-                            (sku,nome,ncm,cfop,origem,ipi,custo,custo_br,custo_pr,
-                             tem_st,cst_padrao,cest,fornecedor,estoque)
-                            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},0)
-                            ON CONFLICT(sku) DO UPDATE SET
-                            nome=EXCLUDED.nome,custo=EXCLUDED.custo,
-                            custo_br=EXCLUDED.custo_br,custo_pr=EXCLUDED.custo_pr,
-                            ncm=EXCLUDED.ncm,tem_st=EXCLUDED.tem_st,
-                            cst_padrao=EXCLUDED.cst_padrao,cest=EXCLUDED.cest,
-                            fornecedor=EXCLUDED.fornecedor""",
-                            (sku,nome,ncm,cfop,origem,ipi_p,custo,cmv_br,cmv_pr,
-                             tem_st,cst,cest,fornecedor))
-                        criados += 1
-                    except Exception as e2:
-                        print(f'[VINCULAR] Erro ao criar produto {sku}: {e2}')
-            self._ok({'ok': True, 'salvos': salvos, 'criados': criados})
-        except Exception as e: self._err(500, str(e))
 
     def _get_cprod_lookup(self):
         p=parse_qs(self.path.split("?")[1] if "?" in self.path else "")
@@ -2187,7 +2111,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             pagina = 1
             while True:
                 url = f'https://api.bling.com.br/Api/v3/produtos?pagina={pagina}&limite=100&tipo=P'
-                req = urllib.request.Request(url, headers={'Authorization': f'Bearer {_bling_token}'})
+                req = urllib.request.Request(url, headers={'Authorization': f'Bearer {_bling_token.get("access","") if isinstance(_bling_token,dict) else _bling_token}'})
                 try:
                     r = urllib.request.urlopen(req, timeout=20)
                     dados = _json.loads(r.read())
@@ -3078,6 +3002,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 cst    = str(it.get('cst', '')).strip()
                 cest   = str(it.get('cest', '')).strip()
                 tem_st = int(it.get('tem_st', 0) or 0)
+                fornecedor = str(it.get('fornecedor', '') or '').strip()[:120]
                 det_num = int(it.get('det_num', 0) or 0)
                 cmv_br = float(it.get('cmv_br', 0) or 0)
                 cmv_pr = float(it.get('cmv_pr', 0) or 0)
@@ -3094,11 +3019,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     exe(f"""UPDATE produtos SET
                         ncm=CASE WHEN {p}!='' THEN {p} ELSE ncm END,
                         cfop=CASE WHEN {p}!='' THEN {p} ELSE cfop END,
+                        cst_padrao=CASE WHEN {p}!='' THEN {p} ELSE cst_padrao END,
+                        cest=CASE WHEN {p}!='' THEN {p} ELSE cest END,
                         origem={p}, ipi={p},
+                        tem_st=CASE WHEN {p}>0 THEN {p} ELSE tem_st END,
                         custo={p}, custo_br={p}, custo_pr={p},
+                        fornecedor=CASE WHEN {p}!='' THEN {p} ELSE fornecedor END,
                         updated_at=NOW()
                         WHERE sku={p}""",
-                        (ncm, ncm, cfop, cfop, origem, ipi_p, custo, cmv_br, cmv_pr, sku))
+                        (ncm,ncm,cfop,cfop,cst,cst,cest,cest,
+                         origem,ipi_p,tem_st,tem_st,custo,cmv_br,cmv_pr,
+                         fornecedor,fornecedor,sku))
                     # Atualizar cprod_map
                     if cprod:
                         exe(f"""INSERT INTO cprod_map (cprod,sku,nome,cmv_br,cmv_pr)
