@@ -1628,6 +1628,157 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._ok({"ok":True,"nome":nome})
         except Exception as e: self._ok({"ok":False,"error":str(e)})
 
+    def _get_sem_sku(self):
+        """GET /api/db/sem-sku"""
+        p = '%s' if IS_PG else '?'
+        try:
+            rows = exe("""
+                SELECT DISTINCT ON (h.cprod)
+                    h.nf, h.cprod, h.nome, h.fornecedor, h.data_emissao,
+                    h.custo_r as custo, h.qtd, h.v_st, h.tem_st,
+                    h.ncm, h.cst, h.cest, h.cfop,
+                    COALESCE(h.orig, 0) as origem, h.ipi_p,
+                    h.cmv_br, h.cmv_pr
+                FROM historico_compras h
+                WHERE (h.sku IS NULL OR h.sku = '')
+                  AND h.cprod IS NOT NULL AND h.cprod != ''
+                  AND h.nome IS NOT NULL AND h.nome != ''
+                ORDER BY h.cprod, h.data_emissao DESC
+            """, fetchall=True) or []
+            row_sku = exe("SELECT MAX(sku::bigint) as m FROM produtos WHERE sku ~ '^[0-9]+$' AND LENGTH(sku)<=6", fetchone=True)
+            mx = int(row_sku['m'] or 2933) if row_sku and row_sku.get('m') else 2933
+            self._ok({'itens': rows, 'proximo_sku': max(mx+1, 2934)})
+        except Exception as e: self._err(500, str(e))
+
+    def _export_frete(self):
+        """GET /api/export/frete"""
+        try:
+            import io, openpyxl
+            from openpyxl.styles import Font, PatternFill, Alignment
+            from openpyxl.utils import get_column_letter
+            rows = exe("""SELECT sku, nome, familia, peso, largura, altura, comprimento
+                          FROM produtos WHERE sku ~ '^[0-9]'
+                          ORDER BY CASE WHEN peso IS NULL OR peso=0 THEN 0 ELSE 1 END, sku""",
+                       fetchall=True) or []
+            wb = openpyxl.Workbook(); ws = wb.active; ws.title = "AJUSTE_FRETE"
+            h_fill = PatternFill("solid", fgColor="1E3A5F")
+            h_font = Font(name="Arial", bold=True, color="FFFFFF", size=10)
+            e_font = Font(name="Arial", color="FBBF24", size=10)
+            e_fill = PatternFill("solid", fgColor="0F172A")
+            heads = ["SKU","NOME","FAMILIA","PESO_KG","LARG_CM","ALT_CM","PROF_CM","DATA_AJUSTE","OBS"]
+            widths = [8,35,15,9,8,8,8,14,25]
+            for ci,(h,w) in enumerate(zip(heads,widths),1):
+                c2=ws.cell(1,ci,h); c2.font=h_font; c2.fill=h_fill
+                c2.alignment=Alignment(horizontal="center",vertical="center")
+                ws.column_dimensions[get_column_letter(ci)].width=w
+            ws.row_dimensions[1].height=26; ws.freeze_panes="A2"
+            for ri,row in enumerate(rows,2):
+                ws.cell(ri,1,str(row.get("sku",""))).font=Font(name="Arial",color="60A5FA",size=10)
+                ws.cell(ri,1).fill=e_fill
+                ws.cell(ri,2,str(row.get("nome","") or "")).font=Font(name="Arial",color="E2E8F0",size=10)
+                ws.cell(ri,2).fill=e_fill
+                ws.cell(ri,3,str(row.get("familia","") or "")).font=Font(name="Arial",color="94A3B8",size=10)
+                ws.cell(ri,3).fill=e_fill
+                for ci2,fld in enumerate(["peso","largura","altura","comprimento"],4):
+                    v=float(row.get(fld) or 0)
+                    ws.cell(ri,ci2,v if v>0 else None)
+                    ws.cell(ri,ci2).font=e_font; ws.cell(ri,ci2).fill=e_fill
+                    ws.cell(ri,ci2).number_format="0.000"
+                    ws.cell(ri,ci2).alignment=Alignment(horizontal="right")
+                ws.cell(ri,8).fill=e_fill; ws.cell(ri,8).number_format="DD/MM/YYYY"
+                ws.cell(ri,9).fill=e_fill; ws.cell(ri,9).font=Font(name="Arial",color="94A3B8",size=10)
+            buf=io.BytesIO(); wb.save(buf); buf.seek(0); data=buf.read()
+            self.send_response(200)
+            self.send_header("Content-Type","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            self.send_header("Content-Disposition","attachment; filename=FRETE_AJUSTE.xlsx")
+            self.send_header("Content-Length",str(len(data)))
+            self.end_headers(); self.wfile.write(data)
+        except Exception as e: self._err(500,str(e))
+
+    def _post_vincular_sku(self):
+        """POST /api/db/vincular-sku"""
+        p = '%s' if IS_PG else '?'
+        try:
+            d = self._body()
+            itens = d if isinstance(d, list) else [d]
+            salvos=0; criados=0
+            for it in itens:
+                cprod=str(it.get('cprod','')).strip()
+                sku=str(it.get('sku','')).strip()
+                nome=str(it.get('nome','')).strip()
+                custo=float(it.get('custo',0) or 0)
+                cmv_br=float(it.get('cmv_br',0) or 0)
+                cmv_pr=float(it.get('cmv_pr',0) or 0)
+                ncm=str(it.get('ncm','') or '').strip()
+                cst=str(it.get('cst','') or '').strip()
+                cest=str(it.get('cest','') or '').strip()
+                cfop=str(it.get('cfop','') or '').strip()
+                origem=int(it.get('origem',0) or 0)
+                ipi_p=float(it.get('ipi_p',0) or 0)
+                tem_st=int(it.get('tem_st',0) or 0)
+                fornecedor=str(it.get('fornecedor','') or '').strip()[:120]
+                criar=bool(it.get('criar',False))
+                if not cprod or not sku: continue
+                exe(f"""INSERT INTO cprod_map (cprod,sku,nome,cmv_br,cmv_pr)
+                    VALUES ({p},{p},{p},{p},{p})
+                    ON CONFLICT(cprod) DO UPDATE SET
+                    sku=EXCLUDED.sku,nome=EXCLUDED.nome,
+                    cmv_br=EXCLUDED.cmv_br,cmv_pr=EXCLUDED.cmv_pr""",
+                    (cprod,sku,nome,cmv_br,cmv_pr))
+                exe(f"UPDATE historico_compras SET sku={p} WHERE cprod={p} AND (sku IS NULL OR sku='')",
+                    (sku,cprod))
+                salvos+=1
+                if criar and nome:
+                    try:
+                        exe(f"""INSERT INTO produtos
+                            (sku,nome,ncm,cfop,origem,ipi,custo,custo_br,custo_pr,
+                             tem_st,cst_padrao,cest,fornecedor,estoque)
+                            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},0)
+                            ON CONFLICT(sku) DO UPDATE SET
+                            nome=EXCLUDED.nome,custo=EXCLUDED.custo,
+                            custo_br=EXCLUDED.custo_br,custo_pr=EXCLUDED.custo_pr,
+                            ncm=EXCLUDED.ncm,tem_st=EXCLUDED.tem_st,
+                            fornecedor=EXCLUDED.fornecedor""",
+                            (sku,nome,ncm,cfop,origem,ipi_p,custo,cmv_br,cmv_pr,
+                             tem_st,cst,cest,fornecedor))
+                        criados+=1
+                    except Exception as e2:
+                        print(f'[VINCULAR] {sku}: {e2}')
+            self._ok({'ok':True,'salvos':salvos,'criados':criados})
+        except Exception as e: self._err(500,str(e))
+
+    def _import_frete(self):
+        """POST /api/import/frete"""
+        p = '%s' if IS_PG else '?'
+        try:
+            import io, openpyxl
+            n=int(self.headers.get("Content-Length",0))
+            data=self.rfile.read(n)
+            wb=openpyxl.load_workbook(io.BytesIO(data),data_only=True)
+            ws=wb.active; atualizados=0
+            for row in ws.iter_rows(min_row=2,values_only=True):
+                if not row or not row[0]: continue
+                sku=str(row[0]).strip()
+                peso=float(row[3] or 0) if len(row)>3 else 0
+                larg=float(row[4] or 0) if len(row)>4 else 0
+                alt=float(row[5] or 0) if len(row)>5 else 0
+                comp=float(row[6] or 0) if len(row)>6 else 0
+                if not sku: continue
+                if peso>0 or larg>0 or alt>0 or comp>0:
+                    exe(f"""UPDATE produtos SET
+                        peso=CASE WHEN {p}>0 THEN {p} ELSE peso END,
+                        largura=CASE WHEN {p}>0 THEN {p} ELSE largura END,
+                        altura=CASE WHEN {p}>0 THEN {p} ELSE altura END,
+                        comprimento=CASE WHEN {p}>0 THEN {p} ELSE comprimento END,
+                        updated_at=NOW() WHERE sku={p}""",
+                        (peso,peso,larg,larg,alt,alt,comp,comp,sku))
+                    if peso>0:
+                        exe(f"UPDATE ml_listings SET peso={p},largura={p},altura={p},comprimento={p} WHERE sku={p}",
+                            (peso,larg,alt,comp,sku))
+                    atualizados+=1
+            self._ok({"ok":True,"atualizados":atualizados})
+        except Exception as e: self._err(500,str(e))
+
     def _get_proximo_sku(self):
         try:
             with get_db() as db:
