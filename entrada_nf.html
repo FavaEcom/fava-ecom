@@ -361,6 +361,21 @@ function buscarNF() {
     });
 }
 
+
+function carregarProximoSku() {
+  fetch('/api/db/proximo-sku').then(r=>r.json()).then(d=>{
+    window._proximoSku = d.proximo_sku || 2934;
+    var el = document.getElementById('inp-proximo-sku');
+    if(el) el.value = window._proximoSku;
+  }).catch(()=>{ window._proximoSku = 2934; });
+}
+
+function carregarFamilias() {
+  fetch('/api/db/familias').then(r=>r.json()).then(d=>{
+    window._familias = Array.isArray(d) ? d : [];
+  }).catch(()=>{ window._familias = []; });
+}
+
 function renderHeader(data) {
   var f = data[0];
   var el = document.getElementById('nf-header');
