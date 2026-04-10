@@ -903,25 +903,25 @@ def ml_get(path):
 
 def sync_ml_listings():
     if not _ml_token.get('access'): return 0
-    print('[SYNC] Anúncios ML — coletando todos os IDs...')
+    print('[SYNC] Anuncios ML - coletando IDs (active + paused)...')
     all_ids = []
-    scroll = None
-    pagina = 0
-    while True:
-        pagina += 1
-        path = 'users/537714337/items/search?status=active&limit=50'
-        if scroll: path += f'&scroll_id={scroll}'
-        d = ml_get(path)
-        if not d: break
-        ids = d.get('results', [])
-        if not ids: break
-        all_ids += ids
-        scroll = d.get('scroll_id')
-        print(f'[ML] Página {pagina}: +{len(ids)} IDs (total {len(all_ids)})')
-        if len(ids) < 50 or not scroll: break
-        time.sleep(0.3)
+    for status_ml in ('active', 'paused'):
+        offset = 0
+        while True:
+            path = f'users/537714337/items/search?status={status_ml}&offset={offset}&limit=100'
+            d = ml_get(path)
+            if not d: break
+            ids = d.get('results', [])
+            if not ids: break
+            all_ids += ids
+            total = (d.get('paging') or {}).get('total', 0)
+            offset += len(ids)
+            print(f'[ML] {status_ml}: {offset}/{total}')
+            if offset >= total or len(ids) < 100: break
+            time.sleep(0.3)
+    all_ids = list(dict.fromkeys(all_ids))  # dedup
     if not all_ids:
-        print('[ML] Nenhum anúncio encontrado'); return 0
+        print('[ML] Nenhum anuncio encontrado'); return 0
     print(f'[ML] {len(all_ids)} anúncios — buscando detalhes...')
 
     # Cache de SKUs válidos da nossa base — só aceita seller_sku que existir aqui
@@ -2099,14 +2099,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         global _bling_token
         p = '%s' if IS_PG else '?'
         try:
-            if not _bling_token:
+            tk = _bling_token.get('access','') if isinstance(_bling_token, dict) else str(_bling_token)
+            if not tk:
                 self._err(400, 'Token Bling nao configurado'); return
             import urllib.request, json as _json
             atualizados = 0
             pagina = 1
             while True:
                 url = f'https://api.bling.com.br/Api/v3/produtos?pagina={pagina}&limite=100&tipo=P'
-                req = urllib.request.Request(url, headers={'Authorization': f'Bearer {_bling_token}'})
+                req = urllib.request.Request(url, headers={'Authorization': f'Bearer {tk}'})
                 try:
                     r = urllib.request.urlopen(req, timeout=20)
                     dados = _json.loads(r.read())
@@ -2500,9 +2501,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                        COALESCE(l.largura, 0) as largura,
                        COALESCE(l.altura, 0) as altura,
                        COALESCE(l.comprimento, 0) as profundidade,
-                       COALESCE(l.st, 0) as st,
-                       COALESCE(l.st_imposto, 0) as st_imposto,
-                       COALESCE(l.monofasico, 0) as monofasico,
+                       COALESCE(l.st, p.st, 0) as st,
+                       COALESCE(l.st_imposto, p.st_imposto, 0) as st_imposto,
+                       COALESCE(l.monofasico, p.monofasico, 0) as monofasico,
+                       l.data_criacao,
                        NULL as camp_nome, 0 as camp_desconto,
                        NULL as camp_data, NULL as camp_status
                 FROM ml_listings l

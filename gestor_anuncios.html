@@ -104,6 +104,16 @@ td.ec input{width:100%;background:#0f172a;border:1px solid #3b82f6;color:#fff;pa
   <select id="fs" onchange="filtrar()"><option value="">Status: Todos</option><option value="active">Ativo</option><option value="paused">Pausado</option></select>
   <select id="ft" onchange="filtrar()"><option value="">Tipo: Todos</option><option value="simples">Simples</option><option value="kit">Kit</option><option value="variacao">Variação</option></select>
   <select id="fprom" onchange="filtrar()"><option value="">Promo: Todas</option><option value="1">Em promoção</option><option value="0">Sem promoção</option></select>
+  <select id="ford" onchange="filtrar()" style="background:#0f172a;border:1px solid #3b82f6;color:#93c5fd;padding:5px 8px;border-radius:6px;font-size:12px;font-weight:600">
+    <option value="data_desc">📅 Mais novo primeiro</option>
+    <option value="data_asc">📅 Mais antigo primeiro</option>
+    <option value="margem_desc">📈 Maior margem</option>
+    <option value="margem_asc">📉 Menor margem</option>
+    <option value="preco_desc">💰 Maior preço</option>
+    <option value="preco_asc">💰 Menor preço</option>
+    <option value="titulo_asc">🔤 Título A→Z</option>
+    <option value="scmv">⚠️ Sem CMV primeiro</option>
+  </select>
 </div>
 
 <div class="stats">
@@ -414,8 +424,16 @@ function C(r){
     freteCalc=sh_fixo;
     freteTipo='taxa_fixa';
   } else if(canal==='ml' && pesoFinal>0){
-    freteCalc=calcFreteML(pesoFinal,preco);
-    freteTipo='full_super';
+    const ltype = (r.listing_type||'').toLowerCase();
+    // Só aplica tabela Full Super se for gold_extra ou gold_super (Full/Super)
+    if(ltype==='gold_extra'||ltype==='gold_super'||ltype.includes('extra')||ltype.includes('super')){
+      freteCalc=calcFreteML(pesoFinal,preco);
+      freteTipo='full_super';
+    } else {
+      // Clássico (gold_special) ou Premium: usa frete_medio manual
+      freteCalc=null;
+      freteTipo=parseFloat(r.frete_medio||0)>0?'manual':'estimado';
+    }
   } else if(canal==='ml' && pesoFinal<=0){
     // ML sem peso: usar frete_medio salvo ou mínimo R$7
     freteCalc=null;
@@ -499,6 +517,8 @@ function filtrar(){
       if(fm==='bad'&&m>=5)return false;}
     return true;
   });
+  _fil = aplicarOrdem(_fil);
+  _fil = aplicarOrdem(_fil);
   _modo==='vis'?renderCards():renderTabela();
 }
 
@@ -570,7 +590,6 @@ function renderTabela(){
     tb.innerHTML=`<tr><td colspan="15" class="loading">${msg}</td></tr>`;return;}
   const R=v=>'R$ '+parseFloat(v||0).toFixed(2),f=(v,d=1)=>parseFloat(v||0).toFixed(d);
   let rows=[..._fil];
-  if(_ord.c)rows.sort((a,b)=>{const v=_ord.a?1:-1;return(parseFloat(a[_ord.c]||0)-parseFloat(b[_ord.c]||0))*v;});
   tb.innerHTML=rows.slice(0,500).map((r,i)=>{
     const m=r.margem||0,mc=m>=15?'#10b981':m>=5?'#f59e0b':'#ef4444';
     const cmv=parseFloat(r.cmv||0),tipo=psku(r.sku);
