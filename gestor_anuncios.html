@@ -522,9 +522,25 @@ function filtrar(){
       if(fm==='bad'&&m>=5)return false;}
     return true;
   });
-  _fil = aplicarOrdem(_fil);
-  _fil = aplicarOrdem(_fil);
+  _fil=aplicarOrdem(_fil);
   _modo==='vis'?renderCards():renderTabela();
+}
+
+function aplicarOrdem(arr){
+  const ord=document.getElementById('ford')?.value||'data_desc';
+  return [...arr].sort((a,b)=>{
+    switch(ord){
+      case 'data_desc':{const da=a.data_criacao||'',db=b.data_criacao||'';if(!da&&!db)return 0;if(!da)return 1;if(!db)return -1;return db.localeCompare(da);}
+      case 'data_asc':{const da=a.data_criacao||'',db=b.data_criacao||'';if(!da&&!db)return 0;if(!da)return 1;if(!db)return -1;return da.localeCompare(db);}
+      case 'margem_desc':return(b.margem||0)-(a.margem||0);
+      case 'margem_asc':return(a.margem||0)-(b.margem||0);
+      case 'preco_desc':return(b.preco||0)-(a.preco||0);
+      case 'preco_asc':return(a.preco||0)-(b.preco||0);
+      case 'titulo_asc':return(a.titulo||'').localeCompare(b.titulo||'');
+      case 'scmv':{const ca=parseFloat(a.cmv||0)>0,cb=parseFloat(b.cmv||0)>0;if(ca===cb)return 0;return ca?1:-1;}
+      default:return 0;
+    }
+  });
 }
 
 function setModo(m){
