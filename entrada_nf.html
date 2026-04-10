@@ -512,6 +512,7 @@ function salvarItem(i) {
       custo_r: it.custo_r||0, ipi_un: it.ipi_un||0,
       tem_st: it.tem_st||0, cst: it.cst||'', cest: it.cest||'',
       cmv_br: it._cmv_br, cmv_pr: it._cmv_pr,
+      fornecedor: it.fornecedor||_itens[0]?.fornecedor||'',
     }]})
   }).then(r=>r.json()).then(d=>{
     if(d.ok){
@@ -534,6 +535,7 @@ function salvarTudo() {
       tem_st: it.tem_st||0, cst: it.cst||'', cest: it.cest||'',
       cmv_br: it._cmv_br, cmv_pr: it._cmv_pr,
       det_num: it.det_num||0,
+      fornecedor: it.fornecedor||_itens[0]?.fornecedor||'',
     };
   });
   fetch('/api/db/entrada-nf/salvar',{

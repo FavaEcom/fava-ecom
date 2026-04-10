@@ -903,25 +903,25 @@ def ml_get(path):
 
 def sync_ml_listings():
     if not _ml_token.get('access'): return 0
-    print('[SYNC] Anuncios ML - coletando IDs (active + paused)...')
+    print('[SYNC] Anúncios ML — coletando todos os IDs...')
     all_ids = []
-    for status_ml in ('active', 'paused'):
-        offset = 0
-        while True:
-            path = f'users/537714337/items/search?status={status_ml}&offset={offset}&limit=100'
-            d = ml_get(path)
-            if not d: break
-            ids = d.get('results', [])
-            if not ids: break
-            all_ids += ids
-            total = (d.get('paging') or {}).get('total', 0)
-            offset += len(ids)
-            print(f'[ML] {status_ml}: {offset}/{total}')
-            if offset >= total or len(ids) < 100: break
-            time.sleep(0.3)
-    all_ids = list(dict.fromkeys(all_ids))  # dedup
+    scroll = None
+    pagina = 0
+    while True:
+        pagina += 1
+        path = 'users/537714337/items/search?status=active&limit=50'
+        if scroll: path += f'&scroll_id={scroll}'
+        d = ml_get(path)
+        if not d: break
+        ids = d.get('results', [])
+        if not ids: break
+        all_ids += ids
+        scroll = d.get('scroll_id')
+        print(f'[ML] Página {pagina}: +{len(ids)} IDs (total {len(all_ids)})')
+        if len(ids) < 50 or not scroll: break
+        time.sleep(0.3)
     if not all_ids:
-        print('[ML] Nenhum anuncio encontrado'); return 0
+        print('[ML] Nenhum anúncio encontrado'); return 0
     print(f'[ML] {len(all_ids)} anúncios — buscando detalhes...')
 
     # Cache de SKUs válidos da nossa base — só aceita seller_sku que existir aqui
@@ -2099,15 +2099,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         global _bling_token
         p = '%s' if IS_PG else '?'
         try:
-            tk = _bling_token.get('access','') if isinstance(_bling_token, dict) else str(_bling_token)
-            if not tk:
+            if not _bling_token:
                 self._err(400, 'Token Bling nao configurado'); return
             import urllib.request, json as _json
             atualizados = 0
             pagina = 1
             while True:
                 url = f'https://api.bling.com.br/Api/v3/produtos?pagina={pagina}&limite=100&tipo=P'
-                req = urllib.request.Request(url, headers={'Authorization': f'Bearer {tk}'})
+                req = urllib.request.Request(url, headers={'Authorization': f'Bearer {_bling_token}'})
                 try:
                     r = urllib.request.urlopen(req, timeout=20)
                     dados = _json.loads(r.read())
@@ -2501,10 +2500,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                        COALESCE(l.largura, 0) as largura,
                        COALESCE(l.altura, 0) as altura,
                        COALESCE(l.comprimento, 0) as profundidade,
-                       COALESCE(l.st, p.st, 0) as st,
-                       COALESCE(l.st_imposto, p.st_imposto, 0) as st_imposto,
-                       COALESCE(l.monofasico, p.monofasico, 0) as monofasico,
-                       l.data_criacao,
+                       COALESCE(l.st, 0) as st,
+                       COALESCE(l.st_imposto, 0) as st_imposto,
+                       COALESCE(l.monofasico, 0) as monofasico,
                        NULL as camp_nome, 0 as camp_desconto,
                        NULL as camp_data, NULL as camp_status
                 FROM ml_listings l
@@ -3000,6 +2998,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 cest   = str(it.get('cest', '')).strip()
                 tem_st = int(it.get('tem_st', 0) or 0)
                 det_num = int(it.get('det_num', 0) or 0)
+                fornecedor = str(it.get('fornecedor', '') or '').strip()[:120]
                 cmv_br = float(it.get('cmv_br', 0) or 0)
                 cmv_pr = float(it.get('cmv_pr', 0) or 0)
                 # Se CMV não vier calculado, recalcular
@@ -3015,11 +3014,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     exe(f"""UPDATE produtos SET
                         ncm=CASE WHEN {p}!='' THEN {p} ELSE ncm END,
                         cfop=CASE WHEN {p}!='' THEN {p} ELSE cfop END,
+                        cst_padrao=CASE WHEN {p}!='' THEN {p} ELSE cst_padrao END,
+                        cest=CASE WHEN {p}!='' THEN {p} ELSE cest END,
                         origem={p}, ipi={p},
+                        tem_st=CASE WHEN {p}>0 THEN {p} ELSE tem_st END,
                         custo={p}, custo_br={p}, custo_pr={p},
+                        fornecedor=CASE WHEN {p}!='' THEN {p} ELSE fornecedor END,
                         updated_at=NOW()
                         WHERE sku={p}""",
-                        (ncm, ncm, cfop, cfop, origem, ipi_p, custo, cmv_br, cmv_pr, sku))
+                        (ncm, ncm, cfop, cfop, cst, cst, cest, cest,
+                         origem, ipi_p, tem_st, tem_st, custo, cmv_br, cmv_pr,
+                         fornecedor, fornecedor, sku))
                     # Atualizar cprod_map
                     if cprod:
                         exe(f"""INSERT INTO cprod_map (cprod,sku,nome,cmv_br,cmv_pr)
@@ -3041,12 +3046,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         if new_sku:
                             try:
                                 exe(f"""INSERT INTO produtos 
-                                    (sku,nome,ncm,cfop,origem,ipi,custo,custo_br,custo_pr,estoque)
-                                    VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},0)
+                                    (sku,nome,ncm,cfop,origem,ipi,custo,custo_br,custo_pr,
+                                     tem_st,cst_padrao,cest,fornecedor,estoque)
+                                    VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},0)
                                     ON CONFLICT(sku) DO UPDATE SET
                                     nome=EXCLUDED.nome, ncm=EXCLUDED.ncm,
-                                    custo=EXCLUDED.custo, custo_br=EXCLUDED.custo_br""",
-                                    (new_sku,nome,ncm,cfop,origem,ipi_p,custo,cmv_br,cmv_pr))
+                                    custo=EXCLUDED.custo, custo_br=EXCLUDED.custo_br,
+                                    tem_st=EXCLUDED.tem_st, cst_padrao=EXCLUDED.cst_padrao,
+                                    cest=EXCLUDED.cest, fornecedor=EXCLUDED.fornecedor""",
+                                    (new_sku,nome,ncm,cfop,origem,ipi_p,custo,cmv_br,cmv_pr,
+                                     tem_st,cst,cest,fornecedor))
                                 if cprod:
                                     exe(f"""INSERT INTO cprod_map (cprod,sku,nome,cmv_br,cmv_pr)
                                         VALUES ({p},{p},{p},{p},{p})
