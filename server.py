@@ -45,7 +45,7 @@ YAMPI_TOKEN   = os.environ.get('YAMPI_TOKEN',  'pMMopJjv6qB1d9ccwargjmOJQeJcHHsW
 YAMPI_SECRET  = os.environ.get('YAMPI_SECRET', 'sk_pjOvgahJ0QysIhv6i7RXhs3oynRRI5O1WaQXB')
 
 PROXY = {
-    '/api/bling/': 'https://www.bling.com.br/Api/v3/',
+    '/api/bling/': 'https://api.bling.com.br/Api/v3/',
     '/api/ml/':    'https://api.mercadolibre.com/',
     '/api/mp/':    'https://api.mercadopago.com/',
 }
@@ -523,7 +523,7 @@ def renovar_bling():
     try:
         body = f'grant_type=refresh_token&refresh_token={rt}'.encode()
         req = urllib.request.Request(
-            'https://www.bling.com.br/Api/v3/oauth/token', data=body,
+            'https://api.bling.com.br/Api/v3/oauth/token', data=body,
             headers={'Content-Type':'application/x-www-form-urlencoded',
                      'Authorization':f'Basic {creds}'}, method='POST')
         with urllib.request.urlopen(req, timeout=15) as r:
@@ -538,7 +538,7 @@ def bling_get(path, pagina=1):
     token = _bling_token.get('access','')
     if not token: return None
     sep = '&' if '?' in path else '?'
-    url = f'https://www.bling.com.br/Api/v3/{path}{sep}pagina={pagina}&limite=100'
+    url = f'https://api.bling.com.br/Api/v3/{path}{sep}pagina={pagina}&limite=100'
     req = urllib.request.Request(url, headers={'Authorization':f'Bearer {token}','Accept':'application/json'})
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
@@ -555,7 +555,7 @@ def bling_get_one(path):
     """GET simples sem paginação para Bling API."""
     token = _bling_token.get('access','')
     if not token: return None
-    url = f'https://www.bling.com.br/Api/v3/{path}'
+    url = f'https://api.bling.com.br/Api/v3/{path}'
     req = urllib.request.Request(url, headers={'Authorization':f'Bearer {token}','Accept':'application/json'})
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
@@ -1463,7 +1463,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def _bling_autorizar(self):
         """GET /api/bling/autorizar — redireciona para autorização Bling"""
         redirect_uri = 'https://web-production-5aa0f.up.railway.app/api/bling/callback'
-        url = (f'https://www.bling.com.br/Api/v3/oauth/authorize'
+        url = (f'https://api.bling.com.br/Api/v3/oauth/authorize'
                f'?response_type=code&client_id={BLING_CLIENT}'
                f'&redirect_uri={urllib.parse.quote(redirect_uri, safe="")}&state=fava')
         self.send_response(302)
@@ -1524,7 +1524,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         body  = f'grant_type=authorization_code&code={code}&redirect_uri={urllib.parse.quote(redirect_uri, safe="")}'.encode()
         try:
             req = urllib.request.Request(
-                'https://www.bling.com.br/Api/v3/oauth/token', data=body,
+                'https://api.bling.com.br/Api/v3/oauth/token', data=body,
                 headers={'Content-Type': 'application/x-www-form-urlencoded',
                          'Authorization': f'Basic {creds}'}, method='POST')
             with urllib.request.urlopen(req, timeout=15) as r:
@@ -1562,14 +1562,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             cprod=str(d.get("cprod","")).strip()
             if not nome: self._ok({"found":False}); return
             # Buscar por código primeiro
-            url=f"https://www.bling.com.br/Api/v3/produtos?codigo={cprod}&limite=5"
+            url=f"https://api.bling.com.br/Api/v3/produtos?codigo={cprod}&limite=5"
             tk=_bling_token.get("access","")
             req=urllib.request.Request(url,headers={"Authorization":f"Bearer {tk}","Accept":"application/json"})
             with urllib.request.urlopen(req,timeout=10) as r: data=json.loads(r.read())
             prods=data.get("data",[])
             # Se não achou por código, buscar por nome
             if not prods:
-                url2=f"https://www.bling.com.br/Api/v3/produtos?pesquisa={urllib.request.quote(nome[:40])}&limite=5"
+                url2=f"https://api.bling.com.br/Api/v3/produtos?pesquisa={urllib.request.quote(nome[:40])}&limite=5"
                 req2=urllib.request.Request(url2,headers={"Authorization":f"Bearer {tk}","Accept":"application/json"})
                 with urllib.request.urlopen(req2,timeout=10) as r2: data2=json.loads(r2.read())
                 prods=data2.get("data",[])
@@ -1578,7 +1578,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # Buscar detalhes completos do produto
             pid=p.get("id","")
             if pid:
-                url3=f"https://www.bling.com.br/Api/v3/produtos/{pid}"
+                url3=f"https://api.bling.com.br/Api/v3/produtos/{pid}"
                 req3=urllib.request.Request(url3,headers={"Authorization":f"Bearer {tk}","Accept":"application/json"})
                 with urllib.request.urlopen(req3,timeout=10) as r3: det=json.loads(r3.read())
                 pd=det.get("data",p)
@@ -1599,7 +1599,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             row=exe("SELECT peso FROM produtos WHERE sku=%s",(cprod,),fetchone=True)
             if row and row.get("peso",0)>0: self._ok({"peso":row["peso"],"fonte":"banco"}); return
             tk=_bling_token.get("access","")
-            req=urllib.request.Request(f"https://www.bling.com.br/Api/v3/produtos?codigo={cprod}&limite=1",
+            req=urllib.request.Request(f"https://api.bling.com.br/Api/v3/produtos?codigo={cprod}&limite=1",
                 headers={"Authorization":f"Bearer {tk}","Accept":"application/json"})
             with urllib.request.urlopen(req,timeout=10) as r: d=json.loads(r.read())
             pr=(d.get("data") or [{}])[0]
@@ -2105,7 +2105,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             atualizados = 0
             pagina = 1
             while True:
-                url = f'https://www.bling.com.br/Api/v3/produtos?pagina={pagina}&limite=100&tipo=P'
+                url = f'https://api.bling.com.br/Api/v3/produtos?pagina={pagina}&limite=100&tipo=P'
                 req = urllib.request.Request(url, headers={'Authorization': f'Bearer {_bling_token}'})
                 try:
                     r = urllib.request.urlopen(req, timeout=20)
@@ -3066,7 +3066,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             import urllib.request as ur
             token = _bling_token.get('access','')
             if not token: self._err(401, 'token bling nao configurado'); return
-            url = f'https://www.bling.com.br/Api/v3/produtos?codigo={cod}&limite=5'
+            url = f'https://api.bling.com.br/Api/v3/produtos?codigo={cod}&limite=5'
             req = ur.Request(url, headers={'Authorization': f'Bearer {token}'})
             resp = ur.urlopen(req, timeout=10)
             import json as _j
