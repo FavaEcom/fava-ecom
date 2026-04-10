@@ -427,14 +427,17 @@ function C(r){
     freteTipo='taxa_fixa';
   } else if(canal==='ml' && pesoFinal>0){
     const ltype = (r.listing_type||'').toLowerCase();
-    // Só aplica tabela Full Super se for gold_extra ou gold_super (Full/Super)
-    if(ltype==='gold_extra'||ltype==='gold_super'||ltype.includes('extra')||ltype.includes('super')){
+    // gold_extra=Full, gold_super=Super, gold_pro=Premium — todos usam tabela ML
+    if(ltype==='gold_special' && !parseInt(r.free_shipping||0)){
+      // Clássico SEM frete grátis: comprador paga, custo do vendedor = 0
+      freteCalc=0; freteTipo='classico';
+    } else if(ltype==='gold_special' && parseInt(r.free_shipping||0)){
+      // Clássico COM frete grátis: usa frete_medio (custo real histórico)
+      freteCalc=null; freteTipo=parseFloat(r.frete_medio||0)>0?'manual':'estimado';
+    } else {
+      // Full, Premium, Super e outros: usa tabela ML
       freteCalc=calcFreteML(pesoFinal,preco);
       freteTipo='full_super';
-    } else {
-      // Clássico (gold_special) ou Premium: usa frete_medio manual
-      freteCalc=null;
-      freteTipo=parseFloat(r.frete_medio||0)>0?'manual':'estimado';
     }
   } else if(canal==='ml' && pesoFinal<=0){
     // ML sem peso: usar frete_medio salvo ou mínimo R$7
