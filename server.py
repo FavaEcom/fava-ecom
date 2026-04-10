@@ -1210,7 +1210,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/proximo-sku':       self._get_proximo_sku,
             '/api/db/sem-sku':           self._get_sem_sku,
             '/api/export/frete':         self._export_frete,
-            '/api/sync/base-completa':   self._sync_base_completa,
             '/api/db/familias':          self._get_familias,
             '/api/db/pedrinho':          self._get_pedrinho,
             '/api/db/kits':              self._get_kits,
