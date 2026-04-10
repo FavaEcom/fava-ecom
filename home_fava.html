@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fava Ecom — Home</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#07101f;
+  --bg2:#0f1e35;
+  --brd:#1e3a5f;
+  --tx:#e2e8f0;
+  --tx2:#64748b;
+}
+html,body{height:100%;width:100%;overflow:hidden}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--tx);
+  display:flex;flex-direction:column;user-select:none}
+
+/* ── HEADER ─────────────────────────────────────────────────── */
+.header{height:70px;background:linear-gradient(135deg,#0a1628,#0f2040);
+  border-bottom:1px solid var(--brd);display:flex;align-items:center;
+  padding:0 28px;gap:20px;flex-shrink:0}
+.logo-area{display:flex;align-items:center;gap:12px}
+.logo-ico{font-size:32px}
+.logo-txt{display:flex;flex-direction:column}
+.logo-name{font-size:18px;font-weight:900;letter-spacing:-.5px;
+  background:linear-gradient(90deg,#60a5fa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-sub{font-size:11px;color:var(--tx2);margin-top:-2px}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:20px}
+.clock-area{text-align:right}
+.clock{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+.date{font-size:11px;color:var(--tx2);margin-top:-2px}
+.status-area{display:flex;flex-direction:column;gap:5px;min-width:130px}
+.stat-pill{display:flex;align-items:center;gap:7px;background:#0d1e35;border:1px solid var(--brd);
+  border-radius:20px;padding:5px 12px;font-size:12px}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-grn{background:#22c55e;box-shadow:0 0 6px #22c55e88}
+.dot-red{background:#ef4444}
+.dot-ylw{background:#f59e0b;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* ── GRID ────────────────────────────────────────────────────── */
+.grid-area{flex:1;overflow-y:auto;padding:20px 24px;
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  grid-template-rows:auto auto auto;
+  gap:14px;align-content:start}
+
+/* ── TILES ───────────────────────────────────────────────────── */
+.tile{border-radius:16px;padding:20px 16px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;
+  text-decoration:none;color:var(--tx);cursor:pointer;
+  transition:transform .12s,box-shadow .12s;
+  border:1px solid transparent;position:relative;overflow:hidden;min-height:110px}
+.tile:hover{transform:scale(1.04);box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.tile:active{transform:scale(.97)}
+.tile::before{content:'';position:absolute;inset:0;background:inherit;filter:brightness(.85);z-index:0;border-radius:inherit}
+.tile>*{position:relative;z-index:1}
+.tile-ico{font-size:36px;margin-bottom:10px;display:block;line-height:1}
+.tile-lbl{font-size:12px;font-weight:800;letter-spacing:.3px;line-height:1.2}
+.tile-sub{font-size:10px;margin-top:4px;opacity:.7;font-weight:500}
+.tile-badge{position:absolute;top:10px;right:10px;z-index:2;
+  background:#ef4444;color:#fff;border-radius:10px;
+  font-size:10px;font-weight:800;padding:2px 7px;min-width:22px;text-align:center}
+
+/* Tile sizes */
+.tile-wide{grid-column:span 2}
+.tile-tall{grid-row:span 2}
+.tile-large{grid-column:span 2;grid-row:span 2}
+
+/* Cores */
+.t-blue  {background:linear-gradient(135deg,#1e3a8a,#1d4ed8)}
+.t-green {background:linear-gradient(135deg,#14532d,#15803d)}
+.t-purple{background:linear-gradient(135deg,#3b0764,#7c3aed)}
+.t-orange{background:linear-gradient(135deg,#7c2d12,#ea580c)}
+.t-teal  {background:linear-gradient(135deg,#134e4a,#0d9488)}
+.t-pink  {background:linear-gradient(135deg,#831843,#db2777)}
+.t-yellow{background:linear-gradient(135deg,#713f12,#d97706)}
+.t-sky   {background:linear-gradient(135deg,#0c4a6e,#0284c7)}
+.t-indigo{background:linear-gradient(135deg,#312e81,#4f46e5)}
+.t-slate {background:linear-gradient(135deg,#1e293b,#334155)}
+.t-rose  {background:linear-gradient(135deg,#881337,#e11d48)}
+.t-lime  {background:linear-gradient(135deg,#365314,#65a30d)}
+
+/* ── SEÇÃO LABEL ─────────────────────────────────────────────── */
+.section-row{grid-column:span 6;display:flex;align-items:center;gap:10px;margin-top:6px}
+.section-row h2{font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.8px}
+.section-row hr{flex:1;border:none;border-top:1px solid var(--brd)}
+
+/* ── LIVE CARD ───────────────────────────────────────────────── */
+.live-card{background:var(--bg2);border:1px solid var(--brd);border-radius:16px;
+  padding:16px;display:flex;flex-direction:column;gap:8px;min-height:110px}
+.live-card h3{font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px}
+.live-val{font-size:30px;font-weight:900;line-height:1;letter-spacing:-1px}
+.live-sub{font-size:11px;color:var(--tx2)}
+.live-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:4px 0;border-bottom:1px solid var(--brd)22}
+.live-row:last-child{border:none}
+.live-row .val{font-weight:700}
+
+/* ── POPUP CONFIRMAÇÃO ───────────────────────────────────────── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;
+  align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.popup{background:#0f1e35;border:1px solid var(--brd);border-radius:20px;padding:28px;
+  max-width:320px;width:90%;text-align:center}
+.popup h3{font-size:16px;font-weight:800;margin-bottom:8px}
+.popup p{font-size:13px;color:var(--tx2);margin-bottom:20px}
+.popup-btns{display:flex;gap:10px;justify-content:center}
+.pbtn{padding:10px 24px;border-radius:10px;border:none;font-size:13px;font-weight:700;cursor:pointer}
+.pbtn-ok{background:#3b82f6;color:#fff}.pbtn-cancel{background:#334155;color:#94a3b8}
+
+/* ── TOAST ───────────────────────────────────────────────────── */
+.toast{position:fixed;bottom:24px;right:24px;background:#166534;color:#86efac;
+  padding:12px 20px;border-radius:12px;font-size:13px;font-weight:700;
+  z-index:300;display:none;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--brd);border-radius:4px}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ──────────────────────────────────────────────────── -->
+<div class="header">
+  <div class="logo-area">
+    <span class="logo-ico">🛒</span>
+    <div class="logo-txt">
+      <span class="logo-name">FAVA ECOM</span>
+      <span class="logo-sub">Painel Operacional</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-area">
+      <div class="stat-pill"><span class="dot" id="dot-srv"></span><span id="lbl-srv">Conectando...</span></div>
+      <div class="stat-pill">📦 <span id="lbl-pedidos-hoje">— pedidos hoje</span></div>
+    </div>
+    <div class="clock-area">
+      <div class="clock" id="clock">--:--</div>
+      <div class="date" id="date-lbl"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── GRID ────────────────────────────────────────────────────── -->
+<div class="grid-area">
+
+  <!-- SEÇÃO: COMERCIAL -->
+  <div class="section-row"><h2>🛒 Comercial</h2><hr></div>
+
+  <a class="tile tile-large t-blue" href="/calculadora_fava.html">
+    <span class="tile-ico">💰</span>
+    <span class="tile-lbl">Calculadora</span>
+    <span class="tile-sub">Preços · Margens · Kits</span>
+  </a>
+
+  <a class="tile tile-large t-indigo" href="/gestor_anuncios.html">
+    <span class="tile-ico">📢</span>
+    <span class="tile-lbl">Gestor de Anúncios</span>
+    <span class="tile-sub">Preços · Promoções · ML</span>
+    <span class="tile-badge" id="badge-anuncios" style="display:none">—</span>
+  </a>
+
+  <a class="tile t-teal" href="/fila_anuncios.html">
+    <span class="tile-ico">🤖</span>
+    <span class="tile-lbl">Fila IA</span>
+    <span class="tile-sub">Novos anúncios</span>
+    <span class="tile-badge" id="badge-fila" style="display:none">—</span>
+  </a>
+
+  <a class="tile t-purple" href="/kits.html">
+    <span class="tile-ico">📦</span>
+    <span class="tile-lbl">Kits</span>
+    <span class="tile-sub">Criar · CMV · Peso</span>
+  </a>
+
+  <!-- SEÇÃO: OPERACIONAL -->
+  <div class="section-row"><h2>⚙️ Operacional</h2><hr></div>
+
+  <a class="tile tile-wide t-orange" href="/entrada_nf.html">
+    <span class="tile-ico">📄</span>
+    <span class="tile-lbl">Entrada de Nota Fiscal</span>
+    <span class="tile-sub">Importar XML · CMV · Vincular</span>
+  </a>
+
+  <a class="tile t-sky" href="/vinculacao.html">
+    <span class="tile-ico">🔗</span>
+    <span class="tile-lbl">Vinculação SKU</span>
+    <span class="tile-sub">Novos produtos</span>
+    <span class="tile-badge" id="badge-vinc" style="display:none">—</span>
+  </a>
+
+  <a class="tile t-slate" href="/base_produtos.html">
+    <span class="tile-ico">🗄️</span>
+    <span class="tile-lbl">Base Produtos</span>
+    <span class="tile-sub">Peso · CMV · NCM</span>
+  </a>
+
+  <a class="tile t-lime" href="/balcao_fava.html">
+    <span class="tile-ico">🏪</span>
+    <span class="tile-lbl">Balcão</span>
+    <span class="tile-sub">Venda direta PR</span>
+  </a>
+
+  <!-- SEÇÃO: INDICADORES AO VIVO -->
+  <div class="section-row"><h2>📊 Ao Vivo</h2><hr></div>
+
+  <div class="live-card tile-wide">
+    <h3>Pedidos</h3>
+    <div class="live-val" id="live-pedidos" style="color:#3b82f6">—</div>
+    <div class="live-sub" id="live-pedidos-sub">últimos 30 dias</div>
+  </div>
+
+  <div class="live-card tile-wide">
+    <h3>Faturamento (30d)</h3>
+    <div class="live-val" id="live-fat" style="color:#22c55e;font-size:22px">—</div>
+    <div class="live-sub">Margem média: <span id="live-marg" style="color:#a78bfa">—</span></div>
+  </div>
+
+  <div class="live-card tile-wide">
+    <h3>⚠️ Estoque Crítico</h3>
+    <div id="live-alerta-body" style="font-size:11px;color:#64748b">Carregando...</div>
+  </div>
+
+  <!-- SEÇÃO: FISCAL / GESTÃO -->
+  <div class="section-row"><h2>📋 Fiscal &amp; Gestão</h2><hr></div>
+
+  <a class="tile t-rose" href="/pedidos_fava.html">
+    <span class="tile-ico">🧾</span>
+    <span class="tile-lbl">Pedidos Fiscal</span>
+    <span class="tile-sub">ICMS · PIS · DIFAL</span>
+  </a>
+
+  <a class="tile t-yellow" href="/historico_compras.html">
+    <span class="tile-ico">🔍</span>
+    <span class="tile-lbl">Histórico Compras</span>
+    <span class="tile-sub">NFs · CMV · Créditos</span>
+  </a>
+
+  <a class="tile t-pink" href="/tarefas.html">
+    <span class="tile-ico">📌</span>
+    <span class="tile-lbl">Tarefas</span>
+    <span class="tile-sub">Equipe · Pendências</span>
+    <span class="tile-badge" id="badge-tarefas" style="display:none">—</span>
+  </a>
+
+  <a class="tile t-slate" href="/estoque_parado.html">
+    <span class="tile-ico">📉</span>
+    <span class="tile-lbl">Estoque Parado</span>
+    <span class="tile-sub">Sem giro · Ação</span>
+  </a>
+
+  <a class="tile t-slate" href="/painel_fava.html">
+    <span class="tile-ico">📊</span>
+    <span class="tile-lbl">Dashboard</span>
+    <span class="tile-sub">Gráficos · KPIs</span>
+  </a>
+
+  <a class="tile t-green" href="/ean.html">
+    <span class="tile-ico">🏷️</span>
+    <span class="tile-lbl">EAN / Código</span>
+    <span class="tile-sub">Cadastrar barras</span>
+  </a>
+
+</div><!-- /grid -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SRV='';
+
+// ── Relógio ───────────────────────────────────────────────────
+function updateClock(){
+  var now=new Date();
+  document.getElementById('clock').textContent=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('date-lbl').textContent=now.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'});
+}
+updateClock(); setInterval(updateClock,1000);
+
+// ── Status + dados ────────────────────────────────────────────
+function carregarDados(){
+  fetch(SRV+'/api/db/status',{signal:AbortSignal.timeout(5000)})
+    .then(r=>r.json())
+    .then(()=>{
+      document.getElementById('dot-srv').className='dot dot-grn';
+      document.getElementById('lbl-srv').textContent='Sistema online';
+    }).catch(()=>{
+      document.getElementById('dot-srv').className='dot dot-red';
+      document.getElementById('lbl-srv').textContent='Offline';
+    });
+
+  // Pedidos
+  fetch(SRV+'/api/db/pedidos?dias=30',{signal:AbortSignal.timeout(8000)})
+    .then(r=>r.json())
+    .then(function(pedidos){
+      if(!Array.isArray(pedidos)) return;
+      var hoje=new Date().toISOString().slice(0,10);
+      var pedHoje=pedidos.filter(function(p){return(p.data||'').startsWith(hoje);});
+      var fat=pedidos.reduce(function(a,p){return a+parseFloat(p.total||p.valor||0);},0);
+      var margens=pedidos.filter(function(p){return p.margem||p.margem_real;})
+        .map(function(p){return parseFloat(p.margem||p.margem_real||0);});
+      var marg=margens.length?margens.reduce(function(a,b){return a+b;},0)/margens.length:0;
+      document.getElementById('lbl-pedidos-hoje').textContent=pedHoje.length+' pedidos hoje';
+      document.getElementById('live-pedidos').textContent=pedidos.length;
+      document.getElementById('live-fat').textContent='R$ '+fat.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+      document.getElementById('live-marg').textContent=marg>0?marg.toFixed(1)+'%':'—';
+    }).catch(()=>{});
+
+  // Produtos para estoque crítico
+  fetch(SRV+'/api/db/produtos?limit=5000',{signal:AbortSignal.timeout(10000)})
+    .then(r=>r.json())
+    .then(function(prods){
+      if(!Array.isArray(prods)) return;
+      var zerados=prods.filter(function(p){return(p.estoque||0)<=0&&(p.preco_venda||0)>0;});
+      var baixos=prods.filter(function(p){return(p.estoque||0)>0&&(p.estoque||0)<=3;});
+      var html='';
+      if(!zerados.length&&!baixos.length){
+        html='<div style="color:#22c55e;font-weight:700">✓ Estoque normal</div>';
+      } else {
+        zerados.slice(0,3).forEach(function(p){
+          html+='<div class="live-row"><span style="color:#ef4444;font-family:monospace;font-size:10px">'+p.sku+'</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin:0 8px;font-size:11px">'+(p.nome||'').slice(0,25)+'</span><span class="val" style="color:#ef4444">ZERO</span></div>';
+        });
+        baixos.slice(0,2).forEach(function(p){
+          html+='<div class="live-row"><span style="color:#f59e0b;font-family:monospace;font-size:10px">'+p.sku+'</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin:0 8px;font-size:11px">'+(p.nome||'').slice(0,25)+'</span><span class="val" style="color:#f59e0b">'+p.estoque+' un</span></div>';
+        });
+        var total=zerados.length+baixos.length;
+        if(total>5) html+='<div style="color:#64748b;font-size:10px;margin-top:4px">+mais '+(total-5)+' produtos</div>';
+      }
+      document.getElementById('live-alerta-body').innerHTML=html;
+      if(zerados.length>0){
+        var b=document.getElementById('badge-anuncios');
+        b.textContent=zerados.length; b.style.display='';
+      }
+    }).catch(()=>{});
+
+  // Sem-sku
+  fetch(SRV+'/api/db/sem-sku',{signal:AbortSignal.timeout(8000)})
+    .then(r=>r.json())
+    .then(function(d){
+      var n=(d.itens||[]).length;
+      var b=document.getElementById('badge-vinc');
+      if(n>0){b.textContent=n;b.style.display='';}
+    }).catch(()=>{});
+}
+
+carregarDados();
+setInterval(carregarDados, 60000); // atualiza a cada 1 min
+</script>
+</body>
+</html>
