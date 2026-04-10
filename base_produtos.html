@@ -10,281 +10,275 @@ body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-heigh
 nav{background:#1e293b;padding:6px 16px;display:flex;gap:8px;align-items:center;border-bottom:1px solid #334155;position:sticky;top:0;z-index:50;height:40px;flex-wrap:wrap}
 nav a{color:#94a3b8;text-decoration:none;font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;white-space:nowrap}
 nav a:hover,nav a.ativo{background:#3b82f6;color:#fff}
-.toolbar{padding:10px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#1e293b;border-bottom:1px solid #334155;position:sticky;top:40px;z-index:40}
-.toolbar input{background:#0f172a;border:1px solid #475569;border-radius:6px;color:#f1f5f9;padding:6px 10px;font-size:12px;width:220px}
-.toolbar input:focus{outline:none;border-color:#3b82f6}
-.toolbar select{background:#0f172a;border:1px solid #475569;border-radius:6px;color:#f1f5f9;padding:6px 10px;font-size:12px}
-.info{font-size:11px;color:#64748b;margin-left:auto}
-.badge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:#1e3a5f;color:#93c5fd}
-.tbl-wrap{overflow:auto;height:calc(100vh - 90px)}
-table{width:100%;border-collapse:collapse;min-width:1400px}
+.main{padding:14px 16px}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.toolbar input,.toolbar select{background:#0f172a;border:1px solid #475569;border-radius:6px;color:#f1f5f9;padding:6px 10px;font-size:12px}
+.toolbar input:focus,.toolbar select:focus{outline:none;border-color:#3b82f6}
+.toolbar input[type=text]{width:220px}
+.btn{padding:6px 14px;border-radius:6px;border:none;font-size:12px;font-weight:700;cursor:pointer}
+.btn-blue{background:#3b82f6;color:#fff}.btn-blue:hover{background:#2563eb}
+.btn-green{background:#16a34a;color:#fff}.btn-green:hover{background:#15803d}
+.stats{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.stat{background:#1e293b;border-radius:7px;padding:9px 14px;border:1px solid #334155;text-align:center;min-width:90px;cursor:pointer;transition:border-color .15s}
+.stat:hover{border-color:#3b82f6}
+.stat-n{font-size:18px;font-weight:800;color:#3b82f6}
+.stat-n.ok{color:#22c55e}.stat-n.warn{color:#f59e0b}.stat-n.red{color:#ef4444}
+.stat-l{font-size:10px;color:#64748b;margin-top:1px}
+.tbl-wrap{overflow:auto;border-radius:8px;border:1px solid #334155;max-height:calc(100vh - 195px)}
+table{width:100%;border-collapse:collapse;min-width:1700px;font-size:11px}
 thead th{background:#1a2335;padding:7px 8px;text-align:left;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:2px solid #334155;white-space:nowrap;position:sticky;top:0;z-index:10;cursor:pointer;user-select:none}
 thead th:hover{color:#e2e8f0}
 thead th.sorted{color:#3b82f6}
-thead th .num{text-align:right}
 tbody tr{border-bottom:1px solid #0f172a;transition:background .1s}
-tbody tr:hover{background:#1a2231}
+tbody tr:hover{background:#14202f}
+tbody tr.sem-peso{background:#1a1200}
+tbody tr.sem-cmv{background:#1a0a0a}
 td{padding:5px 8px;vertical-align:middle;max-width:200px}
 .sku-tag{font-family:monospace;font-weight:700;color:#60a5fa;font-size:11px}
-.nome-cell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;max-width:180px}
-.num-cell{text-align:right;font-family:monospace;font-size:11px}
+.nome-cell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
 .fam-badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;background:#1e293b;color:#94a3b8;border:1px solid #334155}
-/* Edição inline */
-td.editavel{cursor:pointer}
-td.editavel:hover{background:#1a3a5c}
-td.editavel:hover::after{content:'✎';color:#3b82f6;margin-left:4px;font-size:10px}
-input.cell-edit{background:#0f172a;border:1px solid #3b82f6;border-radius:4px;color:#f1f5f9;padding:3px 6px;font-size:11px;width:100%;outline:none}
-input.cell-edit.salvo{border-color:#22c55e;background:#071411}
-/* Tags ST/IMP */
-.tag-st{background:#78350f;color:#fcd34d;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700}
-.tag-ok{background:#14532d;color:#86efac;padding:1px 5px;border-radius:3px;font-size:9px}
-.tag-0{color:#475569;font-size:11px}
-/* Toast */
-.toast{position:fixed;bottom:20px;right:20px;background:#166534;color:#86efac;padding:8px 16px;border-radius:7px;font-size:12px;font-weight:700;z-index:200;display:none;max-width:350px}
+td.edit{cursor:pointer}
+td.edit:hover{background:#1a3a5c33}
+td.edit:hover::after{content:'✎';color:#3b82f6;margin-left:4px;font-size:9px}
+input.cel-inp{background:#0f172a;border:1px solid #3b82f6;border-radius:4px;color:#f1f5f9;padding:3px 6px;font-size:11px;width:100%;outline:none}
+input.cel-inp.salvo{border-color:#22c55e}
+.tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;white-space:nowrap}
+.tag-st{background:#78350f;color:#fcd34d}
+.tag-warn{background:#78350f;color:#fcd34d}
+.tag-zero{color:#475569;font-size:11px}
+.num{text-align:right;font-family:monospace}
+.fr-calc{color:#10b981;font-family:monospace}
+.fr-sem{color:#475569;font-size:10px}
+.toast{position:fixed;top:50px;right:16px;background:#166534;color:#86efac;padding:10px 18px;border-radius:7px;font-size:12px;font-weight:700;z-index:200;display:none;max-width:380px}
 .loading{text-align:center;padding:40px;color:#475569}
 </style>
 </head>
 <body>
 <nav>
-  <a href="/painel_fava.html">🏠 Painel</a>
-  <a href="/entrada_nf.html">📄 Entrada NF</a>
-  <a href="/historico_compras.html">🔍 Histórico</a>
-  <a href="/base_produtos.html">📦 Base</a>
-  <a href="/gestor_anuncios.html">📢 Anúncios</a>
-  <a href="/fila_anuncios.html">🤖 Fila IA</a>
-  <a href="/calculadora_fava.html">💰 Calculadora</a>
-  <a href="/balcao_fava.html">🏪 Balcão</a>
-  <a href="/ean.html">🏷️ EAN</a>
-  <a href="/tarefas.html">📋 Tarefas</a>
-  <a href="/estoque_parado.html">📦 Estoque</a>
+  <a href="/painel_fava.html">&#127968; Painel</a>
+  <a href="/entrada_nf.html">&#128196; Entrada NF</a>
+  <a href="/historico_compras.html">&#128269; Hist&oacute;rico</a>
+  <a href="/base_produtos.html" class="ativo">&#128230; Base</a>
+  <a href="/gestor_anuncios.html">&#128226; An&uacute;ncios</a>
+  <a href="/fila_anuncios.html">&#129302; Fila IA</a>
+  <a href="/calculadora_fava.html">&#128176; Calculadora</a>
+  <a href="/balcao_fava.html">&#127978; Balc&atilde;o</a>
+  <a href="/ean.html">&#127991; EAN</a>
+  <a href="/tarefas.html">&#128203; Tarefas</a>
+  <a href="/estoque_parado.html">&#128230; Estoque</a>
 </nav>
+<div class="main">
 <div class="toolbar">
   <input id="busca" type="text" placeholder="Buscar SKU ou nome..." oninput="filtrar()">
-  <select id="filtro-fam" onchange="filtrar()">
-    <option value="">Todas as famílias</option>
-  </select>
-  <select id="filtro-pend" onchange="filtrar()">
+  <select id="f-fam" onchange="filtrar()"><option value="">Todas as familias</option></select>
+  <select id="f-pend" onchange="filtrar()">
     <option value="">Todos</option>
     <option value="sem-peso">Sem peso</option>
-    <option value="sem-ncm">Sem NCM</option>
-    <option value="sem-familia">Sem família</option>
     <option value="sem-cmv">Sem CMV</option>
+    <option value="sem-ncm">Sem NCM</option>
     <option value="sem-ean">Sem EAN</option>
+    <option value="sem-familia">Sem familia</option>
+    <option value="com-st">Com ST</option>
   </select>
-  <span class="badge" id="badge-count">—</span>
-  <span class="info">Duplo clique numa célula para editar · Enter salva · Esc cancela</span>
+  <button class="btn btn-blue" onclick="syncBlingPeso()" id="btn-speso">Sync Peso Bling</button>
+  <button class="btn btn-green" onclick="syncEstoque()" id="btn-sestq">Sync Estoque</button>
+  <span id="lbl-count" style="font-size:11px;color:#64748b"></span>
 </div>
-<div class="tbl-wrap">
-  <div id="conteudo" class="loading">⏳ Carregando...</div>
+<div class="stats">
+  <div class="stat" onclick="document.getElementById('f-pend').value='';filtrar()"><div class="stat-n" id="sn-tot">-</div><div class="stat-l">Total</div></div>
+  <div class="stat" onclick="document.getElementById('f-pend').value='sem-peso';filtrar()"><div class="stat-n warn" id="sn-sp">-</div><div class="stat-l">Sem peso</div></div>
+  <div class="stat" onclick="document.getElementById('f-pend').value='sem-cmv';filtrar()"><div class="stat-n red" id="sn-sc">-</div><div class="stat-l">Sem CMV</div></div>
+  <div class="stat" onclick="document.getElementById('f-pend').value='sem-ncm';filtrar()"><div class="stat-n warn" id="sn-sn">-</div><div class="stat-l">Sem NCM</div></div>
+  <div class="stat" onclick="document.getElementById('f-pend').value='sem-ean';filtrar()"><div class="stat-n" style="color:#8b5cf6" id="sn-se">-</div><div class="stat-l">Sem EAN</div></div>
+  <div class="stat" onclick="document.getElementById('f-pend').value='com-st';filtrar()"><div class="stat-n" style="color:#fcd34d" id="sn-st">-</div><div class="stat-l">Com ST</div></div>
+  <div class="stat"><div class="stat-n ok" id="sn-eq">-</div><div class="stat-l">Em estoque</div></div>
+</div>
+<div class="tbl-wrap"><div id="conteudo" class="loading">Carregando...</div></div>
 </div>
 <div class="toast" id="toast"></div>
-
 <script>
-var _todos = [], _filtrados = [];
-var _sortCol = 'sku', _sortAsc = true;
+var _todos=[],_fil=[],_sortCol='sku',_sortAsc=true;
 
-function toast(msg, ok) {
-  var el = document.getElementById('toast');
-  el.textContent = msg;
-  el.style.background = ok===false ? '#7f1d1d' : '#166534';
-  el.style.display = 'block';
-  setTimeout(()=>el.style.display='none', 2500);
+// Tabela frete ML (identica calculadora)
+var FTB=[[0.3,5.65,6.55,7.75,12.35,14.35,16.45,18.45,20.95],[0.5,5.95,6.65,7.85,13.25,15.45,17.65,19.85,22.55],[1,6.05,6.75,7.95,13.85,16.15,18.45,20.75,23.65],[1.5,6.15,6.85,8.05,14.15,16.45,18.85,21.15,24.65],[2,6.25,6.95,8.15,14.45,16.85,19.25,21.65,24.65],[3,6.35,7.95,8.55,15.75,18.35,21.05,23.65,26.25],[4,6.45,8.15,8.95,17.05,19.85,22.65,25.55,28.35],[5,6.55,8.35,9.75,18.45,21.55,24.65,27.75,30.75],[6,6.65,8.55,9.95,25.45,28.55,32.65,35.75,39.75],[7,6.75,8.75,10.15,27.05,31.05,36.05,40.05,44.05],[8,6.85,8.95,10.35,28.85,33.65,38.45,43.25,48.05],[9,6.95,9.15,10.55,29.65,34.55,39.55,44.45,49.35],[11,7.05,9.55,10.95,41.25,48.05,54.95,61.75,68.65],[13,7.15,9.95,11.35,42.15,49.25,56.25,63.25,70.25],[15,7.25,10.15,11.55,45.05,52.45,59.95,67.45,74.95],[17,7.35,10.35,11.75,48.55,56.05,63.55,70.75,78.65],[20,7.45,10.55,11.95,54.75,63.85,72.95,82.05,91.15],[25,7.65,10.95,12.15,64.05,75.05,84.75,95.35,105.95],[30,7.75,11.15,12.35,65.95,75.45,85.55,96.25,106.95],[40,7.85,11.35,12.55,67.75,78.95,88.95,99.15,107.05],[50,7.95,11.55,12.75,70.25,81.05,92.05,102.55,110.75],[999,8.05,11.75,12.95,74.95,86.45,98.15,109.35,118.15]];
+function calcFrete(kg,preco){
+  if(!kg||kg<=0)return null;
+  var r=FTB.find(function(x){return kg<=x[0];})||FTB[FTB.length-1];
+  if(preco<19)return Math.min(r[1],preco*0.5);
+  if(preco<49)return r[2]; if(preco<79)return r[3]; if(preco<100)return r[4];
+  if(preco<120)return r[5]; if(preco<150)return r[6]; if(preco<200)return r[7];
+  return r[8];
 }
 
-// Carregar produtos
 fetch('/api/db/produtos?limit=5000')
-  .then(r=>r.json())
-  .then(data=>{
-    _todos = data;
-    // Popular famílias
-    var fams = [...new Set(data.map(d=>d.familia||'').filter(Boolean))].sort();
-    var sel = document.getElementById('filtro-fam');
-    fams.forEach(f=>{var o=document.createElement('option');o.value=f;o.textContent=f;sel.appendChild(o);});
+  .then(function(r){return r.json();})
+  .then(function(data){
+    _todos=data;
+    var fams=[...new Set(data.map(function(d){return d.familia||'';}).filter(Boolean))].sort();
+    var sel=document.getElementById('f-fam');
+    fams.forEach(function(f){var o=document.createElement('option');o.value=f;o.textContent=f;sel.appendChild(o);});
     filtrar();
-  })
-  .catch(e=>document.getElementById('conteudo').innerHTML='Erro: '+e.message);
+  }).catch(function(e){document.getElementById('conteudo').innerHTML='Erro: '+e.message;});
 
-function filtrar() {
-  var busca = document.getElementById('busca').value.toLowerCase();
-  var fam   = document.getElementById('filtro-fam').value;
-  var pend  = document.getElementById('filtro-pend').value;
-  _filtrados = _todos.filter(function(p){
-    if(busca && !p.sku.toLowerCase().includes(busca) && !(p.nome||'').toLowerCase().includes(busca)) return false;
-    if(fam && p.familia !== fam) return false;
-    if(pend==='sem-peso'    && (p.peso||0)>0) return false;
-    if(pend==='sem-ncm'     && p.ncm) return false;
-    if(pend==='sem-familia' && p.familia) return false;
-    if(pend==='sem-cmv'     && (p.custo_br||0)>0) return false;
-    if(pend==='sem-ean'     && p.ean) return false;
+function filtrar(){
+  var q=document.getElementById('busca').value.toLowerCase();
+  var fam=document.getElementById('f-fam').value;
+  var pend=document.getElementById('f-pend').value;
+  _fil=_todos.filter(function(p){
+    if(q&&!(p.sku||'').toLowerCase().includes(q)&&!(p.nome||'').toLowerCase().includes(q))return false;
+    if(fam&&p.familia!==fam)return false;
+    if(pend==='sem-peso'&&(p.peso||0)>0)return false;
+    if(pend==='sem-cmv'&&(p.custo_br||0)>0)return false;
+    if(pend==='sem-ncm'&&p.ncm)return false;
+    if(pend==='sem-ean'&&p.ean)return false;
+    if(pend==='sem-familia'&&p.familia)return false;
+    if(pend==='com-st'&&!parseInt(p.tem_st||0))return false;
     return true;
   });
-  ordenar();
+  ordenar(); atualizarStats();
 }
 
-function ordenar() {
-  var col = _sortCol;
-  _filtrados.sort(function(a,b){
-    var va = a[col]||0, vb = b[col]||0;
-    if(typeof va==='string') { va=va.toLowerCase(); vb=(vb||'').toLowerCase(); }
-    if(va<vb) return _sortAsc?-1:1;
-    if(va>vb) return _sortAsc?1:-1;
-    return 0;
+function atualizarStats(){
+  var d=_todos;
+  document.getElementById('sn-tot').textContent=d.length;
+  document.getElementById('sn-sp').textContent=d.filter(function(p){return!(p.peso>0);}).length;
+  document.getElementById('sn-sc').textContent=d.filter(function(p){return!(p.custo_br>0);}).length;
+  document.getElementById('sn-sn').textContent=d.filter(function(p){return!p.ncm;}).length;
+  document.getElementById('sn-se').textContent=d.filter(function(p){return!p.ean;}).length;
+  document.getElementById('sn-st').textContent=d.filter(function(p){return parseInt(p.tem_st||0);}).length;
+  document.getElementById('sn-eq').textContent=d.filter(function(p){return(p.estoque||0)>0;}).length;
+  document.getElementById('lbl-count').textContent=_fil.length+' produtos';
+}
+
+function ordenar(){
+  var col=_sortCol;
+  _fil.sort(function(a,b){
+    var va=a[col]||0,vb=b[col]||0;
+    if(typeof va==='string'){va=va.toLowerCase();vb=(vb||'').toLowerCase();}
+    if(va<vb)return _sortAsc?-1:1; if(va>vb)return _sortAsc?1:-1; return 0;
   });
   renderTabela();
 }
 
-function setSort(col) {
-  if(_sortCol===col) _sortAsc=!_sortAsc; else { _sortCol=col; _sortAsc=true; }
-  document.querySelectorAll('thead th').forEach(t=>t.classList.remove('sorted'));
-  var th = document.getElementById('th-'+col);
-  if(th) th.classList.add('sorted');
+function setSort(col){
+  if(_sortCol===col)_sortAsc=!_sortAsc;else{_sortCol=col;_sortAsc=true;}
+  document.querySelectorAll('thead th').forEach(function(t){t.classList.remove('sorted');});
+  var th=document.getElementById('th-'+col);if(th)th.classList.add('sorted');
   ordenar();
 }
 
-function renderTabela() {
-  document.getElementById('badge-count').textContent = _filtrados.length+' produtos';
-  var html = '<table><thead><tr>';
-  var cols = [
-    {k:'sku',    l:'SKU',      ed:false},
-    {k:'nome',   l:'Nome',     ed:true},
-    {k:'familia',l:'Família',  ed:true},
-    {k:'custo_br',l:'CMV BR',  ed:true, num:true},
-    {k:'custo_pr',l:'CMV PR',  ed:true, num:true},
-    {k:'peso',   l:'Peso(kg)', ed:true, num:true},
-    {k:'largura',l:'Larg',     ed:true, num:true},
-    {k:'altura', l:'Alt',      ed:true, num:true},
-    {k:'comprimento',l:'Prof', ed:true, num:true},
-    {k:'ncm',    l:'NCM',      ed:true},
-    {k:'cest',   l:'CEST',     ed:true},
-    {k:'cst_padrao',l:'CST',   ed:true},
-    {k:'tem_st', l:'ST',       ed:true},
-    {k:'ipi',    l:'IPI%',     ed:true, num:true},
-    {k:'ean',    l:'EAN',      ed:true},
-    {k:'origem', l:'Orig',     ed:true},
-    {k:'estoque',l:'Estq',     ed:false, num:true},
-  ];
-  cols.forEach(function(c){
-    html += '<th id="th-'+c.k+'" onclick="setSort(\''+c.k+'\')"'+(c.num?' class="num"':'')+'>'+c.l+'</th>';
+var COLS=[
+  {k:'sku',l:'SKU',ed:false},
+  {k:'nome',l:'Nome',ed:true},
+  {k:'familia',l:'Familia',ed:true},
+  {k:'custo_br',l:'CMV BR',ed:true,num:true},
+  {k:'custo_pr',l:'CMV PR',ed:true,num:true},
+  {k:'peso',l:'Peso kg',ed:true,num:true},
+  {k:'largura',l:'Larg cm',ed:true,num:true},
+  {k:'altura',l:'Alt cm',ed:true,num:true},
+  {k:'comprimento',l:'Prof cm',ed:true,num:true},
+  {k:'_f50',l:'Fr R$50',ed:false,num:true,calc:true},
+  {k:'_f100',l:'Fr R$100',ed:false,num:true,calc:true},
+  {k:'_f200',l:'Fr R$200',ed:false,num:true,calc:true},
+  {k:'ncm',l:'NCM',ed:true},
+  {k:'cest',l:'CEST',ed:true},
+  {k:'cst_padrao',l:'CST',ed:true},
+  {k:'tem_st',l:'ST',ed:true},
+  {k:'ipi',l:'IPI%',ed:true,num:true},
+  {k:'ean',l:'EAN',ed:true},
+  {k:'origem',l:'Orig',ed:true},
+  {k:'estoque',l:'Estoque',ed:false,num:true},
+];
+
+function renderTabela(){
+  var html='<table><thead><tr>';
+  COLS.forEach(function(c){
+    var cls=(c.num?' class="num"':'');
+    var sty=c.calc?' style="color:#10b981"':'';
+    html+='<th id="th-'+c.k+'" onclick="setSort(\''+c.k+'\')"'+cls+sty+'>'+c.l+'</th>';
   });
-  html += '</tr></thead><tbody>';
-
-  _filtrados.forEach(function(p, i){
-    html += '<tr id="tr-'+p.sku.replace(/[^a-z0-9]/gi,'_')+'">';
-    cols.forEach(function(col){
-      var v = p[col.k];
-      var display = '';
-      // Formatação por campo
-      if(col.k==='sku') {
-        display = '<span class="sku-tag">'+esc(p.sku)+'</span>';
-      } else if(col.k==='nome') {
-        display = '<div class="nome-cell" title="'+esc(v||'')+'">'+esc((v||'—').slice(0,40))+'</div>';
-      } else if(col.k==='familia') {
-        display = v ? '<span class="fam-badge">'+esc(v)+'</span>' : '<span class="tag-0">—</span>';
-      } else if(col.k==='custo_br'||col.k==='custo_pr') {
-        display = v&&v>0 ? '<span style="color:#22c55e">R$ '+Number(v).toFixed(4)+'</span>' : '<span class="tag-0">—</span>';
-      } else if(col.k==='peso'||col.k==='largura'||col.k==='altura'||col.k==='comprimento') {
-        display = v&&v>0 ? '<span style="color:#f1f5f9">'+Number(v).toFixed(3)+'</span>' : '<span class="tag-0">—</span>';
-      } else if(col.k==='tem_st') {
-        display = v&&parseInt(v)>0 ? '<span class="tag-st">SIM</span>' : '<span class="tag-0">não</span>';
-      } else if(col.k==='ipi') {
-        display = v&&v>0 ? Number(v).toFixed(1)+'%' : '<span class="tag-0">—</span>';
-      } else if(col.k==='estoque') {
-        display = '<span style="color:'+(v>0?'#22c55e':'#ef4444')+'">'+( v||0)+'</span>';
-      } else {
-        display = v ? esc(String(v)) : '<span class="tag-0">—</span>';
-      }
-
-      if(col.ed) {
-        html += '<td class="editavel'+(col.num?' num-cell':'')+'" ondblclick="editarCelula(this,\''+esc(p.sku)+'\',\''+col.k+'\',\''+esc(String(v||''))+'\')" data-sku="'+esc(p.sku)+'" data-campo="'+col.k+'" data-val="'+esc(String(v||''))+'">'+display+'</td>';
-      } else {
-        html += '<td'+(col.num?' class="num-cell"':'')+'>'+display+'</td>';
-      }
+  html+='</tr></thead><tbody>';
+  _fil.forEach(function(p){
+    var sp=!(p.peso>0),sc=!(p.custo_br>0);
+    var rc=sc?'sem-cmv':sp?'sem-peso':'';
+    var f50=calcFrete(p.peso,50),f100=calcFrete(p.peso,100),f200=calcFrete(p.peso,200);
+    html+='<tr class="'+rc+'">';
+    COLS.forEach(function(c){
+      var v=p[c.k],disp='';
+      if(c.k==='sku') disp='<span class="sku-tag">'+esc(p.sku)+'</span>';
+      else if(c.k==='nome') disp='<div class="nome-cell" title="'+esc(v||'')+'">'+esc((v||'&mdash;').slice(0,40))+'</div>';
+      else if(c.k==='familia') disp=v?'<span class="fam-badge">'+esc(v)+'</span>':'<span class="tag-zero">&mdash;</span>';
+      else if(c.k==='custo_br'||c.k==='custo_pr') disp=v&&v>0?'<span style="color:#22c55e;font-family:monospace">R$ '+Number(v).toFixed(4)+'</span>':'<span class="tag tag-warn">-- sem CMV</span>';
+      else if(c.k==='peso') disp=v&&v>0?'<span style="font-family:monospace">'+Number(v).toFixed(3)+'</span>':'<span class="tag tag-warn">-- sem peso</span>';
+      else if(c.k==='largura'||c.k==='altura'||c.k==='comprimento') disp=v&&v>0?'<span style="font-family:monospace">'+Number(v).toFixed(1)+'</span>':'<span class="tag-zero">&mdash;</span>';
+      else if(c.k==='_f50') disp=f50!==null?'<span class="fr-calc">'+f50.toFixed(2)+'</span>':'<span class="fr-sem">&mdash;</span>';
+      else if(c.k==='_f100') disp=f100!==null?'<span class="fr-calc">'+f100.toFixed(2)+'</span>':'<span class="fr-sem">&mdash;</span>';
+      else if(c.k==='_f200') disp=f200!==null?'<span class="fr-calc" style="color:#34d399">'+f200.toFixed(2)+'</span>':'<span class="fr-sem">&mdash;</span>';
+      else if(c.k==='tem_st') disp=v&&parseInt(v)>0?'<span class="tag tag-st">SIM</span>':'<span class="tag-zero">nao</span>';
+      else if(c.k==='ipi') disp=v&&v>0?Number(v).toFixed(1)+'%':'<span class="tag-zero">&mdash;</span>';
+      else if(c.k==='estoque') disp='<span style="color:'+(( v||0)>0?'#22c55e':'#ef4444')+'">'+( v||0)+'</span>';
+      else disp=v?esc(String(v)):'<span class="tag-zero">&mdash;</span>';
+      var raw=String(v===null||v===undefined?'':v);
+      if(c.ed) html+='<td class="edit'+(c.num?' num':'')+'" ondblclick="editarCel(this,\''+esc(p.sku)+'\',\''+c.k+'\',\''+esc(raw)+'\')" data-orig="'+esc(disp)+'">'+disp+'</td>';
+      else html+='<td'+(c.num?' class="num"':'')+'>'+disp+'</td>';
     });
-    html += '</tr>';
+    html+='</tr>';
   });
-  html += '</tbody></table>';
-  document.getElementById('conteudo').innerHTML = html;
+  html+='</tbody></table>';
+  document.getElementById('conteudo').innerHTML=html;
 }
 
-function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-// Edição inline
-var _celAtual = null;
-
-function editarCelula(td, sku, campo, valorAtual) {
-  if(_celAtual) cancelarEdicao();
-  _celAtual = td;
-  var input = document.createElement('input');
-  input.className = 'cell-edit';
-  input.value = valorAtual==='null'||valorAtual==='undefined'||valorAtual==='—'?'':valorAtual;
-  input.dataset.sku = sku;
-  input.dataset.campo = campo;
-  input.dataset.original = td.innerHTML;
-  td.innerHTML = '';
-  td.appendChild(input);
-  input.focus();
-  input.select();
-  input.addEventListener('keydown', function(e){
-    if(e.key==='Enter'){salvarCelula(td, input, sku, campo);}
-    if(e.key==='Escape'){cancelarEdicao();}
-    e.stopPropagation();
-  });
-  input.addEventListener('blur', function(){
-    // Delay para não conflitar com click em outro campo
-    setTimeout(function(){if(_celAtual===td) cancelarEdicao();}, 200);
-  });
+var _cel=null, NUM_C=['peso','largura','altura','comprimento','custo_br','custo_pr','custo','ipi','st_imposto'];
+function editarCel(td,sku,campo,v){
+  if(_cel)cancelar();
+  _cel=td;
+  var i=document.createElement('input'); i.className='cel-inp';
+  i.value=v==='null'||v==='undefined'?'':v;
+  i.dataset.orig=td.getAttribute('data-orig')||td.innerHTML;
+  td.innerHTML=''; td.appendChild(i); i.focus(); i.select();
+  i.addEventListener('keydown',function(e){if(e.key==='Enter')salvar(td,i,sku,campo);if(e.key==='Escape')cancelar();e.stopPropagation();});
+  i.addEventListener('blur',function(){setTimeout(function(){if(_cel===td)cancelar();},200);});
 }
-
-function cancelarEdicao() {
-  if(!_celAtual) return;
-  var inp = _celAtual.querySelector('input');
-  if(inp) _celAtual.innerHTML = inp.dataset.original;
-  _celAtual = null;
+function cancelar(){if(!_cel)return;var i=_cel.querySelector('input');if(i)_cel.innerHTML=i.dataset.orig;_cel=null;}
+function salvar(td,inp,sku,campo){
+  var v=inp.value.trim(), pl={sku:sku};
+  pl[campo]=NUM_C.includes(campo)?(parseFloat(v)||0):v;
+  fetch('/api/db/produto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pl)})
+    .then(function(r){return r.json();}).then(function(d){
+      if(d.ok){inp.className='cel-inp salvo';var p=_todos.find(function(x){return x.sku===sku;});if(p)p[campo]=pl[campo];setTimeout(function(){filtrar();toast('OK '+sku+' '+campo);},300);}
+    }).catch(function(){toast('Erro ao salvar',false);});
+  _cel=null;
 }
-
-function salvarCelula(td, input, sku, campo) {
-  var val = input.value.trim();
-  // Converter para número se necessário
-  var numCampos = ['peso','largura','altura','comprimento','custo_br','custo_pr','custo','ipi','st_imposto'];
-  var payload = {sku: sku};
-  payload[campo] = numCampos.includes(campo) ? (parseFloat(val)||0) : val;
-
-  fetch('/api/db/produto', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(payload)
-  }).then(r=>r.json()).then(d=>{
-    if(d.ok){
-      input.className = 'cell-edit salvo';
-      // Atualizar dado local
-      var prod = _todos.find(p=>p.sku===sku);
-      if(prod) {
-        prod[campo] = payload[campo];
-        // Re-render só essa linha
-        setTimeout(function(){
-          filtrar();
-          toast('✓ '+sku+' — '+campo+' salvo');
-        }, 300);
-      }
-    }
-  }).catch(()=>toast('Erro ao salvar', false));
-  _celAtual = null;
-}
-
-// Atalho: Tab avança para próxima célula editável
-document.addEventListener('keydown', function(e){
-  if(e.key==='Tab' && _celAtual){
-    e.preventDefault();
-    // Avançar para próxima célula editável na mesma linha
-    var tds = Array.from(_celAtual.parentElement.querySelectorAll('td.editavel'));
-    var idx  = tds.indexOf(_celAtual);
-    if(idx >= 0 && idx < tds.length-1) {
-      var next = tds[idx+1];
-      setTimeout(function(){
-        next.dispatchEvent(new MouseEvent('dblclick'));
-      }, 10);
-    }
-  }
+document.addEventListener('keydown',function(e){
+  if(e.key==='Tab'&&_cel){e.preventDefault();var tds=Array.from(_cel.parentElement.querySelectorAll('td.edit'));var idx=tds.indexOf(_cel);if(idx>=0&&idx<tds.length-1)setTimeout(function(){tds[idx+1].dispatchEvent(new MouseEvent('dblclick'));},10);}
 });
+
+function syncBlingPeso(){
+  var b=document.getElementById('btn-speso');b.textContent='Aguarde...';b.disabled=true;
+  fetch('/api/sync/bling-peso').then(function(r){return r.json();}).then(function(d){
+    toast('Peso: '+d.atualizados+' produtos do Bling');
+    return fetch('/api/sync/peso');
+  }).then(function(r){return r.json();}).then(function(d2){
+    toast('Propagado para ML/Shopee/Yampi');
+    return fetch('/api/db/produtos?limit=5000');
+  }).then(function(r){return r.json();}).then(function(data){_todos=data;filtrar();})
+  .catch(function(e){toast('Erro: '+e.message,false);})
+  .finally(function(){b.textContent='Sync Peso Bling';b.disabled=false;});
+}
+
+function syncEstoque(){
+  var b=document.getElementById('btn-sestq');b.textContent='Aguarde...';b.disabled=true;
+  fetch('/api/sync/now').then(function(r){return r.json();}).then(function(d){
+    toast('Sync completo');
+    return fetch('/api/db/produtos?limit=5000');
+  }).then(function(r){return r.json();}).then(function(data){_todos=data;filtrar();})
+  .catch(function(e){toast('Erro: '+e.message,false);})
+  .finally(function(){b.textContent='Sync Estoque';b.disabled=false;});
+}
+
+function toast(msg,ok){var el=document.getElementById('toast');el.textContent=msg;el.style.background=ok===false?'#7f1d1d':'#166534';el.style.display='block';setTimeout(function(){el.style.display='none';},3500);}
 </script>
 </body>
 </html>
