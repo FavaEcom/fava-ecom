@@ -218,7 +218,8 @@ function renderizar() {
     html += '<td><span class="cprod">' + esc(cprod) + '</span></td>';
     html += '<td><div class="nome-cell" title="' + esc(it.nome||'') + '">' + esc(it.nome||'--') + '</div></td>';
     html += '<td><div class="forn-cell">' + esc((it.fornecedor||'--').slice(0,30)) + '</div></td>';
-    html += '<td style="font-family:monospace;color:#22c55e">R$' + parseFloat(it.custo||0).toFixed(2) + '</td>';
+    var custoUnit = parseFloat(it.custo||0) / Math.max(parseFloat(it.qtd||1), 1);
+    html += '<td style="font-family:monospace;color:#22c55e" title="Total: R$' + parseFloat(it.custo||0).toFixed(2) + ' | Qtd: ' + (it.qtd||1) + '">R$' + custoUnit.toFixed(2) + '</td>';
     html += '<td style="font-family:monospace;font-size:10px;color:#64748b">' + esc(it.ncm||'') + '</td>';
     html += '<td><input class="inp-sku" id="sku-' + idCprod + '" value="' + seq + '" placeholder="SKU"></td>';
     html += '<td><input class="inp-nome" id="nome-' + idCprod + '" value="' + esc((it.nome||'').toUpperCase().slice(0,60)) + '" placeholder="Nome"></td>';
