@@ -144,7 +144,7 @@ function renderTabela(){
     document.getElementById('conteudo').innerHTML='<div class="loading" style="color:#22c55e">&#10003; Todos vinculados! Nenhum item pendente.</div>';
     return;
   }
-  // Paginação — 50 por vez para não travar
+  // Paginacao: 50 por vez para nao travar
   if(typeof _pagina==='undefined') _pagina=0;
   var _porPag=50, totalPags=Math.ceil(_fil.length/_porPag);
   var ini=_pagina*_porPag, fim=Math.min(ini+_porPag,_fil.length);
@@ -167,8 +167,8 @@ function renderTabela(){
     html+='<tr class="'+vinc+'" id="row-'+cprod+'">';
     html+='<td><span class="nf-badge">'+esc(String(it.nf||''))+'</span></td>';
     html+='<td><span class="cprod-tag">'+esc(cprod)+'</span></td>';
-    html+='<td><div class="nome-cell" title="'+esc(it.nome||'')+'">'+esc((it.nome||'—'))+'</div></td>';
-    html+='<td><div class="forn-cell" title="'+esc(it.fornecedor||'')+'">'+esc((it.fornecedor||'—').slice(0,35))+'</div></td>';
+    html+='<td><div class="nome-cell" title="'+esc(it.nome||'')+'">'+esc((it.nome||'&mdash;'))+'</div></td>';
+    html+='<td><div class="forn-cell" title="'+esc(it.fornecedor||'')+'">'+esc((it.fornecedor||'&mdash;').slice(0,35))+'</div></td>';
     html+='<td class="num" style="font-family:monospace;color:#22c55e">R$ '+(parseFloat(it.custo||0)).toFixed(2)+'</td>';
     // SKU input
     html+='<td><input id="sku-'+cprod+'" class="inp-sku'+(jaTem?' novo':'')+'" value="'+esc(skuSugerido)+'" ';
@@ -187,16 +187,16 @@ function renderTabela(){
     // Ação
     html+='<td>';
     if(_inativos[cprod]){
-      html+='<span class="tag-inativo">⛔ Uso Interno</span> ';
-      html+='<button class="btn-xs bxs-gray" onclick="reativarItem(\''+cprod+'\')">↩</button>';
+      html+='<span class="tag-inativo">&#9940; Uso Interno</span> ';
+      html+='<button class="btn-xs bxs-gray" onclick="reativarItem(\''+cprod+'\')">&#8617;</button>';
     } else if(jaTem){
       html+='<span class="tag-ok">&#10003; Salvo</span>';
       if(_variacoes[cprod]) html+='<span class="tag-var" style="margin-left:4px">+var</span>';
     } else {
       html+='<button class="btn-xs bxs-green" title="Vincular" onclick="vincularItem(\''+cprod+'\')">&#10003;</button> ';
-      html+='<button class="btn-xs bxs-purple" title="Dividir em variações" onclick="abrirVariacoes(\''+cprod+'\')">✂ Var</button> ';
-      html+='<button class="btn-xs bxs-orange" title="Uso interno/imobilizado" onclick="marcarInativo(\''+cprod+'\')">⛔</button> ';
-      html+='<button class="btn-xs bxs-gray" title="Pular" onclick="pularItem(\''+cprod+'\')">—</button>';
+      html+='<button class="btn-xs bxs-purple" title="Dividir em variações" onclick="abrirVariacoes(\''+cprod+'\')">&#9986; Var</button> ';
+      html+='<button class="btn-xs bxs-orange" title="Uso interno/imobilizado" onclick="marcarInativo(\''+cprod+'\')">&#9940;</button> ';
+      html+='<button class="btn-xs bxs-gray" title="Pular" onclick="pularItem(\''+cprod+'\')">&mdash;</button>';
     }
     html+='</td>';
     html+='</tr>';
@@ -205,12 +205,12 @@ function renderTabela(){
   // Navegação de páginas
   if(totalPags>1){
     html+='<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#0d1e35;border-top:1px solid #1e3a5f;border-radius:0 0 8px 8px">';
-    html+='<span style="color:#64748b;font-size:11px">'+_fil.length+' itens — p&aacute;g '+(_pagina+1)+'/'+totalPags+'</span>';
+    html+='<span style="color:#64748b;font-size:11px">'+_fil.length+' itens - p&aacute;g '+(_pagina+1)+'/'+totalPags+'</span>';
     html+='<div style="margin-left:auto;display:flex;gap:6px">';
-    if(_pagina>0) html+='<button class="btn-xs bxs-gray" onclick="_pagina--;renderTabela()">◄ Anterior</button>';
+    if(_pagina>0) html+='<button class="btn-xs bxs-gray" onclick="_pagina--;renderTabela()">&#x25C4; Anterior</button>';
     var p0=Math.max(0,_pagina-2),p1=Math.min(totalPags-1,_pagina+2);
     for(var pg=p0;pg<=p1;pg++){var a=pg===_pagina?' style="background:#3b82f6;color:#fff"':'';html+='<button class="btn-xs bxs-gray"'+a+' onclick="_pagina='+pg+';renderTabela()">'+(pg+1)+'</button>';}
-    if(_pagina<totalPags-1) html+='<button class="btn-xs bxs-gray" onclick="_pagina++;renderTabela()">Pr&oacute;xima ►</button>';
+    if(_pagina<totalPags-1) html+='<button class="btn-xs bxs-gray" onclick="_pagina++;renderTabela()">Pr&oacute;xima &#x25BA;</button>';
     html+='</div></div>';
   }
   document.getElementById('conteudo').innerHTML=html;
@@ -324,14 +324,14 @@ async function salvarTodos(){
         var row=document.getElementById('row-'+it.cprod);
         if(row){row.className='vinculado';var td=row.querySelector('td:last-child');if(td)td.innerHTML='<span class="tag-ok">&#10003; Salvo</span>';}
         document.getElementById('lbl-vinc').textContent=(_vinculados+ok);
-        toast((i+1)+'/'+pendentes.length+': '+sku+' ✓');
+        toast((i+1)+'/'+pendentes.length+': '+sku+' &#10003;');
       } else { erros.push(it.cprod+': '+(d.error||'falha')); }
     } catch(e){ erros.push(it.cprod+': '+e.message); }
     await new Promise(res=>setTimeout(res,200));
   }
   _vinculados+=ok;
-  if(erros.length) toast('⚠ '+ok+' salvos, '+erros.length+' erros: '+erros[0],false);
-  else toast('✓ Todos os '+ok+' itens salvos com sucesso!');
+  if(erros.length) toast('&#x26A0; '+ok+' salvos, '+erros.length+' erros: '+erros[0],false);
+  else toast('&#10003; Todos os '+ok+' itens salvos com sucesso!');
 }
 
 
@@ -340,8 +340,8 @@ function marcarInativo(cprod){
   var row=document.getElementById('row-'+cprod);
   if(row) row.className='inativo';
   var td=row?row.querySelector('td:last-child'):null;
-  if(td) td.innerHTML='<span class="tag-inativo">⛔ Inativo</span> <button class="btn-xs bxs-gray" onclick="reativarItem(''+cprod+'')">↩</button>';
-  toast('Marcado como uso interno — não será vinculado');
+  if(td) td.innerHTML='<span class="tag-inativo">&#9940; Inativo</span> <button class="btn-xs bxs-gray" onclick="reativarItem(''+cprod+'')">&#8617;</button>';
+  toast('Marcado como uso interno &mdash; não será vinculado');
 }
 
 function reativarItem(cprod){
@@ -384,13 +384,13 @@ function abrirVariacoes(cprod){
     document.getElementById('lbl-vinc').textContent=_vinculados;
     var row=document.getElementById('row-'+cprod);
     if(row){row.className='vinculado';}
-    toast('✓ '+ok+' variações criadas: '+skus.join(', '));
+    toast('&#10003; '+ok+' variações criadas: '+skus.join(', '));
     filtrar();
   }).catch(function(e){toast('Erro: '+e.message,false);});
 }
 
 function fmtData(d){
-  if(!d) return '—';
+  if(!d) return '&mdash;';
   var s=String(d).slice(0,10);
   var p=s.split('-');
   if(p.length===3) return p[2]+'/'+p[1]+'/'+p[0];
