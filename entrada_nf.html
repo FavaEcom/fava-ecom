@@ -461,23 +461,21 @@ function extrairItensXML(xml) {
   // Cruzar com banco — verificar quais já têm SKU mapeado
   var cprods = itens.map(function(i){return i.cprod;}).filter(Boolean);
   if(cprods.length) {
-    fetch('/api/db/cprod-lookup', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({cprods})
-    }).then(r=>r.json()).then(function(mapa){
-      if(!mapa||!Array.isArray(mapa)) return;
-      var mp = {};
-      mapa.forEach(function(m){if(m.cprod) mp[m.cprod]=m.sku;});
+    fetch('/api/db/cprod-lookup?cprods=' + encodeURIComponent(cprods.join(',')))
+    .then(function(r){return r.json();})
+    .then(function(mapa){
+      if(!mapa || typeof mapa !== 'object') return;
       itens.forEach(function(it){
-        if(mp[it.cprod]) {
-          it.sku = mp[it.cprod];
-          it.sku_mapeado = mp[it.cprod];
+        var entry = mapa[it.cprod] || mapa[(it.cprod||'').replace(/^0+/,'')];
+        if(entry && entry.sku) {
+          it.sku = String(entry.sku);
+          it.sku_mapeado = String(entry.sku);
           it.ja_cadastrado = true;
         }
       });
       renderTabela();
       atualizarStats();
-    }).catch(()=>{});
+    }).catch(function(){renderTabela();atualizarStats();});
   }
   return itens;
 }
