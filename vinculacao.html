@@ -67,6 +67,9 @@ tr:hover td{background:#0d1e35}
   <button class="btn btn-blue" onclick="carregar()">Recarregar</button>
   <input id="inp-busca" placeholder="Buscar nome ou cprod..." oninput="filtrar()">
   <input id="inp-nf" placeholder="Filtrar NF..." oninput="filtrar()">
+  <select id="inp-forn" onchange="filtrar()" style="background:#0d1e35;border:1px solid #1e3a5f;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:12px;min-width:200px">
+    <option value="">Todos os fornecedores</option>
+  </select>
   <div class="stat" id="stat">Carregando...</div>
 </div>
 
@@ -150,6 +153,7 @@ function carregar() {
       _itens = d.itens || [];
       _prox = d.proximo_sku || 2934;
       _pag = 0;
+      popularFornecedores();
       filtrar();
     })
     .catch(function(e) {
@@ -157,13 +161,28 @@ function carregar() {
     });
 }
 
+function popularFornecedores() {
+  var sel = document.getElementById('inp-forn');
+  var fSet = {};
+  _itens.forEach(function(it) { if(it.fornecedor) fSet[it.fornecedor] = true; });
+  var forns = Object.keys(fSet).sort();
+  var html = '<option value="">Todos os fornecedores (' + _itens.length + ')</option>';
+  forns.forEach(function(f) {
+    var cnt = _itens.filter(function(it){ return it.fornecedor === f; }).length;
+    html += '<option value="' + f.replace(/"/g,'&quot;') + '">' + f.slice(0,40) + ' (' + cnt + ')</option>';
+  });
+  sel.innerHTML = html;
+}
+
 function filtrar() {
   var busca = (document.getElementById('inp-busca').value || '').toLowerCase();
   var nf = (document.getElementById('inp-nf').value || '').toLowerCase();
+  var forn = document.getElementById('inp-forn').value || '';
   _fil = _itens.filter(function(it) {
     var ok = true;
     if (busca) ok = ok && ((it.nome||'').toLowerCase().includes(busca) || (it.cprod||'').toLowerCase().includes(busca));
     if (nf) ok = ok && String(it.nf||'').toLowerCase().includes(nf);
+    if (forn) ok = ok && (it.fornecedor||'') === forn;
     return ok;
   });
   _pag = 0;
