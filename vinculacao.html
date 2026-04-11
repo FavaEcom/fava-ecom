@@ -3,403 +3,353 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Vinculação de SKUs — Fava Ecom</title>
+<title>Vinculacao de SKUs - Fava Ecom</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;font-size:12px}
-nav{background:#1e293b;padding:6px 16px;display:flex;gap:8px;align-items:center;border-bottom:1px solid #334155;position:sticky;top:0;z-index:50;height:40px;flex-wrap:wrap}
-nav a{color:#94a3b8;text-decoration:none;font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;white-space:nowrap}
-nav a:hover,nav a.ativo{background:#3b82f6;color:#fff}
-.main{padding:14px 16px}
-.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
-.toolbar input{background:#0f172a;border:1px solid #475569;border-radius:6px;color:#f1f5f9;padding:6px 10px;font-size:12px;width:180px}
-.toolbar input:focus{outline:none;border-color:#3b82f6}
-.btn{padding:6px 14px;border-radius:6px;border:none;font-size:12px;font-weight:700;cursor:pointer}
-.btn-blue{background:#3b82f6;color:#fff}.btn-blue:hover{background:#2563eb}
-.btn-green{background:#16a34a;color:#fff}.btn-green:hover{background:#15803d}
-.btn-gray{background:#334155;color:#94a3b8}.btn-gray:hover{color:#fff}
-.btn-orange{background:#ea580c;color:#fff}
-.badge{background:#1e3a5f;color:#93c5fd;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700}
-/* Stats */
-.info-bar{background:#0d1f3c;border:1px solid #1d4ed8;border-radius:8px;padding:10px 16px;margin-bottom:12px;display:flex;gap:20px;align-items:center;flex-wrap:wrap}
-.info-bar span{font-size:12px;color:#93c5fd}
-.info-bar b{color:#fff}
-/* Tabela */
-.tbl-wrap{overflow:auto;border-radius:8px;border:1px solid #334155;max-height:calc(100vh - 180px)}
-table{width:100%;border-collapse:collapse;min-width:1200px;font-size:11px}
-thead th{background:#1a2335;padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:2px solid #334155;white-space:nowrap;position:sticky;top:0;z-index:10}
-thead th.num{text-align:right}
-tbody tr{border-bottom:1px solid #0f172a}
-tbody tr:hover{background:#14202f}
-tbody tr.vinculado{opacity:.45}
-td{padding:6px 10px;vertical-align:middle}
-.cprod-tag{font-family:monospace;color:#64748b;font-size:10px}
-.nome-cell{font-weight:500;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.forn-cell{color:#64748b;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}
-.nf-badge{background:#1e293b;color:#94a3b8;padding:1px 6px;border-radius:3px;font-size:10px;font-family:monospace}
-/* SKU input group */
-.sku-group{display:flex;gap:4px;align-items:center}
-.inp-sku{background:#0f172a;border:1px solid #475569;border-radius:5px;color:#fbbf24;padding:4px 8px;font-size:12px;font-weight:700;font-family:monospace;width:80px;outline:none}
-.inp-sku:focus{border-color:#f59e0b}
-.inp-sku.novo{border-color:#10b981;color:#10b981}
-.inp-sku.existente{border-color:#3b82f6;color:#93c5fd}
-.inp-nome{background:#0f172a;border:1px solid #334155;border-radius:5px;color:#e2e8f0;padding:4px 8px;font-size:11px;width:220px;outline:none}
-.inp-nome:focus{border-color:#3b82f6}
-.btn-xs{padding:3px 8px;border-radius:4px;border:none;font-size:10px;font-weight:700;cursor:pointer}
-.bxs-green{background:#14532d;color:#86efac}
-.bxs-blue{background:#1d4ed8;color:#93c5fd}
-.bxs-gray{background:#334155;color:#94a3b8}
-/* Radio criar/vincular */
-.modo-sel{display:flex;gap:6px;align-items:center}
-.modo-sel label{display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;padding:3px 8px;border-radius:4px;border:1px solid #334155}
-.modo-sel label.ativo{border-color:#10b981;color:#10b981;background:#071411}
-.modo-sel input{display:none}
-/* Toast */
-.toast{position:fixed;top:50px;right:16px;background:#166534;color:#86efac;padding:10px 18px;border-radius:7px;font-size:12px;font-weight:700;z-index:200;display:none;max-width:400px}
-.loading{text-align:center;padding:40px;color:#475569}
+body{font-family:system-ui,sans-serif;background:#07101f;color:#e2e8f0;min-height:100vh}
+.nav{background:#0f1e35;border-bottom:1px solid #1e3a5f;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.nav a{color:#94a3b8;text-decoration:none;font-size:12px;padding:4px 8px;border-radius:4px}
+.nav a:hover{color:#e2e8f0;background:#1e3a5f}
+.nav a.ativo{color:#93c5fd;background:#1e3a5f}
+.barra{background:#0f1e35;border-bottom:1px solid #1e3a5f;padding:10px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.barra input{background:#0d1e35;border:1px solid #1e3a5f;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:12px;width:200px}
+.btn{padding:6px 14px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:700}
+.btn-blue{background:#1d4ed8;color:#fff}
+.btn-green{background:#15803d;color:#fff}
+.btn-gray{background:#334155;color:#94a3b8}
+.btn-orange{background:#c2410c;color:#fff}
+.stat{font-size:11px;color:#64748b;margin-left:auto}
+.conteudo{padding:16px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{text-align:left;padding:6px 8px;color:#64748b;font-size:10px;text-transform:uppercase;border-bottom:1px solid #1e3a5f;white-space:nowrap}
+td{padding:6px 8px;border-bottom:1px solid #0d1a2d;vertical-align:middle}
+tr:hover td{background:#0d1e35}
+.cprod{font-family:monospace;color:#f59e0b;font-size:10px}
+.nome-cell{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.forn-cell{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b}
+.inp-sku{width:80px;background:#0d1e35;border:1px solid #1e3a5f;color:#e2e8f0;padding:4px 6px;border-radius:4px;font-size:11px}
+.inp-nome{width:200px;background:#0d1e35;border:1px solid #1e3a5f;color:#e2e8f0;padding:4px 6px;border-radius:4px;font-size:11px}
+.inp-sku:focus,.inp-nome:focus{outline:none;border-color:#3b82f6}
 .tag-ok{background:#14532d;color:#86efac;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700}
-.tag-inativo{background:#1e293b;color:#64748b;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700}
-.tag-var{background:#312e81;color:#a5b4fc;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700}
-tbody tr.inativo{opacity:.35}
-.bxs-orange{background:#7c2d12;color:#fdba74}
-.bxs-purple{background:#312e81;color:#a5b4fc}
+.loading{text-align:center;padding:40px;color:#475569}
+.pag{display:flex;align-items:center;gap:6px;padding:10px 16px;background:#0f1e35;border-top:1px solid #1e3a5f}
+.pag span{color:#64748b;font-size:11px}
+.pag-btn{padding:4px 10px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:4px;cursor:pointer;font-size:11px}
+.pag-btn:hover,.pag-btn.ativo{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+.toast{position:fixed;bottom:20px;right:20px;background:#166534;color:#86efac;padding:10px 18px;border-radius:8px;font-size:12px;font-weight:700;display:none;z-index:999}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#0f1e35;border:1px solid #1e3a5f;border-radius:12px;padding:24px;width:500px;max-width:95vw}
+.modal h3{font-size:15px;font-weight:800;margin-bottom:16px;color:#93c5fd}
+.form-row{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.form-row label{font-size:10px;color:#64748b;text-transform:uppercase;font-weight:700}
+.form-row input,.form-row select,.form-row textarea{background:#0d1e35;border:1px solid #1e3a5f;color:#e2e8f0;padding:7px 10px;border-radius:6px;font-size:12px}
+.form-row input:focus,.form-row select:focus{outline:none;border-color:#3b82f6}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tipo-btns{display:flex;gap:8px;flex-wrap:wrap}
+.tipo-btn{padding:6px 14px;border:1px solid #334155;background:#1e293b;color:#94a3b8;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700}
+.tipo-btn.sel{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
 </style>
 </head>
 <body>
-<nav>
-  <a href="/painel_fava.html">&#127968; Painel</a>
-  <a href="/entrada_nf.html">&#128196; Entrada NF</a>
-  <a href="/historico_compras.html">&#128269; Hist&oacute;rico</a>
-  <a href="/base_produtos.html">&#128230; Base</a>
-  <a href="/vinculacao.html" class="ativo">&#128279; Vincula&ccedil;&atilde;o</a>
-  <a href="/gestor_anuncios.html">&#128226; Gestor</a>
-  <a href="/calculadora_fava.html">&#128176; Calculadora</a>
+
+<nav class="nav">
+  <a href="/home_fava.html">Painel</a>
+  <a href="/entrada_nf.html">Entrada NF</a>
+  <a href="/historico_compras.html">Historico</a>
+  <a href="/base_produtos.html">Base</a>
+  <a href="/vinculacao.html" class="ativo">Vinculacao</a>
+  <a href="/gestor_anuncios.html">Gestor</a>
+  <a href="/calculadora_fava.html">Calculadora</a>
 </nav>
-<div class="main">
-<div class="toolbar">
-  <input id="busca" type="text" placeholder="Buscar nome ou cprod..." oninput="filtrar()">
-  <input id="nf-busca" type="text" placeholder="Filtrar NF..." oninput="filtrar()" style="width:120px">
-  <button class="btn btn-blue" onclick="carregar()">&#8635; Recarregar</button>
-  <button class="btn btn-green" id="btn-salvar-todos" onclick="salvarTodos()" style="display:none">&#9745; Salvar todos vinculados</button>
-  <span class="badge" id="badge">Carregando...</span>
+
+<div class="barra">
+  <button class="btn btn-blue" onclick="carregar()">Recarregar</button>
+  <input id="inp-busca" placeholder="Buscar nome ou cprod..." oninput="filtrar()">
+  <input id="inp-nf" placeholder="Filtrar NF..." oninput="filtrar()">
+  <div class="stat" id="stat">Carregando...</div>
 </div>
 
-<div class="info-bar" id="info-bar" style="display:none">
-  <span>Pr&oacute;ximo SKU: <b id="lbl-proximo" style="color:#10b981;font-size:14px">—</b></span>
-  <span>Pendentes: <b id="lbl-pend" style="color:#f59e0b">—</b></span>
-  <span>Vinculados agora: <b id="lbl-vinc" style="color:#10b981">0</b></span>
-  <span style="font-size:11px;color:#475569">Duplo clique no SKU para editar &bull; NOVO = cria produto &bull; EXISTENTE = s&oacute; vincula cprod</span>
+<div id="conteudo" class="conteudo">
+  <div class="loading">Carregando itens sem SKU...</div>
 </div>
 
-<div class="tbl-wrap">
-  <div id="conteudo" class="loading">&#9203; Carregando itens sem SKU...</div>
-</div>
-</div>
+<div class="pag" id="pag" style="display:none"></div>
+
 <div class="toast" id="toast"></div>
 
+<!-- Modal cadastro produto -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3>Cadastrar Produto + Vincular SKU</h3>
+    <div class="form-row">
+      <label>Tipo de produto</label>
+      <div class="tipo-btns">
+        <div class="tipo-btn sel" onclick="setTipo('un',this)">Unitario</div>
+        <div class="tipo-btn" onclick="setTipo('var',this)">Variacao</div>
+        <div class="tipo-btn" onclick="setTipo('kit',this)">Kit</div>
+        <div class="tipo-btn" onclick="setTipo('cx',this)">Caixa/Pacote</div>
+        <div class="tipo-btn" onclick="setTipo('uso',this)">Uso Interno</div>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-row">
+        <label>SKU (gerado automatico)</label>
+        <input id="m-sku" placeholder="ex: 2934">
+      </div>
+      <div class="form-row">
+        <label>Fator embalagem</label>
+        <input id="m-fator" type="number" value="1" min="1" placeholder="1 = unitario, 5 = cx/5">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Nome do produto</label>
+      <input id="m-nome" placeholder="Nome em maiusculas">
+    </div>
+    <div id="var-extra" style="display:none">
+      <div class="form-row">
+        <label>Variacoes (uma por linha: SKU|Nome)</label>
+        <textarea id="m-vars" rows="3" placeholder="2934|CADEIRA AZUL&#10;2935|CADEIRA VERMELHA"></textarea>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Cprod (codigo fornecedor)</label>
+      <input id="m-cprod" readonly style="color:#f59e0b">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-green" onclick="salvarCadastro()">Salvar e Vincular</button>
+      <button class="btn btn-gray" onclick="fecharModal()">Cancelar</button>
+    </div>
+    <div id="m-erro" style="color:#ef4444;font-size:11px;margin-top:8px"></div>
+  </div>
+</div>
+
 <script>
-var _itens=[], _fil=[], _proximoSku=2934, _vinculados=0;
+var _itens = [];
+var _fil = [];
+var _pag = 0;
+var _porPag = 50;
+var _prox = 2934;
+var _tipo = 'un';
+var _cprodAtual = '';
 
-function toast(msg,ok){
-  var el=document.getElementById('toast');
-  el.textContent=msg; el.style.background=ok===false?'#7f1d1d':'#166534';
-  el.style.display='block'; setTimeout(function(){el.style.display='none';},4000);
+function toast(msg, ok) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = (ok === false) ? '#7f1d1d' : '#166534';
+  el.style.display = 'block';
+  setTimeout(function() { el.style.display = 'none'; }, 4000);
 }
 
-function carregar(){
-  document.getElementById('conteudo').innerHTML='<div class="loading">&#9203; Carregando...</div>';
-  fetch('/api/db/sem-sku').then(function(r){return r.json();}).then(function(d){
-    _itens=d.itens||[];
-    _proximoSku=d.proximo_sku||2934;
-    document.getElementById('lbl-proximo').textContent=_proximoSku;
-    document.getElementById('info-bar').style.display='flex';
-    document.getElementById('btn-salvar-todos').style.display='';
-    filtrar();
-  }).catch(function(e){
-    document.getElementById('conteudo').innerHTML='<div class="loading" style="color:#ef4444">Erro: '+e.message+'</div>';
+function carregar() {
+  document.getElementById('conteudo').innerHTML = '<div class="loading">Carregando...</div>';
+  document.getElementById('pag').style.display = 'none';
+  fetch('/api/db/sem-sku')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      _itens = d.itens || [];
+      _prox = d.proximo_sku || 2934;
+      _pag = 0;
+      filtrar();
+    })
+    .catch(function(e) {
+      document.getElementById('conteudo').innerHTML = '<div class="loading" style="color:#ef4444">Erro: ' + e.message + '</div>';
+    });
+}
+
+function filtrar() {
+  var busca = (document.getElementById('inp-busca').value || '').toLowerCase();
+  var nf = (document.getElementById('inp-nf').value || '').toLowerCase();
+  _fil = _itens.filter(function(it) {
+    var ok = true;
+    if (busca) ok = ok && ((it.nome||'').toLowerCase().includes(busca) || (it.cprod||'').toLowerCase().includes(busca));
+    if (nf) ok = ok && String(it.nf||'').toLowerCase().includes(nf);
+    return ok;
   });
+  _pag = 0;
+  renderizar();
 }
 
-function filtrar(){
-  var q=document.getElementById('busca').value.toLowerCase();
-  var nf=document.getElementById('nf-busca').value.toLowerCase();
-  _fil=_itens.filter(function(it){
-    if(q&&!(it.nome||'').toLowerCase().includes(q)&&!(it.cprod||'').includes(q))return false;
-    if(nf&&!(it.nf||'').toString().includes(nf))return false;
-    return true;
-  });
-  document.getElementById('badge').textContent=_fil.length+' itens';
-  document.getElementById('lbl-pend').textContent=_itens.length;
-  renderTabela();
-}
+function renderizar() {
+  var total = _fil.length;
+  var totalPags = Math.ceil(total / _porPag);
+  var ini = _pag * _porPag;
+  var fim = Math.min(ini + _porPag, total);
+  var pagItens = _fil.slice(ini, fim);
 
-var _autoSku = {};  // cprod -> sku atribuído
-var _nomes = {};    // cprod -> nome editado
+  document.getElementById('stat').textContent = total + ' itens sem SKU | proximo: ' + _prox;
 
-function getSkuInput(cprod){ var el=document.getElementById('sku-'+cprod); return el?el.value.trim():''; }
-function getNomeInput(cprod){ var el=document.getElementById('nome-'+cprod); return el?el.value.trim():''; }
-
-function renderTabela(){
-  if(!_fil.length){
-    document.getElementById('conteudo').innerHTML='<div class="loading" style="color:#22c55e">&#10003; Todos vinculados! Nenhum item pendente.</div>';
+  if (!total) {
+    document.getElementById('conteudo').innerHTML = '<div class="loading" style="color:#22c55e">Todos os itens ja tem SKU!</div>';
+    document.getElementById('pag').style.display = 'none';
     return;
   }
-  // Paginacao: 50 por vez para nao travar
-  if(typeof _pagina==='undefined') _pagina=0;
-  var _porPag=50, totalPags=Math.ceil(_fil.length/_porPag);
-  var ini=_pagina*_porPag, fim=Math.min(ini+_porPag,_fil.length);
-  var _filPag=_fil.slice(ini,fim);
-  var html='<table><thead><tr>';
-  html+='<th>NF</th><th>C&oacute;d Forn (cprod)</th><th style="min-width:260px">Nome do Produto na NF</th>';
-  html+='<th>Fornecedor</th><th class="num">Custo Unit</th>';
-  html+='<th style="min-width:120px">SKU Fava</th><th style="min-width:230px">Nome no Sistema</th>';
-  html+='<th>Modo</th><th>A&ccedil;&atilde;o</th>';
-  html+='</tr></thead><tbody>';
 
-  var seq=_proximoSku;
-  _filPag.forEach(function(it){
-    var cprod=it.cprod;
-    var jaTem=_autoSku[cprod];
-    var skuSugerido=jaTem||String(seq);
-    if(!jaTem) seq++;
-    var nomeSugerido=_nomes[cprod]||(it.nome||'').toUpperCase().slice(0,60);
-    var vinc=jaTem?'vinculado':'';
-    html+='<tr class="'+vinc+'" id="row-'+cprod+'">';
-    html+='<td><span class="nf-badge">'+esc(String(it.nf||''))+'</span></td>';
-    html+='<td><span class="cprod-tag">'+esc(cprod)+'</span></td>';
-    html+='<td><div class="nome-cell" title="'+esc(it.nome||'')+'">'+esc((it.nome||'&mdash;'))+'</div></td>';
-    html+='<td><div class="forn-cell" title="'+esc(it.fornecedor||'')+'">'+esc((it.fornecedor||'&mdash;').slice(0,35))+'</div></td>';
-    html+='<td class="num" style="font-family:monospace;color:#22c55e">R$ '+(parseFloat(it.custo||0)).toFixed(2)+'</td>';
-    // SKU input
-    html+='<td><input id="sku-'+cprod+'" class="inp-sku'+(jaTem?' novo':'')+'" value="'+esc(skuSugerido)+'" ';
-    html+='oninput="onSkuChange(\''+cprod+'\')" placeholder="SKU" maxlength="20"></td>';
-    // Nome input
-    html+='<td><input id="nome-'+cprod+'" class="inp-nome" value="'+esc(nomeSugerido)+'" placeholder="Nome do produto"></td>';
-    // Modo (novo ou existente)
-    var modoAtual=_autoSku['modo_'+cprod]||'novo';
-    html+='<td>';
-    html+='<div class="modo-sel">';
-    html+='<label class="'+(modoAtual==='novo'?'ativo':'')+'" id="lbl-novo-'+cprod+'" onclick="setModo(\''+cprod+'\',\'novo\')">';
-    html+='&#10004; NOVO</label>';
-    html+='<label class="'+(modoAtual==='existente'?'ativo':'')+'" id="lbl-ex-'+cprod+'" onclick="setModo(\''+cprod+'\',\'existente\')">';
-    html+='&#128279; EXISTENTE</label>';
-    html+='</div></td>';
-    // Ação
-    html+='<td>';
-    if(_inativos[cprod]){
-      html+='<span class="tag-inativo">&#9940; Uso Interno</span> ';
-      html+='<button class="btn-xs bxs-gray" onclick="reativarItem(\''+cprod+'\')">&#8617;</button>';
-    } else if(jaTem){
-      html+='<span class="tag-ok">&#10003; Salvo</span>';
-      if(_variacoes[cprod]) html+='<span class="tag-var" style="margin-left:4px">+var</span>';
-    } else {
-      html+='<button class="btn-xs bxs-green" title="Vincular" onclick="vincularItem(\''+cprod+'\')">&#10003;</button> ';
-      html+='<button class="btn-xs bxs-purple" title="Dividir em variações" onclick="abrirVariacoes(\''+cprod+'\')">&#9986; Var</button> ';
-      html+='<button class="btn-xs bxs-orange" title="Uso interno/imobilizado" onclick="marcarInativo(\''+cprod+'\')">&#9940;</button> ';
-      html+='<button class="btn-xs bxs-gray" title="Pular" onclick="pularItem(\''+cprod+'\')">&mdash;</button>';
+  var html = '<table><thead><tr>';
+  html += '<th>NF</th><th>Cod Forn (cprod)</th><th>Nome na Nota</th><th>Fornecedor</th><th>Custo</th><th>NCM</th><th>SKU Fava</th><th>Nome Sistema</th><th>Acao</th>';
+  html += '</tr></thead><tbody>';
+
+  var seq = _prox;
+  for (var i = 0; i < pagItens.length; i++) {
+    var it = pagItens[i];
+    var cprod = it.cprod || '';
+    var idCprod = 'c_' + cprod.replace(/[^a-zA-Z0-9]/g, '_');
+    html += '<tr id="row-' + idCprod + '">';
+    html += '<td><span style="background:#1e3a5f;color:#93c5fd;padding:1px 6px;border-radius:3px;font-size:10px">' + esc(String(it.nf||'')) + '</span></td>';
+    html += '<td><span class="cprod">' + esc(cprod) + '</span></td>';
+    html += '<td><div class="nome-cell" title="' + esc(it.nome||'') + '">' + esc(it.nome||'--') + '</div></td>';
+    html += '<td><div class="forn-cell">' + esc((it.fornecedor||'--').slice(0,30)) + '</div></td>';
+    html += '<td style="font-family:monospace;color:#22c55e">R$' + parseFloat(it.custo||0).toFixed(2) + '</td>';
+    html += '<td style="font-family:monospace;font-size:10px;color:#64748b">' + esc(it.ncm||'') + '</td>';
+    html += '<td><input class="inp-sku" id="sku-' + idCprod + '" value="' + seq + '" placeholder="SKU"></td>';
+    html += '<td><input class="inp-nome" id="nome-' + idCprod + '" value="' + esc((it.nome||'').toUpperCase().slice(0,60)) + '" placeholder="Nome"></td>';
+    html += '<td style="white-space:nowrap">';
+    html += '<button class="btn btn-green" style="font-size:10px;padding:3px 8px;margin-right:4px" onclick="vincularRapido(\'' + idCprod + '\',\'' + cprod.replace(/'/g,"\\'") + '\')">Vincular</button>';
+    html += '<button class="btn btn-blue" style="font-size:10px;padding:3px 8px" onclick="abrirCadastro(\'' + cprod.replace(/'/g,"\\'") + '\',' + seq + ',\'' + esc(it.nome||'').replace(/'/g,"\\'") + '\')">Cadastrar</button>';
+    html += '</td>';
+    html += '</tr>';
+    seq++;
+  }
+  html += '</tbody></table>';
+  document.getElementById('conteudo').innerHTML = html;
+
+  // Paginacao
+  var pagEl = document.getElementById('pag');
+  if (totalPags > 1) {
+    var pHtml = '<span>' + total + ' itens | Pag ' + (_pag+1) + '/' + totalPags + '</span>';
+    pHtml += '<div style="margin-left:auto;display:flex;gap:4px">';
+    if (_pag > 0) pHtml += '<div class="pag-btn" onclick="_pag--;renderizar()">Anterior</div>';
+    var p0 = Math.max(0, _pag-2), p1 = Math.min(totalPags-1, _pag+2);
+    for (var pg = p0; pg <= p1; pg++) {
+      var a = (pg === _pag) ? ' ativo' : '';
+      pHtml += '<div class="pag-btn' + a + '" onclick="_pag=' + pg + ';renderizar()">' + (pg+1) + '</div>';
     }
-    html+='</td>';
-    html+='</tr>';
-  });
-  html+='</tbody></table>';
-  // Navegação de páginas
-  if(totalPags>1){
-    html+='<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#0d1e35;border-top:1px solid #1e3a5f;border-radius:0 0 8px 8px">';
-    html+='<span style="color:#64748b;font-size:11px">'+_fil.length+' itens - p&aacute;g '+(_pagina+1)+'/'+totalPags+'</span>';
-    html+='<div style="margin-left:auto;display:flex;gap:6px">';
-    if(_pagina>0) html+='<button class="btn-xs bxs-gray" onclick="_pagina--;renderTabela()">&#x25C4; Anterior</button>';
-    var p0=Math.max(0,_pagina-2),p1=Math.min(totalPags-1,_pagina+2);
-    for(var pg=p0;pg<=p1;pg++){var a=pg===_pagina?' style="background:#3b82f6;color:#fff"':'';html+='<button class="btn-xs bxs-gray"'+a+' onclick="_pagina='+pg+';renderTabela()">'+(pg+1)+'</button>';}
-    if(_pagina<totalPags-1) html+='<button class="btn-xs bxs-gray" onclick="_pagina++;renderTabela()">Pr&oacute;xima &#x25BA;</button>';
-    html+='</div></div>';
-  }
-  document.getElementById('conteudo').innerHTML=html;
-}
-
-function setModo(cprod, modo){
-  _autoSku['modo_'+cprod]=modo;
-  var lNovo=document.getElementById('lbl-novo-'+cprod);
-  var lEx=document.getElementById('lbl-ex-'+cprod);
-  if(lNovo) lNovo.className='modo-sel'.replace('modo-sel','')+(modo==='novo'?' ativo':'');
-  if(lEx) lEx.className=(modo==='existente'?' ativo':'');
-  // Rebuild labels
-  if(lNovo) lNovo.className='ativo'===lNovo.className?'ativo':'';
-  renderLabels(cprod, modo);
-}
-
-function renderLabels(cprod, modo){
-  var lNovo=document.getElementById('lbl-novo-'+cprod);
-  var lEx=document.getElementById('lbl-ex-'+cprod);
-  if(!lNovo||!lEx) return;
-  lNovo.className=modo==='novo'?'ativo':'';
-  lEx.className=modo==='existente'?'ativo':'';
-  var inp=document.getElementById('nome-'+cprod);
-  if(inp) inp.disabled=(modo==='existente');
-}
-
-function onSkuChange(cprod){
-  var val=document.getElementById('sku-'+cprod)?.value.trim()||'';
-  // Verificar se SKU existe na base
-  if(/^\d{4,}$/.test(val)){
-    fetch('/api/db/produto?sku='+val).then(function(r){return r.json();}).then(function(d){
-      var inp=document.getElementById('sku-'+cprod);
-      if(d&&d.sku){
-        if(inp) inp.className='inp-sku existente';
-        var nomeInp=document.getElementById('nome-'+cprod);
-        if(nomeInp) nomeInp.value=d.nome||'';
-        setModo(cprod,'existente');
-      } else {
-        if(inp) inp.className='inp-sku novo';
-        setModo(cprod,'novo');
-      }
-    }).catch(function(){});
+    if (_pag < totalPags-1) pHtml += '<div class="pag-btn" onclick="_pag++;renderizar()">Proxima</div>';
+    pHtml += '</div>';
+    pagEl.innerHTML = pHtml;
+    pagEl.style.display = 'flex';
+  } else {
+    pagEl.style.display = 'none';
   }
 }
 
-function vincularItem(cprod){
-  var sku=getSkuInput(cprod);
-  var nome=getNomeInput(cprod);
-  var modo=_autoSku['modo_'+cprod]||'novo';
-  if(!sku){toast('Digite um SKU',false);return;}
-  var it=_itens.find(function(x){return x.cprod===cprod;});
-  if(!it) return;
-  var payload={
-    cprod: cprod, sku: sku, nome: nome||it.nome||'',
-    custo: it.custo||0, cmv_br: it.cmv_br||0, cmv_pr: it.cmv_pr||0,
-    ncm: it.ncm||'', cst: it.cst||'', cest: it.cest||'',
-    cfop: it.cfop||'', origem: it.origem||0, ipi_p: it.ipi_p||0,
-    tem_st: it.tem_st||0, fornecedor: it.fornecedor||'',
-    criar: modo==='novo'
-  };
-  fetch('/api/db/vincular-sku',{
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(payload)
-  }).then(function(r){return r.json();}).then(function(d){
-    if(d.ok){
-      _autoSku[cprod]=sku;
-      _vinculados++;
-      document.getElementById('lbl-vinc').textContent=_vinculados;
-      var row=document.getElementById('row-'+cprod);
-      if(row) row.className='vinculado';
-      var td=row?row.querySelector('td:last-child'):null;
-      if(td) td.innerHTML='<span class="tag-ok">&#10003; Salvo</span>';
-      toast('&#10003; '+cprod+' vinculado ao SKU '+sku+(d.criados?'  (produto criado)':''));
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function vincularRapido(idCprod, cprod) {
+  var sku = document.getElementById('sku-' + idCprod).value.trim();
+  var nome = document.getElementById('nome-' + idCprod).value.trim();
+  if (!sku) { toast('Informe o SKU', false); return; }
+  fetch('/api/db/vincular-sku', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({cprod: cprod, sku: sku, nome: nome, criar: true})
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.ok) {
+      var row = document.getElementById('row-' + idCprod);
+      if (row) { row.cells[row.cells.length-1].innerHTML = '<span class="tag-ok">OK ' + sku + '</span>'; }
+      _itens = _itens.filter(function(it) { return it.cprod !== cprod; });
+      _fil = _fil.filter(function(it) { return it.cprod !== cprod; });
+      document.getElementById('stat').textContent = _fil.length + ' itens sem SKU | proximo: ' + _prox;
+      toast('Vinculado: ' + cprod + ' -> ' + sku);
     } else {
-      toast('Erro: '+(d.error||'falha'),false);
+      toast('Erro: ' + (d.error||'falha'), false);
     }
-  }).catch(function(e){toast('Erro: '+e.message,false);});
+  }).catch(function(e) { toast('Erro: ' + e.message, false); });
 }
 
-function pularItem(cprod){
-  var row=document.getElementById('row-'+cprod);
-  if(row){row.style.opacity='0.3';}
+// === MODAL CADASTRO ===
+function setTipo(tipo, el) {
+  _tipo = tipo;
+  document.querySelectorAll('.tipo-btn').forEach(function(b) { b.classList.remove('sel'); });
+  el.classList.add('sel');
+  document.getElementById('var-extra').style.display = (tipo === 'var') ? 'block' : 'none';
 }
 
-async function salvarTodos(){
-  var pendentes=_fil.filter(function(it){
-    var sku=getSkuInput(it.cprod);
-    return sku && !_autoSku[it.cprod] && !_pulados[it.cprod] && !_inativos[it.cprod];
-  });
-  if(!pendentes.length){toast('Nenhum pendente para salvar!');return;}
-  if(!confirm('Salvar '+pendentes.length+' itens um a um?')) return;
-  var seq=_proximoSku, ok=0, erros=[];
-  for(var i=0;i<pendentes.length;i++){
-    var it=pendentes[i];
-    var sku=getSkuInput(it.cprod)||String(seq++);
-    var nome=getNomeInput(it.cprod)||(it.nome||'').toUpperCase().slice(0,60);
-    var modo=_autoSku['modo_'+it.cprod]||'novo';
-    var payload={
-      cprod:it.cprod, sku:sku, nome:nome,
-      custo:it.custo||0, cmv_br:it.cmv_br||0, cmv_pr:it.cmv_pr||0,
-      ncm:it.ncm||'', cst:it.cst||'', cest:it.cest||'',
-      cfop:it.cfop||'', origem:it.origem||0, ipi_p:it.ipi_p||0,
-      tem_st:it.tem_st||0, fornecedor:it.fornecedor||'',
-      criar: modo==='novo'
-    };
-    try{
-      var r=await fetch('/api/db/vincular-sku',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-      var d=await r.json();
-      if(d.ok){
-        _autoSku[it.cprod]=sku; ok++;
-        var row=document.getElementById('row-'+it.cprod);
-        if(row){row.className='vinculado';var td=row.querySelector('td:last-child');if(td)td.innerHTML='<span class="tag-ok">&#10003; Salvo</span>';}
-        document.getElementById('lbl-vinc').textContent=(_vinculados+ok);
-        toast((i+1)+'/'+pendentes.length+': '+sku+' &#10003;');
-      } else { erros.push(it.cprod+': '+(d.error||'falha')); }
-    } catch(e){ erros.push(it.cprod+': '+e.message); }
-    await new Promise(res=>setTimeout(res,200));
+function abrirCadastro(cprod, sku, nome) {
+  _cprodAtual = cprod;
+  document.getElementById('m-cprod').value = cprod;
+  document.getElementById('m-sku').value = sku;
+  document.getElementById('m-nome').value = nome;
+  document.getElementById('m-fator').value = 1;
+  document.getElementById('m-erro').textContent = '';
+  document.getElementById('modal').classList.add('open');
+}
+
+function fecharModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+function salvarCadastro() {
+  var cprod = _cprodAtual;
+  var sku = document.getElementById('m-sku').value.trim();
+  var nome = document.getElementById('m-nome').value.trim();
+  var fator = parseInt(document.getElementById('m-fator').value) || 1;
+  var tipo = _tipo;
+
+  if (!sku || !nome) {
+    document.getElementById('m-erro').textContent = 'SKU e Nome sao obrigatorios';
+    return;
   }
-  _vinculados+=ok;
-  if(erros.length) toast('&#x26A0; '+ok+' salvos, '+erros.length+' erros: '+erros[0],false);
-  else toast('&#10003; Todos os '+ok+' itens salvos com sucesso!');
-}
 
-
-function marcarInativo(cprod){
-  _inativos[cprod]=true;
-  var row=document.getElementById('row-'+cprod);
-  if(row) row.className='inativo';
-  var td=row?row.querySelector('td:last-child'):null;
-  if(td) td.innerHTML='<span class="tag-inativo">&#9940; Inativo</span> <button class="btn-xs bxs-gray" onclick="reativarItem(''+cprod+'')">&#8617;</button>';
-  toast('Marcado como uso interno &mdash; não será vinculado');
-}
-
-function reativarItem(cprod){
-  delete _inativos[cprod];
-  filtrar();
-}
-
-function abrirVariacoes(cprod){
-  var it=_itens.find(function(x){return x.cprod===cprod;});
-  if(!it) return;
-  var qtd=parseInt(prompt('Quantas variações? (ex: 2 para azul e vermelho)','2'));
-  if(!qtd||qtd<2) return;
-  var skus=[], nomes=[];
-  for(var i=0;i<qtd;i++){
-    var sugestao=String(_proximoSku+i);
-    var s=prompt('SKU variação '+(i+1)+' (sugestão: '+sugestao+'):',sugestao);
-    if(!s){toast('Cancelado',false);return;}
-    var n=prompt('Nome variação '+(i+1)+':', (it.nome||'').toUpperCase().slice(0,50)+' VAR'+(i+1));
-    if(!n){toast('Cancelado',false);return;}
-    skus.push(s); nomes.push(n);
+  if (tipo === 'uso') {
+    // Marcar como uso interno - apenas adiciona no cprod_map sem criar produto de venda
+    fetch('/api/db/vincular-sku', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({cprod: cprod, sku: 'USO_INTERNO', nome: nome, criar: false})
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      fecharModal();
+      toast('Marcado como uso interno');
+      carregar();
+    }).catch(function(e) { document.getElementById('m-erro').textContent = e.message; });
+    return;
   }
-  // Salvar cada variação
-  var promises=skus.map(function(sku,i){
-    return fetch('/api/db/vincular-sku',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        cprod:cprod, sku:sku, nome:nomes[i],
-        custo:it.custo||0, cmv_br:it.cmv_br||0, cmv_pr:it.cmv_pr||0,
-        ncm:it.ncm||'', cst:it.cst||'', cest:it.cest||'',
-        cfop:it.cfop||'', origem:it.origem||0, ipi_p:it.ipi_p||0,
-        tem_st:it.tem_st||0, fornecedor:it.fornecedor||'',
-        criar:true
-      })
-    }).then(function(r){return r.json();});
-  });
-  Promise.all(promises).then(function(results){
-    var ok=results.filter(function(d){return d.ok;}).length;
-    _autoSku[cprod]=skus[0]; _variacoes[cprod]=skus;
-    _vinculados++; _proximoSku+=skus.length;
-    document.getElementById('lbl-vinc').textContent=_vinculados;
-    var row=document.getElementById('row-'+cprod);
-    if(row){row.className='vinculado';}
-    toast('&#10003; '+ok+' variações criadas: '+skus.join(', '));
-    filtrar();
-  }).catch(function(e){toast('Erro: '+e.message,false);});
+
+  if (tipo === 'var') {
+    // Salvar multiplas variacoes
+    var linhas = (document.getElementById('m-vars').value || '').split('\n').filter(function(l) { return l.trim(); });
+    if (!linhas.length) { document.getElementById('m-erro').textContent = 'Informe as variacoes'; return; }
+    var promises = linhas.map(function(linha) {
+      var partes = linha.split('|');
+      var vSku = (partes[0]||'').trim();
+      var vNome = (partes[1]||nome).trim();
+      return fetch('/api/db/vincular-sku', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({cprod: cprod, sku: vSku, nome: vNome, criar: true, fator_embalagem: 1})
+      }).then(function(r) { return r.json(); });
+    });
+    Promise.all(promises).then(function() {
+      fecharModal();
+      toast('Variacoes criadas!');
+      carregar();
+    }).catch(function(e) { document.getElementById('m-erro').textContent = e.message; });
+    return;
+  }
+
+  // Produto normal, caixa ou kit
+  fetch('/api/db/vincular-sku', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({cprod: cprod, sku: sku, nome: nome, criar: true, fator_embalagem: fator})
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.ok) {
+      fecharModal();
+      toast('Produto cadastrado e vinculado: ' + sku);
+      carregar();
+    } else {
+      document.getElementById('m-erro').textContent = d.error || 'Erro ao salvar';
+    }
+  }).catch(function(e) { document.getElementById('m-erro').textContent = e.message; });
 }
 
-function fmtData(d){
-  if(!d) return '&mdash;';
-  var s=String(d).slice(0,10);
-  var p=s.split('-');
-  if(p.length===3) return p[2]+'/'+p[1]+'/'+p[0];
-  return s;
-}
+// Fechar modal clicando fora
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) fecharModal();
+});
 
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-
-// Carregar ao abrir
 carregar();
 </script>
 </body>
