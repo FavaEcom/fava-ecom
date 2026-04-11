@@ -187,8 +187,12 @@ td{padding:6px 8px;vertical-align:middle}
   <div><label>Número da NF</label>
     <input id="inp-nf" style="width:160px" placeholder="315065" onkeydown="if(event.key==='Enter')buscarNF()">
   </div>
-  <button class="btn btn-blue" onclick="buscarNF()">🔍 Buscar</button>
+  <button class="btn btn-blue" onclick="buscarNF()">🔍 Buscar no Banco</button>
   <button class="btn btn-gray" onclick="listarNFs()">📋 Todas as NFs</button>
+  <div style="display:flex;flex-direction:column;gap:2px">
+    <label style="font-size:10px;color:#93c5fd;font-weight:700">📂 OU CARREGAR XML DIRETO</label>
+    <input type="file" id="inp-xml" accept=".xml" multiple style="font-size:11px;color:#94a3b8;background:#0f172a;border:1px solid #3b82f6;border-radius:5px;padding:3px 6px;cursor:pointer" onchange="lerXML(this.files)">
+  </div>
   <div id="nf-status" style="font-size:11px;color:#64748b;align-self:center"></div>
 </div>
 
@@ -320,6 +324,179 @@ function recalc() {
 function fmt(v) { return 'R$ ' + (v||0).toFixed(4); }
 function fmtR(v) { return 'R$ ' + (v||0).toFixed(2); }
 
+
+// ═══════════════════════════════════════════════════════════════
+// LER XML DIRETO — exibe TODOS os produtos da NF sem depender do banco
+// ═══════════════════════════════════════════════════════════════
+function lerXML(files) {
+  if(!files||!files.length) return;
+  document.getElementById('nf-status').textContent = 'Lendo XML...';
+  document.getElementById('conteudo').innerHTML = '<div class="loading">⏳ Processando XML...</div>';
+  var file = files[0];
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var txt = e.target.result;
+      var parser = new DOMParser();
+      var xml = parser.parseFromString(txt, 'text/xml');
+      var itensXML = extrairItensXML(xml);
+      if(!itensXML || !itensXML.length) {
+        document.getElementById('conteudo').innerHTML = '<div class="loading" style="color:#ef4444">XML sem itens encontrados</div>';
+        return;
+      }
+      _itens = itensXML;
+      _nf = itensXML[0]?.nf || '';
+      document.getElementById('inp-nf').value = _nf;
+      document.getElementById('nf-status').textContent = itensXML.length + ' itens do XML';
+      renderHeader(itensXML);
+      carregarCapa(_nf);
+      renderTabela();
+      atualizarStats();
+      document.getElementById('barra').style.display = 'flex';
+      carregarProximoSku();
+      carregarFamilias();
+      // Salvar no banco automaticamente
+      salvarNoHistorico(itensXML);
+    } catch(err) {
+      document.getElementById('conteudo').innerHTML = '<div class="loading" style="color:#ef4444">Erro ao ler XML: ' + err.message + '</div>';
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function extrairItensXML(xml) {
+  var get = function(el, tag) { var f = el.getElementsByTagName(tag)[0]; return f ? f.textContent.trim() : ''; };
+  var getAll = function(el, tag) { return Array.from(el.getElementsByTagName(tag)); };
+  var c = cfg();
+
+  // Dados da capa
+  var ide = xml.getElementsByTagName('ide')[0] || xml;
+  var emit = xml.getElementsByTagName('emit')[0] || xml;
+  var total = xml.getElementsByTagName('total')[0] || xml;
+  var nfNum = get(ide,'nNF') || get(xml,'nNF');
+  var fornecedor = get(emit,'xNome');
+  var cnpj = get(emit,'CNPJ');
+  var dtEmissao = (get(ide,'dhEmi') || get(ide,'dEmi') || '').slice(0,10);
+  var chave = get(xml.getElementsByTagName('infNFe')[0] || xml,'Id').replace('NFe','') ||
+    (xml.getElementsByTagName('infNFe')[0]?.getAttribute('Id') || '').replace('NFe','');
+
+  // Salvar capa
+  fetch('/api/db/nf', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({chave, nf:nfNum, forn:fornecedor, cnpj, emissao:dtEmissao, vNF: parseFloat(get(total,'vNF')||'0')})
+  }).catch(()=>{});
+
+  // Boletos da NF
+  var dups = getAll(xml,'dup');
+  if(dups.length) {
+    var parcelas = dups.map(function(d,idx){return {num:get(d,'nDup')||(idx+1), venc:get(d,'dVenc'), valor:parseFloat(get(d,'vDup')||'0')};});
+    fetch('/api/db/nf', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({chave,nf:nfNum,forn:fornecedor,cnpj,emissao:dtEmissao,vNF:parseFloat(get(total,'vNF')||'0'),parcelas})
+    }).catch(()=>{});
+  }
+
+  // Itens
+  var dets = getAll(xml,'det');
+  var itens = dets.map(function(det, idx){
+    var prod = det.getElementsByTagName('prod')[0] || det;
+    var imp  = det.getElementsByTagName('imposto')[0] || det;
+    var icmsEl = imp.querySelector ? imp.querySelector('ICMS00,ICMS10,ICMS20,ICMS30,ICMS40,ICMS51,ICMS60,ICMS70,ICMS90,ICMSSNxx,ICMSSN101,ICMSSN102,ICMSSN201,ICMSSN202,ICMSSN500,ICMSSN900') : null;
+    var pisProd = getAll(imp,'PIS')[0] || det;
+    var cofProd = getAll(imp,'COFINS')[0] || det;
+    var ipiProd = getAll(imp,'IPI')[0] || det;
+
+    var cprod  = get(prod,'cProd');
+    var nome   = get(prod,'xProd');
+    var ncm    = get(prod,'NCM');
+    var cfop   = get(prod,'CFOP');
+    var ucom   = get(prod,'uCom') || 'UN';
+    var qtd    = parseFloat(get(prod,'qCom') || '1');
+    var vunit  = parseFloat(get(prod,'vUnCom') || '0');
+    var vtot   = parseFloat(get(prod,'vProd') || '0');
+    var cest   = get(prod,'CEST');
+    var detNum = parseInt(det.getAttribute('nItem') || det.getAttribute('item') || (idx+1));
+
+    // IPI
+    var ipi_p  = parseFloat(get(ipiProd,'pIPI') || '0');
+    var vIPI   = parseFloat(get(ipiProd,'vIPI') || '0');
+    var ipi_un = qtd > 0 ? vIPI/qtd : 0;
+
+    // ICMS
+    var cst    = get(icmsEl||imp,'CST') || get(icmsEl||imp,'CSOSN') || '';
+    var vICMS  = parseFloat(get(icmsEl||imp,'vICMS') || '0');
+    var pICMS  = parseFloat(get(icmsEl||imp,'pICMS') || '0');
+    var vBC    = parseFloat(get(icmsEl||imp,'vBC')   || '0');
+    var cred_icms = vtot>0 ? vICMS/vtot : 0;
+
+    // ST
+    var vST    = parseFloat(get(imp,'vICMSST') || get(imp,'vST') || '0');
+    var tem_st = vST > 0 ? 1 : 0;
+
+    // Origem
+    var orig   = parseInt(get(icmsEl||imp,'orig') || '0');
+
+    // Custo = vProd + IPI (sem ST, ST é custo separado)
+    var custo_r = vtot + vIPI;
+
+    // CMV calculado
+    var aliq = cred_icms > 0 ? cred_icms*100 : ([1,2,6,7].includes(orig) ? c.imp : c.nac);
+    var cmv_br = custo_r - custo_r*(aliq/100) - custo_r*(c.pis/100) - custo_r*(c.cof/100);
+    var cmv_pr = tem_st ? custo_r - custo_r*(c.pis/100) - custo_r*(c.cof/100) : cmv_br;
+
+    return {
+      nf: nfNum, fornecedor: fornecedor, cnpj_emit: cnpj, data_emissao: dtEmissao,
+      cprod, nome, ncm, cfop, cest, cst,
+      det_num: detNum, qtd, vunit, vtot,
+      ipi_p, ipi_un, icms_p: pICMS||aliq,
+      custo_r, cmv_br, cmv_pr,
+      v_st: vST, cred_icms: vICMS,
+      tem_st, orig, tipo:'compra',
+      sku:'', _cmv_br: cmv_br, _cmv_pr: cmv_pr, _aliq: aliq,
+      _fator_embalagem:1, _unidade_compra: ucom,
+      ja_cadastrado: false, duplicata: false, sku_eh_cprod: false, sku_mapeado:''
+    };
+  });
+
+  // Cruzar com banco — verificar quais já têm SKU mapeado
+  var cprods = itens.map(function(i){return i.cprod;}).filter(Boolean);
+  if(cprods.length) {
+    fetch('/api/db/cprod-lookup', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({cprods})
+    }).then(r=>r.json()).then(function(mapa){
+      if(!mapa||!Array.isArray(mapa)) return;
+      var mp = {};
+      mapa.forEach(function(m){if(m.cprod) mp[m.cprod]=m.sku;});
+      itens.forEach(function(it){
+        if(mp[it.cprod]) {
+          it.sku = mp[it.cprod];
+          it.sku_mapeado = mp[it.cprod];
+          it.ja_cadastrado = true;
+        }
+      });
+      renderTabela();
+      atualizarStats();
+    }).catch(()=>{});
+  }
+  return itens;
+}
+
+// Salvar todos os itens do XML no histórico (sem apagar os existentes da NF)
+function salvarNoHistorico(itens) {
+  if(!itens||!itens.length) return;
+  var st = document.getElementById('nf-status');
+  if(st) st.textContent = (itens.length)+' itens — salvando no histórico...';
+  fetch('/api/db/historico', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(itens)
+  }).then(r=>r.json()).then(function(d){
+    if(st) st.textContent = itens.length+' itens do XML ('+d.inseridos+' salvos no banco)';
+  }).catch(function(e){
+    if(st) st.textContent = itens.length+' itens carregados (erro ao salvar: '+e.message+')';
+  });
+}
+
 function buscarNF() {
   var nf = document.getElementById('inp-nf').value.trim();
   if(!nf){toast('Digite o número da NF', false);return;}
@@ -398,7 +575,7 @@ function renderTabela() {
   var html = '<div class="tbl-wrap" style="max-height:calc(100vh - 120px);overflow-y:auto;overflow-x:auto"><table><thead><tr>';
   var ths = ['#','Cód Forn','Nome Produto','SKU Vinculado','NCM','CFOP','CST','CEST','Orig',
     'Qtd','Vl Unit','IPI%','IPI Un','ICMS NF%','Aliq Cred%','ST Un','Custo Total',
-    'CMV Brasil','CMV PR','Ações'];
+    'Fator Emb','Unid','CMV Brasil','CMV PR','Ações'];
   ths.forEach(h=>html+='<th'+(
     ['Qtd','Vl Unit','IPI%','IPI Un','ICMS NF%','Aliq Cred%','ST Un','Custo Total','CMV Brasil','CMV PR'].includes(h)
     ?' class="num"':'')+'>'+h+'</th>');
@@ -463,8 +640,13 @@ function renderTabela() {
     html += '<td class="num"><input class="ei ei-num" id="aliq-'+i+'" type="number" value="'+it._aliq.toFixed(2)+'" step="0.5" style="border-color:'+aliqCor+'" title="'+aliqTitle+'" oninput="onAliqChange('+i+',this.value)"></td>';
     html += '<td class="num">'+(st_un>0 ? fmt(st_un) : '—')+'</td>';
     html += '<td class="num" style="font-weight:700">'+fmt(custo)+'</td>';
+    // Fator embalagem
+    var fat = it._fator_embalagem||1;
+    var unid = it._unidade_compra||'UN';
+    html += '<td class="num"><input class="ei ei-num" style="width:45px;color:#f59e0b;text-align:center" type="number" min="1" step="1" value="'+fat+'" title="Qtd por embalagem (1=unitário, 5=caixa c/5un)" onchange="setFator('+i+',this.value)"></td>';
+    html += '<td><select class="ei" style="width:52px;font-size:10px;padding:2px" onchange="setUnidade('+i+',this.value)"><option'+(unid==='UN'?' selected':'')+'>UN</option><option'+(unid==='CX'?' selected':'')+'>CX</option><option'+(unid==='PCT'?' selected':'')+'>PCT</option><option'+(unid==='CT'?' selected':'')+'>CT</option><option'+(unid==='DZ'?' selected':'')+'>DZ</option><option'+(unid==='PAR'?' selected':'')+'>PAR</option></select></td>';
     // CMV Brasil
-    html += '<td class="num cmv-br'+(it._cmv_br<0?' cmv-neg':'')+'" id="cmvbr-'+i+'">'+fmt(it._cmv_br)+'</td>';
+    html += '<td class="num cmv-br'+(it._cmv_br<0?' cmv-neg':'')+'" id="cmvbr-'+i+'">'+fmt(it._cmv_br)+(fat>1?'<span style="font-size:9px;color:#f59e0b;margin-left:3px">÷'+fat+'</span>':'')+'</td>';
     // CMV PR
     html += '<td class="num cmv-pr'+(it._cmv_pr<0?' cmv-neg':'')+'" id="cmvpr-'+i+'">'+fmt(it._cmv_pr)+'</td>';
     // Ações
@@ -539,6 +721,23 @@ function buscarBling(i) {
       if(el){el.value=sku;el.className='ei ei-sku ei-sku-w ok';}
       toast('Bling: '+sku+' — '+(p.nome||'').slice(0,35));
     }).catch(()=>toast('Erro Bling',false));
+}
+
+
+function setFator(i, val) {
+  var f = Math.max(1, parseInt(val)||1);
+  _itens[i]._fator_embalagem = f;
+  var r = calcCMV(_itens[i]);
+  _itens[i]._cmv_br = r.cmv_br / f;
+  _itens[i]._cmv_pr = r.cmv_pr / f;
+  var eBr = document.getElementById('cmvbr-'+i);
+  var ePr = document.getElementById('cmvpr-'+i);
+  if(eBr) eBr.innerHTML = fmt(_itens[i]._cmv_br) + (f>1?'<span style="font-size:9px;color:#f59e0b;margin-left:3px">÷'+f+'</span>':'');
+  if(ePr) ePr.textContent = fmt(_itens[i]._cmv_pr);
+  atualizarStats();
+}
+function setUnidade(i, val) {
+  _itens[i]._unidade_compra = val;
 }
 
 function salvarItem(i) {

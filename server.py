@@ -3203,6 +3203,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 cest   = str(it.get('cest', '')).strip()
                 tem_st = int(it.get('tem_st', 0) or 0)
                 fornecedor = str(it.get('fornecedor', '') or '').strip()[:120]
+                fator_emb  = float(it.get('fator_embalagem', 1) or 1)
+                unid_comp  = str(it.get('unidade_compra', 'UN') or 'UN').strip()[:10]
                 det_num = int(it.get('det_num', 0) or 0)
                 cmv_br = float(it.get('cmv_br', 0) or 0)
                 cmv_pr = float(it.get('cmv_pr', 0) or 0)
@@ -3225,11 +3227,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         tem_st=CASE WHEN {p}>0 THEN {p} ELSE tem_st END,
                         custo={p}, custo_br={p}, custo_pr={p},
                         fornecedor=CASE WHEN {p}!='' THEN {p} ELSE fornecedor END,
+                        fator_embalagem=CASE WHEN {p}>1 THEN {p} ELSE fator_embalagem END,
+                        unidade_compra=CASE WHEN {p}!='' THEN {p} ELSE unidade_compra END,
                         updated_at=NOW()
                         WHERE sku={p}""",
                         (ncm,ncm,cfop,cfop,cst,cst,cest,cest,
                          origem,ipi_p,tem_st,tem_st,custo,cmv_br,cmv_pr,
-                         fornecedor,fornecedor,sku))
+                         fornecedor,fornecedor,
+                         fator_emb,fator_emb,unid_comp,unid_comp, sku))
                     # Atualizar cprod_map
                     if cprod:
                         exe(f"""INSERT INTO cprod_map (cprod,sku,nome,cmv_br,cmv_pr)
@@ -4371,10 +4376,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if isinstance(payload, dict): payload = [payload]
             if not payload: self._ok({'ok': True, 'inseridos': 0}); return
 
-            # Apagar NFs do lote antes de inserir — evita qualquer duplicata
-            nfs = list(set(str(r.get('nf','')) for r in payload if r.get('nf')))
-            for nf_d in nfs:
-                try: exe(f"DELETE FROM historico_compras WHERE nf={p}", (nf_d,))
+            # Apagar só os itens específicos (cprod+nf) para não perder outros da mesma NF
+            for row in payload:
+                nf_d   = str(row.get('nf','') or '')
+                cprod_d = str(row.get('cprod','') or '')
+                det_d   = int(row.get('det_num',0) or 0)
+                if not nf_d: continue
+                try:
+                    if cprod_d:
+                        exe(f"DELETE FROM historico_compras WHERE nf={p} AND cprod={p}", (nf_d, cprod_d))
+                    elif det_d:
+                        exe(f"DELETE FROM historico_compras WHERE nf={p} AND det_num={p}", (nf_d, det_d))
                 except: pass
 
             inseridos = 0
@@ -4407,6 +4419,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     cest          = str(row.get('cest','') or '')
                     tem_st        = int(row.get('tem_st',0) or 0)
                     orig          = int(row.get('orig',0) or 0)
+                    fator_emb     = float(row.get('fator_embalagem',1) or 1)
+                    if fator_emb < 1: fator_emb = 1
+                    # Custo unitário real = custo total / fator
+                    if fator_emb > 1:
+                        custo_r = custo_r / fator_emb
+                        ipi_un  = ipi_un  / fator_emb
+                        vtot    = vtot    / fator_emb
+                        vunit   = vunit   / fator_emb
+                        qtd     = qtd * fator_emb  # qtd de unidades reais
 
                     exe(f"""INSERT INTO historico_compras
                         (nf,fornecedor,data_emissao,sku,nome,qtd,vunit,vtot,
