@@ -144,6 +144,11 @@ function renderTabela(){
     document.getElementById('conteudo').innerHTML='<div class="loading" style="color:#22c55e">&#10003; Todos vinculados! Nenhum item pendente.</div>';
     return;
   }
+  // Paginação — 50 por vez para não travar
+  if(typeof _pagina==='undefined') _pagina=0;
+  var _porPag=50, totalPags=Math.ceil(_fil.length/_porPag);
+  var ini=_pagina*_porPag, fim=Math.min(ini+_porPag,_fil.length);
+  var _filPag=_fil.slice(ini,fim);
   var html='<table><thead><tr>';
   html+='<th>NF</th><th>C&oacute;d Forn (cprod)</th><th style="min-width:260px">Nome do Produto na NF</th>';
   html+='<th>Fornecedor</th><th class="num">Custo Unit</th>';
@@ -152,7 +157,7 @@ function renderTabela(){
   html+='</tr></thead><tbody>';
 
   var seq=_proximoSku;
-  _fil.forEach(function(it){
+  _filPag.forEach(function(it){
     var cprod=it.cprod;
     var jaTem=_autoSku[cprod];
     var skuSugerido=jaTem||String(seq);
@@ -197,6 +202,17 @@ function renderTabela(){
     html+='</tr>';
   });
   html+='</tbody></table>';
+  // Navegação de páginas
+  if(totalPags>1){
+    html+='<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#0d1e35;border-top:1px solid #1e3a5f;border-radius:0 0 8px 8px">';
+    html+='<span style="color:#64748b;font-size:11px">'+_fil.length+' itens — p&aacute;g '+(_pagina+1)+'/'+totalPags+'</span>';
+    html+='<div style="margin-left:auto;display:flex;gap:6px">';
+    if(_pagina>0) html+='<button class="btn-xs bxs-gray" onclick="_pagina--;renderTabela()">◄ Anterior</button>';
+    var p0=Math.max(0,_pagina-2),p1=Math.min(totalPags-1,_pagina+2);
+    for(var pg=p0;pg<=p1;pg++){var a=pg===_pagina?' style="background:#3b82f6;color:#fff"':'';html+='<button class="btn-xs bxs-gray"'+a+' onclick="_pagina='+pg+';renderTabela()">'+(pg+1)+'</button>';}
+    if(_pagina<totalPags-1) html+='<button class="btn-xs bxs-gray" onclick="_pagina++;renderTabela()">Pr&oacute;xima ►</button>';
+    html+='</div></div>';
+  }
   document.getElementById('conteudo').innerHTML=html;
 }
 
