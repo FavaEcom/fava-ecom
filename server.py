@@ -1217,6 +1217,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/proximo-sku':       self._get_proximo_sku,
             '/api/db/sem-sku':           self._get_sem_sku,
             '/api/db/fix-cmv-pr':        self._fix_cmv_pr,
+            '/api/db/base-reimportar':    self._post_base_reimportar,
             '/api/export/frete':         self._export_frete,
             '/api/db/familias':          self._get_familias,
             '/api/db/pedrinho':          self._get_pedrinho,
@@ -1647,6 +1648,80 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._ok({"ok":True,"nome":nome})
         except Exception as e: self._ok({"ok":False,"error":str(e)})
 
+
+
+    def _post_base_reimportar(self):
+        """POST /api/db/base-reimportar
+        1. Apaga todos os produtos cujo SKU parece cprod (8+ digitos) ou sku vazio
+        2. Cria produtos unicos a partir do historico_compras (por cprod)
+           com: cprod, nome, ncm, cst, cest, tem_st, custo_br, custo_pr
+        """
+        p = '%s' if IS_PG else '?'
+        try:
+            # 1. Contar antes
+            antes = exe("SELECT COUNT(*) as n FROM produtos", fetchone=True)['n']
+
+            # 2. Apagar produtos com SKU bagunçado (cprod no lugar de sku)
+            exe("""DELETE FROM produtos WHERE
+                (sku ~ '^[0-9]{8,}$')
+                OR (sku IS NULL OR sku = '')
+                OR (sku = 'USO_INTERNO')
+            """)
+
+            # 3. Pegar produtos unicos do historico (melhor entrada por cprod)
+            historico = exe("""
+                SELECT DISTINCT ON (cprod)
+                    cprod, nome, ncm, cfop, cst, cest, tem_st, orig,
+                    custo_r, cmv_br, cmv_pr, ipi_p, v_st, fornecedor
+                FROM historico_compras
+                WHERE cprod IS NOT NULL AND cprod != ''
+                  AND tipo = 'compra'
+                ORDER BY cprod, data_emissao DESC, id DESC
+            """, fetchall=True) or []
+
+            # 4. Inserir cada um como produto sem SKU (sku = cprod temporariamente, depois vincula)
+            inseridos = 0
+            for h in historico:
+                cprod = str(h.get('cprod','') or '')
+                nome = str(h.get('nome','') or '').strip()[:200]
+                if not cprod: continue
+                # Verificar se já existe pelo cprod na tabela
+                existe = exe(f"SELECT 1 FROM produtos WHERE sku={p}", (cprod,), fetchone=True)
+                if not existe:
+                    try:
+                        exe(f"""INSERT INTO produtos
+                            (sku, nome, ncm, cst_padrao, cest, tem_st, origem,
+                             custo, custo_br, custo_pr, ipi, fornecedor)
+                            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})
+                            ON CONFLICT(sku) DO NOTHING""",
+                            (cprod, nome,
+                             str(h.get('ncm','') or ''),
+                             str(h.get('cst','') or ''),
+                             str(h.get('cest','') or ''),
+                             int(h.get('tem_st',0) or 0),
+                             int(h.get('orig',0) or 0),
+                             float(h.get('custo_r',0) or 0),
+                             float(h.get('cmv_br',0) or 0),
+                             float(h.get('cmv_pr',0) or 0),
+                             float(h.get('ipi_p',0) or 0),
+                             str(h.get('fornecedor','') or '')[:120]
+                            ))
+                        inseridos += 1
+                    except Exception as ei:
+                        print(f'[REIMPORT] erro cprod={cprod}: {ei}')
+                        continue
+
+            depois = exe("SELECT COUNT(*) as n FROM produtos", fetchone=True)['n']
+            self._ok({
+                'ok': True,
+                'antes': antes,
+                'apagados': antes - (depois - inseridos),
+                'inseridos': inseridos,
+                'depois': depois,
+                'mensagem': f'Base limpa: {inseridos} produtos do historico importados'
+            })
+        except Exception as e:
+            self._err(500, str(e))
 
     def _fix_cmv_pr(self):
         """GET /api/db/fix-cmv-pr — corrige CMV PR = CMV BR para produtos sem ST"""
