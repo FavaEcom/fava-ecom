@@ -320,10 +320,12 @@ function carregarDados(){
         html='<div style="color:#22c55e;font-weight:700">✓ Estoque normal</div>';
       } else {
         zerados.slice(0,3).forEach(function(p){
-          html+='<div class="live-row"><span style="color:#ef4444;font-family:monospace;font-size:10px">'+p.sku+'</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin:0 8px;font-size:11px">'+(p.nome||'').slice(0,25)+'</span><span class="val" style="color:#ef4444">ZERO</span></div>';
+          var nome=(p.nome||p.sku||'SKU '+p.sku).slice(0,28);
+          html+='<div class="live-row"><span style="color:#ef4444;font-family:monospace;font-size:10px;flex-shrink:0">'+p.sku+'</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin:0 8px;font-size:11px">'+nome+'</span><span class="val" style="color:#ef4444">ZERO</span></div>';
         });
-        baixos.slice(0,2).forEach(function(p){
-          html+='<div class="live-row"><span style="color:#f59e0b;font-family:monospace;font-size:10px">'+p.sku+'</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin:0 8px;font-size:11px">'+(p.nome||'').slice(0,25)+'</span><span class="val" style="color:#f59e0b">'+p.estoque+' un</span></div>';
+        baixos.slice(0,3).forEach(function(p){
+          var nome=(p.nome||p.sku||'SKU '+p.sku).slice(0,28);
+          html+='<div class="live-row"><span style="color:#f59e0b;font-family:monospace;font-size:10px;flex-shrink:0">'+p.sku+'</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin:0 8px;font-size:11px">'+nome+'</span><span class="val" style="color:#f59e0b">'+p.estoque+' un</span></div>';
         });
         var total=zerados.length+baixos.length;
         if(total>5) html+='<div style="color:#64748b;font-size:10px;margin-top:4px">+mais '+(total-5)+' produtos</div>';

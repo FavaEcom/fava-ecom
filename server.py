@@ -963,7 +963,8 @@ def sync_ml_listings():
             try:
                 c = ('ON CONFLICT(id) DO UPDATE SET '
                      'sku=CASE WHEN EXCLUDED.sku!=\'\' THEN EXCLUDED.sku ELSE ml_listings.sku END,'
-                     'titulo=EXCLUDED.titulo,preco=EXCLUDED.preco,sale_fee=EXCLUDED.sale_fee,'
+                     'titulo=CASE WHEN EXCLUDED.titulo!=\'\'  THEN EXCLUDED.titulo ELSE ml_listings.titulo END,'
+                     'preco=EXCLUDED.preco,sale_fee=EXCLUDED.sale_fee,'
                      'listing_type=EXCLUDED.listing_type,free_shipping=EXCLUDED.free_shipping,'
                      'status=EXCLUDED.status,'
                      'peso=EXCLUDED.peso,largura=EXCLUDED.largura,altura=EXCLUDED.altura,comprimento=EXCLUDED.comprimento') if IS_PG else \
@@ -1209,6 +1210,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/bling-peso':         self._get_bling_peso,
             '/api/db/proximo-sku':       self._get_proximo_sku,
             '/api/db/sem-sku':           self._get_sem_sku,
+            '/api/db/fix-cmv-pr':        self._fix_cmv_pr,
             '/api/export/frete':         self._export_frete,
             '/api/db/familias':          self._get_familias,
             '/api/db/pedrinho':          self._get_pedrinho,
@@ -1555,7 +1557,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     # GET routes
     # ────────────────────────────────────────────────────────────
     def _get_produtos(self):
-        try: self._ok(exe("SELECT * FROM produtos ORDER BY CASE WHEN sku ~ '^[[:digit:]]' THEN 0 ELSE 1 END, CASE WHEN sku ~ '^[[:digit:]]+$' THEN sku::bigint ELSE 9999999 END, sku", fetchall=True))
+        p = '%s' if IS_PG else '?'
+        try:
+            # Filtrar SKUs que são claramente códigos de fornecedor (>7 dígitos)
+            # mas manter os registros no banco — só não exibe
+            rows = exe("""SELECT * FROM produtos
+                WHERE NOT (sku ~ '^[0-9]{8,}$')
+                ORDER BY
+                  CASE WHEN sku ~ '^[[:digit:]]+$' AND sku::bigint BETWEEN 1 AND 99999 THEN 0 ELSE 1 END,
+                  CASE WHEN sku ~ '^[[:digit:]]+$' AND sku::bigint BETWEEN 1 AND 99999 THEN sku::bigint ELSE 9999999 END,
+                  sku""", fetchall=True)
+            self._ok(rows)
         except Exception as e: self._err(500, str(e))
 
     def _post_bling_buscar_produto(self):
@@ -1627,6 +1639,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._ok({"ok":True,"nome":nome})
         except Exception as e: self._ok({"ok":False,"error":str(e)})
 
+
+    def _fix_cmv_pr(self):
+        """GET /api/db/fix-cmv-pr — corrige CMV PR = CMV BR para produtos sem ST"""
+        p = '%s' if IS_PG else '?'
+        try:
+            atualizados = exe(f"""UPDATE produtos SET custo_pr = custo_br
+                WHERE (custo_pr IS NULL OR custo_pr = 0)
+                AND custo_br > 0
+                AND (tem_st IS NULL OR tem_st = 0)
+                RETURNING sku""", fetchall=True)
+            self._ok({'ok': True, 'atualizados': len(atualizados or [])})
+        except Exception as e: self._err(500, str(e))
+
     def _get_sem_sku(self):
         """GET /api/db/sem-sku"""
         p = '%s' if IS_PG else '?'
@@ -1644,7 +1669,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                   AND h.nome IS NOT NULL AND h.nome != ''
                 ORDER BY h.cprod, h.data_emissao DESC
             """, fetchall=True) or []
-            row_sku = exe("SELECT MAX(sku::bigint) as m FROM produtos WHERE sku ~ '^[0-9]+$' AND LENGTH(sku)<=6", fetchone=True)
+            row_sku = exe("SELECT MAX(sku::bigint) as m FROM produtos WHERE sku ~ '^[0-9]+$' AND sku::bigint BETWEEN 1000 AND 9999", fetchone=True)
             mx = int(row_sku['m'] or 2933) if row_sku and row_sku.get('m') else 2933
             self._ok({'itens': rows, 'proximo_sku': max(mx+1, 2934)})
         except Exception as e: self._err(500, str(e))
@@ -1780,9 +1805,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def _get_proximo_sku(self):
         try:
-            with get_db() as db:
-                row=db.fetchone("SELECT MAX(sku::bigint) as m FROM produtos WHERE sku ~ '^[0-9]+$' AND LENGTH(sku)<=6")
-                mx=int(row["m"] or 2933) if row and row["m"] else 2933
+            row = exe("SELECT MAX(sku::bigint) as m FROM produtos WHERE sku ~ '^[0-9]+$' AND sku::bigint BETWEEN 1000 AND 9999", fetchone=True)
+            mx = int(row['m'] or 2933) if row and row.get('m') else 2933
             self._ok({"proximo_sku": max(mx+1, 2934), "max_db": mx})
         except Exception as e: self._ok({"proximo_sku":2934,"error":str(e)})
 
@@ -2274,14 +2298,36 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     larg = float(pr.get('largura', 0) or 0)
                     alt  = float(pr.get('altura', 0) or 0)
                     comp = float(pr.get('profundidade', 0) or 0)
-                    if sku and (peso > 0 or larg > 0 or alt > 0 or comp > 0):
+                    nome_b  = str(pr.get('nome','') or '').strip()[:150]
+                    ncm_b   = str(pr.get('ncm','') or '').strip().replace('.','')
+                    cest_b  = str(pr.get('cest','') or '').strip()
+                    orig_b  = int(pr.get('origem', 0) or 0)
+                    ipi_b   = float(pr.get('ipi', 0) or 0)
+                    # ST: verifica se tem situacao tributaria com ST
+                    tributs = pr.get('tributacao') or {}
+                    tem_st_b = 1 if tributs.get('modalidade') in ['4','5','500','700','900'] else 0
+                    # Fornecedor: pegar do campo fornecedores se disponível
+                    forn_list = pr.get('fornecedores') or []
+                    forn_b = str(forn_list[0].get('nome','') if forn_list else pr.get('nomeFornecedor','') or '').strip()[:120]
+                    if sku:
                         exe(f"""UPDATE produtos SET
                             peso=CASE WHEN {p}>0 THEN {p} ELSE peso END,
                             largura=CASE WHEN {p}>0 THEN {p} ELSE largura END,
                             altura=CASE WHEN {p}>0 THEN {p} ELSE altura END,
-                            comprimento=CASE WHEN {p}>0 THEN {p} ELSE comprimento END
+                            comprimento=CASE WHEN {p}>0 THEN {p} ELSE comprimento END,
+                            ncm=CASE WHEN {p}!='' THEN {p} ELSE ncm END,
+                            cest=CASE WHEN {p}!='' THEN {p} ELSE cest END,
+                            origem=CASE WHEN {p}>0 THEN {p} ELSE origem END,
+                            ipi=CASE WHEN {p}>0 THEN {p} ELSE ipi END,
+                            tem_st=CASE WHEN {p}>0 THEN {p} ELSE tem_st END,
+                            fornecedor=CASE WHEN {p}!='' THEN {p} ELSE fornecedor END,
+                            nome=CASE WHEN (nome IS NULL OR nome='') AND {p}!='' THEN {p} ELSE nome END
                             WHERE sku={p}""",
-                            (peso,peso, larg,larg, alt,alt, comp,comp, sku))
+                            (peso,peso, larg,larg, alt,alt, comp,comp,
+                             ncm_b,ncm_b, cest_b,cest_b,
+                             orig_b,orig_b, ipi_b,ipi_b,
+                             tem_st_b,tem_st_b, forn_b,forn_b,
+                             nome_b,nome_b, sku))
                         atualizados += 1
                 if len(prods) < 100: break
                 pagina += 1
@@ -3084,11 +3130,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     WHERE hc.nf = {p}
                     ORDER BY hc.det_num, hc.id DESC""", (nf,), fetchall=True) or []
 
-                # Deduplicar em Python — por (det_num, sku): manter o mais recente (id DESC)
+                # Deduplicar em Python — por (det_num, cprod): manter o mais recente (id DESC)
+                # ATENÇÃO: chave deve ser cprod (único por posição na NF), não sku (pode ser vazio)
                 seen = {}
                 dedup = []
                 for row in rows:
-                    chave = (row.get('det_num', 0), str(row.get('sku') or ''))
+                    det = row.get('det_num') or 0
+                    cprod = str(row.get('cprod') or row.get('id') or '')
+                    # Fallback: se det_num=0 ou null para todos, usa cprod+nome como chave
+                    chave = (det, cprod) if (det and cprod) else (str(row.get('id','')),)
                     if chave not in seen:
                         seen[chave] = True
                         # Corrigir icms_p em decimal (0.195 → 19.5)

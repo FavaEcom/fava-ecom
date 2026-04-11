@@ -262,7 +262,7 @@ header h1{font-size:14px;font-weight:700;flex:1}
 
   <div class="cfg">
     <div class="cfg-toggle" onclick="toggleCfg()">⚙️ Tokens <span id="cfg-arr">▼</span></div>
-    <div class="cfg-body open" id="cfg-body">
+    <div class="cfg-body" id="cfg-body">
       <div class="field" style="margin-top:7px">
         <label>Token Bling API v3</label>
         <input type="password" id="tk-bling" placeholder="Cole aqui">
@@ -1211,6 +1211,18 @@ let massaData = []; // resultado da precificação em massa
 // ══════════════════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════════════════
+// Auto-fecha painel de tokens se já tiver tokens carregados
+function checarAbrirCfg(){
+  setTimeout(function(){
+    var ml = document.getElementById('tk-ml')?.value||'';
+    if(!ml){
+      var body=document.getElementById('cfg-body');
+      if(body) body.classList.add('open');
+      document.getElementById('cfg-arr').textContent='▲';
+    }
+  }, 800);
+}
+
 window.onload=async ()=>{
   carregarTokenStore();
   // Tenta renovar tokens expirados no startup

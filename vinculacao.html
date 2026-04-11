@@ -58,6 +58,11 @@ td{padding:6px 10px;vertical-align:middle}
 .toast{position:fixed;top:50px;right:16px;background:#166534;color:#86efac;padding:10px 18px;border-radius:7px;font-size:12px;font-weight:700;z-index:200;display:none;max-width:400px}
 .loading{text-align:center;padding:40px;color:#475569}
 .tag-ok{background:#14532d;color:#86efac;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700}
+.tag-inativo{background:#1e293b;color:#64748b;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700}
+.tag-var{background:#312e81;color:#a5b4fc;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700}
+tbody tr.inativo{opacity:.35}
+.bxs-orange{background:#7c2d12;color:#fdba74}
+.bxs-purple{background:#312e81;color:#a5b4fc}
 </style>
 </head>
 <body>
@@ -176,11 +181,17 @@ function renderTabela(){
     html+='</div></td>';
     // Ação
     html+='<td>';
-    if(jaTem){
+    if(_inativos[cprod]){
+      html+='<span class="tag-inativo">⛔ Uso Interno</span> ';
+      html+='<button class="btn-xs bxs-gray" onclick="reativarItem(\''+cprod+'\')">↩</button>';
+    } else if(jaTem){
       html+='<span class="tag-ok">&#10003; Salvo</span>';
+      if(_variacoes[cprod]) html+='<span class="tag-var" style="margin-left:4px">+var</span>';
     } else {
-      html+='<button class="btn-xs bxs-green" onclick="vincularItem(\''+cprod+'\')">&#10003; Vincular</button> ';
-      html+='<button class="btn-xs bxs-gray" onclick="pularItem(\''+cprod+'\')">Pular</button>';
+      html+='<button class="btn-xs bxs-green" title="Vincular" onclick="vincularItem(\''+cprod+'\')">&#10003;</button> ';
+      html+='<button class="btn-xs bxs-purple" title="Dividir em variações" onclick="abrirVariacoes(\''+cprod+'\')">✂ Var</button> ';
+      html+='<button class="btn-xs bxs-orange" title="Uso interno/imobilizado" onclick="marcarInativo(\''+cprod+'\')">⛔</button> ';
+      html+='<button class="btn-xs bxs-gray" title="Pular" onclick="pularItem(\''+cprod+'\')">—</button>';
     }
     html+='</td>';
     html+='</tr>';
@@ -268,15 +279,20 @@ function pularItem(cprod){
   if(row){row.style.opacity='0.3';}
 }
 
-function salvarTodos(){
-  var pendentes=_fil.filter(function(it){return !_autoSku[it.cprod];});
-  if(!pendentes.length){toast('Nenhum pendente!');return;}
-  var seq=_proximoSku;
-  var payload=pendentes.map(function(it){
+async function salvarTodos(){
+  var pendentes=_fil.filter(function(it){
+    var sku=getSkuInput(it.cprod);
+    return sku && !_autoSku[it.cprod] && !_pulados[it.cprod] && !_inativos[it.cprod];
+  });
+  if(!pendentes.length){toast('Nenhum pendente para salvar!');return;}
+  if(!confirm('Salvar '+pendentes.length+' itens um a um?')) return;
+  var seq=_proximoSku, ok=0, erros=[];
+  for(var i=0;i<pendentes.length;i++){
+    var it=pendentes[i];
     var sku=getSkuInput(it.cprod)||String(seq++);
     var nome=getNomeInput(it.cprod)||(it.nome||'').toUpperCase().slice(0,60);
     var modo=_autoSku['modo_'+it.cprod]||'novo';
-    return {
+    var payload={
       cprod:it.cprod, sku:sku, nome:nome,
       custo:it.custo||0, cmv_br:it.cmv_br||0, cmv_pr:it.cmv_pr||0,
       ncm:it.ncm||'', cst:it.cst||'', cest:it.cest||'',
@@ -284,17 +300,85 @@ function salvarTodos(){
       tem_st:it.tem_st||0, fornecedor:it.fornecedor||'',
       criar: modo==='novo'
     };
+    try{
+      var r=await fetch('/api/db/vincular-sku',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      var d=await r.json();
+      if(d.ok){
+        _autoSku[it.cprod]=sku; ok++;
+        var row=document.getElementById('row-'+it.cprod);
+        if(row){row.className='vinculado';var td=row.querySelector('td:last-child');if(td)td.innerHTML='<span class="tag-ok">&#10003; Salvo</span>';}
+        document.getElementById('lbl-vinc').textContent=(_vinculados+ok);
+        toast((i+1)+'/'+pendentes.length+': '+sku+' ✓');
+      } else { erros.push(it.cprod+': '+(d.error||'falha')); }
+    } catch(e){ erros.push(it.cprod+': '+e.message); }
+    await new Promise(res=>setTimeout(res,200));
+  }
+  _vinculados+=ok;
+  if(erros.length) toast('⚠ '+ok+' salvos, '+erros.length+' erros: '+erros[0],false);
+  else toast('✓ Todos os '+ok+' itens salvos com sucesso!');
+}
+
+
+function marcarInativo(cprod){
+  _inativos[cprod]=true;
+  var row=document.getElementById('row-'+cprod);
+  if(row) row.className='inativo';
+  var td=row?row.querySelector('td:last-child'):null;
+  if(td) td.innerHTML='<span class="tag-inativo">⛔ Inativo</span> <button class="btn-xs bxs-gray" onclick="reativarItem(''+cprod+'')">↩</button>';
+  toast('Marcado como uso interno — não será vinculado');
+}
+
+function reativarItem(cprod){
+  delete _inativos[cprod];
+  filtrar();
+}
+
+function abrirVariacoes(cprod){
+  var it=_itens.find(function(x){return x.cprod===cprod;});
+  if(!it) return;
+  var qtd=parseInt(prompt('Quantas variações? (ex: 2 para azul e vermelho)','2'));
+  if(!qtd||qtd<2) return;
+  var skus=[], nomes=[];
+  for(var i=0;i<qtd;i++){
+    var sugestao=String(_proximoSku+i);
+    var s=prompt('SKU variação '+(i+1)+' (sugestão: '+sugestao+'):',sugestao);
+    if(!s){toast('Cancelado',false);return;}
+    var n=prompt('Nome variação '+(i+1)+':', (it.nome||'').toUpperCase().slice(0,50)+' VAR'+(i+1));
+    if(!n){toast('Cancelado',false);return;}
+    skus.push(s); nomes.push(n);
+  }
+  // Salvar cada variação
+  var promises=skus.map(function(sku,i){
+    return fetch('/api/db/vincular-sku',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        cprod:cprod, sku:sku, nome:nomes[i],
+        custo:it.custo||0, cmv_br:it.cmv_br||0, cmv_pr:it.cmv_pr||0,
+        ncm:it.ncm||'', cst:it.cst||'', cest:it.cest||'',
+        cfop:it.cfop||'', origem:it.origem||0, ipi_p:it.ipi_p||0,
+        tem_st:it.tem_st||0, fornecedor:it.fornecedor||'',
+        criar:true
+      })
+    }).then(function(r){return r.json();});
   });
-  if(!confirm('Vincular '+payload.length+' itens? SKUs de '+payload[0].sku+' a '+payload[payload.length-1].sku))return;
-  fetch('/api/db/vincular-sku',{
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(payload)
-  }).then(function(r){return r.json();}).then(function(d){
-    if(d.ok){
-      toast('&#10003; '+d.salvos+' vinculados, '+d.criados+' produtos criados!');
-      setTimeout(carregar, 1500);
-    }
+  Promise.all(promises).then(function(results){
+    var ok=results.filter(function(d){return d.ok;}).length;
+    _autoSku[cprod]=skus[0]; _variacoes[cprod]=skus;
+    _vinculados++; _proximoSku+=skus.length;
+    document.getElementById('lbl-vinc').textContent=_vinculados;
+    var row=document.getElementById('row-'+cprod);
+    if(row){row.className='vinculado';}
+    toast('✓ '+ok+' variações criadas: '+skus.join(', '));
+    filtrar();
   }).catch(function(e){toast('Erro: '+e.message,false);});
+}
+
+function fmtData(d){
+  if(!d) return '—';
+  var s=String(d).slice(0,10);
+  var p=s.split('-');
+  if(p.length===3) return p[2]+'/'+p[1]+'/'+p[0];
+  return s;
 }
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}

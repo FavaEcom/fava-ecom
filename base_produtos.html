@@ -256,6 +256,14 @@ function renderTabela(){
   document.getElementById('conteudo').innerHTML=html;
 }
 
+function fmtData(d){
+  if(!d) return '—';
+  var s=String(d).slice(0,10);
+  var p=s.split('-');
+  if(p.length===3) return p[2]+'/'+p[1]+'/'+p[0];
+  return s;
+}
+
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 var _cel=null, NUM_C=['peso','largura','altura','comprimento','custo_br','custo_pr','custo','ipi','st_imposto'];
