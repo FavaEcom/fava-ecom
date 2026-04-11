@@ -1217,6 +1217,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/proximo-sku':       self._get_proximo_sku,
             '/api/db/sem-sku':           self._get_sem_sku,
             '/api/db/fix-cmv-pr':        self._fix_cmv_pr,
+            '/api/db/auto-vincular':      self._post_auto_vincular,
             '/api/db/base-reimportar':    self._post_base_reimportar,
             '/api/export/frete':         self._export_frete,
             '/api/db/familias':          self._get_familias,
@@ -1719,6 +1720,45 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 'inseridos': inseridos,
                 'depois': depois,
                 'mensagem': f'Base limpa: {inseridos} produtos do historico importados'
+            })
+        except Exception as e:
+            self._err(500, str(e))
+
+
+    def _post_auto_vincular(self):
+        """POST /api/db/auto-vincular
+        Aplica cprod_map automaticamente a todos os itens do historico sem SKU.
+        Nao cria produtos novos — apenas atualiza sku no historico_compras.
+        """
+        p = '%s' if IS_PG else '?'
+        try:
+            # Buscar todos mapeamentos do cprod_map
+            mapa = exe("SELECT cprod, sku FROM cprod_map WHERE sku IS NOT NULL AND sku != ''", fetchall=True) or []
+            if not mapa:
+                self._ok({'ok': True, 'vinculados': 0, 'msg': 'cprod_map vazio'})
+                return
+
+            vinculados = 0
+            for m in mapa:
+                cprod = str(m['cprod'] or '')
+                sku   = str(m['sku'] or '')
+                if not cprod or not sku:
+                    continue
+                # Atualizar historico_compras onde cprod bate e sku esta vazio
+                exe(f"""UPDATE historico_compras
+                    SET sku = {p}
+                    WHERE cprod = {p}
+                    AND (sku IS NULL OR sku = '' OR sku = cprod)
+                """, (sku, cprod))
+                vinculados += 1
+
+            # Contar quantos ainda ficaram sem SKU
+            sem = exe("SELECT COUNT(*) as n FROM historico_compras WHERE (sku IS NULL OR sku = '' OR sku = cprod) AND cprod != ''", fetchone=True)
+            self._ok({
+                'ok': True,
+                'vinculados': vinculados,
+                'ainda_sem_sku': int(sem['n']) if sem else 0,
+                'msg': f'{vinculados} produtos vinculados automaticamente pelo cprod_map'
             })
         except Exception as e:
             self._err(500, str(e))
