@@ -177,9 +177,7 @@ def criar_tabelas():
             )""",
             """CREATE UNIQUE INDEX IF NOT EXISTS idx_webhook_event_id ON webhook_log(event_id)""",
             # Deduplicar antes de criar o índice único
-            """DELETE FROM historico_compras WHERE id NOT IN (
-                SELECT MIN(id) FROM historico_compras GROUP BY nf, sku
-            )""",
+            # DELETE REMOVIDO: apagava historico ao reiniciar servidor
             # Índice único deve ser por (nf, cprod), não (nf, sku) — vários itens podem ter sku vazio
             """DO $$ BEGIN
                 IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_hist_nf_sku') THEN
