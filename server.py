@@ -180,7 +180,13 @@ def criar_tabelas():
             """DELETE FROM historico_compras WHERE id NOT IN (
                 SELECT MIN(id) FROM historico_compras GROUP BY nf, sku
             )""",
-            """CREATE UNIQUE INDEX IF NOT EXISTS idx_hist_nf_sku ON historico_compras(nf, sku)""",
+            # Índice único deve ser por (nf, cprod), não (nf, sku) — vários itens podem ter sku vazio
+            """DO $$ BEGIN
+                IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_hist_nf_sku') THEN
+                    DROP INDEX idx_hist_nf_sku;
+                END IF;
+            END $$""",
+            """CREATE UNIQUE INDEX IF NOT EXISTS idx_hist_nf_cprod ON historico_compras(nf, cprod) WHERE cprod != ''""",
             """CREATE TABLE IF NOT EXISTS nf_entrada (
                 chave TEXT PRIMARY KEY, nf TEXT, fornecedor TEXT, cnpj TEXT,
                 emissao TEXT, valor REAL DEFAULT 0, created_at TIMESTAMP DEFAULT NOW())""",
@@ -1217,6 +1223,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/kits':              self._get_kits,
             '/api/db/cadastros':         self._get_cadastros,
             '/api/auth/tokens':           self._get_or_post_tokens,
+            '/api/auth/tokens/get':       self._get_or_post_tokens,
             '/api/sync/peso':              self._get_sync_peso,
             '/api/estoque/parado':        self._get_estoque_parado,
             '/api/estoque/sugerir-kit':   self._get_sugerir_kit,
@@ -1301,6 +1308,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '/api/db/cadastro':           self._post_cadastro,
             '/api/db/pedidos-pc':         self._post_pedidos_pc,
             '/api/auth/tokens':           self._get_or_post_tokens,
+            '/api/auth/tokens/get':       self._get_or_post_tokens,
             '/api/bling/set-token':         self._bling_set_token,
             '/api/cmv-cache':             self._post_cmv,
             '/webhook/bling':             self._post_webhook_bling,
@@ -3144,15 +3152,32 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         # Corrigir icms_p em decimal (0.195 → 19.5)
                         if row.get('icms_p') and 0 < float(row['icms_p'] or 0) < 1.0:
                             row['icms_p'] = float(row['icms_p']) * 100
-                        # Detectar SKU que parece código de fornecedor (10+ dígitos)
+                        # SKU que parece código fornecedor = limpar
                         sku = str(row.get('sku') or '')
-                        row['sku_eh_cprod'] = bool(sku and sku.isdigit() and len(sku) >= 10)
-                        # Detectar duplicata no XML (mesmo det_num com sku diferente)
+                        if sku and sku.isdigit() and len(sku) >= 8:
+                            row['sku_eh_cprod'] = True
+                            row['sku'] = ''  # limpa — não é nosso SKU
+                        else:
+                            row['sku_eh_cprod'] = False
                         row['duplicata'] = False
-                        # Buscar mapeamento cprod → sku no cprod_map
                         row['sku_mapeado'] = ''
                         row['cprod'] = str(row.get('cprod') or '')
                         dedup.append(row)
+
+            # Cruzar CPRODs com cprod_map para preencher SKU automaticamente
+            cprods = [r['cprod'] for r in dedup if r.get('cprod')]
+            if cprods:
+                ph = ','.join([p]*len(cprods))
+                mapa = exe(f"SELECT cprod, sku, nome FROM cprod_map WHERE cprod IN ({ph})", tuple(cprods), fetchall=True) or []
+                mapa_dict = {m['cprod']: m for m in mapa}
+                for row in dedup:
+                    cp = row.get('cprod','')
+                    if cp and cp in mapa_dict:
+                        m = mapa_dict[cp]
+                        if not row.get('sku') and m.get('sku'):
+                            row['sku'] = m['sku']
+                            row['sku_mapeado'] = m['sku']
+                            row['ja_cadastrado'] = True
 
                 # Detectar duplicatas reais (mesmo det_num, sku diferente)
                 det_count = {}
@@ -4364,7 +4389,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     inseridos += 1
                 except Exception as ei:
                     continue
-            self._ok({'ok': True, 'inseridos': inseridos})
+            self._ok({'ok': True, 'inseridos': inseridos, 'total': len(payload)})
         except Exception as e:
             self._err(500, str(e))
 
@@ -4441,7 +4466,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                          str(row.get('cnpj_emit','') or '')))
                     inseridos += 1
                 except Exception as ei:
-                    continue  # item com erro, pula
+                    print(f'[HISTORICO] Erro item det={det_num} cprod={cprod_val}: {ei}')
+                    continue
 
             self._ok({'ok': True, 'inseridos': inseridos})
         except Exception as e:
