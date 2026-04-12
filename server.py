@@ -2822,9 +2822,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                        COALESCE(l.largura, 0) as largura,
                        COALESCE(l.altura, 0) as altura,
                        COALESCE(l.comprimento, 0) as profundidade,
-                       COALESCE(l.st, 0) as st,
-                       COALESCE(l.st_imposto, 0) as st_imposto,
-                       COALESCE(l.monofasico, 0) as monofasico,
+                       COALESCE(p.tem_st, l.st, 0) as st,
+                       COALESCE(p.st_imposto, l.st_imposto, 0) as st_imposto,
+                       COALESCE(p.monofasico, l.monofasico, 0) as monofasico,
+                       COALESCE(p.ncm, '') as ncm,
+                       COALESCE(p.familia, '') as familia,
                        NULL as camp_nome, 0 as camp_desconto,
                        NULL as camp_data, NULL as camp_status
                 FROM ml_listings l
